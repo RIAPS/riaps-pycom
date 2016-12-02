@@ -1,0 +1,114 @@
+'''
+Component class
+Created on Oct 15, 2016
+
+@author: riaps
+'''
+
+import threading
+import zmq
+import logging
+from .exc import BuildError
+
+class ComponentThread(threading.Thread):
+    '''
+    Component execution thread. Runs the component's code, and communicates with the parent actor.
+    '''
+    def __init__(self,parent):
+        threading.Thread.__init__(self)
+        self.name = parent.name
+        self.parent = parent
+        self.context = parent.context
+        self.instance = parent.instance
+    
+    def setupControl(self):
+        '''
+        Create the control socket and connect it to the socket in the parent part part
+        '''
+        self.control = self.context.socket(zmq.PAIR)
+        self.control.connect('inproc://part_' + self.name + '_control')
+    
+    def setupSockets(self):
+        msg = self.control.recv_pyobj()
+        if msg != "build":
+            raise BuildError 
+        for portName in self.parent.ports:
+            res = self.parent.ports[portName].setupSocket()
+            if res[0] == 'tim':
+                continue
+            elif res[0] == 'pub' or res[0] == 'sub' or \
+                    res[0] == 'clt' or res[0] == 'srv' or \
+                    res[0] == 'req' or res[0] == 'rep':
+                self.control.send_pyobj(res)
+            else:
+                raise BuildError
+        self.control.send_pyobj("done")
+    
+    def setupPoller(self):
+        self.poller  = zmq.Poller()
+        self.portMap = {}
+        self.poller.register(self.control,zmq.POLLIN)
+        self.portMap[self.control] = ""
+        for portName in self.parent.ports:
+            portObj = self.parent.ports[portName]
+            portSocket = portObj.getSocket()
+            portIsInput = portObj.inSocket()
+            if portSocket != None:
+                if portIsInput:
+                    self.poller.register(portSocket,zmq.POLLIN)
+                    self.portMap[portSocket] = portName
+            
+    def runCommand(self):
+        msg = self.control.recv_pyobj()
+        cmd = msg[0]
+        if cmd == "portUpdate":
+            (_,portName,host,port) = msg
+            portObj = self.parent.ports[portName]
+            res = portObj.update(host,port)
+        else:
+            pass
+        self.control.send_pyobj("ok")
+    
+    def getInfo(self):
+        info = []
+        for (portName,portObj) in self.parent.ports:
+            res = portObj.getInfo()
+            info.append(res)
+        return info
+    
+    def run(self):
+        self.setupControl()
+        self.setupSockets()
+        self.setupPoller()
+        while 1:
+            sockets = dict(self.poller.poll())
+            if self.control in sockets:
+                self.runCommand()
+                del sockets[self.control]
+            for socket in sockets:
+                portName = self.portMap[socket]
+                func_ = getattr(self.instance, 'on_' + portName)
+                func_()
+
+class Component(object):
+    '''
+    Base class for RIAPS application components
+    '''
+
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        class_ = getattr(self,'__class__')
+        className = getattr(class_,'__name__')
+        self.logger = logging.getLogger(className)
+        self.logger.setLevel(logging.INFO)
+        ch = logging.StreamHandler()
+        ch.setLevel(logging.INFO)
+        formatter = logging.Formatter('%(levelname)s:%(asctime)s:%(name)s:%(message)s')
+        ch.setFormatter(formatter)
+        self.logger.addHandler(ch)
+#        print  ( "Component() : '%s'" % self ) 
+
+    

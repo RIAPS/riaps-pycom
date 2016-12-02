@@ -1,0 +1,129 @@
+/*
+ * riaps dsl
+ * DSL for RIAPS models
+ */
+
+RIAPSModel:
+ apps*=App
+;
+
+// Application 
+App:
+ 'app' name=ID '{'
+     messages+=Message
+     components+=Component
+     actors+=Actor
+ '}'
+;
+
+// Message types used in the application 
+Message:
+  'message' name=ID ';'
+;
+
+// Component types used in the application
+Component:
+ 'component' name=ID 
+   ( '(' formals*=Formal[','] ')' )? 
+  '{'
+     ports*=Port
+  '}'
+;
+
+Formal:
+  argName=ID ( '=' argDefault=FormalDefault)?
+;
+
+FormalDefault: 
+	(default=STRING | default=Number | default=BOOL)
+;
+
+Number:
+	(INT !FLOAT) | FLOAT
+;
+
+// Port specs (interaction patterns in comment)
+Port:
+  (PubPort  | SubPort | // Publish(msg) -> Subscribe(msg)
+   ClntPort | SrvPort | // Client(req,rep) -> Server(req,rep)
+   ReqPort  | RepPort | // send Req(msg_req) -> recv Rep(msg_req) ...
+                        // ... send Rep(msg_rep) -> recv Req(msg_rep)
+   TimPort) ';'
+;
+
+// Publisher port (single type)
+PubPort:
+  'pub' name=ID ':' type=[Message] 
+;
+
+// Subscriber port (single type)
+SubPort:
+  'sub' name=ID ':' type=[Message] 
+;
+
+// Client port (request and reply message types) - Owned by an SMI client
+// Client operation is expected to send on the port and then receive on the same port
+ClntPort:
+  'clt' name=ID ':' '(' req_type=[Message]? ',' rep_type=[Message]? ')'
+;
+
+// Server port (request and reply message types) - Owned by an SMI client
+// Server operation is triggered by the port and is expected to send a reply on the same port 
+SrvPort:
+  'srv' name=ID ':' '(' req_type=[Message]? ',' rep_type=[Message]? ')'
+;
+
+// Req port (request and reply message types) - owned by an AMI client
+// Requesting client's operation is expected to send a request on the port and then terminate. 
+// The arrival of the reply triggers the reply operation on the client   
+ReqPort:
+  'req' name=ID ':' '(' req_type=[Message]? ',' rep_type=[Message]? ')'
+;
+
+// Rep port (request and reply message types) - owned by an AMI server
+// Server's operation is triggered by the request message.
+// The operation is expected to send a reply on the port.   
+RepPort:
+  'rep' name=ID ':' '(' req_type=[Message]? ',' rep_type=[Message]? ')'
+;
+
+// Timer port. Optional argument is periodicity in msec
+TimPort:
+  'timer' name=ID (spec=INT)?
+;
+
+Actual:
+  argName=ID '=' argValue=ActualValue 
+;
+
+ActualValue: 
+	(value=STRING | value=Number | value=BOOL | param = ID)
+;
+
+// Application actor
+Actor:
+  'actor' name=ID
+   ( '(' formals*=Formal[','] ')' )? 
+  '{'
+    ( 'local' locals*=[Message][','] ';' )? 		// Optional: local messages (stay within the host)
+    ( 'internal' internals*=[Message][','] ';' )? 	// Optional: internal messages (stay within the actor)
+      '{' instances+=Instance '}'
+      wires*=Wire
+  '}'
+;
+
+// Wiring of clients to servers (both SMI and AMI)
+Wire:
+  lhsName=ID '.' lhsPortName=ID '=' rhsName=ID '.' rhsPortName=ID ';'
+;
+
+// Instance of a component, used inside an actor
+Instance:
+   name=ID ':' type=[Component] ( '(' actuals*=Actual[','] ')' )?  ';'
+;
+
+// Obligatory comment spec
+Comment:
+ /\/\/.*$/
+;
+

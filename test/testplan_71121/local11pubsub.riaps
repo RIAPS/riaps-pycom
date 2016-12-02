@@ -1,0 +1,36 @@
+// RIAPS Test for Local (single node) 1-to-1 (actor to actor) Publish/Subscribe Pattern
+// This test implements the description of 7.1.1.2.1 Part 1 of the initial design test plan to meet Milestone 2.1.2.
+// Part 1 starts the publisher first and then two seconds later starts the subscriber.
+
+app Local11PubSub {
+	// Message types used in the app
+    message CurrentCount; 
+
+    
+	// Local Publisher component
+    component CountPublisher {
+      timer starter 1; 					    // Startup the publisher immediately
+      timer wakeup 1000; 					// Periodic timer trigger to wake up publisher every 1 sec
+      pub newCount : CurrentCount ;			// Publish port for CurrentCount messages 
+    }
+    
+    // Local Subscriber component
+    component CountSubscriber {
+      timer starter 2000; 					// Startup timer trigger to wake up subscriber 2 secs after startup
+      sub newCount : CurrentCount ;			// Subscriber port to trigger component with CurrentCount messages
+    }
+    
+    // Test Publisher Actor on a local node
+    actor LocalNodePublisher {
+       {
+          publisher : CountPublisher; 		// publishes global message 'CurrentCount' 
+       }
+    }
+    
+    // Test Subscriber Actor on the same local node
+    actor LocalNodeSubscriber {
+       {
+          subscriber : CountSubscriber;		// subscribes to 'CurrentCount' messages
+       }
+    }
+}

@@ -1,0 +1,30 @@
+// RIAPS DAverager
+
+app DistributedAverager {
+    message SensorData; 
+    message NodeData;
+     
+	// Sensor component
+    component Measurer {
+      timer clock 100; 							
+      pub sensorReady : SensorData ;		// Publish port for SensorData messages 
+    }
+    
+    // Averager component
+    component Averager {
+      sub sensorReady : SensorData ;		// Subscriber port to trigger component with SensorData messages
+      pub nodeReady : NodeData;				// Publish port to publish node value update messages
+      sub otherReady : NodeData;			// Subscriber port for node value update messages
+      timer update 1000;					// 
+    }
+
+    // Averager actor
+    actor Averager {
+       local SensorData;					// Local message types
+       {
+          sensor : Measurer;		
+          averager : Averager; 		
+       }
+
+    }
+}
