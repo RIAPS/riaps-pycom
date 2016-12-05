@@ -7,9 +7,9 @@ Created on Oct 19, 2016
 import zmq
 import capnp
 from ..proto import disco_capnp
-from riaps.consts import defs
+from riaps.consts.defs import *
 from .exc import SetupError
-
+import logging
 
 class DiscoClient(object):
     '''
@@ -19,6 +19,7 @@ class DiscoClient(object):
         '''
         Constructor
         '''
+        self.logger = logging.getLogger(__name__)
         self.actor = parentActor
         self.suffix = suffix
         self.appName = parentActor.appName
@@ -27,13 +28,15 @@ class DiscoClient(object):
         self.context = zmq.Context()
         
     def start(self):
+        self.logger.info("starting")
         self.socket = self.context.socket(zmq.REQ)
-        self.socket.setsockopt(zmq.RCVTIMEO,defs.const.discoEndpointTimeout)
-        endpoint = defs.const.discoEndpoint + self.suffix
+        self.socket.setsockopt(zmq.RCVTIMEO,const.discoEndpointTimeout)
+        endpoint = const.discoEndpoint + self.suffix
         self.socket.connect(endpoint)    
         self.channel = self.context.socket(zmq.PAIR)
 
     def registerApp(self):
+        self.logger.info("registerApp")
         reqt = disco_capnp.DiscoReq.new_message()
         appMessage = reqt.init('actorReg')
         appMessage.appName = self.appName
@@ -66,6 +69,7 @@ class DiscoClient(object):
         return 
 
     def handleRegReq(self,bundle):
+        self.logger.info("handleRegReq: %s" % str(bundle))
         (partName,partType,kind,isLocal,portName,portType,portHost,portNum) = bundle[0:8]
         # All interactions below go via the REQ/REP socket ; the channel is for server pushes
         req = disco_capnp.DiscoReq.new_message()
@@ -98,6 +102,7 @@ class DiscoClient(object):
         return
     
     def handleLookupReq(self,bundle):
+        self.logger.info("handleLookupReq: %s" % str(bundle))
         (partName,partType,kind,isLocal,portName,portType) = bundle[0:6]
         # All interactions below go via the REQ/REP socket ; the channel is for server pushes
         req = disco_capnp.DiscoReq.new_message()
@@ -141,7 +146,8 @@ class DiscoClient(object):
  
         
     def registerEndpoint(self,bundle):
-        print ("DiscoClient.registerEndpoint",bundle)
+        self.logger.info("registerEndpoint: %s" % str(bundle))
+        # print ("DiscoClient.registerEndpoint",bundle)
         # Prefix: (partName, partType)
         # (pub,local,name,type,host,port)
         # (sub,local,name,type,host)

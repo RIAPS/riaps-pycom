@@ -6,13 +6,17 @@ Created on Oct 10, 2016
 from .port import Port
 import threading
 import zmq
+import time
 
 class TimerThread(threading.Thread):
     def __init__(self,parent):
         threading.Thread.__init__(self)
         self.name = parent.instName
         self.context = parent.context
-        self.period = parent.period * 0.001 # millisec
+        if parent.period == 0:
+            self.period = None
+        else:
+            self.period = parent.period * 0.001 # millisec
         self.active = threading.Event()
         self.active.clear()
         self.waiting = threading.Event()
@@ -22,9 +26,13 @@ class TimerThread(threading.Thread):
         self.socket.bind('inproc://timer_' + self.name)
         while 1:
             self.active.wait(None)
-            self.waiting.wait(self.period)
-            if self.active.is_set():
-                self.socket.send_string('tick')
+            if self.period:
+                self.waiting.wait(self.period)
+                if self.active.is_set():
+                    value = time.time()
+                    self.socket.send_pyobj(value)
+            else:
+                pass
             
     def activate(self):
         self.active.set()
@@ -69,8 +77,11 @@ class TimPort(Port):
         return True
     
     def recv_pyobj(self):
-        res = self.socket.recv_string()
+        res = self.socket.recv_pyobj()
         return res
+    
+    def send_pyobj(self,msg):
+        raise OperationError("attempt to send through a timer port")
     
     def getInfo(self):
         return ("tim",self.name,"*tick*")

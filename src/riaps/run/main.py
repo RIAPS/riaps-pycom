@@ -10,11 +10,15 @@ from os.path import join
 import argparse
 import json
 import logging
+from riaps.utils.config import Config
 
 from .actor import Actor
 
 # Singleton Actor object
 theActor = None
+
+# Config object
+theConfig = None 
 
 # Interactive console for debugging (not used)
 def interact():
@@ -46,6 +50,10 @@ def main(debug=True):
     # Setup the logger formatter 
     logging.Formatter.default_time_format = '%H:%M:%S'
     logging.Formatter.default_msec_format = '%s,%03d'
+
+    # Read configuration    
+    global theConfig
+    theConfig = Config()
     
     global theActor
     theActor = Actor(model,aName,rest)      # Construct the Actor

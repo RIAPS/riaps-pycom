@@ -6,6 +6,7 @@ Created on Oct 9, 2016
 @author: riaps
 '''
 from .exc import SetupError,OperationError
+from riaps.utils.config import Config
 
 class Port(object):
     '''
@@ -21,7 +22,7 @@ class Port(object):
         self.context = parentPart.context
         self.localIface = None
         self.globalIface = None
-    
+        self.sendTimeout = Config.SEND_TIMEOUT
 
     def getLocalIface(self):
         if self.localIface != None:

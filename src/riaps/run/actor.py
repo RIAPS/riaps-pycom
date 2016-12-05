@@ -12,6 +12,7 @@ import time
 from .disco import DiscoClient
 from riaps.proto import disco_capnp
 from riaps.utils.ifaces import getNetworkInterfaces
+from riaps.utils.config import Config
 import getopt
 import logging
 from builtins import int, str
@@ -25,6 +26,7 @@ class Actor(object):
         '''
         Constructor
         '''
+        self.logger = logging.getLogger(__name__)
         self.inst_ = self
         self.appName = gModel["name"]
         self.name = aName
@@ -106,7 +108,7 @@ class Actor(object):
         try:
             opts,args = getopt.getopt(sysArgv, '', optList)
         except:
-            logging.info("Error parsing actor options %s" % str(sysArgv))
+            self.logger.info("Error parsing actor options %s" % str(sysArgv))
             return
 #        try:
         for opt in opts:
@@ -121,7 +123,7 @@ class Actor(object):
                                          % str((optName,optValue)))
                 self.params[optName] = paramValue
             else:
-                logging.info("Unknown argument %s - ignored" % optName)
+                self.logger.info("Unknown argument %s - ignored" % optName)
         for param in self.params:
             if self.params[param] == None:
                 raise BuildError("Required parameter %s missing" % param) 
@@ -189,6 +191,7 @@ class Actor(object):
         '''
         Perform a setup operation on the actor (after  the initial construction but before the activation of parts)
         '''
+        self.logger.info("setup")
         self.setupIfaces()
         self.suffix = self.macAddress
         self.disco = DiscoClient(self,self.suffix)
@@ -210,6 +213,7 @@ class Actor(object):
         '''
         Activate the parts
         '''
+        self.logger.info("activate")
         for inst in self.components:
             self.components[inst].activate()
             
@@ -217,6 +221,7 @@ class Actor(object):
         '''
         Deactivate the parts
         '''
+        self.logger.info("deactivate")
         for inst in self.components:
             self.components[inst].deactivate()
 
@@ -224,6 +229,7 @@ class Actor(object):
         '''
         Start and operate the actor (infinite polling loop)
         '''
+        self.logger.info("starting")
         self.channel = self.disco.channel                   # Private channel to the discovery service
        
         self.poller = zmq.Poller()                          # Set up the poller
@@ -263,6 +269,7 @@ class Actor(object):
         '''
         Ask a part to update itself
         '''
+        self.logger.info("updatePart %s" % str((instanceName,portName,host,port)))
         part = self.components[instanceName]
         part.handlePortUpdate(portName,host,port)
         

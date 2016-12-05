@@ -10,6 +10,7 @@ from rpyc import async
 from rpyc.utils.server import ThreadedServer
 from riaps.consts.defs import *
 import threading
+import logging
 
 theController = None
 guiClient = None
@@ -34,7 +35,8 @@ class ServiceClient(object):
             return
         self.stale = True
         self.callback = None
-        self.log("- %s " % (self.name,))
+        if self.name != '*gui*':
+            self.log("- %s " % (self.name,))
                 
     def log(self, text):
         '''
@@ -72,6 +74,7 @@ class ControllerService(rpyc.Service):
         Called when a client connects. Subsequently the client must login. 
         '''
         self.client = None
+        self.logger = logging.getLogger('riapsCtrl')
 
     def on_disconnect(self):
         '''

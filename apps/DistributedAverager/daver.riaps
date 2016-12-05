@@ -5,25 +5,26 @@ app DistributedAverager {
     message NodeData;
      
 	// Sensor component
-    component Measurer {
-      timer clock 100; 							
-      pub sensorReady : SensorData ;		// Publish port for SensorData messages 
+    component Sensor(value=1.0) {
+      timer clock 5000; 							
+      pub sensorReady : SensorData ;	// Publish port for SensorData messages 
     }
     
     // Averager component
-    component Averager {
-      sub sensorReady : SensorData ;		// Subscriber port to trigger component with SensorData messages
-      pub nodeReady : NodeData;				// Publish port to publish node value update messages
-      sub otherReady : NodeData;			// Subscriber port for node value update messages
-      timer update 1000;					// 
+    component Averager(Ts=1.0) {
+      sub sensorReady : SensorData ;	// Subscriber port to trigger component with SensorData messages
+      pub thisReady : NodeData;			// Publish port to publish node value update messages
+      sub nodeReady : NodeData;			// Subscriber port for node value update messages
+      timer update 10;					// 
+      timer display 1000;
     }
 
     // Averager actor
-    actor Averager {
+    actor Averager(value=0.0,Ts=100.0) {
        local SensorData;					// Local message types
        {
-          sensor : Measurer;		
-          averager : Averager; 		
+          sensor : Sensor(value=value);		
+          averager : Averager(Ts=Ts); 		
        }
 
     }

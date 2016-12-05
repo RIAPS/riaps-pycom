@@ -14,13 +14,15 @@ from riaps.proto import disco_capnp
 from riaps.consts.defs import *
 from riaps.utils.ifaces import getNetworkInterfaces
 from riaps.run.exc import DatabaseError
+import logging
 
 class DiscoService(object):
     '''
-    Discovry service main class. 
+    Discovery service main class. 
     '''
     
     def __init__(self,dbase):
+        self.logger = logging.getLogger(__name__)
         self.context = zmq.Context()
         self.setupIfaces()
         self.suffix = self.macAddress
@@ -38,6 +40,7 @@ class DiscoService(object):
         self.macAddress = globalMAC
         
     def start(self):
+        self.logger.info("starting")
         self.server = self.context.socket(zmq.REP)              # Create main server socket for client requests
         endpoint = const.discoEndpoint + self.suffix
         self.server.bind(endpoint)
@@ -55,6 +58,7 @@ class DiscoService(object):
         '''
         Main loop of the discovery service
         '''
+        self.logger.info("running")
         while 1:
             self.clientUpdates = []
             sockets = dict(self.poller.poll(1000.0))            # Poll client messages, with timeout 1 sec
@@ -62,6 +66,7 @@ class DiscoService(object):
                 try: 
                     self.clientUpdates = self.dbase.fetchUpdates()  # then fetch updates from database
                 except DatabaseError:
+                    self.logger.info("restarting database")
                     self.dbase.start()
                     time.sleep(0.0001)     
             elif self.server in sockets:                        # else check if there is a server request, handle it 
@@ -100,7 +105,7 @@ class DiscoService(object):
         appVersion = actReg.version   
         appActorName = actReg.actorName
          
-        print ('DiscoService:%s %s' % (appName, appActorName))
+        self.logger.info("handleActorReg: %s %s" % (appName, appActorName))
         
         clientPort = self.setupClient(appName,appVersion,appActorName)
         
@@ -155,7 +160,7 @@ class DiscoService(object):
         host = socket.host
         port = socket.port
         
-#       print ("Disco.handleServiceReg:", (appName,msgType,kind,scope,host,port))
+        self.logger.info("handleServiceReg: %s,%s,%s,%s,%s,%s" % (appName,msgType,kind,scope,host,port))
         (key,value) = self.buildInsertKeyValuePair(appName, msgType, kind, scope,host, port)
         clients = self.dbase.insert(key,value)
         
@@ -185,9 +190,11 @@ class DiscoService(object):
         clientPortName = client.portName
         client = (appName,clientActorHost,clientActorName,clientInstanceName,clientPortName)
 
-#        print ("Disco.handleServiceLookup:", (appName,msgType,kind,scope,instanceName))
+        self.logger.info("handleServiceLookup:%s,%s,%s,%s,%s" 
+                            % (appName,msgType,kind,scope,clientInstanceName))
         (key,client) = self.buildLookupKey(appName, msgType, kind, scope,
-                                           clientActorHost, clientActorName, clientInstanceName,clientPortName)
+                                           clientActorHost, clientActorName, 
+                                           clientInstanceName,clientPortName)
         result = self.dbase.fetch(key,client)
         
         rep = disco_capnp.DiscoRep.new_message()            # Construct the response: all providers of the requested service
@@ -223,7 +230,7 @@ class DiscoService(object):
         Handle a notification message received from the database.
         The notification triggers the notification of client actors about the new service provider
         '''
-        print("DiscoService.handleNote():",msg)
+        self.logger.info("handleNote: %s",str(msg))
         (key,value,clients) = msg                       # Parse notification message
         pair = re.split(':',value)
         host = pair[0]

@@ -6,7 +6,8 @@ Created on Oct 10, 2016
 import zmq
 from .port import Port
 from riaps.run.exc import OperationError
-
+from riaps.utils.config import Config
+from zmq.error import ZMQError
 
 class SrvPort(Port):
     '''
@@ -29,6 +30,7 @@ class SrvPort(Port):
   
     def setupSocket(self):
         self.socket = self.context.socket(zmq.REP)
+        self.socket.setsockopt(zmq.SNDTIMEO,self.sendTimeout)
         self.host = ''
         if not self.isLocalPort:
             globalHost = self.getGlobalIface()
@@ -53,7 +55,14 @@ class SrvPort(Port):
         return self.socket.recv_pyobj()
     
     def send_pyobj(self,msg):
-        self.socket.send_pyobj(msg)
+        try:
+            self.socket.send_pyobj(msg)
+        except ZMQError as e:
+            if e.errno == zmq.EAGAIN:
+                return False
+            else:
+                raise
+        return True
         
     def getInfo(self):
         return ("srv",self.Name,self.Type,self.host,self.portNum)

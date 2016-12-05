@@ -7,9 +7,13 @@ import sys
 import os
 import argparse
 from .discs import DiscoService
+from riaps.utils.config import Config
 
 # Singleton DiscoService object 
 theDisco = None
+
+# Config object
+conf = None 
 
 # Interactive console for debugging (not used)
 def interact():
@@ -27,6 +31,12 @@ def main(debug=True):
         print ("Unexpected error:", sys.exc_info()[0])
         raise
     sys.path.append(os.getcwd())   # Ensure load_module works from current directory
+    
+    # Read configuration
+    global conf
+    conf = Config()
+    
+    # Create singleton 
     global theDisco
     theDisco = DiscoService(args.database)  # Assign the service to the singleton
     theDisco.start()

@@ -6,6 +6,8 @@ Created on Oct 10, 2016
 '''
 import zmq
 from .port import Port
+from riaps.utils.config import Config
+from zmq.error import ZMQError
 #from .part import Part
 #from .actor import Actor
 
@@ -24,12 +26,13 @@ class CltPort(Port):
         self.req_type = portSpec["req_type"]
         self.rep_type = portSpec["rep_type"]
         parentActor = parentComponent.parent
-        # The request and replye message types must be of the same kind (global/local)
+        # The request and reply message types must be of the same kind (global/local)
         assert parentActor.isInnerMessage(self.req_type) == parentActor.isInnerMessage(self.rep_type)
         # Determine if the port is host-local 
         self.isLocalPort = parentActor.isLocalMessage(self.req_type) and parentActor.isLocalMessage(self.rep_type)
         self.serverHost = None
         self.serverPort = None
+
 
     def setup(self):
         '''
@@ -42,6 +45,7 @@ class CltPort(Port):
         Set up the socket of the port. Return a tuple suitable for querying the discovery service for the publishers
         '''
         self.socket = self.context.socket(zmq.REQ)
+        self.socket.setsockopt(zmq.SNDTIMEO,self.sendTimeout) 
         self.host = ''
         if not self.isLocalPort:
             globalHost = self.getGlobalIface()
@@ -84,7 +88,14 @@ class CltPort(Port):
         '''
         Send an object through this port
         '''
-        self.socket.send_pyobj(msg)
+        try:
+            self.socket.send_pyobj(msg)
+        except ZMQError as e:
+            if e.errno == zmq.EAGAIN:
+                return False
+            else:
+                raise
+        return True
         
     def getInfo(self):
         '''

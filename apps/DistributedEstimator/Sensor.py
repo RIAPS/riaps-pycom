@@ -7,8 +7,8 @@ class Sensor(Component):
         super(Sensor, self).__init__()
         
     def on_clock(self):
-        msg = self.clock.recv_pyobj()
-        self.logger.info('on_clock():%s',msg)
+        now = self.clock.recv_pyobj()   # Receive time.time() as float
+        self.logger.info('on_clock(): %s',str(now))
         msg = "data_ready"
         self.ready.send_pyobj(msg)
     

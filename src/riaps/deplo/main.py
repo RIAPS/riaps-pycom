@@ -9,9 +9,13 @@ import os
 import argparse
 from .deplo import DeploService
 from riaps.consts.defs import *
+from riaps.utils.config import Config 
 
 # Singleton Deployment Service object 
 theDepl = None
+
+# Config object
+conf = None 
 
 # Interactive console for debugging (not used)
 def interact():
@@ -29,6 +33,8 @@ def main(debug=True):
         print ("Unexpected error:", sys.exc_info()[0])
         raise
     sys.path.append(os.getcwd())   # Ensure load_module works from current directory
+    global conf
+    conf = Config()
     global theDepl
     theDepl = DeploService(args.node,args.port)  # Assign the service to the singleton
     theDepl.setup()

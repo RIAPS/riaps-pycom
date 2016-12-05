@@ -1,5 +1,5 @@
 '''
-Deployment commander - main program
+Deployment controller - main program
 Created on Nov 1, 2016
 
 @author: riaps
@@ -7,7 +7,7 @@ Created on Nov 1, 2016
 import sys
 import os
 import argparse
-import logging
+# import logging
 
 from riaps.ctrl.ctrl import Controller
 from riaps.consts.defs import *
@@ -28,7 +28,7 @@ def main(debug=True):
     args = parser.parse_args()
     sys.path.append(os.getcwd())   # Ensure load_module works from current directory
 #
-    logging.basicConfig(level=logging.INFO)
+#   logging.basicConfig(level=logging.INFO)
     global conf
     conf = Config()
     c = None

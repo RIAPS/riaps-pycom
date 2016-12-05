@@ -9,6 +9,7 @@ import redis
 from riaps.consts.defs import *
 from riaps.run.exc import *
 import re
+import logging
 
 class DiscoDbase(object):
     '''
@@ -19,6 +20,7 @@ class DiscoDbase(object):
         '''
         Construct the database object, set up singleton.
         '''
+        self.logger = logging.getLogger(__name__)
         # Singleton DiscoDbase object
         global theDiscoBase
         theDiscoBase = self
@@ -41,6 +43,7 @@ class DiscoDbase(object):
             port = const.discoRedisPort
         
         try:    
+            self.logger.info("connecting to redis")
             self.r = redis.StrictRedis(host,port, db=0) # Connect
             self.notesPubSub = self.r.pubsub()          # Set up pubsub channel to receive notifications
         except redis.exceptions.ConnectionError:

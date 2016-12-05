@@ -39,6 +39,7 @@ class Controller(object):
         from clients: deployment services running on RIAPS nodes.
         FOR NOW: it is able to launch only one application
         '''       
+        self.logger = logging.getLogger(__name__)
         self.dbase = None
         self.setupIfaces()
         self.port = port
@@ -81,9 +82,10 @@ class Controller(object):
         dbase_config = join(self.riaps_Folder,"etc/redis.conf")
         # Launch the database process
         try: 
+            self.logger.info('Launching redis server')
             self.dbase = subprocess.Popen(['redis-server',dbase_config])
         except:
-            print ("Error:", sys.exc_info()[0])
+            self.logger.error("Error when starting database: %s", sys.exc_info()[0])
             raise
         
     def startGUI(self):
@@ -168,7 +170,7 @@ class Controller(object):
         try:
             ki = paramiko.RSAKey.from_private_key_file(rsa_private_key)
         except Exception as e:
-                logging.info('Failed loading' % (rsa_private_key, e))
+                self.logger.error('Failed loading %s' % (rsa_private_key, e))
                 return
 
         agent = paramiko.Agent()
@@ -177,13 +179,13 @@ class Controller(object):
             return
 
         for key in agent_keys:
-            logging.info ('Trying ssh-agent key %s' % key.get_fingerprint().hex())
+            self.logger.info ('Trying ssh-agent key %s' % key.get_fingerprint().hex())
             try:
                 transport.auth_publickey(username, key)
-                logging.info ('... success!')
+                self.logger.info ('... success!')
                 return
             except paramiko.SSHException as e:
-                logging.info ('... failed!', e)
+                self.logger.info ('... failed!', e)
 
     def downloadAppToClient(self,files,client):
         hostName = client.name
@@ -192,16 +194,16 @@ class Controller(object):
         if hostName in self.hostKeys:
             hostKeyType = self.hostKeys[hostName].keys()[0]
             hostKey= self.hostKeys[hostName][hostKeyType]
-            logging.info ('Using host key of type %s' % hostKeyType)
+            self.logger.info ('Using host key of type %s' % hostKeyType)
         try:
             port = const.ctrlSSHPort
             logging.info ('Establishing SSH connection to: %s:%s' % (str(hostName),str(port)))
             t = paramiko.Transport((hostName, port))
             t.start_client()
-            self.authenticate(t,Config.USER)
+            self.authenticate(t,Config.TARGET_USER)
 
             if not t.is_authenticated():
-                logging.info ('RSA key auth failed!') 
+                self.logger.warning ('RSA key auth failed!') 
                 # t.connect(username=username, password=password, hostkey=hostkey)
                 return False
 
@@ -212,7 +214,7 @@ class Controller(object):
             try:
                 sftpClient.mkdir(dirRemote)
             except IOError as e:
-                logging.info ('(assuming %s exists)' % dirRemote)
+                self.logger.info ('(assuming %s exists)' % dirRemote)
             
             for fileName in files:
                 isUptodate = False
@@ -228,20 +230,20 @@ class Controller(object):
                         md2 = hashlib.md5(remoteFileData).digest()
                         if md1 == md2:
                             isUptodate = True
-                            logging.info ("UNCHANGED: %s" % os.path.basename(fileName))
+                            self.logger.info ("Unchanged: %s" % os.path.basename(fileName))
                         else:
-                            logging.info ("MODIFIED: %s" % os.path.basename(fileName))
+                            self.logger.info ("Modified: %s" % os.path.basename(fileName))
                 except:
-                    logging.info ("NEW: %s" % os.path.basename(fileName))
+                    self.logger.info ("New: %s" % os.path.basename(fileName))
 
                 if not isUptodate:
-                    logging.info ('Copying' + str(localFile) + ' to ' + str(remoteFile))
+                    self.logger.info ('Copying' + str(localFile) + ' to ' + str(remoteFile))
                     sftpClient.put(localFile, remoteFile)
     
             t.close()
             return True
         except Exception as e:
-            logging.info ('*** Caught exception: %s: %s' % (e.__class__, e))
+            self.logger.warning('Caught exception: %s: %s' % (e.__class__, e))
             try:
                 t.close()
                 return False

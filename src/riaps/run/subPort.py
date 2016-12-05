@@ -54,7 +54,7 @@ class SubPort(Port):
     def recv_pyobj(self):
         return self.socket.recv_pyobj()
     
-    def send_pyobj(self):
+    def send_pyobj(self,msg):
         raise OperationError("attempt to send through a subscriber port")
 
     def getInfo(self):

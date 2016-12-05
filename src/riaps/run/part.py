@@ -23,6 +23,7 @@ from .comp import ComponentThread
 from .exc import SetupError
 from .exc import ControlError
 from .exc import BuildError
+import logging
 
 class Part(object):
     '''
@@ -50,6 +51,7 @@ class Part(object):
         '''
         Construct the Part object, load the component implementation and construct its object
         '''
+        self.logger = logging.getLogger(__name__)
         self.state = Part.State.Starting
         self.name = iName
         self.parent = parentActor
@@ -58,6 +60,7 @@ class Part(object):
         self.args = iArgs
         self.load()
         self.class_ = getattr(self.module_, self.typeName)
+        self.logger.info('Constructing %s of type %s' % (iName,self.typeName))
         self.instance = self.class_(**self.args)    # Run the component constructor
         
         self.context = parentActor.context
@@ -159,7 +162,7 @@ class Part(object):
         Handle a port update message coming from the discovery service
         '''
         msg = ("portUpdate",portName,host,port)
-        print(msg)
+        # print(msg)
         self.control.send_pyobj(msg)        # Relay message to component thread
         rep = self.control.recv_pyobj()     # Wait for an OK response
         if rep == "ok" :

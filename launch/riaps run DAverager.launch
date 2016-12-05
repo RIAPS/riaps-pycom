@@ -11,7 +11,7 @@
 </mapAttribute>
 <stringAttribute key="org.eclipse.ui.externaltools.ATTR_LOCATION" value="${workspace_loc:RIAPS/src/riaps.py}"/>
 <stringAttribute key="org.eclipse.ui.externaltools.ATTR_OTHER_WORKING_DIRECTORY" value="${workspace_loc:RIAPS/test}"/>
-<stringAttribute key="org.eclipse.ui.externaltools.ATTR_TOOL_ARGUMENTS" value="DistributedEstimator DistributedEstimator.json Estimator"/>
+<stringAttribute key="org.eclipse.ui.externaltools.ATTR_TOOL_ARGUMENTS" value="DistributedAverager DistributedAverager.json Averager"/>
 <stringAttribute key="org.eclipse.ui.externaltools.ATTR_WORKING_DIRECTORY" value="${workspace_loc:RIAPS/test}"/>
 <stringAttribute key="org.python.pydev.debug.ATTR_INTERPRETER" value="__default"/>
 <stringAttribute key="org.python.pydev.debug.ATTR_PROJECT" value="RIAPS"/>

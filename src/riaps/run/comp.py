@@ -104,6 +104,7 @@ class Component(object):
         className = getattr(class_,'__name__')
         self.logger = logging.getLogger(className)
         self.logger.setLevel(logging.INFO)
+        self.logger.propagate=False
         ch = logging.StreamHandler()
         ch.setLevel(logging.INFO)
         formatter = logging.Formatter('%(levelname)s:%(asctime)s:%(name)s:%(message)s')

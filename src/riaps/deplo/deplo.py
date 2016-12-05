@@ -21,6 +21,7 @@ class DeploService(object):
     responsible for starting and managing all RIAPS processes. 
     '''
     def __init__(self, host,port):
+        self.logger = logging.getLogger(__name__)
         '''
         Initialize the service with the host:port of the controller node (if provided)
         '''
@@ -31,6 +32,7 @@ class DeploService(object):
         self.context = zmq.Context()
         self.launchMap = { }            # Map of launched actors
         self.riapsApps = os.getenv('RIAPSAPPS', './')
+        self.logger.info("Starting with apps in %s" % self.riapsApps)
 
     def setupIfaces(self):
         '''
@@ -64,21 +66,20 @@ class DeploService(object):
                     break
                 except:
                     if retry == False:
-                        return
+                        return False
                     time.sleep(5)
                     continue
         self.bgsrv = rpyc.BgServingThread(self.conn,self.handleBgServingThreadException)       
         resp = self.conn.root.login(self.hostAddress,self.callback,self.riapsApps)
-        if type(resp) == tuple:             # Expected response: (redis) database host:port pair
-            if resp[0] == 'dbase':
-                (_,host,port) = resp
-                self.dbaseHost = host
-                self.dbasePort = port
-            else:
-                pass
+        if type(resp) == tuple and resp[0] == 'dbase':   # Expected response: (redis) database host:port pair
+            (_,host,port) = resp
+            self.dbaseHost = host
+            self.dbasePort = port
+            return True
         else:
-            pass
-            
+            pass    # Ignore any other response
+            return False
+
             
     def startDisco(self):
         '''
@@ -91,7 +92,7 @@ class DeploService(object):
         try: 
             self.disco = subprocess.Popen(['python3',disco_mod,disco_arg1,disco_arg2])
         except:
-            print ("Error:", sys.exc_info()[0])
+            self.logger.error("Error: %s" % sys.exc_info()[0])
             raise
     
     def startActor(self,appName,appModel,actorName,actorArgs):
@@ -111,13 +112,13 @@ class DeploService(object):
         for arg in actorArgs:
             command.append(arg)
         try: 
-            logging.info("Launching %s " % str(command[2:]))
+            self.logger.info("Launching %s " % str(command[2:]))
             proc = subprocess.Popen(command,cwd=appFolder)
             key = str(appName) + "." + str(actorName)
             # ADD HERE: build comm channel to the actor for control purposes
             self.launchMap[key] = proc
         except:
-            print ("Error:", sys.exc_info()[0])
+            self.logger.error("Error: %s" % sys.exc_info()[0])
             raise
     
     def haltActor(self,appName,actorName):
@@ -127,6 +128,7 @@ class DeploService(object):
         key = str(appName) + "." + str(actorName)
         if key in self.launchMap:
             proc = self.launchMap[key]
+            self.logger.info("Halting %s" % key)
             proc.terminate()                             # Should check for errors
             del self.launchMap[key]
 
@@ -146,6 +148,7 @@ class DeploService(object):
         Main loop of the Deployment Service 
         '''
         self.poller = zmq.Poller()
+        ok = True
         while True:     # Placeholder code
             time.sleep(1.0)
             # Poll controlled actors for messages
@@ -156,8 +159,9 @@ class DeploService(object):
 #                 pass
             # If background server 
             if self.bgsrv == None and self.conn == None: 
-                print("CTRL conn lost - retrying")
-                self.login(retry=False)
+                if ok: 
+                    self.logger.info("Connection to controller lost - retrying")
+                ok = self.login(retry=False)
 
     def handleBgServingThreadException(self):
         '''
