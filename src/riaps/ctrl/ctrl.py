@@ -78,7 +78,7 @@ class Controller(object):
         '''
         Start the (redis) database
         ''' 
-        dbase_config = join(self.riaps_Folder,"riaps/dbase/redis.conf")
+        dbase_config = join(self.riaps_Folder,"etc/redis.conf")
         # Launch the database process
         try: 
             self.dbase = subprocess.Popen(['redis-server',dbase_config])

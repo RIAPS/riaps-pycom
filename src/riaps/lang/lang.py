@@ -232,7 +232,7 @@ def compileModel(modelFileName,verbose=False,debug=False):
     this_folder = os.getcwd()  
     
     # Get meta-model from language grammar
-    riaps_meta = metamodel_from_file(join(riaps_folder, 'riaps/lang/riaps.tx'),
+    riaps_meta = metamodel_from_file(join(riaps_folder, 'lang/riaps.tx'),
                                      debug=debug)       
     
     # Register object processors for wires and timer ports

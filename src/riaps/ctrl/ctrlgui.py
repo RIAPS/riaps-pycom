@@ -34,7 +34,7 @@ class ControlGUIClient(object):
         self.controller = controller
         self.builder = Gtk.Builder()
         riaps_folder = os.getenv('RIAPSHOME', './')
-        self.builder.add_from_file(join(riaps_folder,"riaps/ctrl/riaps-ctrl.glade"))  # GUI construction
+        self.builder.add_from_file(join(riaps_folder,"etc/riaps-ctrl.glade"))  # GUI construction
         self.builder.connect_signals({"onDeleteWindow" : self.on_Quit, 
                                       "onConsoleEntryActivate" : self.on_ConsoleEntry,
                                       "onSelectApplication" : self.on_SelectApplication,

@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 '''
 Top-level script to start the discovery service (disco)
 Created on Oct 20, 2016

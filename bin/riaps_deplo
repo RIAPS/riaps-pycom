@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 '''
 Top level script to start the deployment manager
 It connects to the RIAPSCONTROL service, either through the service registry or through the specified 

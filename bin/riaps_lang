@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 '''
 Top-level script to start the language processor ('lang')
 Created on Oct 15, 2016

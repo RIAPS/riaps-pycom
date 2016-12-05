@@ -2,6 +2,8 @@
 # Set up basic RIAPS environment
 # Should be sourced on the CTRL node before using any other scripts.
 
+# MM Note:  This file is no longer used when RIAPS is automatically installed on user's machine
+
 export RIAPSHOME=`pwd`/src
 export RIAPSAPPS=`pwd`/test
 export PATH=$PATH:`pwd`/bin

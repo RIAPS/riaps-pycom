@@ -20,7 +20,7 @@ class Config(object):
         Constructor
         '''
         riaps_folder = os.getenv('RIAPSHOME', './')
-        riaps_conf = join(riaps_folder,'riaps/etc/riaps.conf')
+        riaps_conf = join(riaps_folder,'etc/riaps.conf')
         
         c_parse = configparser.ConfigParser()
     

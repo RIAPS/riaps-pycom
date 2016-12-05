@@ -22,7 +22,7 @@ class DeploymentModel(object):
         riaps_folder = os.getenv('RIAPSHOME', './') # RIAPSHOME points to the folder containing the grammar
         this_folder = os.getcwd()  
         # Get meta-model from language grammar
-        depl_meta = metamodel_from_file(join(riaps_folder, 'riaps/lang/depl.tx'),
+        depl_meta = metamodel_from_file(join(riaps_folder, 'lang/depl.tx'),
                                          debug=debug)       
         # Register object processors for wires and timer ports
 #       depl_meta.register_obj_processors(obj_processors)
