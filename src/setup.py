@@ -10,6 +10,8 @@ setup(name='riaps',
       packages=find_packages(),
       data_files=[('riaps/etc', ['config/riaps.conf']),
                   ('riaps/lang',['riaps/lang/riaps.tx', 'riaps/lang/depl.tx']),
+                  ('riaps/etc',['riaps/dbase/redis.conf']),
+                  ('riaps/etc',['riaps/ctrl/riaps-ctrl.glade']),
                   ('riaps/keys',['keys/id_rsa.key','keys/id_rsa.pub'])
                ],
       scripts = [
