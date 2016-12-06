@@ -8,6 +8,9 @@ setup(name='riaps',
       author_email='riaps@vanderbilt.com',
       license='',
       packages=find_packages(),
+      package_data = {
+        # If any package contains *.txt or *.rst files, include them:
+        '': ['*.capnp']},      
       data_files=[('riaps/etc', ['config/riaps.conf']),
                   ('riaps/lang',['riaps/lang/riaps.tx', 'riaps/lang/depl.tx']),
                   ('riaps/etc',['riaps/dbase/redis.conf']),
