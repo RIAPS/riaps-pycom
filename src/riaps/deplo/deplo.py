@@ -86,11 +86,11 @@ class DeploService(object):
         Start the Discovery Service process 
         '''
         riaps_folder = os.getenv('RIAPSHOME', './')
-        disco_mod = join(riaps_folder,'disco.py')
+        disco_mod = ('riaps_disco')
         disco_arg1 = '--database'
         disco_arg2 = '%s:%s' % (self.dbaseHost,self.dbasePort)
         try: 
-            self.disco = subprocess.Popen(['python3',disco_mod,disco_arg1,disco_arg2])
+            self.disco = subprocess.Popen([disco_mod,disco_arg1,disco_arg2])
         except:
             self.logger.error("Error: %s" % sys.exc_info()[0])
             raise
