@@ -1,7 +1,7 @@
 textX >= 1.4
 redis >= 2.10.5
 hiredis >= 0.2.0
-pyzmq >= 16.1.0
+pyzmq >= 16
 pycapnp >= 0.5.9
 netifaces >= 0.10.5
 paramiko >= 2.0.2
