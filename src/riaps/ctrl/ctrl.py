@@ -165,7 +165,7 @@ class Controller(object):
         Attempt to authenticate to the given transport using any of the private
         keys available from an SSH agent or from a local private RSA key file (assumes no pass phrase).
         """
-        rsa_private_key = join(self.riaps_Folder,"ssh/" + str(const.ctrlPrivateKey))
+        rsa_private_key = join(self.riaps_Folder,"keys/" + str(const.ctrlPrivateKey))
         
         try:
             ki = paramiko.RSAKey.from_private_key_file(rsa_private_key)
