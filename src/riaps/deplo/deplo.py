@@ -101,14 +101,14 @@ class DeploService(object):
         '''
         
         riaps_folder = os.getenv('RIAPSHOME', './')
-        riaps_mod = join(riaps_folder,'riaps.py')
+        riaps_mod = join('riaps_actor')
         
         appFolder = join(self.riapsApps,appName)
         appModelPath = join(appFolder,appModel)
         riaps_arg1 = appName 
         riaps_arg2 = appModelPath
         riaps_arg3 = actorName
-        command = ['python3',riaps_mod,riaps_arg1,riaps_arg2,riaps_arg3]
+        command = [riaps_mod,riaps_arg1,riaps_arg2,riaps_arg3]
         for arg in actorArgs:
             command.append(arg)
         try: 
