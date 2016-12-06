@@ -11,7 +11,7 @@ setup(name='riaps',
       package_data = {
         # If any package contains *.txt or *.rst files, include them:
         '': ['*.capnp']},      
-      data_files=[('riaps/etc', ['config/riaps.conf']),
+      data_files=[('riaps/etc', ['riaps/etc/riaps.conf',  'riaps/etc/riaps-log.conf']),
                   ('riaps/lang',['riaps/lang/riaps.tx', 'riaps/lang/depl.tx']),
                   ('riaps/etc',['riaps/dbase/redis.conf']),
                   ('riaps/etc',['riaps/ctrl/riaps-ctrl.glade']),
