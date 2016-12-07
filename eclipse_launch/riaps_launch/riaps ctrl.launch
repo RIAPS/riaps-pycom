@@ -1,20 +1,11 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<launchConfiguration type="org.python.pydev.debug.regularLaunchConfigurationType">
-<listAttribute key="org.eclipse.debug.core.MAPPED_RESOURCE_PATHS">
-<listEntry value="/RIAPS/src/ctrl.py"/>
-</listAttribute>
-<listAttribute key="org.eclipse.debug.core.MAPPED_RESOURCE_TYPES">
-<listEntry value="1"/>
-</listAttribute>
+<launchConfiguration type="org.eclipse.ui.externaltools.ProgramLaunchConfigurationType">
 <mapAttribute key="org.eclipse.debug.core.environmentVariables">
-<mapEntry key="RIAPSHOME" value="${workspace_loc:RIAPS/src/}"/>
+<mapEntry key="RIAPSHOME" value="${env_var:HOME}/.local/riaps"/>
 </mapAttribute>
-<stringAttribute key="org.eclipse.ui.externaltools.ATTR_LOCATION" value="${workspace_loc:RIAPS/src/ctrl.py}"/>
-<stringAttribute key="org.eclipse.ui.externaltools.ATTR_OTHER_WORKING_DIRECTORY" value="${workspace_loc:RIAPS/src/riaps/ctrl}"/>
+<listAttribute key="org.eclipse.debug.ui.favoriteGroups">
+<listEntry value="org.eclipse.ui.externaltools.launchGroup"/>
+</listAttribute>
+<stringAttribute key="org.eclipse.ui.externaltools.ATTR_LOCATION" value="${env_var:HOME}/.local/bin/riaps_ctrl"/>
 <stringAttribute key="org.eclipse.ui.externaltools.ATTR_TOOL_ARGUMENTS" value="-p 8888"/>
-<stringAttribute key="org.eclipse.ui.externaltools.ATTR_WORKING_DIRECTORY" value="${workspace_loc:RIAPS/src/riaps/ctrl}"/>
-<stringAttribute key="org.python.pydev.debug.ATTR_INTERPRETER" value="__default"/>
-<stringAttribute key="org.python.pydev.debug.ATTR_PROJECT" value="RIAPS"/>
-<stringAttribute key="process_factory_id" value="org.python.pydev.debug.processfactory.PyProcessFactory"/>
 </launchConfiguration>
-

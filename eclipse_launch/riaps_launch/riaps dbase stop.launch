@@ -2,5 +2,5 @@
 <launchConfiguration type="org.eclipse.ui.externaltools.ProgramLaunchConfigurationType">
 <stringAttribute key="org.eclipse.ui.externaltools.ATTR_LOCATION" value="/usr/local/bin/redis-cli"/>
 <stringAttribute key="org.eclipse.ui.externaltools.ATTR_TOOL_ARGUMENTS" value="shutdown"/>
-<stringAttribute key="org.eclipse.ui.externaltools.ATTR_WORKING_DIRECTORY" value="${workspace_loc:/RIAPS/src/riaps/dbase}"/>
+<stringAttribute key="org.eclipse.ui.externaltools.ATTR_WORKING_DIRECTORY" value="${env_var:HOME}/.local/riaps/etc"/>
 </launchConfiguration>
