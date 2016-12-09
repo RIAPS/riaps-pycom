@@ -78,7 +78,7 @@ class DeploymentModel(object):
         return self.deployments
         
 
-if __name__ == '__main__':
+def main(debug=False):
     parser = argparse.ArgumentParser()
     parser.add_argument("model", help="model file name")       # Model file argument
     args = parser.parse_args()
@@ -89,3 +89,6 @@ if __name__ == '__main__':
         raise
     print (deplo.deployments)
 
+
+if __name__ == '__main__':
+    m = main()
