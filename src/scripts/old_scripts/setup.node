@@ -1,9 +1,0 @@
-#!/bin/sh
-# Set up basic RIAPS environment
-# Should be sourced onthe SLAVE RIAPS node before using any other scripts.
-
-
-export RIAPSHOME=`pwd`/src
-export RIAPSAPPS=`pwd`/tmp/`ps | grep bash | awk '{ printf $1 }'`
-mkdir $RIAPSAPPS
-export PATH=$PATH:`pwd`/bin

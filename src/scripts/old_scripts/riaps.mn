@@ -1,5 +1,0 @@
-#!/bin/sh
-# Start mininet with a single,4 topology and sshd running on each host
-# Should be used after 'setup' has been sourced.
-
-sudo `which sshd.py`
