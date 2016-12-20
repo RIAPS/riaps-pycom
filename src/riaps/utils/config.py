@@ -16,7 +16,7 @@ class Config(object):
     Including logging configuration
     '''
     TARGET_USER = 'riaps-user'
-    SEND_TIMEOUT = -1
+    SEND_TIMEOUT = 500
     
     def __init__(self):
         '''
