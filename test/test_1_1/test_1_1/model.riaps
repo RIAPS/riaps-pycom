@@ -1,0 +1,23 @@
+// RIAPS Sample
+
+app test_1_1 {
+    message SensorValue;
+
+    component TemperatureSensor {
+      timer clock 1000; 							// Periodic timer trigger to trigger sensor every 1 sec
+      pub sendTemperature : SensorValue ;			// Publish port for SensorReady messages
+    }
+
+    // Collects data from temperature sensors
+    component Collector {
+      sub getTemperature : SensorValue ;						// Subscriber port to trigger component with SensorValue messages
+    }
+
+    // Actor for sensors
+    actor ActorTest11 {
+       {  // Sensor component
+          sensor : TemperatureSensor;
+          collector: Collector;
+       }
+    }
+}

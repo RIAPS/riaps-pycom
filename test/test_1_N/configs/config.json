@@ -1,0 +1,11 @@
+{
+    "app_dir"          : "test_1_N",
+    "model_file"       : "model.riaps",
+    "components_py"    : ["TemperatureSensor.py", "Collector.py"],
+
+    "actor_name"       : "ActorTest1N",
+
+
+    "target_hosts"     : ["192.168.1.104"],
+    "riaps_apps_path"  : "/home/ubuntu/riaps_apps/"
+}

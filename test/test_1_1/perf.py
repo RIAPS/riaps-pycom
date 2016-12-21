@@ -24,22 +24,12 @@ OUTPUT_DIRECTORY = "/tmp/riaps_test/results/"
 
 def machine_logs():
   return {
-    "server1": [os.path.join("/tmp/server_client/AdditionServers/server1", "logs/AdditionServer.log")],
-    "server2": [os.path.join("/tmp/server_client/AdditionServers/server2", "logs/AdditionServer.log")],
-    "server3": [os.path.join("/tmp/server_client/AdditionServers/server3", "logs/AdditionServer.log")],
-
-    "client1": [os.path.join("/tmp/server_client/AdditionClients/client1", "logs/AdditionClient.log")],
-    "client2": [os.path.join("/tmp/server_client/AdditionClients/client2", "logs/AdditionClient.log")],
+    "modelDeployer": ["/tmp/test_1_1.log"]
   }
 
 def naarad_logs():
   return {
-    "server1": [os.path.join("/tmp/server_client/AdditionServers/server1", "logs/AdditionServerPerf.csv")],
-    "server2": [os.path.join("/tmp/server_client/AdditionServers/server2", "logs/AdditionServerPerf.csv")],
-    "server3": [os.path.join("/tmp/server_client/AdditionServers/server3", "logs/AdditionServerPerf.csv")],
 
-    "client1": [os.path.join("/tmp/server_client/AdditionClients/client1", "logs/AdditionClientPerf.csv")],
-    "client2": [os.path.join("/tmp/server_client/AdditionClients/client2", "logs/AdditionClientPerf.csv")],
   }
 
 
