@@ -21,7 +21,7 @@ setup(name='riaps',
         'scripts/riaps_actor', "scripts/riaps_ctrl", "scripts/riaps_deplo", "scripts/riaps_disco", "scripts/riaps_lang", "scripts/riaps_depll", "scripts/riaps_init"
 
      ],
-      install_requires=['rpyc>=3.3.1', 'netifaces', 'textX >= 1.4','redis >= 2.10.5','hiredis >= 0.2.0','pyzmq >= 16','pycapnp >= 0.5.9','netifaces >= 0.10.5','paramiko >= 2.0.2','cryptography >= 1.5.3'],
+      install_requires=['rpyc>=3.3.1','textX >= 1.4','redis >= 2.10.5','hiredis >= 0.2.0','pyzmq >= 16','pycapnp >= 0.5.9','netifaces >= 0.10.5','paramiko >= 2.0.2','cryptography >= 1.5.3'],
 dependency_links=[
         "git+https://github.com/adubey14/rpyc#egg=rpyc-3.3.1"
     ],
