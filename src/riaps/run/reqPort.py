@@ -28,7 +28,6 @@ class ReqPort(Port):
         self.isLocalPort = parentActor.isLocalMessage(self.req_type) and parentActor.isLocalMessage(self.rep_type)
         self.replyHost = None
         self.replyPort = None
-        self.isConnected = False
 
     def setup(self):
         pass
@@ -58,8 +57,7 @@ class ReqPort(Port):
         self.replyHost = host
         self.replyPort = port
         self.socket.connect(repPort)
-        self.isConnected = True
-        
+
     def recv_pyobj(self):
         return self.socket.recv_pyobj()
     
