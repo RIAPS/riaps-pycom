@@ -11,6 +11,22 @@ def setup_suite():
                               runtime.get_active_config('app_dir'),
                               runtime.get_active_config('model_file'))
 
+    # Script to check discovery service
+    discoCheckScript = "checkDiscoveryService.py"
+    discoCheckScriptPath = "../test_common"
+    for target in runtime.get_active_config('targets'):
+        deployerId = "disco" + target["actor"]
+        checkscriptpath = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), discoCheckScriptPath, discoCheckScript))
+
+        checkDiscoDeployer = adhoc_deployer.SSHDeployer(deployerId,{
+            'executable': checkscriptpath,
+            'install_path' : runtime.get_active_config('riaps_apps_path'),
+            'hostname': target["host"],
+            "start_command" : "python3 " + runtime.get_active_config('riaps_apps_path') + "checkDiscoveryService.py"
+        })
+        runtime.set_deployer(deployerId, checkDiscoDeployer)
+        checkDiscoDeployer.install(deployerId)
+
     for target in runtime.get_active_config('targets'):
         model_deployer = adhoc_deployer.SSHDeployer(target["actor"], {
             'executable': model_path,
