@@ -14,14 +14,13 @@ class TemperatureSensor(Component):
 
         self.testlogger = logging.getLogger(__name__)
         self.testlogger.setLevel(logging.DEBUG)
-        self.fh = logging.FileHandler('/tmp/test_N_1.log')
+        self.fh = logging.FileHandler('/tmp/test_N_1_ActorTestN1p.log')
         self.fh.setLevel(logging.DEBUG)
         self.testlogger.addHandler(self.fh)
         self.messageCounter = 0
 
     def on_clock(self):
         msg = self.clock.recv_pyobj()
-        #self.testlogger.info("[%d] on_clock():%s [%d]", msg, self.pid)
         self.messageCounter += 1
         msg = self.messageCounter
         self.sendTemperature.send_pyobj(msg)
