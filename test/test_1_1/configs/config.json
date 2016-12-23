@@ -1,4 +1,5 @@
 {
+
   "app_dir": "test_1_1",
   "model_file": "model.riaps",
   "components_py": [
@@ -7,13 +8,14 @@
   ],
   "targets": [
     {
-      "host": "192.168.1.104",
+      "host": "192.168.1.120",
       "actor": "ActorTest1p"
     },
     {
-      "host": "192.168.1.105",
+      "host": "192.168.1.121",
       "actor": "ActorTest1s"
     }
   ],
-  "riaps_apps_path": "/home/ubuntu/riaps_apps/"
+  "riaps_apps_path": "riaps_apps",
+  "username":"riaps"
 }

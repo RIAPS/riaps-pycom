@@ -17,11 +17,6 @@ def test_pub_send():
 
     sleep(20)
 
-  # model_deployer = runtime.get_deployer("modelDeployer")
-  # model_deployer.start("modelDeployer", configs={"sync": False})
-  # sleep(15)
-  #model_deployer.stop("modelDeployer")
-
 def validate_pub_send():
     print("Validate")
 
@@ -35,10 +30,15 @@ def validate_pub_send():
     assert runtime.get_active_config("targets")[1]["actor"] == subActorName, "Subscriber actor name doesn't match"
     assert runtime.get_active_config("app_dir") == appName, "Application name doesn't match"
 
-    pub_log_name = "{0}-{1}_{2}.log".format(appName, pubActorName,pubActorName)
+    pub_log_name = "{0}-{1}_{2}.log".format(pubActorName, appName,pubActorName)
     pub_log_file = os.path.join(perf.LOGS_DIRECTORY, pub_log_name)
     pub_logs = testutilities.get_log_for_test("test_pub_send", pub_log_file, "12:00:00")
     assert "Sent messages: 1" in pub_logs, "Publisher couldn't send any messages"
     assert "Sent messages: 5" in pub_logs, "Publisher couldn't send 5 messages"
-    #assert "Received messages: 1" in pub_logs, "Subscriber didn't get any messages"
-    #assert "Received messages: 5" in pub_logs, "Subscriber didn't get 5 messages"
+
+    sub_log_name = "{0}-{1}_{2}.log".format(subActorName, appName, subActorName)
+    sub_log_file = os.path.join(perf.LOGS_DIRECTORY, sub_log_name)
+    sub_logs = testutilities.get_log_for_test("test_pub_send", sub_log_file, "12:00:00")
+
+    assert "Received messages: 1" in sub_logs, "Subscriber didn't get any messages"
+    assert "Received messages: 5" in sub_logs, "Subscriber didn't get 5 messages"
