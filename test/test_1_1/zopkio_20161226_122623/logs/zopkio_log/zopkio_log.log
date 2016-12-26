@@ -1,0 +1,10 @@
+2016-12-26 12:26:24 zopkio [INFO] Starting zopkio
+2016-12-26 12:26:24 naarad [INFO] Available graphing modules:  
+2016-12-26 12:26:24 zopkio.test_runner [INFO] Setting up configuration: single execution
+2016-12-26 12:27:01 naarad.utils [WARNING] /home/istvan/work/riaps-pycom/test/test_1_1/naarad.cfg : file does not exist.
+2016-12-26 12:27:01 naarad.utils [WARNING] /home/istvan/work/riaps-pycom/test/test_1_1/naarad.cfg : file does not exist.
+2016-12-26 12:27:01 naarad.utils [WARNING] /home/istvan/work/riaps-pycom/test/test_1_1/naarad.cfg : file does not exist.
+2016-12-26 12:27:01 zopkio.test_runner [INFO] Execution of configuration: single execution complete
+2016-12-26 12:27:01 zopkio.test_runner [INFO] test_pub_send----passed
+2016-12-26 12:27:01 zopkio.test_runner [INFO] test_reach_discovery----passed
+2016-12-26 12:27:02 zopkio [INFO] Exiting zopkio

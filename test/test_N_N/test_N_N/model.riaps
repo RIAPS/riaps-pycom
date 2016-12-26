@@ -1,5 +1,3 @@
-// RIAPS Sample
-
 app test_N_N {
     message SensorValue;
 
@@ -14,12 +12,16 @@ app test_N_N {
     }
 
     // Actor for sensors
-    actor ActorTestNN {
-       {  // Sensor component
+    actor ActorTestNNp {
+       {
           sensor1     : TemperatureSensor;
           sensor2     : TemperatureSensor;
           sensor3     : TemperatureSensor;
-          collector1  : Collector;
+       }
+    }
+
+    actor ActorTestNNs {
+       {  collector1  : Collector;
           collector2  : Collector;
           collector3  : Collector;
        }
