@@ -15,7 +15,7 @@ setup(name='riaps',
                   ('riaps/lang',['riaps/lang/riaps.tx', 'riaps/lang/depl.tx']),
                   ('riaps/etc',['riaps/etc/redis.conf']),
                   ('riaps/etc',['riaps/etc/riaps-ctrl.glade']),
-                  ('riaps/keys',['keys/id_rsa.key','keys/id_rsa.pub'])
+                  ('riaps/keys',['riaps/keys/id_rsa.key','riaps/keys/id_rsa.pub'])
                ],
       scripts = [
         '../scripts/riaps_actor',"../scripts/riaps-dev.node","../scripts/rpyc_registry", "../scripts/riaps_ctrl", "../scripts/riaps_deplo", "../scripts/riaps_disco", "../scripts/riaps_lang", "../scripts/riaps_depll", "../scripts/riaps_init","../scripts/riaps-dev.ctrl","../scripts/riaps_init","../scripts/sshd.py","../scripts/riaps-dev.mn"
