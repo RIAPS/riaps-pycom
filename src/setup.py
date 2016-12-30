@@ -18,7 +18,7 @@ setup(name='riaps',
                   ('riaps/keys',['riaps/keys/id_rsa.key','riaps/keys/id_rsa.pub'])
                ],
       scripts = [
-        '../scripts/riaps_actor',"../scripts/riaps-dev.node","../scripts/rpyc_registry", "../scripts/riaps_ctrl", "../scripts/riaps_deplo", "../scripts/riaps_disco", "../scripts/riaps_lang", "../scripts/riaps_depll", "../scripts/riaps_init","../scripts/riaps-dev.ctrl","../scripts/riaps_init","../scripts/sshd.py","../scripts/riaps-dev.mn"
+        'scripts/riaps_actor',"scripts/riaps-dev.node","scripts/rpyc_registry", "scripts/riaps_ctrl", "scripts/riaps_deplo", "scripts/riaps_disco", "scripts/riaps_lang", "scripts/riaps_depll", "scripts/riaps_init","scripts/riaps-dev.ctrl","scripts/riaps_init","scripts/sshd.py","scripts/riaps-dev.mn"
 
      ],
       install_requires=['rpyc>=3.3.1','textX >= 1.4','redis >= 2.10.5','hiredis >= 0.2.0','pyzmq >= 16','pycapnp >= 0.5.9','netifaces >= 0.10.5','paramiko >= 2.0.2','cryptography >= 1.5.3'],
