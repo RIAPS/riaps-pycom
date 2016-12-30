@@ -185,7 +185,7 @@ class Controller(object):
                 self.logger.info ('... success!')
                 return
             except paramiko.SSHException as e:
-                self.logger.info ('... failed!', e)
+                self.logger.info ('... failed! - %s' % str(e))
 
     def downloadAppToClient(self,files,client):
         hostName = client.name

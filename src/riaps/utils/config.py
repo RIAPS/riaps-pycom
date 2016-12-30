@@ -29,6 +29,7 @@ class Config(object):
         try:
             logging.config.fileConfig(riaps_logconf)
         except Exception as e:
+            logging.warning(' Log configuration file %s not found.' % (riaps_logconf))
             pass
 
         

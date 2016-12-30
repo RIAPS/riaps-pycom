@@ -14,7 +14,7 @@ from riaps.consts.defs import *
 from riaps.utils.ifaces import getNetworkInterfaces
 from riaps.run.exc import SetupError
 import logging
-    
+
 class DeploService(object):
     '''
     Deployment service main class. Each RIAPS mode runs a copy of the Deployment Service, which is
@@ -24,6 +24,8 @@ class DeploService(object):
         self.logger = logging.getLogger(__name__)
         '''
         Initialize the service with the host:port of the controller node (if provided)
+        Note: if the python implementation of the discovery service and/or actor is used, the corresponding python
+        script must be in the path. One way to achieve this is to run this script in the same folder 
         '''
         self.ctrlrHost = host 
         self.ctrlrPort = port
@@ -33,13 +35,29 @@ class DeploService(object):
         self.launchMap = { }            # Map of launched actors
         self.riapsApps = os.getenv('RIAPSAPPS', './')
         self.logger.info("Starting with apps in %s" % self.riapsApps)
+        self.riaps_actor_file = 'riaps_actor'       # Default name for the executable riaps actor shell
+        try:
+            import riaps.riaps_actor          # We try to import the python riaps_actor first so that we know is correct file name
+            self.riaps_actor_file = riaps.riaps_actor.__file__
+        except:
+            pass
+        self.riaps_disco_file = 'riaps_disco'       # Default name for the executable riaps disco 
+        try:
+            import riaps.riaps_disco         # We try to import the python riaps_disco first so that we know is correct file name
+            self.riaps_disco_file = riaps.riaps_disco.__file__
+        except:
+            pass
 
     def setupIfaces(self):
         '''
         Find the IP addresses of the (host-)local and network(-global) interfaces
         '''
         (globalIPs,globalMACs,localIP) = getNetworkInterfaces()
-        assert len(globalIPs) > 0 and len(globalMACs) > 0
+        try:
+            assert len(globalIPs) > 0 and len(globalMACs) > 0
+        except:
+            self.logger.error("Error: no active network interface")
+            raise
         globalIP = globalIPs[0]
         globalMAC = globalMACs[0]
         self.hostAddress = globalIP
@@ -79,47 +97,56 @@ class DeploService(object):
         else:
             pass    # Ignore any other response
             return False
-
-            
+        
     def startDisco(self):
         '''
         Start the Discovery Service process 
         '''
-        riaps_folder = os.getenv('RIAPSHOME', './')
-        disco_mod = ('riaps_disco')
+        disco_prog = 'riaps_disco'
+        disco_mod = self.riaps_disco_file   # File name for python script riaps_disco.py
+
         disco_arg1 = '--database'
         disco_arg2 = '%s:%s' % (self.dbaseHost,self.dbasePort)
+        command = [disco_prog,disco_arg1,disco_arg2]
         try: 
-            self.disco = subprocess.Popen([disco_mod,disco_arg1,disco_arg2])
-        except:
-            self.logger.error("Error: %s" % sys.exc_info()[0])
-            raise
+            self.disco = subprocess.Popen(command)
+        except FileNotFoundError:
+            try:
+                command = ['python3',disco_mod] + command[1:]
+                self.disco = subprocess.Popen(command)
+            except:
+                self.logger.error("Error while starting disco: %s" % sys.exc_info()[0])
+                raise
     
     def startActor(self,appName,appModel,actorName,actorArgs):
         '''
         Start an actor of an application 
         '''
-        
-        riaps_folder = os.getenv('RIAPSHOME', './')
-        riaps_mod = join('riaps_actor')
+        riaps_prog = 'riaps_actor'
+        riaps_mod = self.riaps_actor_file   #  File name for python script 'riaps_actor.py'
         
         appFolder = join(self.riapsApps,appName)
         appModelPath = join(appFolder,appModel)
         riaps_arg1 = appName 
         riaps_arg2 = appModelPath
         riaps_arg3 = actorName
-        command = [riaps_mod,riaps_arg1,riaps_arg2,riaps_arg3]
+        command = [riaps_prog,riaps_arg1,riaps_arg2,riaps_arg3]
         for arg in actorArgs:
             command.append(arg)
-        try: 
-            self.logger.info("Launching %s " % str(command[2:]))
+        self.logger.info("Launching %s " % str(command))
+        try:
             proc = subprocess.Popen(command,cwd=appFolder)
-            key = str(appName) + "." + str(actorName)
-            # ADD HERE: build comm channel to the actor for control purposes
-            self.launchMap[key] = proc
-        except:
-            self.logger.error("Error: %s" % sys.exc_info()[0])
-            raise
+        except FileNotFoundError:
+            try:
+                command = ['python3',riaps_mod] + command[1:]
+                proc = subprocess.Popen(command,cwd=appFolder)
+            except:
+                self.logger.error("Error while starting actor: %s" % sys.exc_info()[0])
+                raise
+        key = str(appName) + "." + str(actorName)
+        # ADD HERE: build comm channel to the actor for control purposes
+        self.launchMap[key] = proc
+
     
     def haltActor(self,appName,actorName):
         '''

@@ -57,7 +57,7 @@ class ReqPort(Port):
         self.replyHost = host
         self.replyPort = port
         self.socket.connect(repPort)
-
+        
     def recv_pyobj(self):
         return self.socket.recv_pyobj()
     
