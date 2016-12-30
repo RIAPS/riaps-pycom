@@ -1,5 +1,6 @@
+#!/usr/bin/python3
 '''
-Top-level script to start the language processor ('lang')
+Top-level script to start the language processor ('lang') for app models
 Created on Oct 15, 2016
 
 Arguments:

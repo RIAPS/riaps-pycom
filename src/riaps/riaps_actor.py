@@ -13,3 +13,4 @@ import riaps.run.main
 
 if __name__ == '__main__':
     riaps.run.main.main()
+    

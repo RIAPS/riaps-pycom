@@ -1,13 +1,14 @@
 RIAPS - Mininet
 ---------------
+- This is for riaps developers - NOT for APP developers - 
 
-To run the tools on mininet:
+To run the riaps tools on mininet:
 
 The ssh public key needs to be installed in ~/.ssh as the app files are 
 transferred using sftp from the virtual CTRL node to the virtual SLAVE nodes.
 To add the public key:
   cat src/ssh/id_rsa.pub >>~/.ssh/authorized_keys
-  
+Make sure that authorized_keys has permissions set 644, and the ~/.ssh folder has 755.
 
 On the shell:
  source setup		# Sets up environment variables
