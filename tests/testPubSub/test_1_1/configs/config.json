@@ -17,5 +17,6 @@
     }
   ],
   "riaps_apps_path": "riaps_apps",
-  "username":"riaps"
+  "username":"riaps",
+  "password":"riapspwd"
 }

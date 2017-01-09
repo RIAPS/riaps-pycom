@@ -7,7 +7,8 @@ import zopkio.runtime as runtime
 def setup_suite():
     # Set up authentication
     username = runtime.get_active_config("username")
-    runtime.set_user(username, "riapspwd")
+    password = runtime.get_active_config("password")
+    runtime.set_user(username, password)
 
     # Set up the target directories and properties
     userdir = os.path.join("/home", username)
@@ -25,7 +26,7 @@ def setup_suite():
 
     # Script to check discovery service
     discoCheckScript = "checkDiscoveryService.py"
-    discoCheckScriptPath = "../test_common"
+    discoCheckScriptPath = "../../test_common"
 
     # Deploy the riaps-disco checker script
     for target in runtime.get_active_config('targets'):

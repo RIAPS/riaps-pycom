@@ -1,0 +1,33 @@
+// RIAPS Sample
+
+app test_1_1 {
+    message SensorValue;
+    message SensorQuery;
+
+    component TemperatureSensor {
+      timer stopComponent 20000;                    // Stop the component after 20 sec
+      rep sendTemperature : ( SensorQuery , SensorValue );
+    }
+
+    // Collects data from temperature sensors
+    component Collector {
+      timer clock 3000;
+      timer stopComponent 20000;                    // Stop the component after 20 sec
+      req getTemperature : ( SensorQuery , SensorValue );
+    }
+
+    // Actor for sensors
+    actor ActorTest1rep {
+       {
+          // Sensor component
+          sensor : TemperatureSensor;
+       }
+    }
+
+    // Actor for collectors
+    actor ActorTest1req {
+       {
+          collector: Collector;
+       }
+    }
+}

@@ -24,6 +24,9 @@ class TemperatureSensor(Component):
         msg = self.messageCounter
         self.sendTemperature.send_pyobj(msg)
         self.testlogger.info("Sent messages: %d", self.messageCounter)
-        if self.messageCounter == 15:
-            print("kill %d", os.getpid())
-            os.kill(os.getpid(), -9)
+
+    def on_stopComponent(self):
+        self.testlogger.info("Component commits suicide (pid: %d)", os.getpid())
+        print("kill %d", os.getpid())
+        os.kill(os.getpid(), -9)
+
