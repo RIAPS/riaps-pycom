@@ -23,7 +23,7 @@ Message:
 
 // Component types used in the application
 Component:
- 'component' name=ID 
+ ( appComponent?='component' | ioComponent?='device') name=ID 
    ( '(' formals*=Formal[','] ')' )? 
   '{'
      ports*=Port
@@ -48,7 +48,9 @@ Port:
    ClntPort | SrvPort | // Client(req,rep) -> Server(req,rep)
    ReqPort  | RepPort | // send Req(msg_req) -> recv Rep(msg_req) ...
                         // ... send Rep(msg_rep) -> recv Req(msg_rep)
-   TimPort) ';'
+   TimPort	|			// timer
+   InsPort				// inside
+   ) ';'
 ;
 
 // Publisher port (single type)
@@ -92,6 +94,11 @@ TimPort:
   'timer' name=ID (spec=INT)?
 ;
 
+// Inside port
+InsPort:
+  'inside' name=ID spec?='default'
+;
+
 Actual:
   argName=ID '=' argValue=ActualValue 
 ;
@@ -124,6 +131,6 @@ Instance:
 
 // Obligatory comment spec
 Comment:
- /\/\/.*$/
+	/\/\/.*$/|/\/\*(.|\n)*?\*\// 
 ;
 

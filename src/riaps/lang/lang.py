@@ -10,6 +10,7 @@ from os.path import join
 from textx.metamodel import metamodel_from_file
 from textx.export import metamodel_export, model_export
 from textx.exceptions import TextXSemanticError
+import textx.model
 
 import sys
 import json
@@ -32,6 +33,7 @@ class RiapsModel2JSON(object):
             appObj = {}
             appObj['name'] = app.name
             appObj['messages'] = self.getMessages(app.messages)
+            appObj['devices'] = self.getIOComponents(app.components)
             appObj['components'] = self.getComponents(app.components)
             appObj['actors'] = self.getActors(app.actors)
             self.apps[app.name] = appObj
@@ -59,17 +61,31 @@ class RiapsModel2JSON(object):
                 formalObj["default"] = formal.argDefault.default[0]
             res.append(formalObj)
         return res
+    def getIOComponents(self,components):
+        res = {}
+        for comp in components:
+            if comp.ioComponent:
+                if comp.name in res:
+                    raise TextXSemanticError('Component name "%s" is not unique.' % 
+                                             comp.name)
+                compObj = { }
+                compObj["name"] = comp.name
+                compObj["formals"] = self.getFormals(comp.formals)
+                compObj["ports"] = self.getPorts(comp.ports)
+                res[comp.name] = compObj
+        return res
     def getComponents(self,components):
         res = {}
         for comp in components:
-            if comp.name in res:
-                raise TextXSemanticError('Component name "%s" is not unique.' % 
-                                         comp.name)
-            compObj = { }
-            compObj["name"] = comp.name
-            compObj["formals"] = self.getFormals(comp.formals)
-            compObj["ports"] = self.getPorts(comp.ports)
-            res[comp.name] = compObj
+            if comp.appComponent:
+                if comp.name in res:
+                    raise TextXSemanticError('Component name "%s" is not unique.' % 
+                                             comp.name)
+                compObj = { }
+                compObj["name"] = comp.name
+                compObj["formals"] = self.getFormals(comp.formals)
+                compObj["ports"] = self.getPorts(comp.ports)
+                res[comp.name] = compObj
         return res
     def getPorts(self,ports):
         pubs = {}
@@ -79,6 +95,7 @@ class RiapsModel2JSON(object):
         reqs = {}
         reps = {}
         tims = {}
+        inss = {}
         portNames = []
         for port in ports:
             portObj = { }
@@ -113,13 +130,16 @@ class RiapsModel2JSON(object):
             elif(portClass == 'TimPort'):
                 portObj['period'] = port.period
                 tims[port.name] = portObj
+            elif (portClass == 'InsPort'):
+                inss[port.name] = portObj
+                portObj['spec'] = port.spec
             else:
                 raise TextXSemanticError('Unknown type for port "%s"' %
                                          port.name)
         return { "subs" : subs , "pubs" : pubs,
                  "clts" : clts , "srvs" : srvs,
                  "reqs" : reqs,  "reps" : reps,
-                 "tims" : tims}
+                 "tims" : tims,  "inss" : inss}
     def getActors(self,actors):
         res = {}
         for act in actors:
@@ -196,6 +216,36 @@ def timport_obj_processor(timport):
     else:
         timport.period = timport.spec
 
+# Object processor for inside  ports: the 'spec' part is optional. If missing it implies the default 1sec trigger
+def insport_obj_processor(insport):
+    if insport.spec == True :
+        insport.spec = 'default'
+    else:
+        insport.spec = None
+
+# Object processor for io component instances: messages must be local
+def instance_obj_processor(instance):
+    component = instance.type
+    if component.ioComponent:
+        localMessages = instance.parent.locals
+        localMessageNames = [localMessage.name for localMessage in localMessages]
+        portMessageNames = []
+        for port in component.ports:
+            if hasattr(port, 'type'):
+                portMessageNames.append(port.type.name)
+            elif hasattr(port,'req_type'):
+                portMessageNames.append(port.req_type.name)
+            elif hasattr(port,'rep_type'):
+                portMessageNames.append(port.rep_type.name)
+            else:
+                pass
+        for portMessageName in portMessageNames:
+            if portMessageName not in localMessageNames:
+                raise TextXSemanticError('Non-local message type %s for IO component %s:%s' 
+                                         % (portMessageName,instance.name,component.name))
+    else:
+        pass
+
 # Object processor for wires: checks if the names used are correct. 
 # Wires are to connect ports of local instances.
 def wire_obj_processor(wire):
@@ -239,6 +289,8 @@ def compileModel(modelFileName,verbose=False,debug=False):
     obj_processors = {
         'Wire': wire_obj_processor,
         'TimPort': timport_obj_processor,
+        'InsPort': insport_obj_processor,
+        'Instance': instance_obj_processor,
         # We should also check for parameters: 
         #   (1) formal/actual lists should match, 
         #   (2) inherited parameters should appear in their parent 

@@ -1,9 +1,8 @@
 #!/usr/bin/python3
 '''
-Top level script to start the run-time system: an actor
+Top level script to start the run-time system for a device actor
 Created on Oct 15, 2016
 
-Arguments
   app   : Name of parent app
   model : Name of processed (JSON) model file
   actor : Name of specific actor from the model this process will run
@@ -11,8 +10,8 @@ Arguments
 
 @author: riaps
 '''
-import riaps.run.main
+import riaps.run.dmain
 
 if __name__ == '__main__':
-    riaps.run.main.main()
+    riaps.run.dmain.main()
     

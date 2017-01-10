@@ -7,6 +7,7 @@ from .port import Port
 import threading
 import zmq
 import time
+from .exc import OperationError
 
 class TimerThread(threading.Thread):
     def __init__(self,parent):
@@ -20,14 +21,18 @@ class TimerThread(threading.Thread):
         self.active = threading.Event()
         self.active.clear()
         self.waiting = threading.Event()
+        self.terminated = threading.Event()
+        self.terminated.clear()
         
     def run(self):
         self.socket = self.context.socket(zmq.PUB)
         self.socket.bind('inproc://timer_' + self.name)
         while 1:
             self.active.wait(None)
+            if self.terminated.is_set(): break
             if self.period:
                 self.waiting.wait(self.period)
+                if self.terminated.is_set(): break
                 if self.active.is_set():
                     value = time.time()
                     self.socket.send_pyobj(value)
@@ -40,6 +45,9 @@ class TimerThread(threading.Thread):
     def deactivate(self):
         self.active.clear()
     
+    def terminate(self):
+        self.terminated.set()
+        
 class TimPort(Port):
     '''
     classdocs
@@ -70,6 +78,9 @@ class TimPort(Port):
     def deactivate(self):
         self.thread.deactivate()
         
+    def terminate(self):
+        self.thread.terminate()
+
     def getSocket(self):
         return self.socket
     

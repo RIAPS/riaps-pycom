@@ -66,7 +66,7 @@ class DiscoService(object):
                 try: 
                     self.clientUpdates = self.dbase.fetchUpdates()  # then fetch updates from database
                 except DatabaseError:
-                    self.logger.info("restarting database")
+                    self.logger.info("reconnecting database")
                     self.dbase.start()
                     time.sleep(0.0001)     
             elif self.server in sockets:                        # else check if there is a server request, handle it 

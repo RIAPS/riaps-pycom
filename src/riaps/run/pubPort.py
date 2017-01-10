@@ -67,5 +67,5 @@ class PubPort(Port):
         raise OperationError("attempt to receive through a publish port")
     
     def getInfo(self):
-        return ("pub",self.Name,self.Type,self.host,self.portNum)
+        return ("pub",self.name,self.type,self.host,self.portNum)
     

@@ -9,7 +9,14 @@ import riaps.consts.const as const
 # Name of endpoint for actor-disco communication
 const.discoEndpoint = 'ipc:///tmp/riaps-disco'
 # Timeout for actor-disco communication (-1: wait forever)
-const.discoEndpointTimeout = -1
+const.discoEndpointRecvTimeout = -1
+const.discoEndpointSendTimeout = -1
+
+# Name of endpoint for actor-devm communication
+const.devmEndpoint = 'ipc:///tmp/riaps-devm'
+# Timeout for actor-devm communication (-1: wait forever)
+const.devmEndpointRecvTimeout = 1000
+const.devmEndpointSendTimeout = 3000
 
 # Default host for disco redis host
 const.discoRedisHost = 'localhost'
@@ -20,6 +27,7 @@ const.discoRedisPort = 6379
 const.ctrlNode = 'localhost'
 # Default port number for the Controller
 const.ctrlPort = 8888
+
 # Control service name
 const.ctrlServiceName = 'RIAPSControl'
 # Name of private key file

@@ -35,16 +35,25 @@ class DeploService(object):
         self.launchMap = { }            # Map of launched actors
         self.riapsApps = os.getenv('RIAPSAPPS', './')
         self.logger.info("Starting with apps in %s" % self.riapsApps)
+        
         self.riaps_actor_file = 'riaps_actor'       # Default name for the executable riaps actor shell
         try:
             import riaps.riaps_actor          # We try to import the python riaps_actor first so that we know is correct file name
             self.riaps_actor_file = riaps.riaps_actor.__file__
         except:
             pass
+        
         self.riaps_disco_file = 'riaps_disco'       # Default name for the executable riaps disco 
         try:
             import riaps.riaps_disco         # We try to import the python riaps_disco first so that we know is correct file name
             self.riaps_disco_file = riaps.riaps_disco.__file__
+        except:
+            pass
+        
+        self.riaps_devm_file = 'riaps_devm'       # Default name for the executable riaps devm 
+        try:
+            import riaps.riaps_devm         # We try to import the python riaps_devm first so that we know is correct file name
+            self.riaps_devm_file = riaps.riaps_devm.__file__
         except:
             pass
 
@@ -118,6 +127,25 @@ class DeploService(object):
                 self.logger.error("Error while starting disco: %s" % sys.exc_info()[0])
                 raise
     
+    def startDevm(self):
+        '''
+        Start the Device manager service process 
+        '''
+        devm_prog = 'riaps_devm'
+        devm_mod = self.riaps_devm_file   # File name for python script riaps_devm.py
+
+#        devm_args = None
+        command = [devm_prog]
+        try: 
+            self.devm = subprocess.Popen(command)
+        except FileNotFoundError:
+            try:
+                command = ['python3',devm_mod] + command[1:]
+                self.devm = subprocess.Popen(command)
+            except:
+                self.logger.error("Error while starting devm: %s" % sys.exc_info()[0])
+                raise
+    
     def startActor(self,appName,appModel,actorName,actorArgs):
         '''
         Start an actor of an application 
@@ -162,13 +190,13 @@ class DeploService(object):
         
     def setup(self):
         '''
-        Set up the discovery service
+        Set up the discovery and device management services
         '''
         self.setupIfaces()
         self.login()
         if self.dbaseHost != None and self.dbasePort != None:
             self.startDisco()
-            
+        self.startDevm()
     
     def run(self):
         '''

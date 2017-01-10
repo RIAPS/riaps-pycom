@@ -8,7 +8,7 @@ import zmq
 import capnp
 from ..proto import disco_capnp
 from riaps.consts.defs import *
-from .exc import SetupError
+from .exc import SetupError, OperationError
 import logging
 
 class DiscoClient(object):
@@ -30,7 +30,8 @@ class DiscoClient(object):
     def start(self):
         self.logger.info("starting")
         self.socket = self.context.socket(zmq.REQ)
-        self.socket.setsockopt(zmq.RCVTIMEO,const.discoEndpointTimeout)
+        self.socket.setsockopt(zmq.RCVTIMEO,const.discoEndpointRecvTimeout)
+        self.socket.setsockopt(zmq.SNDTIMEO,const.discoEndpointSendTimeout)
         endpoint = const.discoEndpoint + self.suffix
         self.socket.connect(endpoint)    
         self.channel = self.context.socket(zmq.PAIR)
@@ -44,17 +45,25 @@ class DiscoClient(object):
         appMessage.actorName = self.actor.name
                   
         msgBytes = reqt.to_bytes()
-        self.socket.send(msgBytes)
+        
+        try:
+            self.socket.send(msgBytes)
+        except Exception as e:
+            self.logger.error("Unable to register app with discovery: {1}".format(e.errno, e.strerror))
+            self.socket.close()
+            self.socket = None
+            return
         
         try:
             respBytes = self.socket.recv()
         except Exception as e:
-            print ("Exception: {1}".format(e.errno, e.strerror))
+            self.logger.error("No response from discovery service: {1}".format(e.errno, e.strerror))
             self.socket.close()
             self.socket = None
             return
         
         resp = disco_capnp.DiscoRep.from_bytes(respBytes)
+        
         which = resp.which()
         if which == 'actorReg':
             respMessage = resp.actorReg
@@ -63,13 +72,16 @@ class DiscoClient(object):
             if status == 'ok':
                 self.channel.connect("tcp://localhost:" + str(port))
             else:
-                raise SetupError("Actor registration error")
+                raise SetupError("Error response from disco service at app registration")
         else:
-            assert False
+            raise SetupError("Unexpected response from disco service at app registration")
         return 
 
     def handleRegReq(self,bundle):
         self.logger.info("handleRegReq: %s" % str(bundle))
+        if self.socket == None:
+            self.logger.info("No disco service - skipping registration: %s", str(bundle))
+            return 
         (partName,partType,kind,isLocal,portName,portType,portHost,portNum) = bundle[0:8]
         # All interactions below go via the REQ/REP socket ; the channel is for server pushes
         req = disco_capnp.DiscoReq.new_message()
@@ -86,23 +98,25 @@ class DiscoClient(object):
         try:
             repBytes = self.socket.recv()
         except Exception as e:
-            print ("Exception: {1}".format(e.errno, e.strerror))
-            raise
+            raise SetupError("No response from disco service : {1}".format(e.errno, e.strerror))
         rep = disco_capnp.DiscoRep.from_bytes(repBytes)
         which = rep.which()
         if which == 'serviceReg':
             repMessage = rep.serviceReg
             status = repMessage.status
             if status == 'err':
-                raise SetupError('Unable to register service')
+                raise SetupError("Error response from disco service at service registration")
             else:
                 pass
         else:
-            raise SetupError("Service registration error - bad response")
+            raise SetupError("Unexpected response from disco service at service registration")
         return
     
     def handleLookupReq(self,bundle):
         self.logger.info("handleLookupReq: %s" % str(bundle))
+        if self.socket == None:
+            self.logger.info("No disco service - skipping lookup: %s", str(bundle))
+            return []
         (partName,partType,kind,isLocal,portName,portType) = bundle[0:6]
         # All interactions below go via the REQ/REP socket ; the channel is for server pushes
         req = disco_capnp.DiscoReq.new_message()
@@ -123,7 +137,7 @@ class DiscoClient(object):
         try:
             repBytes = self.socket.recv()
         except Exception as e:
-            print ("Exception: {1}".format(e.errno, e.strerror))
+            raise SetupError("No response from disco service : {1}".format(e.errno, e.strerror))
             raise
         rep = disco_capnp.DiscoRep.from_bytes(repBytes)
         which = rep.which()

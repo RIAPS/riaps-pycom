@@ -1,6 +1,6 @@
 '''
-Actor class to hold and manage components. 
-Created on Oct 9, 2016
+Device actor class to hold and manage a single device component. 
+Created on Jan 7, 2017
 
 @author: riaps
 '''
@@ -11,7 +11,7 @@ from .exc import BuildError
 import zmq
 import time
 from .disco import DiscoClient
-from .devc import DevmClient
+#from .devm import DevmClient
 from riaps.proto import disco_capnp
 from riaps.utils.ifaces import getNetworkInterfaces
 from riaps.utils.config import Config
@@ -20,12 +20,13 @@ import logging
 from builtins import int, str
 import re
 import sys
+from .actor import Actor
 
-class Actor(object):
+class Device(Actor):
     '''
     The actor class implements all the management and control functions over its components
     '''          
-    def __init__(self, gModel, gModelName, aName, sysArgv):
+    def __init__(self, gModel, gModelName, dName, sysArgv):
         '''
         Constructor
         '''
@@ -33,11 +34,32 @@ class Actor(object):
         self.inst_ = self
         self.appName = gModel["name"]
         self.modelName = gModelName
-        self.name = aName
+        self.name = dName
         self.suffix = ""
-        if aName not in gModel["actors"]:
-            raise BuildError('Actor "%s" unknown' % aName)
-        self.model = gModel["actors"][aName]                # Fetch the relevant content from the model
+        if dName not in gModel["devices"]:
+            raise BuildError('Device "%s" unknown' % dName)
+       
+        # In order to make the rest of the code work, we build an actor model for the device
+        devModel = gModel["devices"][dName]
+        self.model = {}                             # The made-up actor model
+        
+        formals = devModel["formals"]               # Formals are the same as those of the device (component)
+        self.model["formals"] = formals
+
+        devInst = { "type" : dName }                # There is a single instance, containing the device component
+        actuals = []
+        for arg in  formals:
+            name = arg["name"]
+            actual = {}
+            actual["name"] = name
+            actual["param"] = name
+            actuals.append(actual)
+        devInst["actuals"] = actuals
+        
+        self.model["instances"] = { dName : devInst}
+        
+        self.model["locals"] = self.getMessageTypes(devModel)   # All messages are local
+        self.model["internals"] =  { }                          # No internals 
         
         self.INT_RE = re.compile(r"^[-]?\d+$")
         self.parseParams(sysArgv)
@@ -48,7 +70,7 @@ class Actor(object):
         self.messageNames = []
         for messageSpec in messages:
             self.messageNames.append(messageSpec["name"])
-        
+                   
         locals_ = self.model["locals"]                       # Local message types (local to the host)
         self.localNames = []
         for messageSpec in locals_:
@@ -62,26 +84,36 @@ class Actor(object):
         self.components = {}
         instSpecs = self.model["instances"]
         compSpecs = gModel["components"]
-        ioSpecs = gModel["devices"]
+        devSpecs = gModel["devices"]
         for instName in instSpecs:                          # Create the component instances: the 'parts'
             instSpec = instSpecs[instName]
             instType = instSpec['type']
-            if instType in compSpecs:
-                typeSpec = compSpecs[instType]
-                ioComp = False
-            elif instType in ioSpecs:
-                typeSpec = ioSpecs[instType]
-                ioComp = True
+            if instType in devSpecs: 
+                typeSpec = devSpecs[instType]
             else:
-                raise BuildError('Component type "%s" for instance "%s" is undefined' % (instType,instName))
+                raise BuildError('Device type "%s" for instance "%s" is undefined' % (instType,instName))
             instFormals = typeSpec['formals']
             instActuals = instSpec['actuals']
             instArgs = self.buildInstArgs(instName,instFormals,instActuals)
-            if not ioComp:
-                self.components[instName]= Part(self,typeSpec,instName, instType, instArgs)
-            else:
-                self.components[instName]= Peripheral(self,typeSpec,instName, instType, instArgs)
-           
+            self.components[instName]= Part(self,typeSpec,instName, instType, instArgs)
+    
+    def getPortMessageTypes(self,ports,key,kinds,res):
+        for name,spec in ports[key].items():
+            for kind in kinds:
+                typeName = spec[kind]
+                res.append({"type" : typeName})
+        
+    def getMessageTypes(self,devModel):
+        res = []
+        ports = devModel["ports"]
+        self.getPortMessageTypes(ports,"pubs",["type"],res)
+        self.getPortMessageTypes(ports,"subs",["type"],res)
+        self.getPortMessageTypes(ports,"reqs",["req_type","rep_type"],res)
+        self.getPortMessageTypes(ports,"reps",["req_type","rep_type"],res)
+        self.getPortMessageTypes(ports,"clts",["req_type","rep_type"],res)
+        self.getPortMessageTypes(ports,"srvs",["req_type","rep_type"],res)
+        return res
+        
     def getParameterValueType(self,param,defaultType):
         paramValue, paramType = None, None
         if defaultType != None:
@@ -210,9 +242,10 @@ class Actor(object):
         self.disco = DiscoClient(self,self.suffix)
         self.disco.start()                  # Start the discovery service client
         self.disco.registerApp()            # Register this actor with the discovery service
-        self.devc = DevmClient(self,self.suffix)
-        self.devc.start()
-        self.devc.registerApp()
+        # This is a device - does not register with the device manager
+#         self.devc = DevmClient(self,self.suffix)
+#         self.devc.start()
+#         self.devc.registerApp()
         for inst in self.components:
             self.components[inst].setup()
     
@@ -234,15 +267,6 @@ class Actor(object):
         result = self.devc.registerDevice(msg)
         return result
 
-    def unregisterDevice(self,bundle):
-        '''
-        Relay the device registration message to the device interface service client
-        '''
-        typeName, = bundle
-        msg = (self.appName,self.modelName,typeName)
-        result = self.devc.unregisterDevice(msg)
-        return result
-    
     def activate(self):
         '''
         Activate the parts
@@ -265,10 +289,10 @@ class Actor(object):
         '''
         self.logger.info("starting")
         self.discoChannel = self.disco.channel              # Private channel to the discovery service
-        self.devcChannel = self.devc.channel
+#        self.devcChannel = self.devc.channel
        
         self.poller = zmq.Poller()                          # Set up the poller
-        self.poller.register(self.devcChannel,zmq.POLLIN)
+#        self.poller.register(self.devcChannel,zmq.POLLIN)
         self.poller.register(self.discoChannel,zmq.POLLIN)
         
         while 1:
@@ -277,10 +301,10 @@ class Actor(object):
                 msg = self.discoChannel.recv()
                 self.handleServiceUpdate(msg)               # Handle message from disco service
                 del sockets[self.discoChannel]
-            elif self.devcChannel in sockets:
-                msg = self.devcChannel.recv()
-                pass                                        # Handle message from devm service
-                del sockets[self.devcChannel]
+#            elif self.devicChannel in sockets:
+#                msg = self.devcChannel.recv()
+#                pass                                        # Handle message from devm service
+#                del sockets[self.devcChannel]
             else:
                 pass
             
@@ -312,16 +336,4 @@ class Actor(object):
         self.logger.info("updatePart %s" % str((instanceName,portName,host,port)))
         part = self.components[instanceName]
         part.handlePortUpdate(portName,host,port)
-    
-    def terminate(self):
-        self.logger.info("terminating")
-        for component in self.components.values():
-            component.terminate()
-        # Clean up everything
-        self.context.destroy()
-        time.sleep(1.0)
-        self.logger.info("terminated")
-        sys.exit()
-
-    
-    
+        

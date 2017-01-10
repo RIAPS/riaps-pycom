@@ -316,6 +316,9 @@ class Controller(object):
         for component in appObj["components"]:
             componentFile = str(component) + ".py"
             download.append(componentFile)
+        for device in appObj["devices"]:
+            deviceFile = str(device) + ".py"
+            download.append(deviceFile)
         # Process the deployment and download app
         clients = set() 
         for depl in depls:

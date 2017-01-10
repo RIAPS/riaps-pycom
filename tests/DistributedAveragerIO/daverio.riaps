@@ -1,0 +1,37 @@
+// RIAPS DAverager
+// IO Version
+
+app DistributedAveragerIO {
+    message SensorData; 
+    message NodeData;
+    message SensorCommand;
+    message SensorResponse;
+     
+	// Sensor device
+    device Sensor(rate=10) {
+      inside trigger /* default */; 	// Inside port for triggering an op by a message coming from an internal thread.
+      									// The 'default' is optional, it implies a 1 sec timer/ticker thread.
+      timer clock 2000;
+      pub sensorReady : SensorData ;	// Publish port for SensorData messages 
+      rep control : (SensorCommand, SensorResponse) ;	// Reply port to control the sensor
+    }
+    
+    // Averager component
+    component Averager(Ts=1.0) {
+      sub sensorReady : SensorData ;	// Subscriber port to trigger component with SensorData messages
+      pub thisReady : NodeData;			// Publish port to publish node value update messages
+      sub nodeReady : NodeData;			// Subscriber port for node value update messages
+      timer update 10;					// 
+      timer display 1000;
+      req control : (SensorCommand, SensorResponse) ;	// Request port to control the sensor
+    }
+
+    // Averager actor
+    actor Averager(rate=10,Ts=100.0) {
+       local SensorData,SensorCommand,SensorResponse;	// Local message types
+       {
+       	  sensor : Sensor(rate=rate);
+          averager : Averager(Ts=Ts); 		
+       }
+    }
+}

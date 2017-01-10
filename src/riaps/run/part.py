@@ -18,6 +18,7 @@ from .srvPort import SrvPort
 from .reqPort import ReqPort
 from .repPort import RepPort
 from .timPort import TimPort
+from .insPort import InsPort
 from .exc import StateError
 from .comp import ComponentThread
 from .exc import SetupError
@@ -47,7 +48,7 @@ class Part(object):
     def mods(self,val):
         self._mods = val
 
-    def __init__(self, parentActor, gModel, iName, iTypeName, iArgs):
+    def __init__(self, parentActor, iTypeDef, iName, iTypeName, iArgs):
         '''
         Construct the Part object, load the component implementation and construct its object
         '''
@@ -55,16 +56,14 @@ class Part(object):
         self.state = Part.State.Starting
         self.name = iName
         self.parent = parentActor
-        self.type = gModel["components"][iTypeName]
+        self.type = iTypeDef
         self.typeName = self.type['name']
         self.args = iArgs
         self.load()
         self.class_ = getattr(self.module_, self.typeName)
         self.logger.info('Constructing %s of type %s' % (iName,self.typeName))
         self.instance = self.class_(**self.args)    # Run the component constructor
-        
         self.context = parentActor.context
- 
         self.buildAllPorts(self.type["ports"])      # Build all the ports of the component
         self.state = Part.State.Initial
         
@@ -104,6 +103,7 @@ class Part(object):
         self.buildPorts(self.ports,'reqs',portSpecs,ReqPort)
         self.buildPorts(self.ports,'reps',portSpecs,RepPort)
         self.buildPorts(self.ports,'tims',portSpecs,TimPort)
+        self.buildPorts(self.ports,'inss',portSpecs,InsPort)
         for portName in self.ports:
             # The port will be accessible in the component instance under its own name 
             setattr(self.instance,portName,self.ports[portName]) 
@@ -119,7 +119,7 @@ class Part(object):
         '''
         Send a control message to component thread
         '''
-        self.control.setsockopt(zmq.RCVTIMEO,timeOut) 
+        self.control.setsockopt(zmq.SNDTIMEO,timeOut) 
         self.control.send_pyobj(cmd)
         
     def setup(self):
@@ -221,4 +221,12 @@ class Part(object):
         if self.state == Part.State.Destroyed:
             raise StateError("Invalid state %s in destroy()" % self.state)
         # Destroy thread
+    
+    def terminate(self):
+        self.logger.info("terminating")
+        self.sendControl("kill",-1)         # Send message to the thread to kill itself
+        self.thread.join()
+        for portObj in self.ports.values():
+            portObj.terminate()
+        self.logger.info("terminated")
         

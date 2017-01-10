@@ -34,7 +34,7 @@ class ComponentThread(threading.Thread):
             raise BuildError 
         for portName in self.parent.ports:
             res = self.parent.ports[portName].setupSocket()
-            if res[0] == 'tim':
+            if res[0] == 'tim' or res[0] == 'ins':
                 continue
             elif res[0] == 'pub' or res[0] == 'sub' or \
                     res[0] == 'clt' or res[0] == 'srv' or \
@@ -59,15 +59,22 @@ class ComponentThread(threading.Thread):
                     self.portMap[portSocket] = portName
             
     def runCommand(self):
+        res = False
         msg = self.control.recv_pyobj()
-        cmd = msg[0]
-        if cmd == "portUpdate":
-            (_,portName,host,port) = msg
-            portObj = self.parent.ports[portName]
-            res = portObj.update(host,port)
-        else:
-            pass
-        self.control.send_pyobj("ok")
+        if msg == "kill":
+            res = True
+        elif msg == "activate":
+            pass                            
+        else: 
+            cmd = msg[0]
+            if cmd == "portUpdate":
+                (_,portName,host,port) = msg
+                portObj = self.parent.ports[portName]
+                res = portObj.update(host,port)
+                self.control.send_pyobj("ok")
+            else:
+                pass            # Should report an error
+        return res
     
     def getInfo(self):
         info = []
@@ -80,15 +87,22 @@ class ComponentThread(threading.Thread):
         self.setupControl()
         self.setupSockets()
         self.setupPoller()
-        while 1:
+        toStop = False
+        while True:
             sockets = dict(self.poller.poll())
             if self.control in sockets:
-                self.runCommand()
+                toStop = self.runCommand()
                 del sockets[self.control]
+            if toStop: break
             for socket in sockets:
                 portName = self.portMap[socket]
                 func_ = getattr(self.instance, 'on_' + portName)
                 func_()
+        if hasattr(self.instance,'__destroy__'):
+            destroy_ = getattr(self.instance,'__destroy__')
+            destroy_()
+
+                   
 
 class Component(object):
     '''

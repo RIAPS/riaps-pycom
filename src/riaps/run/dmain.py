@@ -1,6 +1,6 @@
 '''
-RIAPS run-time system main program for an actor
-Created on Oct 9, 2016
+RIAPS run-time system main program for an device
+Created on Jan 7, 2017
 
 @author: riaps
 '''
@@ -12,10 +12,10 @@ import json
 import logging
 from riaps.utils.config import Config
 
-from .actor import Actor
+from .device import Device
 
-# Singleton Actor object
-theActor = None
+# Singleton Device object
+theDevice = None
 
 # Config object
 theConfig = None 
@@ -26,14 +26,14 @@ def interact():
     code.InteractiveConsole(locals=globals()).interact()
 
 def termHandler(signal,frame):
-    global theActor
-    theActor.terminate()
-
+    global theDevice
+    theDevice.terminate()
+      
 def main(debug=True):
     parser = argparse.ArgumentParser()
     parser.add_argument("app", help="app name")             # App name
     parser.add_argument("model", help="model file name")    # Model file argument
-    parser.add_argument("actor", help="actor name")         # Actor name argument
+    parser.add_argument("device", help="device name")         # Device name argument
     (args,rest) = parser.parse_known_args()
     appFolder = os.getenv('RIAPSAPPS', './')
     appFolder = join(appFolder,args.app)
@@ -41,7 +41,7 @@ def main(debug=True):
     try:
         fp = open(modelFileName,'r')           # Load model file
         model = json.load(fp)
-        aName = args.actor
+        aName = args.device
     except IOError as e:
         print ("I/O error({0}): {1}".format(e.errno, e.strerror))
         raise
@@ -58,12 +58,12 @@ def main(debug=True):
     global theConfig
     theConfig = Config()
     
-    global theActor
-    theActor = Actor(model,args.model,aName,rest)      # Construct the Actor
+    global theDevice
+    theDevice = Device(model,args.model,aName,rest)      # Construct the Device
     signal.signal(signal.SIGTERM,termHandler)
-    theActor.setup()                        # Setup the objects contained in the actor
-    theActor.activate()                     # Activate the components 
-    theActor.start()                        # Start the actor main loop
+    theDevice.setup()                        # Setup the objects contained in the device
+    theDevice.activate()                     # Activate the components 
+    theDevice.start()                        # Start the device main loop
 #     if debug:
 #         interact()
 

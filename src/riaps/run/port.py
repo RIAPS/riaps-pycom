@@ -82,6 +82,9 @@ class Port(object):
     def deactivate(self):
         pass
     
+    def terminate(self):
+        pass
+    
     def send_pyobj(self,msg):
         '''
         Send an object (if possible) out through the port
