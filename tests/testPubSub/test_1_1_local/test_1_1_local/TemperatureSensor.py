@@ -12,7 +12,7 @@ class TemperatureSensor(Component):
 
         self.testlogger = logging.getLogger(__name__)
         self.testlogger.setLevel(logging.DEBUG)
-        self.fh = logging.FileHandler('/tmp/test_1_1_ActorTest1p.log')
+        self.fh = logging.FileHandler('/tmp/test_1_1_local_ActorTest1p1s_loc.log')
         self.fh.setLevel(logging.DEBUG)
         self.testlogger.addHandler(self.fh)
         self.messageCounter = 0

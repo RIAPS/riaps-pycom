@@ -20,9 +20,9 @@ def test_pub_send():
 def validate_pub_send():
     print("Validate")
 
-    pubActorName = "ActorTest1p"
-    subActorName = "ActorTest1s"
-    appName = "test_1_1"
+    pubActorName = "ActorTest1p1s_loc"
+    subActorName = "ActorTest1p1s_loc"
+    appName = "test_1_1_local"
 
     # Check the configuration, please adjust the names according to the config.json and components log (if necessary)
     # We make sure, that we collect the right logs
