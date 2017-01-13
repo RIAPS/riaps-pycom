@@ -36,18 +36,24 @@ class Repeater(Component):
         #self.testlogger.info("[%d] on_clock():%s [%d]", msg, self.pid)
 
         messageToSend = {"messageCounter": 0, "body": bytes([])}
-        messageToSend.messageCounter = self.messageCounter
-        messageToSend.body = content
+        messageToSend["messageCounter"] = self.messageCounter
+        messageToSend["body"] = content
+                      
 
 
-        self.sendTemperature.send_pyobj(msg)
+        self.sendArray.send_pyobj(msg)
         self.log += str(datetime.now()) + " " + str(self.messageCounter) + " sent\n"
 
         self.messageCounter += 1
+        
+        if self.messageCounter%10==0:
+            print(self.log)
+            self.log=""
 
 
     def on_getResults(self):
         msg = self.getResults.recv_pyobj()
+        self.log += str(datetime.now()) + " " + str(msg["messageCounter"]) + " arrived\n"
 
 
         #self.testlogger.info("Sent messages: %d", self.messageCounter)

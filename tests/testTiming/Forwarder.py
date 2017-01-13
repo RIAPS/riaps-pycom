@@ -14,6 +14,7 @@ class Forwarder(Component):
         
     def on_getArray(self):
         msg = self.getArray.recv_pyobj()
+        print("message arrived")
         #self.testlogger.info("Received messages: %d", msg)
         self.sendArray.send_pyobj(msg)
 

@@ -14,6 +14,9 @@ class Final(Component):
         # self.messageCounter = 0
 
     def on_getArray(self):
+        print("callback called")
         msg = self.getArray.recv_pyobj()
         # self.testlogger.info("Received messages: %d", msg)
+        print("Got message, forward it ")
         self.returnResults.send_pyobj(msg)
+        
