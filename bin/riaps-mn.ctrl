@@ -10,5 +10,5 @@ route add default gw 10.0.0.1
 /usr/local/bin/rpyc_registry.py &
 
 # Change to (non-privileged) user and run mininet
-echo "source setup; python3 src/riaps_ctrl.py" | sudo -s -u riaps
+echo "source setup; export PYTHONPATH=`pwd`/src; cd src; python3 riaps/riaps_ctrl.py" | sudo -s -u riaps
 

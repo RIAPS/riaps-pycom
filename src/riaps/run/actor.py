@@ -175,6 +175,12 @@ class Actor(object):
         Return True if the message type is local
         '''
         return msgTypeName in self.localNames
+
+    def isInnerMessage(self,msgTypeName):
+        '''
+        Return True if the message type is internal
+        '''
+        return msgTypeName in self.internalNames
         
     def getLocalIface(self):
         '''
@@ -317,6 +323,8 @@ class Actor(object):
         self.logger.info("terminating")
         for component in self.components.values():
             component.terminate()
+        self.devc.terminate()
+        self.disco.terminate()
         # Clean up everything
         self.context.destroy()
         time.sleep(1.0)

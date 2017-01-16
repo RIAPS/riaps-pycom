@@ -14,7 +14,6 @@ class SrvPort(Port):
     classdocs
     '''
 
-
     def __init__(self, parentComponent, portName, portSpec):
         '''
         Constructor

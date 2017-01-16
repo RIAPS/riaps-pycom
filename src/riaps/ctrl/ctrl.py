@@ -179,7 +179,7 @@ class Controller(object):
             return
 
         for key in agent_keys:
-            self.logger.info ('Trying ssh-agent key %s' % key.get_fingerprint().hex())
+            self.logger.info ('Trying user %s ssh-agent key %s' % (username,key.get_fingerprint().hex()))
             try:
                 transport.auth_publickey(username, key)
                 self.logger.info ('... success!')

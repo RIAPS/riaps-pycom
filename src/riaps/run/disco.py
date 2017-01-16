@@ -49,7 +49,7 @@ class DiscoClient(object):
         try:
             self.socket.send(msgBytes)
         except Exception as e:
-            self.logger.error("Unable to register app with discovery: {1}".format(e.errno, e.strerror))
+            self.logger.error("Unable to register app with discovery: %s" % e.args)
             self.socket.close()
             self.socket = None
             return
@@ -57,7 +57,7 @@ class DiscoClient(object):
         try:
             respBytes = self.socket.recv()
         except Exception as e:
-            self.logger.error("No response from discovery service: {1}".format(e.errno, e.strerror))
+            self.logger.error("No response from discovery service: %s" % e.args)
             self.socket.close()
             self.socket = None
             return
@@ -183,3 +183,8 @@ class DiscoClient(object):
         else:
             raise SetupError("Invalid registration message")
         return result
+    
+    def terminate(self):
+        self.logger.info("terminating")
+        pass
+    

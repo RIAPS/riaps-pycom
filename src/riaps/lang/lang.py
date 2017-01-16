@@ -9,7 +9,7 @@ Uses the textX parser
 from os.path import join
 from textx.metamodel import metamodel_from_file
 from textx.export import metamodel_export, model_export
-from textx.exceptions import TextXSemanticError
+from textx.exceptions import TextXSemanticError, TextXSyntaxError
 import textx.model
 
 import sys
@@ -116,7 +116,7 @@ class RiapsModel2JSON(object):
                 portObj['rep_type'] = port.rep_type.name
                 clts[port.name] = portObj
             elif (portClass == 'SrvPort'):
-                portObj['rep_type'] = port.req_type.name
+                portObj['req_type'] = port.req_type.name
                 portObj['rep_type'] = port.rep_type.name
                 srvs[port.name] = portObj
             elif (portClass == 'ReqPort'):
@@ -306,6 +306,9 @@ def compileModel(modelFileName,verbose=False,debug=False):
         example_riaps_model = riaps_meta.model_from_file(join(this_folder,modelFileName))
     except IOError as e:
         print ("I/O error({0}): {1}".format(e.errno, e.strerror))
+        raise
+    except TextXSyntaxError as e:
+        print ("Syntax error: %s" % e.args)
         raise
     except: 
         print ("Unexpected error:", sys.exc_info()[0])
