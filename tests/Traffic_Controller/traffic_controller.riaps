@@ -9,7 +9,7 @@ app traffic_controller {
     message gameDensityMsg;
     
 	// Intersection Controller component. Should probably say what Ts is.
-    component IC (Ts=1.0){
+    component IC (parent="none"){
       //timer clock 1000; 						// Periodic timer trigger to trigger density reading every 1 sec
       //sub densityPort : gameDensityMsg;				// sub port for densityMsg messages 
       //sub lightPort : gameLightStateMsg;		// sub port for messages regarding the state of the traffic lights
@@ -24,7 +24,7 @@ app traffic_controller {
  //   rep setLightsPort : (setLightReq, setLightRep);
  //   }
     
-    device densitySensor(rate=10) {
+    device DensitySensor(rate=10, gameServerIP="localhost") {
     	inside trigger /* default */; 	// Inside port for triggering an op by a message coming from an internal thread.
       								// The 'default' is optional, it implies a 1 sec timer/ticker thread.
     	timer clock 1000;  //Timer to get the density after the value specified milliseconds.
@@ -36,9 +36,9 @@ app traffic_controller {
     actor Actor0 {
        local gameDensityMsg, gameLightStateMsg, setLightReq, setLightRep;	// Local message types
        {
-          ic : IC;						// Intersection Controller
-          lsnsr : lightSensor;			// Component interfacing with the game to get light state
-          //dsnsr : densitySensor;		// Component interfacing with the game to get density
+          ic : IC(parent="Actor0");						// Intersection Controller
+          //lsnsr : lightSensor;			// Component interfacing with the game to get light state
+          dsnsr : DensitySensor(gameServerIP="192.168.0.107");		// Component interfacing with the game to get density
           
        }
     }
@@ -47,7 +47,7 @@ app traffic_controller {
        //{
          // ic : IC;						// Intersection Controller
           //lsnsr : lightSensor;			// Component interfacing with the game to get light state
-          //dsnsr : densitySensor;		// Component interfacing with the game to get density
+          //dsnsr : DensitySensor;		// Component interfacing with the game to get density
           
        //}
     //}
@@ -57,7 +57,7 @@ app traffic_controller {
        //{
          // ic : IC;						// Intersection Controller
           //lsnsr : lightSensor;			// Component interfacing with the game to get light state
-          //dsnsr : densitySensor;		// Component interfacing with the game to get density
+          //dsnsr : DensitySensor;		// Component interfacing with the game to get density
           
        //}
     //}

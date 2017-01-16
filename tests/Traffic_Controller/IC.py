@@ -7,7 +7,7 @@ from time import time
 
 class IC(Component):
     def __init__(self, parent):
-        super(IC, self).__init__(parent)
+        super(IC, self).__init__()
         self.pending = 0
         
         self.GameLightState = {}
@@ -33,7 +33,8 @@ class IC(Component):
         self.maxDensity = 50
         self.minTime = 5
         self.maxTime = 20
-        self.myActor = self.parent.parent.name
+        self.myActor = parent
+        print( self.myActor)
 
     def on_subICPort(self):
         msg = self.subICPort.recv_json()
