@@ -7,6 +7,7 @@ Created on Oct 19, 2016
 import zmq
 import capnp
 import time
+import sys
 import re
 
 from .dbase import DiscoDbase
@@ -268,5 +269,11 @@ class DiscoService(object):
             msgBytes = updMsg.to_bytes()
             clientSocket.send(msgBytes)                     # Send message to client 
         
-
+        def terminate(self):
+            self.logger.info("terminating")
+            # Clean up everything
+            self.context.destroy()
+            time.sleep(1.0)
+            self.logger.info("terminated")
+            sys.exit()
     

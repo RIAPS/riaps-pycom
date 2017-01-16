@@ -28,6 +28,7 @@ class CltPort(Port):
         parentActor = parentComponent.parent
         # The request and reply message types must be of the same kind (global/local)
         assert parentActor.isInnerMessage(self.req_type) == parentActor.isInnerMessage(self.rep_type)
+        assert parentActor.isLocalMessage(self.req_type) == parentActor.isLocalMessage(self.rep_type)
         # Determine if the port is host-local 
         self.isLocalPort = parentActor.isLocalMessage(self.req_type) and parentActor.isLocalMessage(self.rep_type)
         self.serverHost = None

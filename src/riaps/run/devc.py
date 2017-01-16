@@ -176,4 +176,7 @@ class DevmClient(object):
             raise SetupError("Unexpected response from devm service at device unregistration")
         return False
     
+    def terminate(self):
+        self.logger.info("terminating")
+        pass
     

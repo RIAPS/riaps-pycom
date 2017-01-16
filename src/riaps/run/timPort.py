@@ -60,6 +60,7 @@ class TimPort(Port):
         super(TimPort,self).__init__(parentPart,portName)
         self.instName = self.parent.name + '.' + self.name
         self.period = portSpec["period"]
+        self.thread = None
 
     def setup(self):
         self.thread = TimerThread(self)
@@ -73,13 +74,16 @@ class TimPort(Port):
         return ('tim',self.name)
 
     def activate(self):
-        self.thread.activate()
+        if self.thread != None:
+            self.thread.activate()
         
     def deactivate(self):
-        self.thread.deactivate()
+        if self.thread != None:
+            self.thread.deactivate()
         
     def terminate(self):
-        self.thread.terminate()
+        if self.thread != None:
+            self.thread.terminate()
 
     def getSocket(self):
         return self.socket
