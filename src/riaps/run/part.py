@@ -64,6 +64,8 @@ class Part(object):
         self.logger.info('Constructing %s of type %s' % (iName,self.typeName))
         self.instance = self.class_(**self.args)    # Run the component constructor
         self.context = parentActor.context
+        self.control = None
+        self.thread = None
         self.buildAllPorts(self.type["ports"])      # Build all the ports of the component
         self.state = Part.State.Initial
         
@@ -119,8 +121,9 @@ class Part(object):
         '''
         Send a control message to component thread
         '''
-        self.control.setsockopt(zmq.SNDTIMEO,timeOut) 
-        self.control.send_pyobj(cmd)
+        if self.control != None:
+            self.control.setsockopt(zmq.SNDTIMEO,timeOut) 
+            self.control.send_pyobj(cmd)
         
     def setup(self):
         '''
@@ -161,6 +164,7 @@ class Part(object):
         '''
         Handle a port update message coming from the discovery service
         '''
+        self.logger.info("handlePortUpdate %s %s %s" % (portName,str(host),str(port)))
         msg = ("portUpdate",portName,host,port)
         # print(msg)
         self.control.send_pyobj(msg)        # Relay message to component thread
@@ -225,7 +229,8 @@ class Part(object):
     def terminate(self):
         self.logger.info("terminating")
         self.sendControl("kill",-1)         # Send message to the thread to kill itself
-        self.thread.join()
+        if self.thread != None:
+            self.thread.join()
         for portObj in self.ports.values():
             portObj.terminate()
         self.logger.info("terminated")

@@ -4,7 +4,7 @@ Created on Oct 19, 2016
 @author: riaps
 '''
 import sys
-import os
+import os,signal
 import argparse
 from .discs import DiscoService
 from riaps.utils.config import Config
@@ -14,6 +14,10 @@ theDisco = None
 
 # Config object
 conf = None 
+
+def termHandler(signal,frame):
+    global theDisco
+    theDisco.terminate()
 
 # Interactive console for debugging (not used)
 def interact():
@@ -39,6 +43,7 @@ def main(debug=True):
     # Create singleton 
     global theDisco
     theDisco = DiscoService(args.database)  # Assign the service to the singleton
+    signal.signal(signal.SIGTERM,termHandler)
     theDisco.start()
     theDisco.run()
 #    if debug:
