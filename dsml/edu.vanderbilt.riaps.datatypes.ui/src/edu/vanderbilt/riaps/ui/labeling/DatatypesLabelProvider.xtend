@@ -28,4 +28,4 @@ class DatatypesLabelProvider extends DefaultEObjectLabelProvider {
 //	def image(Greeting ele) {
 //		'Greeting.gif'
 //	}
-}
+} 

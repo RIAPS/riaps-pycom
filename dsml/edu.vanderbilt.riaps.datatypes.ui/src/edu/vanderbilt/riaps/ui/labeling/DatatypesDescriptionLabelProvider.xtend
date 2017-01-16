@@ -19,6 +19,6 @@ class DatatypesDescriptionLabelProvider extends DefaultDescriptionLabelProvider 
 //	}
 //	 
 //	override image(IEObjectDescription ele) {
-//		ele.EClass.name + '.gif'
+//		ele.EClass.name + '.gif' 
 //	}
 }

@@ -11,3 +11,4 @@ import org.eclipse.xtend.lib.annotations.FinalFieldsConstructor
 @FinalFieldsConstructor
 class DatatypesUiModule extends AbstractDatatypesUiModule {
 }
+  

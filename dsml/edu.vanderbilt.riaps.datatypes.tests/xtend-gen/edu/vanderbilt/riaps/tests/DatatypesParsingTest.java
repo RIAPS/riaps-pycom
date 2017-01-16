@@ -26,7 +26,7 @@ public class DatatypesParsingTest {
   public void loadModel() {
     try {
       StringConcatenation _builder = new StringConcatenation();
-      _builder.append("Hello Xtext!");
+      _builder.append("Hello Xtext! ");
       _builder.newLine();
       final Mdodel result = this.parseHelper.parse(_builder);
       Assert.assertNotNull(result);

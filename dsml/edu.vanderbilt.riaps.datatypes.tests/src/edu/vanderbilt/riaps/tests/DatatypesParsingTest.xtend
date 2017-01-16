@@ -22,7 +22,7 @@ class DatatypesParsingTest{
 	@Test 
 	def void loadModel() {
 		val result = parseHelper.parse('''
-			Hello Xtext!
+			Hello Xtext! 
 		''')
 		Assert.assertNotNull(result)
 	}
