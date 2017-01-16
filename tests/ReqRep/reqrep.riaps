@@ -1,0 +1,30 @@
+// RIAPS Client Server 
+
+app ReqRep {
+    message CltReq; 
+    message SrvRep;
+     
+    // Client
+    component Requestor {
+    	req cltReqPort : (CltReq,SrvRep); 
+    	timer clock 1000;
+    }
+    
+    // Server
+    component Replier {
+    	rep srvRepPort : (CltReq, SrvRep);
+    }
+    
+    actor RequestorActor {
+    	{ 
+    		requestor : Requestor;
+    	}
+    }
+    
+    actor ReplierActor {
+    	{
+    		replier : Replier;
+    	}
+    }
+    
+}

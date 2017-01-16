@@ -1,0 +1,153 @@
+/********************************************************************************/
+grammar edu.vanderbilt.riaps.Datatypes with org.eclipse.xtext.common.Terminals
+generate datatypes "http://www.vanderbilt.edu/riaps/Datatypes"
+import "http://www.eclipse.org/emf/2002/Ecore" as ecore
+// **************************************************************
+// model root
+Model returns Mdodel:
+	{Model}
+	pack=Package
+	(imports+=Import)*
+	( typeCollections+=FTypeCollection | messageCollections +=FMessageCollection)*
+	;
+// **************************************************************
+// general
+
+Package:
+	'package' name=FQN
+;
+
+Import :
+	'import' (importedNamespace=ImportedFQN);
+
+ImportedFQN:
+	FQN ('.' '*')?;
+
+FQN:
+	ID ('.' ID)*;
+
+// **************************************************************
+// Annotation
+FAnnotationBlock returns FAnnotationBlock:
+	'<**' (elements+=FAnnotation)+ '**>';
+
+FAnnotation returns FAnnotation:
+	rawText=ANNOTATION_STRING;
+
+terminal ANNOTATION_STRING returns ecore::EString:
+	'@' (('a'..'z')|'-')+ (' '|'\t')* ':'
+	( ('\\' ('b'|'t'|'n'|'f'|'r'|'u'|'"'|"'"|'\\')) | ('\\*'|'\\@') | !('\\'|'*'|'@') )*
+;
+
+	
+
+FTypeCollection returns FTypeCollection:
+	{FTypeCollection}
+	(comment=FAnnotationBlock)?
+	'typeCollection' (name=ID)?
+	'{'
+		('version' version=FVersion)?
+		(
+			types+=FType
+		)*
+	'}';
+	
+FMessageCollection returns FMessageCollection:
+	{FMessageCollection}
+	(comment=FAnnotationBlock)?
+	'messageCollection' (name=ID)?
+	'{'
+		('version' version=FVersion)?
+		(
+			messages+=FMessage
+		)*
+	'}';
+
+
+FMessage returns FMessage:
+	{FMessage}
+	derived=[FStructType|FQN] name=ID ('key' key=[FField|FQN])?;
+
+FVersion returns FVersion:
+	{FVersion}
+	'{'
+		'major' major=INT
+		'minor' minor=INT
+    '}';
+	
+
+FTypeRef returns FTypeRef:
+	predefined=FBasicTypeId | derived=[FType|FQN];
+
+enum FBasicTypeId returns FBasicTypeId:
+	Int8 = 'Int8' |
+	UInt8 = 'UInt8' |
+	Int16 = 'Int16' |
+	UInt16 = 'UInt16' |
+	Int32 = 'Int32' |
+	UInt32 = 'UInt32' |
+	Int64 = 'Int64' |
+	UInt64 = 'UInt64' |
+	Boolean = 'Boolean' |
+	String = 'String' |
+	Float = 'Float' |
+	Double = 'Double' |
+	ByteBuffer = 'ByteBuffer' ;
+	
+	
+FType returns FType:
+	FArrayType |
+	FEnumerationType |
+	FStructType |
+	FMapType |
+	FTypeDef;
+	
+FArrayType returns FArrayType:
+	{FArrayType}
+	(comment=FAnnotationBlock)?
+	'array' name=ID 'of' elementType=FTypeRef;
+	
+FTypeDef returns FTypeDef:
+	{FTypeDef}
+	(comment=FAnnotationBlock)?
+	'typedef' name=ID 'is' actualType=FTypeRef
+	; 
+	
+FStructType returns FStructType:
+	{FStructType}
+	(comment=FAnnotationBlock)?
+	'struct' name=ID
+		(
+			('extends' base=[FStructType|FQN])
+		)?
+	'{'
+		(elements+=FField)*
+    '}';
+
+FEnumerationType returns FEnumerationType:
+	{FEnumerationType}
+	(comment=FAnnotationBlock)?
+	'enumeration' name=ID
+	('extends' base=[FEnumerationType|FQN])?
+	'{'
+		(enumerators+=FEnumerator (','? enumerators+=FEnumerator)*)?
+    '}';
+    
+FEnumerator returns FEnumerator:
+	{FEnumerator}
+	(comment=FAnnotationBlock)?
+	name=ID ('=' value=STRING)?
+    ;
+    
+ 
+FMapType returns FMapType:
+	{FMapType}
+	(comment=FAnnotationBlock)?
+	'map' name=ID '{'
+		keyType=FTypeRef 'to' valueType=FTypeRef
+	'}';
+ 
+FField:
+	(comment=FAnnotationBlock)?
+	type=FTypeRef (array?='[' ']')? name=ID;
+	

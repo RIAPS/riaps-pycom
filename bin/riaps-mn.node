@@ -7,4 +7,4 @@
 route add default gw 10.0.0.1
 
 # Change to (non-privileged) user
-echo "source setup.node; cd src; python3 riaps_deplo.py" | sudo -s -u riaps 
+echo "source setup.node; export PYTHONPATH=`pwd`/src; cd src; python3 riaps/riaps_deplo.py" | sudo -s -u riaps 

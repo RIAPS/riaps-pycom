@@ -1,0 +1,6 @@
+app traffic_controller {
+	on all Actor0;
+	//on (192.168.0.107) Actor0;
+	//on (192.168.0.108) Actor1;
+	//on (192.168.0.101) Actor2;
+}

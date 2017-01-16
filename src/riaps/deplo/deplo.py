@@ -249,3 +249,10 @@ class DeploService(object):
         else:
             pass                # Should flag an error
 
+    def terminate(self):
+        self.logger.info("terminating")
+        # Clean up everything
+        self.context.destroy()
+        time.sleep(1.0)
+        self.logger.info("terminated")
+        sys.exit()

@@ -5,7 +5,7 @@ Created on Nov 1, 2016
 @author: riaps
 '''
 import sys
-import os
+import os,signal
 import argparse
 from .deplo import DeploService
 from riaps.consts.defs import *
@@ -21,7 +21,11 @@ conf = None
 def interact():
     import code
     code.InteractiveConsole(locals=globals()).interact()
-  
+
+def termHandler(signal,frame):
+    global theDepl
+    theDepl.terminate()
+      
 def main(debug=True):
     parser = argparse.ArgumentParser()
     parser.add_argument("-p","--port", type=int,  default=const.ctrlPort, help="controller port number")
@@ -37,6 +41,7 @@ def main(debug=True):
     conf = Config()
     global theDepl
     theDepl = DeploService(args.node,args.port)  # Assign the service to the singleton
+    signal.signal(signal.SIGTERM,termHandler)
     theDepl.setup()
     theDepl.run()
 #     if debug:
