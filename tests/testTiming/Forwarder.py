@@ -1,22 +1,32 @@
 # import riaps
 from riaps.run.comp import Component
 import logging
+from Message import message
+from datetime import datetime
 
 class Forwarder(Component):
     def __init__(self):
         super(Forwarder, self).__init__()
-        #self.testlogger = logging.getLogger(__name__)
-        #self.testlogger.setLevel(logging.DEBUG)
-        #self.fh = logging.FileHandler('/tmp/test_1_N_ActorTest1Ns.log')
-        #self.fh.setLevel(logging.DEBUG)
-        #self.testlogger.addHandler(self.fh)
-        #self.messageCounter = 0
+        self.log=""
         
     def on_getArray(self):
         msg = self.getArray.recv_pyobj()
-        print("message arrived")
-        #self.testlogger.info("Received messages: %d", msg)
-        self.sendArray.send_pyobj(msg)
+         
+        newMsg = message()
+        newMsg.messageCounter = msg.messageCounter
+        newMsg.body = bytearray([])
+        
+        self.log += "<= " +str(datetime.now()) + " " + str(msg.messageCounter) + " arrived\n"
+        if msg.messageCounter%1000==0:
+            print(self.log)
+            self.log=""
+        
+        
+        for value in msg.body:
+            newMsg.body.append(value*2)
+            
+            
+        self.sendArray.send_pyobj(newMsg)
 
     
 

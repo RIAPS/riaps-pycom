@@ -6,7 +6,7 @@ app testTiming {
 
     // Periodically sends 100bytes
     component Repeater {
-      timer clock 1000;
+      timer clock 10;
       pub sendArray : m1;
       sub getResults : m3;
     }
