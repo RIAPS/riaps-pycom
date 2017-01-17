@@ -114,7 +114,7 @@ class IC(Component):
             self.setGameLights()
             self.timeStamp = time()
         elif(not self.initialized):
-            self.logger.info("%s Waiting for server", self.parent.parent.name)
+            self.logger.info("%s Waiting for server", self.myActor)
         else:
             if True == self.controller():
                 self.switchState()
@@ -168,10 +168,11 @@ class IC(Component):
         msg = self.densityPort.recv_pyobj()
         self.Densities = msg
         self.logger.info("DensityState: \n%s\n", pprint.pformat(msg))
-        ICD = {'IC' : self.parent.parent.name,
+        ICD = {'IC' : self.myActor,
                'Densities' : self.Densities}
-        #print(ICD)
-        self.pubICPort.send_json(ICD)
+        #print("ICD: ", ICD)
+        #self.pubICPort.send_json(ICD)
+        self.pubICPort.send_pyobj(ICD)
         
     def on_setLightsPort(self):
         msg = self.setLightsPort.recv_pyobj()
