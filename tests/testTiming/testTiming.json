@@ -103,7 +103,7 @@
                 },
                 "tims":{
                     "clock":{
-                        "period":1000
+                        "period":10
                     }
                 }
             }

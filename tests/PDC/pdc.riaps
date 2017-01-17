@@ -1,12 +1,13 @@
 // RIAPS PMU/PDC Demo
 
-app PDCApp {
+app PDC {
     message DataFrame; 
      
 	// PMU device interface
     device PMU(pmu_ip='127.0.0.1', pmu_port=1410) {
-      inside trigger /* default */; 	// Inside port for triggering an op by a message coming from an internal thread.
-      									// The 'default' is optional, it implies a 1 sec timer/ticker thread.
+      inside queue /* default */; 	// Inside port for forwarding messages coming from an internal thread.
+      								// The 'default' is optional, it implies a 1 sec timer/ticker thread.
+      timer clock 2000;
       pub pmuData : DataFrame ;	// Publish port for PMU data messages 
     }
     
