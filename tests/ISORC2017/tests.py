@@ -4,6 +4,21 @@ import os
 import perf
 from time import sleep
 
+def test_start_discovery():
+    for target in runtime.get_active_config("targets"):
+        deployerId = "discostart" + target["actor"]
+        deployer = runtime.get_deployer(deployerId)
+        deployer.start(deployerId, configs={"sync": True})
+    sleep(10)
+
+def test_stop_discovery():
+    for target in runtime.get_active_config("targets"):
+        deployerId = "discostop" + target["actor"]
+        deployer = runtime.get_deployer(deployerId)
+        deployer.start(deployerId, configs={"sync": True})
+    sleep(10)
+
+'''
 def test_reach_discovery():
     for target in runtime.get_active_config("targets"):
         deployerId = "disco" + target["actor"]
@@ -42,3 +57,4 @@ def validate_pub_send():
 
     assert "Received messages: 1" in sub_logs, "Subscriber didn't get any messages"
     assert "Received messages: 5" in sub_logs, "Subscriber didn't get 5 messages"
+'''
