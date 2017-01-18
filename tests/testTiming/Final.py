@@ -12,7 +12,7 @@ class Final(Component):
 
     def on_getArray(self):
         msg = self.getArray.recv_pyobj()
-        print("Got message, forward it ")
+        #print("Got message, forward it ")
         
          
         newMsg = message()

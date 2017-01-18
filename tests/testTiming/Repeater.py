@@ -5,7 +5,7 @@ from riaps.run.comp import Component
 import logging
 import os
 import sys
-from datetime import datetime
+import time
 from Message import message
 
 
@@ -39,15 +39,15 @@ class Repeater(Component):
         m = message()
         m.messageCounter = self.messageCounter
         m.body = content
-                      
-
 
         self.sendArray.send_pyobj(m)
-        self.sendLog += "=> " + str(datetime.now()) + " " + str(self.messageCounter) + " sent\n"
+        #self.sendLog += "=> " + str(datetime.now()) + " " + str(self.messageCounter) + " sent\n"
+        self.sendLog += "=> " + str(time.perf_counter()) + " " + str(self.messageCounter) + " sent\n"
+
 
         self.messageCounter += 1
         
-        if self.messageCounter%1000==0:
+        if self.messageCounter%2000==0:
             print(self.sendLog)
             print("-----")
             print(self.receiveLog)
@@ -57,4 +57,5 @@ class Repeater(Component):
 
     def on_getResults(self):
         mmm = self.getResults.recv_pyobj()
-        self.receiveLog += "<= " +str(datetime.now()) + " " + str(mmm.messageCounter) + " arrived\n"
+        #self.receiveLog += "<= " +str(datetime.now()) + " " + str(mmm.messageCounter) + " arrived\n"
+        self.receiveLog += "<= " +str(time.perf_counter()) + " " + str(mmm.messageCounter) + " arrived\n"

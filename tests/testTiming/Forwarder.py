@@ -16,10 +16,10 @@ class Forwarder(Component):
         newMsg.messageCounter = msg.messageCounter
         newMsg.body = bytearray([])
         
-        self.log += "<= " +str(datetime.now()) + " " + str(msg.messageCounter) + " arrived\n"
+        #self.log += "<= " +str(datetime.now()) + " " + str(msg.messageCounter) + " arrived\n"
         if msg.messageCounter%1000==0:
-            print(self.log)
-            self.log=""
+            print("1000. message")
+        
         
         
         for value in msg.body:
