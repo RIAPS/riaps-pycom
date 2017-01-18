@@ -25,15 +25,15 @@ def setup_suite():
 
     # Script to check discovery service
     discoCheckScript = "checkDiscoveryService.py"
-    discoCheckScriptPath = "../../test_common"
+    discoCheckScriptPath = "../test_common"
     
     # Script to start the discovery
     discoStartScript = "startDiscovery.py"
-    discoStartScriptPath = "../../test_common"
+    discoStartScriptPath = "../test_common"
     
     # Script to stop the discovery
     discoStopScript = "stopDiscovery.py"
-    discoStopScriptPath = "../../test_common"
+    discoStopScriptPath = "../test_common"
     
 
     # Deploy the riaps-disco checker script

@@ -8,7 +8,7 @@ def test_start_discovery():
     for target in runtime.get_active_config("targets"):
         deployerId = "discostart" + target["actor"]
         deployer = runtime.get_deployer(deployerId)
-        deployer.start(deployerId, configs={"sync": True})
+        deployer.start(deployerId, configs={"sync": False})
     sleep(10)
 
 def test_stop_discovery():
