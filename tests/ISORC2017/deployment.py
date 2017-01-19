@@ -25,7 +25,16 @@ def setup_suite():
 
     # Script to check discovery service
     discoCheckScript = "checkDiscoveryService.py"
-    discoCheckScriptPath = "../../test_common"
+    discoCheckScriptPath = "../test_common"
+    
+    # Script to start the discovery
+    discoStartScript = "startDiscovery.py"
+    discoStartScriptPath = "../test_common"
+    
+    # Script to stop the discovery
+    discoStopScript = "stopDiscovery.py"
+    discoStopScriptPath = "../test_common"
+    
 
     # Deploy the riaps-disco checker script
     for target in runtime.get_active_config('targets'):
@@ -37,10 +46,40 @@ def setup_suite():
             'executable': checkscriptpath,
             'install_path': riaps_app_path,
             'hostname': target["host"],
-            "start_command": "python3 " + os.path.join(riaps_app_path, "checkDiscoveryService.py")
+            "start_command": "python3 " + os.path.join(riaps_app_path, discoCheckScript)
         })
         runtime.set_deployer(deployerId, checkDiscoDeployer)
         checkDiscoDeployer.install(deployerId)
+        
+    # Deploy the discovery starter script
+    for target in runtime.get_active_config('targets'):
+        deployerId = "discostart" + target["actor"]
+        startscriptpath = os.path.abspath(
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), discoStartScriptPath, discoStartScript))
+
+        startDiscoveryDeployer = adhoc_deployer.SSHDeployer(deployerId, {
+            'executable': startscriptpath,
+            'install_path': riaps_app_path,
+            'hostname': target["host"],
+            "start_command": "python3 " + os.path.join(riaps_app_path, discoStartScript)
+        })
+        runtime.set_deployer(deployerId, startDiscoveryDeployer)
+        startDiscoveryDeployer.install(deployerId)
+        
+    # Deploy the discovery stop script
+    for target in runtime.get_active_config('targets'):
+        deployerId = "discostop" + target["actor"]
+        stopscriptpath = os.path.abspath(
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), discoStopScriptPath, discoStopScript))
+
+        stopDiscoveryDeployer = adhoc_deployer.SSHDeployer(deployerId, {
+            'executable': startscriptpath,
+            'install_path': riaps_app_path,
+            'hostname': target["host"],
+            "start_command": "python3 " + os.path.join(riaps_app_path, discoStopScript)
+        })
+        runtime.set_deployer(deployerId, stopDiscoveryDeployer)
+        stopDiscoveryDeployer.install(deployerId)
 
     # Deploy the riaps-components/model file
     for target in runtime.get_active_config('targets'):
