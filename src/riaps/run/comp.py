@@ -116,6 +116,7 @@ class Component(object):
         '''
         class_ = getattr(self,'__class__')
         className = getattr(class_,'__name__')
+        self.owner = class_.OWNER                   # This is set in the parent part (temporarily)
         self.logger = logging.getLogger(className)
         self.logger.setLevel(logging.INFO)
         self.logger.propagate=False
@@ -124,6 +125,46 @@ class Component(object):
         formatter = logging.Formatter('%(levelname)s:%(asctime)s:%(name)s:%(message)s')
         ch.setFormatter(formatter)
         self.logger.addHandler(ch)
-#        print  ( "Component() : '%s'" % self ) 
+#        print  ( "Component() : '%s'" % self )
+ 
+    def getName(self):
+        '''
+        Return the name of the component (as in model)
+        '''
+        return self.owner.getName()
+    
+    def getTypeName(self):
+        '''
+        Return the name of the type of the component (as in model) 
+        '''
+        return self.owner.getTypeName()
+    
+    def getLocalID(self):
+        '''
+        Return a locally unique ID (int) of the component. The ID is unique within the actor.
+        '''
+        return id(self)
+
+    def getActorName(self):
+        '''
+        Return the name of the parent actor (as in model)
+        '''
+        return self.owner.getActorName()
+    
+    def getAppName(self):
+        '''
+        Return the name of the parent application (as in model)
+        '''
+        return self.owner.getAppName()
+    
+    def getActorID(self):
+        '''
+        Return a globally unique ID (8 bytes) for the parent actor. 
+        '''
+        return self.owner.getActorID()
+    
+    
+    
+    
 
     
