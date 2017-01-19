@@ -38,7 +38,7 @@ def setup_suite():
 
     # Deploy the riaps-disco checker script
     for target in runtime.get_active_config('targets'):
-        deployerId = "disco" + target["actor"]
+        deployerId = "disco_" + target["host"] + "_" + target["actor"]
         checkscriptpath = os.path.abspath(
             os.path.join(os.path.dirname(os.path.abspath(__file__)), discoCheckScriptPath, discoCheckScript))
 
@@ -53,7 +53,7 @@ def setup_suite():
         
     # Deploy the discovery starter script
     for target in runtime.get_active_config('targets'):
-        deployerId = "discostart" + target["actor"]
+        deployerId = "discostart_" + target["host"] + "_" + target["actor"]
         startscriptpath = os.path.abspath(
             os.path.join(os.path.dirname(os.path.abspath(__file__)), discoStartScriptPath, discoStartScript))
 
@@ -68,12 +68,12 @@ def setup_suite():
         
     # Deploy the discovery stop script
     for target in runtime.get_active_config('targets'):
-        deployerId = "discostop" + target["actor"]
+        deployerId = "discostop_" + target["host"] + "_" + target["actor"]
         stopscriptpath = os.path.abspath(
             os.path.join(os.path.dirname(os.path.abspath(__file__)), discoStopScriptPath, discoStopScript))
 
         stopDiscoveryDeployer = adhoc_deployer.SSHDeployer(deployerId, {
-            'executable': startscriptpath,
+            'executable': stopscriptpath,
             'install_path': riaps_app_path,
             'hostname': target["host"],
             "start_command": "python3 " + os.path.join(riaps_app_path, discoStopScript)
@@ -83,7 +83,8 @@ def setup_suite():
 
     # Deploy the riaps-components/model file
     for target in runtime.get_active_config('targets'):
-        model_deployer = adhoc_deployer.SSHDeployer(target["actor"], {
+        deployerId = target["host"] + "_" + target["actor"]
+        model_deployer = adhoc_deployer.SSHDeployer(deployerId, {
             'executable': model_path,
             'install_path': os.path.join(riaps_app_path,
                                          runtime.get_active_config('app_dir')),
@@ -91,14 +92,15 @@ def setup_suite():
             'start_command': os.path.join(userdir, ".local/bin/riaps_actor"),
             'args': [runtime.get_active_config('app_dir'),
                      runtime.get_active_config('app_dir') + '.json',
-                     target["actor"]],
+                     target["actor"],
+                     "address=" + target["host"]],
             'env': env,
             'terminate_only': True,
             'pid_keyword': model_path,
             'post_install_cmds': [start_riaps_lang]
         })
-        runtime.set_deployer(target["actor"], model_deployer)
-        model_deployer.install(target["actor"])
+        runtime.set_deployer(deployerId, model_deployer)
+        model_deployer.install(deployerId)
 
         for component in runtime.get_active_config('components_py'):
             localPath = os.path.join(os.path.dirname(os.path.abspath(__file__)),

@@ -6,17 +6,33 @@ from time import sleep
 
 def test_start_discovery():
     for target in runtime.get_active_config("targets"):
-        deployerId = "discostart" + target["actor"]
+        deployerId = "discostart_" + target["host"] + "_" + target["actor"]
         deployer = runtime.get_deployer(deployerId)
         deployer.start(deployerId, configs={"sync": False})
     sleep(10)
 
+def test_reach_discovery():
+    for target in runtime.get_active_config("targets"):
+        deployerId = "disco_" + target["host"] + "_" + target["actor"]
+        deployer = runtime.get_deployer(deployerId)
+        deployer.start(deployerId, configs={"sync": True})
+
+def test_pub_sub():
+    for target in runtime.get_active_config("targets"):
+        deployerId = target["host"] + "_" + target["actor"]
+        deployer = runtime.get_deployer(deployerId)
+        deployer.start(target["actor"], configs={"sync": False})
+
+    sleep(30)
+
 def test_stop_discovery():
     for target in runtime.get_active_config("targets"):
-        deployerId = "discostop" + target["actor"]
+        deployerId = "discostop_" + target["host"] + "_" + target["actor"]
         deployer = runtime.get_deployer(deployerId)
         deployer.start(deployerId, configs={"sync": True})
     sleep(10)
+
+
 
 '''
 def test_reach_discovery():

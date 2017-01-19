@@ -1,26 +1,26 @@
 app ISORC2017 {
     message SensorValue;
 
-    component TemperatureSensor {
+    component TemperatureSensor(address="") {
       timer clock 1000; 							// Periodic timer trigger to trigger sensor every 1 sec
       timer stopComponent 40000;                    // Stop the component after 20 sec
       pub sendTemperature : SensorValue ;			// Publish port for SensorReady messages
     }
 
-    component Collector {
+    component Collector(address="") {
       timer stopComponent 40000;                    // Stop the component after 40 sec
       sub getTemperature : SensorValue ;			// Subscriber port to trigger component with SensorValue messages
     }
 
-    actor ActorSensor {
+    actor ActorSensor(address="") {
        {
-          sensor : TemperatureSensor;
+          sensor : TemperatureSensor(address=address);
        }
     }
 
-    actor ActorCollector {
+    actor ActorCollector(address="") {
        {
-          collector: Collector;
+          collector: Collector(address=address);
        }
     }
 }
