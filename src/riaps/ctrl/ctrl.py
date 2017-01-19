@@ -7,6 +7,7 @@ Created on Nov 10, 2016
 
 import os
 import sys
+from stat import *
 import time
 import hashlib
 import paramiko
@@ -288,15 +289,12 @@ class Controller(object):
             res.append(argValue)
         return res
     
-    def launch(self): 
-        '''
-        Launch an app. The model of the app is in self.riaps_model, and the corresponding deployment 
-        is in self.riaps_depl. 
-        '''
+    def buildDownload(self):
         download = []
         appName = self.riaps_depl.getAppName()
         self.riaps_appName = appName
         appNameJSON = appName + ".json"
+        self.riaps_appNameJSON = appNameJSON
         if appName not in self.riaps_model:
             self.log("Error: App '%s' not found in model" % appName)
             return
@@ -336,6 +334,15 @@ class Controller(object):
                             clients.add(client)
                         else:
                             self.log('? %s ' % target)
+        return (download,clients,depls)
+    
+    def launch(self): 
+        '''
+        Launch an app. The model of the app is in self.riaps_model, and the corresponding deployment 
+        is in self.riaps_depl. 
+        '''
+        download,clients,depls = self.buildDownload()
+        # 
         ok = self.downloadApp(download,clients)
         if not ok:
             self.log("* App download fault")
@@ -352,9 +359,9 @@ class Controller(object):
                             actorName = actor["name"]
                             actuals = actor["actuals"]
                             actualArgs = self.buildArgs(actuals)
-                            client.launch(appName,appNameJSON,actorName,actualArgs)
-                            self.launchList.append([client,appName,actorName])
-                            self.log("L %s %s %s %s" % (clientName,appName,actorName,str(actualArgs)))
+                            client.launch(self.riaps_appName,self.riaps_appNameJSON,actorName,actualArgs)
+                            self.launchList.append([client,self.riaps_appName,actorName])
+                            self.log("L %s %s %s %s" % (clientName,self.riaps_appName,actorName,str(actualArgs)))
                 else:           
                     for target in targets:
                         client = self.findClient(target)
@@ -363,9 +370,9 @@ class Controller(object):
                                 actorName = actor["name"]
                                 actuals = actor["actuals"]
                                 actualArgs = self.buildArgs(actuals)
-                                client.launch(appName,appNameJSON,actorName,actualArgs)
-                                self.launchList.append([client,appName,actorName])
-                                self.log("L %s %s %s %s" % (target,appName,actorName,str(actualArgs)))
+                                client.launch(self.riaps_appName,self.riaps_appNameJSON,actorName,actualArgs)
+                                self.launchList.append([client,self.riaps_appName,actorName])
+                                self.log("L %s %s %s %s" % (target,self.riaps_appName,actorName,str(actualArgs)))
                         else:
                             self.log('? %s ' % target)
         return True
@@ -380,7 +387,80 @@ class Controller(object):
             client.halt(appName,actorName)
             self.log("H %s %s %s" % (client.name,appName,actorName))
         self.launchList = []
+
     
+    def isdir(self,sftp,path):
+        try:
+            return S_ISDIR(sftp.stat(path).st_mode)
+        except IOError:
+            return False
+
+    def rm(self,sftp,path):
+        files = sftp.listdir(path)
+
+        for f in files:
+            filepath = os.path.join(path, f)
+            try:
+                sftp.remove(filepath)
+            except IOError:
+                self.rm(sftp,filepath)
+        sftp.rmdir(path)
+
+    def removeAppFromClient(self,files,client):
+        hostName = client.name
+        hostKey = None
+        hostKeyType = None
+        if hostName in self.hostKeys:
+            hostKeyType = self.hostKeys[hostName].keys()[0]
+            hostKey= self.hostKeys[hostName][hostKeyType]
+            self.logger.info ('Using host key of type %s' % hostKeyType)
+        try:
+            port = const.ctrlSSHPort
+            logging.info ('Establishing SSH connection to: %s:%s' % (str(hostName),str(port)))
+            t = paramiko.Transport((hostName, port))
+            t.start_client()
+            self.authenticate(t,Config.TARGET_USER)
+
+            if not t.is_authenticated():
+                self.logger.warning ('RSA key auth failed!') 
+                # t.connect(username=username, password=password, hostkey=hostkey)
+                return False
+
+            sftpSession = t.open_session()
+            sftpClient = paramiko.SFTPClient.from_transport(t)
+            
+            dirRemote = os.path.join(client.appFolder,self.riaps_appName)
+            
+            self.rm(sftpClient,dirRemote)
+            
+        except Exception as e:
+                self.logger.warning('Caught exception: %s: %s' % (e.__class__, e))
+        try:
+            t.close()
+            return True
+        except:
+            return False
+            
+    def removeApp(self):
+        files,clients,depls = self.buildDownload()
+        with ctrlLock:
+            for client in clients:
+                if client.stale:
+                    self.log('? %s',client.name)    # Stale client, we don't remove
+                else:
+                    ok = self.removeAppFromClient(files,client)
+                    if not ok:
+                        return False
+        return True
+        
+    
+    def remove(self):
+        ok = self.removeApp()
+        if ok: 
+            self.log("R %s " % self.riaps_appName)
+        else:
+            self.log("? %s " % self.riaps_appName)
+
     def setAppFolder(self,appFolderPath):
         self.riaps_appFolder = appFolderPath
         os.chdir(appFolderPath)

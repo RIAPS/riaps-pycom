@@ -20,6 +20,8 @@ import logging
 from builtins import int, str
 import re
 import sys
+import os
+import ipaddress
 
 class Actor(object):
     '''
@@ -34,6 +36,10 @@ class Actor(object):
         self.appName = gModel["name"]
         self.modelName = gModelName
         self.name = aName
+        self.pid = os.getpid()
+        self.setupIfaces()
+        # Assumption : pid is a 4 byte int
+        self.actorID = ipaddress.IPv4Address(self.globalHost).packed + self.pid.to_bytes(4,'big')
         self.suffix = ""
         if aName not in gModel["actors"]:
             raise BuildError('Actor "%s" unknown' % aName)
@@ -193,6 +199,15 @@ class Actor(object):
         Return the IP address of the global network interface
         '''
         return self.globalHost
+
+    def getActorName(self):
+        return self.name
+    
+    def getAppName(self):
+        return self.appName 
+        
+    def getActorID(self):
+        return self.actorID
     
     def setupIfaces(self):
         '''
@@ -211,7 +226,6 @@ class Actor(object):
         Perform a setup operation on the actor (after  the initial construction but before the activation of parts)
         '''
         self.logger.info("setup")
-        self.setupIfaces()
         self.suffix = self.macAddress
         self.disco = DiscoClient(self,self.suffix)
         self.disco.start()                  # Start the discovery service client

@@ -35,7 +35,7 @@ class ServiceClient(object):
             return
         self.stale = True
         self.callback = None
-        if self.name != '*gui*':
+        if self.name != "*gui*":
             self.log("- %s " % (self.name,))
                 
     def log(self, text):
@@ -78,7 +78,7 @@ class ControllerService(rpyc.Service):
 
     def on_disconnect(self):
         '''
-        Called when a client connects. Subsequently the client must login. 
+        Called when a client disconnects
         '''
         if self.client:
             self.client.exposed_logout()

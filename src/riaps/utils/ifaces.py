@@ -4,6 +4,7 @@ Created on Nov 4, 2016
 
 @author: riaps
 '''
+
 import netifaces
 
 def getNetworkInterfaces():

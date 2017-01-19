@@ -61,13 +61,30 @@ class Part(object):
         self.args = iArgs
         self.load()
         self.class_ = getattr(self.module_, self.typeName)
+        self.class_.OWNER = self            # Trick to set the OWNER of the component 
         self.logger.info('Constructing %s of type %s' % (iName,self.typeName))
         self.instance = self.class_(**self.args)    # Run the component constructor
+        self.class_.OWNER = None
         self.context = parentActor.context
         self.control = None
         self.thread = None
         self.buildAllPorts(self.type["ports"])      # Build all the ports of the component
         self.state = Part.State.Initial
+        
+    def getName(self):
+        return self.name
+    
+    def getTypeName(self):
+        return self.typeName
+    
+    def getActorName(self):
+        return self.parent.getActorName()
+
+    def getAppName(self):
+        return self.parent.getAppName()
+
+    def getActorID(self):
+        return self.parent.getActorID()
         
     def load(self):
         '''

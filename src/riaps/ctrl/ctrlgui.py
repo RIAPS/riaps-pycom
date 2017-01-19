@@ -42,6 +42,8 @@ class ControlGUIClient(object):
                                       "onFolderEntryActivate" : self.on_folderEntryActivate,
                                       "onQuit" : self.on_Quit,
                                       "onLaunch" : self.on_Launch,
+                                      "onStop" : self.on_Stop,
+                                      "onRemove" : self.on_Remove
                                       })
 
         self.conn = rpyc.connect("localhost",port)  # Local connection to the service
@@ -55,7 +57,13 @@ class ControlGUIClient(object):
         self.deplNameEntry = self.builder.get_object("deplNameEntry")
         self.folderEntry = self.builder.get_object("folderEntry")
         self.launchButton = self.builder.get_object("launchButton")
+        self.launchButton.set_sensitive(False)
+        self.stopButton = self.builder.get_object("stopButton")
+        self.stopButton.set_sensitive(False)
+        self.removeButton = self.builder.get_object("removeButton")
+        self.removeButton.set_sensitive(False)
         self.appLaunched = False
+        self.appDownLoaded = False
         self.mainWindow.show_all()
         
     def bg_server(self, source = None, cond = None):
@@ -134,7 +142,12 @@ class ControlGUIClient(object):
             folderName = self.fcd.get_filename()
         self.fcd.destroy()
         return folderName
-            
+    
+    def isAppOK(self):
+        aName = self.appNameEntry.get_text()
+        dName = self.deplNameEntry.get_text()
+        return (aName != None and aName != '' and dName != None and dName != '')
+    
     def on_SelectApplication(self,*args):
         '''
         App selection. Sets the app entry and calls the controller to compile the app model. 
@@ -143,6 +156,9 @@ class ControlGUIClient(object):
         if fileName != None:
             self.appNameEntry.set_text(os.path.basename(fileName))
             self.controller.compileApplication(fileName)
+            if self.isAppOK():
+                self.launchButton.set_sensitive(True)    
+                self.removeButton.set_sensitive(True)     
 
     def clearApplication(self):
         '''
@@ -159,6 +175,9 @@ class ControlGUIClient(object):
         if fileName != None:
             self.deplNameEntry.set_text(os.path.basename(fileName))
             self.controller.compileDeployment(fileName)
+            if self.isAppOK():
+                self.launchButton.set_sensitive(True)
+                self.removeButton.set_sensitive(True) 
             
     def clearDeployment(self):
         '''
@@ -184,24 +203,43 @@ class ControlGUIClient(object):
     
     def on_Launch(self,*args):
         '''
-        Application launch or halt. Called when the Launch/Halt button is activated.
+        Application launch. Called when the Launch button is activated.
         For success, the app name and deployment name has to be set.    
         '''
-        aName = self.appNameEntry.get_text()
-        dName = self.deplNameEntry.get_text()
+        if not self.isAppOK():
+            return
         if self.appLaunched == False:
-            if aName != None and aName != '' and dName != None and dName != '':
-                ok = self.controller.launch()
-                if not ok:
-                    return
-                else:
-                    self.launchButton.set_label("Stop")
-                    self.appLaunched = True
-        else:
+            ok = self.controller.launch()
+            if not ok:
+                return
+            else:
+                self.launchButton.set_sensitive(False)
+                self.stopButton.set_sensitive(True)
+                self.removeButton.set_sensitive(False)
+                self.appLaunched = True
+    
+    def on_Stop(self,*args):
+        '''
+        Application halt. Called when the Halt button is activated.
+        For success, the app must have been started.    
+        '''
+        if self.appLaunched:
             self.controller.halt()
-            self.launchButton.set_label("Launch")
             self.appLaunched = False
+            self.launchButton.set_sensitive(True)
+            self.removeButton.set_sensitive(True)
             
-        
+    
+    def on_Remove(self,*args):
+        '''
+        Application removal. Called when the Remove button is activated.
+        For success, the app / deployment must have been selected, but the app not launched.    
+        '''
+        if not self.isAppOK():
+            return
+        if self.appLaunched == False:
+            self.controller.remove()
+
+    
 
 

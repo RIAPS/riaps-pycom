@@ -8,6 +8,26 @@
     <property name="can_focus">False</property>
     <property name="stock">gtk-open</property>
   </object>
+  <object class="GtkImage" id="image2">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="stock">gtk-media-play</property>
+  </object>
+  <object class="GtkImage" id="image3">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="stock">gtk-media-stop</property>
+  </object>
+  <object class="GtkImage" id="image4">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="stock">gtk-remove</property>
+  </object>
+  <object class="GtkImage" id="image5">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="stock">gtk-directory</property>
+  </object>
   <object class="GtkTextBuffer" id="messageTextBuffer"/>
   <object class="GtkWindow" id="window1">
     <property name="can_focus">False</property>
@@ -34,6 +54,16 @@
                   <object class="GtkMenu" id="menu4">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
+                    <child>
+                      <object class="GtkImageMenuItem" id="imagemenuitem16">
+                        <property name="label" translatable="yes">Folder</property>
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="image">image5</property>
+                        <property name="use_stock">False</property>
+                        <signal name="activate" handler="onFolderEntryActivate" swapped="no"/>
+                      </object>
+                    </child>
                     <child>
                       <object class="GtkImageMenuItem" id="imagemenuitem11">
                         <property name="label">Application</property>
@@ -206,18 +236,66 @@
               </packing>
             </child>
             <child>
-              <object class="GtkButton" id="launchButton">
-                <property name="label" translatable="yes">Launch</property>
+              <object class="GtkMenuBar" id="menubar1">
                 <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <property name="xalign">0.49000000953674316</property>
-                <signal name="clicked" handler="onLaunch" swapped="no"/>
+                <property name="can_focus">False</property>
+                <child>
+                  <object class="GtkMenuItem" id="menuitem1">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="label" translatable="yes">_Control</property>
+                    <property name="use_underline">True</property>
+                    <child type="submenu">
+                      <object class="GtkMenu" id="menu1">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <child>
+                          <object class="GtkImageMenuItem" id="launchButton">
+                            <property name="label">Launch</property>
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="opacity">0.99000000022351742</property>
+                            <property name="resize_mode">queue</property>
+                            <property name="image">image2</property>
+                            <property name="use_stock">False</property>
+                            <signal name="activate" handler="onLaunch" swapped="no"/>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkImageMenuItem" id="stopButton">
+                            <property name="label">Stop</property>
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="image">image3</property>
+                            <property name="use_stock">False</property>
+                            <signal name="activate" handler="onStop" swapped="no"/>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkSeparatorMenuItem" id="menuitem2">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkImageMenuItem" id="removeButton">
+                            <property name="label">Remove</property>
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="image">image4</property>
+                            <property name="use_stock">False</property>
+                            <signal name="activate" handler="onRemove" swapped="no"/>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
               </object>
               <packing>
                 <property name="expand">False</property>
                 <property name="fill">True</property>
-                <property name="position">4</property>
+                <property name="position">5</property>
               </packing>
             </child>
           </object>

@@ -10,6 +10,10 @@ class LocalEstimator(Component):
         self.pending = 0
         self.logger.info("LocalEstimator(iArg=%d,fArg=%f,sArg=%s,bArg=%s" 
                          %(iArg,fArg,sArg,str(bArg)))
+        self.logger.info("name.typeName.localID.actorName.appName: \n\t%s \n\t%s \n\t%s \n\t%s \n\t%s \n\t%s"
+                         % (self.getName(),self.getTypeName(),hex(self.getLocalID()),
+                            self.getActorName(),self.getAppName(),
+                            hex(int.from_bytes(self.getActorID(),'big'))))
         
     def on_ready(self):
         msg = self.ready.recv_pyobj()
