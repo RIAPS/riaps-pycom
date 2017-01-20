@@ -2,6 +2,7 @@
 from riaps.run.comp import Component
 import logging
 import os
+import time
 
 class Collector(Component):
     def __init__(self, address):
@@ -15,7 +16,7 @@ class Collector(Component):
         
     def on_getTemperature(self):
         msg = self.getTemperature.recv_pyobj()
-        self.testlogger.info("Received messages: %d", msg)
+        self.testlogger.info("[%f] <= %d", time.time(), msg)
 
     def on_stopComponent(self):
         self.testlogger.info("Component commits suicide (pid: %d)", os.getpid())

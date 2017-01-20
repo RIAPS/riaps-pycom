@@ -84,6 +84,7 @@ def setup_suite():
     # Deploy the riaps-components/model file
     for target in runtime.get_active_config('targets'):
         deployerId = target["host"] + "_" + target["actor"]
+        #deleteLogCommand = "rm /tmp/" + target["host"] + "*.log"
         model_deployer = adhoc_deployer.SSHDeployer(deployerId, {
             'executable': model_path,
             'install_path': os.path.join(riaps_app_path,
@@ -93,7 +94,7 @@ def setup_suite():
             'args': [runtime.get_active_config('app_dir'),
                      runtime.get_active_config('app_dir') + '.json',
                      target["actor"],
-                     "address=" + target["host"]],
+                     '--address="' + target["host"]+'"'],
             'env': env,
             'terminate_only': True,
             'pid_keyword': model_path,

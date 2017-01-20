@@ -3,6 +3,7 @@ from riaps.run.comp import Component
 import logging
 import os
 import sys
+import time
 
 class TemperatureSensor(Component):
     def __init__(self, address):
@@ -23,10 +24,11 @@ class TemperatureSensor(Component):
         self.messageCounter += 1
         msg = self.messageCounter
         self.sendTemperature.send_pyobj(msg)
-        self.testlogger.info("Sent messages: %d", self.messageCounter)
+        self.testlogger.info("[%f] => %d", time.time(), self.messageCounter)
 
     def on_stopComponent(self):
         self.testlogger.info("Component commits suicide (pid: %d)", os.getpid())
         print("kill %d", os.getpid())
+        os.kill(os.getpid(), -9)
         os.kill(os.getpid(), -9)
 
