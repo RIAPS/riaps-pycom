@@ -4,19 +4,98 @@ import os
 import perf
 from time import sleep
 
-def test_reach_discovery():
+def reach_discovery():
     for target in runtime.get_active_config("targets"):
         deployerId = "disco" + target["actor"]
         deployer = runtime.get_deployer(deployerId)
         deployer.start(deployerId, configs={"sync": True})
 
-def test_pub_send():
+def test_pub_send_pub_first():
+    # Start discovery
     for target in runtime.get_active_config("targets"):
-        deployer = runtime.get_deployer(target["actor"])
-        deployer.start(target["actor"], configs={"sync": False})
+        deployerId = "discostart_" + target["host"]
+        deployer = runtime.get_deployer(deployerId)
+        deployer.start(deployerId, configs={"sync": False})
+    sleep(2)
 
-    sleep(20)
+    reach_discovery()
 
+    pubActorName = "ActorTest1p"
+    subActorName = "ActorTest1s"
+
+    # start test, publisher comes first
+    for target in runtime.get_active_config("targets"):
+        if target["actor"] == pubActorName:
+            deployer = runtime.get_deployer(target["actor"])
+            deployer.start(target["actor"], configs={"sync": False})
+
+    sleep(2)
+
+    # start subscriber
+    for target in runtime.get_active_config("targets"):
+        if target["actor"] == subActorName:
+            deployer = runtime.get_deployer(target["actor"])
+            deployer.start(target["actor"], configs={"sync": False})
+
+
+    sleep(30)
+
+    # kill all the runing riaps actors
+    for target in runtime.get_active_config("targets"):
+        deployerId = "killer_" + target["host"]
+        deployer = runtime.get_deployer(deployerId)
+        deployer.start(deployerId, configs={"sync": True})
+
+    # Stop discovery
+    for target in runtime.get_active_config("targets"):
+        deployerId = "discostop_" + target["host"]
+        deployer = runtime.get_deployer(deployerId)
+        deployer.start(deployerId, configs={"sync": True})
+    sleep(10)
+
+def test_pub_send_sub_first():
+    # Start discovery
+    for target in runtime.get_active_config("targets"):
+        deployerId = "discostart_" + target["host"]
+        deployer = runtime.get_deployer(deployerId)
+        deployer.start(deployerId, configs={"sync": False})
+    sleep(2)
+
+    reach_discovery()
+
+    pubActorName = "ActorTest1p"
+    subActorName = "ActorTest1s"
+
+    # start test, subscriber comes first
+    for target in runtime.get_active_config("targets"):
+        if target["actor"] == subActorName:
+            deployer = runtime.get_deployer(target["actor"])
+            deployer.start(target["actor"], configs={"sync": False})
+
+    sleep(2)
+
+    # start publisher
+    for target in runtime.get_active_config("targets"):
+        if target["actor"] == pubActorName:
+            deployer = runtime.get_deployer(target["actor"])
+            deployer.start(target["actor"], configs={"sync": False})
+
+    sleep(30)
+
+    # kill all the runing riaps actors
+    for target in runtime.get_active_config("targets"):
+        deployerId = "killer_" + target["host"]
+        deployer = runtime.get_deployer(deployerId)
+        deployer.start(deployerId, configs={"sync": True})
+
+    # Stop discovery
+    for target in runtime.get_active_config("targets"):
+        deployerId = "discostop_" + target["host"]
+        deployer = runtime.get_deployer(deployerId)
+        deployer.start(deployerId, configs={"sync": True})
+    sleep(10)
+
+'''
 def validate_pub_send():
     print("Validate")
 
@@ -42,3 +121,4 @@ def validate_pub_send():
 
     assert "Received messages: 1" in sub_logs, "Subscriber didn't get any messages"
     assert "Received messages: 5" in sub_logs, "Subscriber didn't get 5 messages"
+'''
