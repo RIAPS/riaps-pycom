@@ -34,6 +34,24 @@ def setup_suite():
     # Script to stop the discovery
     discoStopScript = "stopDiscovery.py"
     discoStopScriptPath = "../test_common"
+
+    killRiapsScript = "killRiaps.py"
+    killRiapsScriptPath = "../test_common"
+
+    # Deploy the riaps killer script
+    for target in runtime.get_active_config('targets'):
+        deployerId = "killer_" + target["host"]
+        killscriptpath = os.path.abspath(
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), killRiapsScriptPath, killRiapsScript))
+
+        killDeployer = adhoc_deployer.SSHDeployer(deployerId, {
+            'executable': killscriptpath,
+            'install_path': riaps_app_path,
+            'hostname': target["host"],
+            "start_command": "python3 " + os.path.join(riaps_app_path, killRiapsScript)
+        })
+        runtime.set_deployer(deployerId, killDeployer)
+        killDeployer.install(deployerId)
     
 
     # Deploy the riaps-disco checker script

@@ -27,6 +27,6 @@ class Collector(Component):
 
     def on_stopComponent(self):
         self.testlogger.info("Component commits suicide (pid: %d)", os.getpid())
-        print("kill %d", os.getpid())
-        os.kill(os.getpid(), -9)
+        #print("kill %d", os.getpid())
+        #os.kill(os.getpid(), -9)
 

@@ -4,20 +4,22 @@ import os
 import perf
 from time import sleep
 
-def test_start_discovery():
+def test_pub_sub():
+
+    #Start discovery
     for target in runtime.get_active_config("targets"):
         deployerId = "discostart_" + target["host"] + "_" + target["actor"]
         deployer = runtime.get_deployer(deployerId)
         deployer.start(deployerId, configs={"sync": False})
     sleep(10)
 
-def test_reach_discovery():
+    # Test if disco is avaliable
     for target in runtime.get_active_config("targets"):
         deployerId = "disco_" + target["host"] + "_" + target["actor"]
         deployer = runtime.get_deployer(deployerId)
         deployer.start(deployerId, configs={"sync": True})
 
-def test_pub_sub():
+    # start the test
     for target in runtime.get_active_config("targets"):
         deployerId = target["host"] + "_" + target["actor"]
         deployer = runtime.get_deployer(deployerId)
@@ -25,7 +27,13 @@ def test_pub_sub():
 
     sleep(30)
 
-def test_stop_discovery():
+    # kill all the runing riaps actors
+    for target in runtime.get_active_config("targets"):
+        deployerId = "killer_" + target["host"]
+        deployer = runtime.get_deployer(deployerId)
+        deployer.start(deployerId, configs={"sync": True})
+
+    # STOP DISCOVERY
     for target in runtime.get_active_config("targets"):
         deployerId = "discostop_" + target["host"] + "_" + target["actor"]
         deployer = runtime.get_deployer(deployerId)
