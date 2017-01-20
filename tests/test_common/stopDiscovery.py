@@ -12,4 +12,4 @@ try:
     if pid != "":
         os.kill(int(pid), signal.SIGINT)
 except subprocess.CalledProcessError as e:
-    print("Discovery service is not running")
+    print("No process with the given name")

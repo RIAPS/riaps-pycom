@@ -8,7 +8,7 @@ def test_pub_sub():
 
     #Start discovery
     for target in runtime.get_active_config("targets"):
-        deployerId = "discostart_" + target["host"] + "_" + target["actor"]
+        deployerId = "discostart_" + target["host"]
         deployer = runtime.get_deployer(deployerId)
         deployer.start(deployerId, configs={"sync": False})
     sleep(10)
@@ -33,9 +33,9 @@ def test_pub_sub():
         deployer = runtime.get_deployer(deployerId)
         deployer.start(deployerId, configs={"sync": True})
 
-    # STOP DISCOVERY
+    # Stop discovery
     for target in runtime.get_active_config("targets"):
-        deployerId = "discostop_" + target["host"] + "_" + target["actor"]
+        deployerId = "discostop_" + target["host"]
         deployer = runtime.get_deployer(deployerId)
         deployer.start(deployerId, configs={"sync": True})
     sleep(10)

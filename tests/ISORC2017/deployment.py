@@ -71,7 +71,7 @@ def setup_suite():
         
     # Deploy the discovery starter script
     for target in runtime.get_active_config('targets'):
-        deployerId = "discostart_" + target["host"] + "_" + target["actor"]
+        deployerId = "discostart_" + target["host"]
         startscriptpath = os.path.abspath(
             os.path.join(os.path.dirname(os.path.abspath(__file__)), discoStartScriptPath, discoStartScript))
 
@@ -86,7 +86,7 @@ def setup_suite():
         
     # Deploy the discovery stop script
     for target in runtime.get_active_config('targets'):
-        deployerId = "discostop_" + target["host"] + "_" + target["actor"]
+        deployerId = "discostop_" + target["host"]
         stopscriptpath = os.path.abspath(
             os.path.join(os.path.dirname(os.path.abspath(__file__)), discoStopScriptPath, discoStopScript))
 
