@@ -7,9 +7,16 @@ import time
 class Collector(Component):
     def __init__(self, address):
         super(Collector, self).__init__()
+
+        logfile = '/tmp/' + address + '.log'
+        try:
+            os.remove(logfile)
+        except OSError:
+            pass
+
         self.testlogger = logging.getLogger(__name__)
         self.testlogger.setLevel(logging.DEBUG)
-        self.fh = logging.FileHandler('/tmp/' + address + '.log')
+        self.fh = logging.FileHandler(logfile)
         self.fh.setLevel(logging.DEBUG)
         self.testlogger.addHandler(self.fh)
         self.messageCounter = 0
@@ -22,9 +29,4 @@ class Collector(Component):
         self.testlogger.info("Component commits suicide (pid: %d)", os.getpid())
         print("kill %d", os.getpid())
         os.kill(os.getpid(), -9)
-
-    
-
-
-
 
