@@ -1,6 +1,6 @@
 #!/bin/bash
 pycomrepo=`pwd`
-version=0.3
+version=0.4
 tmpdir=`mktemp --directory`
 mkdir $tmpdir/riaps-pycom_v$version
 cd $tmpdir/riaps-pycom_v$version
