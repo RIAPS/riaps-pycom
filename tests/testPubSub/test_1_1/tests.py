@@ -7,25 +7,43 @@ from time import sleep
 
 def test_pub_send_pub_first():
 
+    print("Start test: pub_send_pub_first")
+
     pubActorName = "ActorTest1p"
     subActorName = "ActorTest1s"
 
+    testId = "pubfirst_" + pubActorName
+    deployer = runtime.get_deployer(pubActorName)
+    deployer.start(testId, configs={"sync": False,
+                                    'args': [runtime.get_active_config('app_dir'),
+                                             runtime.get_active_config('app_dir') + '.json',
+                                             pubActorName,
+                                             '--logfile="' + testId + '.log"']})
+
     # start test, publisher comes first
-    for target in runtime.get_active_config("targets"):
-        if target["actor"] == pubActorName:
-            deployer = runtime.get_deployer(target["actor"])
-            deployer.start(target["actor"], configs={"sync": False})
+    #for target in runtime.get_active_config("targets"):
+    #    if target["actor"] == pubActorName:
+    #        deployer = runtime.get_deployer(target["actor"])
+    #        deployer.start(target["actor"], configs={"sync": False})
 
     sleep(2)
 
+    testId = "pubfirst_" + subActorName
+    deployer = runtime.get_deployer(subActorName)
+    deployer.start(testId, configs={"sync": False,
+                                    'args': [runtime.get_active_config('app_dir'),
+                                             runtime.get_active_config('app_dir') + '.json',
+                                             subActorName,
+                                             '--logfile="' + testId + '.log"']})
+
+
     # start subscriber
-    for target in runtime.get_active_config("targets"):
-        if target["actor"] == subActorName:
-            deployer = runtime.get_deployer(target["actor"])
-            deployer.start(target["actor"], configs={"sync": False})
+    #for target in runtime.get_active_config("targets"):
+    #    if target["actor"] == subActorName:
+    #        deployer = runtime.get_deployer(target["actor"])
+    #        deployer.start(target["actor"], configs={"sync": False})
 
     sleep(30)
-
 
 
 def test_pub_send_sub_first():
@@ -34,18 +52,36 @@ def test_pub_send_sub_first():
     subActorName = "ActorTest1s"
 
     # start test, subscriber comes first
-    for target in runtime.get_active_config("targets"):
-        if target["actor"] == subActorName:
-            deployer = runtime.get_deployer(target["actor"])
-            deployer.start(target["actor"], configs={"sync": False})
+    #for target in runtime.get_active_config("targets"):
+    #    if target["actor"] == subActorName:
+    #        deployer = runtime.get_deployer(target["actor"])
+    #        deployer.start(target["actor"], configs={"sync": False})
+    testId = "subfirst_" + subActorName
+    deployer = runtime.get_deployer(subActorName)
+    deployer.start(testId, configs={"sync": False,
+                                    'args': [runtime.get_active_config('app_dir'),
+                                             runtime.get_active_config('app_dir') + '.json',
+                                             subActorName,
+                                             '--logfile="' + testId + '.log"']})
 
     sleep(2)
 
+
+
     # start publisher
-    for target in runtime.get_active_config("targets"):
-        if target["actor"] == pubActorName:
-            deployer = runtime.get_deployer(target["actor"])
-            deployer.start(target["actor"], configs={"sync": False})
+    testId = "subfirst_" + pubActorName
+    deployer = runtime.get_deployer(pubActorName)
+    deployer.start(testId, configs={"sync": False,
+                                    'args': [runtime.get_active_config('app_dir'),
+                                             runtime.get_active_config('app_dir') + '.json',
+                                             pubActorName,
+                                             '--logfile="' + testId + '.log"']})
+
+
+    #for target in runtime.get_active_config("targets"):
+    #    if target["actor"] == pubActorName:
+    #        deployer = runtime.get_deployer(target["actor"])
+     #       deployer.start(target["actor"], configs={"sync": False})
 
     sleep(30)
 
@@ -56,7 +92,9 @@ def validate_pub_send_pub_first():
     pubActorName = "ActorTest1p"
     subActorName = "ActorTest1s"
 
-    pub_log_name = "{0}-{1}_{2}.log".format(pubActorName, "pubfirst", pubActorName)
+    testcase = "pubfirst_" + pubActorName
+
+    pub_log_name = "{0}-{1}.log".format(testcase, pubActorName)
     pub_log_file = os.path.join(perf.LOGS_DIRECTORY, pub_log_name)
     pub_logs = testutilities.get_log_for_test("pub_send_pub_first", pub_log_file, "12:00:00")
     assert "Sent messages: 1" in pub_logs, "Publisher couldn't send any messages"
@@ -85,6 +123,7 @@ def validate_pub_send_sub_first():
     sub_logs = testutilities.get_log_for_test("pub_send_pub_first", sub_log_file, "12:00:00")
 
     assert "Received messages: 10" in sub_logs, "Subscriber didn't get 10 messages"
+
 
 '''
 def validate_pub_send():

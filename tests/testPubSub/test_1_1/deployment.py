@@ -86,7 +86,7 @@ def setup_suite():
 
     # Deploy the riaps-disco checker script
     for target in runtime.get_active_config('targets'):
-        deployerId = "disco" + target["actor"]
+        deployerId = "disco" + target["host"]
         checkscriptpath = os.path.abspath(
             os.path.join(os.path.dirname(os.path.abspath(__file__)), discoCheckScriptPath, discoCheckScript))
 
@@ -125,7 +125,7 @@ def setup_suite():
                 'args': [runtime.get_active_config('app_dir'),
                          runtime.get_active_config('app_dir') + '.json',
                          target["actor"],
-                         '--logfile="' + testcase + '.log']})
+                         '--logfile="' + testcase + '.log"']})
 
 
         for component in runtime.get_active_config('components_py'):
@@ -152,7 +152,7 @@ def setup_suite():
 
 def reach_discovery():
     for target in runtime.get_active_config("targets"):
-        deployerId = "disco" + target["actor"]
+        deployerId = "disco" + target["host"]
         deployer = runtime.get_deployer(deployerId)
         deployer.start(deployerId, configs={"sync": True})
 
@@ -188,6 +188,7 @@ def teardown():
         deployer = runtime.get_deployer(deployerId)
         deployer.start(deployerId, configs={"sync": True})
     sleep(10)
+    print(" -- END -- ")
 
     # for process in client_deployer.get_processes():
     #  client_deployer.stop(process.unique_id)

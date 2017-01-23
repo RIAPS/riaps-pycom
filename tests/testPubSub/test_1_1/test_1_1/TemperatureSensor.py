@@ -8,9 +8,9 @@ class TemperatureSensor(Component):
     def __init__(self, logfile):
         super(TemperatureSensor, self).__init__()
 
-        logfile = '/tmp/' + logfile
+        logpath = '/tmp/' + logfile
         try:
-            os.remove(logfile)
+            os.remove(logpath)
         except OSError:
             pass
 
@@ -19,7 +19,7 @@ class TemperatureSensor(Component):
 
         self.testlogger = logging.getLogger(__name__)
         self.testlogger.setLevel(logging.DEBUG)
-        self.fh = logging.FileHandler(logfile)
+        self.fh = logging.FileHandler(logpath)
         self.fh.setLevel(logging.DEBUG)
         self.testlogger.addHandler(self.fh)
         self.messageCounter = 0
