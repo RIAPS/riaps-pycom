@@ -10,8 +10,17 @@ def machine_logs():
   results = {}
 
   for target in runtime.get_active_config("targets"):
-    logpath = "/tmp/{0}_{1}.log".format(runtime.get_active_config("app_dir"), target["actor"])
-    results[target["actor"]] = [logpath]
+    pubfirstKey = "pubfirst_" + target["actor"]
+    subfirstKey = "subfirst_" + target["actor"]
+
+    logpath = "/tmp/{0}.log".format(pubfirstKey)
+    results[pubfirstKey] = logpath
+    results[subfirstKey] = logpath
+
+    #for testcase in runtime.get_active_config("testcases"):
+    #  logpath = "/tmp/{0}_{1}_{2}.log".format(runtime.get_active_config("app_dir"), target["actor"], testcase)
+    #  results[target["actor"]].append(logpath)
+
 
   return results
   # return {

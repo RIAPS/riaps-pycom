@@ -5,10 +5,10 @@ import os
 import sys
 
 class TemperatureSensor(Component):
-    def __init__(self):
+    def __init__(self, logfile):
         super(TemperatureSensor, self).__init__()
 
-        logfile = '/tmp/test_1_1_ActorTest1p.log'
+        logfile = '/tmp/' + logfile
         try:
             os.remove(logfile)
         except OSError:

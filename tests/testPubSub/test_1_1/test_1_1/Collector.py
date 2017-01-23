@@ -4,10 +4,10 @@ import logging
 import os
 
 class Collector(Component):
-    def __init__(self):
+    def __init__(self, logfile):
         super(Collector, self).__init__()
 
-        logfile = '/tmp/test_1_1_ActorTest1s.log'
+        logfile = '/tmp/' + logfile
         try:
             os.remove(logfile)
         except OSError:

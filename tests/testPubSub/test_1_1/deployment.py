@@ -2,6 +2,7 @@ import os
 
 import zopkio.adhoc_deployer as adhoc_deployer
 import zopkio.runtime as runtime
+from time import sleep
 
 def setup_suite():
     # Set up authentication
@@ -115,7 +116,17 @@ def setup_suite():
             'post_install_cmds': [start_riaps_lang]
         })
         runtime.set_deployer(target["actor"], model_deployer)
-        model_deployer.install(target["actor"])
+
+        # Add test cases
+        testcases = ["pubfirst_"+target["actor"], "subfirst_"+target["actor"]]
+
+        for testcase in testcases:
+            model_deployer.install(testcase, {
+                'args': [runtime.get_active_config('app_dir'),
+                         runtime.get_active_config('app_dir') + '.json',
+                         target["actor"],
+                         '--logfile="' + testcase + '.log']})
+
 
         for component in runtime.get_active_config('components_py'):
             localPath = os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -139,14 +150,45 @@ def setup_suite():
 
     print("Deployment done.")
 
+def reach_discovery():
+    for target in runtime.get_active_config("targets"):
+        deployerId = "disco" + target["actor"]
+        deployer = runtime.get_deployer(deployerId)
+        deployer.start(deployerId, configs={"sync": True})
+
 def setup():
-    print("Setup")
+    print("Start discovery service...")
+    # Start discovery
+    for target in runtime.get_active_config("targets"):
+        deployerId = "discostart_" + target["host"]
+        deployer = runtime.get_deployer(deployerId)
+        deployer.start(deployerId, configs={"sync": False})
+    sleep(2)
+
+    reach_discovery()
+
+    #print("Setup")
     # for process in server_deployer.get_processes():
     #  server_deployer.start(process.unique_id)
 
 
 def teardown():
-    print("Teardown")
+    print("Stop riaps actors...")
+
+    # kill all the runing riaps actors
+    for target in runtime.get_active_config("targets"):
+        deployerId = "killer_" + target["host"]
+        deployer = runtime.get_deployer(deployerId)
+        deployer.start(deployerId, configs={"sync": True})
+
+    print("Stop discovery...")
+    # Stop discovery
+    for target in runtime.get_active_config("targets"):
+        deployerId = "discostop_" + target["host"]
+        deployer = runtime.get_deployer(deployerId)
+        deployer.start(deployerId, configs={"sync": True})
+    sleep(10)
+
     # for process in client_deployer.get_processes():
     #  client_deployer.stop(process.unique_id)
 
