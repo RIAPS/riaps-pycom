@@ -11,6 +11,7 @@ RIAPSModel:
 App:
  'app' name=ID '{'
      messages+=Message
+     libraries*=Library
      components+=Component
      actors+=Actor
  '}'
@@ -21,6 +22,11 @@ Message:
   'message' name=ID ';'
 ;
 
+// Libraries used in the app
+Library:
+  'library' name=ID ';'
+;
+ 
 // Component types used in the application
 Component:
  ( appComponent?='component' | ioComponent?='device') name=ID 

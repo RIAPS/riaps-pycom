@@ -33,6 +33,7 @@ class RiapsModel2JSON(object):
             appObj = {}
             appObj['name'] = app.name
             appObj['messages'] = self.getMessages(app.messages)
+            appObj['libraries'] = self.getLibraries(app.libraries)
             appObj['devices'] = self.getIOComponents(app.components)
             appObj['components'] = self.getComponents(app.components)
             appObj['actors'] = self.getActors(app.actors)
@@ -43,6 +44,13 @@ class RiapsModel2JSON(object):
             msgObj = { } 
             msgObj["name"] = msg.name
             res.append(msgObj)
+        return res
+    def getLibraries(self,libraries):
+        res = []
+        for lib in libraries:
+            libObj = { } 
+            libObj["name"] = lib.name
+            res.append(libObj)
         return res
     def getFormals(self,formals):
         res = []

@@ -30,6 +30,29 @@ from gi.repository import Gtk
 
 ctrlLock = RLock()
 
+class RSFTPClient(paramiko.SFTPClient):
+    def put_dir(self, source, target):
+        ''' Uploads the contents of the source directory to the target path. The
+            target directory needs to exists. All subdirectories in source are 
+            created under target.
+        '''
+        for item in os.listdir(source):
+            if os.path.isfile(os.path.join(source, item)):
+                self.put(os.path.join(source, item), '%s/%s' % (target, item))
+            else:
+                self.mkdir('%s/%s' % (target, item), ignore_existing=True)
+                self.put_dir(os.path.join(source, item), '%s/%s' % (target, item))
+
+    def mkdir(self, path, mode=511, ignore_existing=False):
+        ''' Augments mkdir by adding an option to not fail if the folder exists  '''
+        try:
+            super(RSFTPClient, self).mkdir(path, mode)
+        except IOError:
+            if ignore_existing:
+                pass
+            else:
+                raise
+
 class Controller(object):
     '''
     Main class of controller - manages everything and maintains global controller state
@@ -188,7 +211,7 @@ class Controller(object):
             except paramiko.SSHException as e:
                 self.logger.info ('... failed! - %s' % str(e))
 
-    def downloadAppToClient(self,files,client):
+    def downloadAppToClient(self,files,libraries,client):
         hostName = client.name
         hostKey = None
         hostKeyType = None
@@ -209,13 +232,11 @@ class Controller(object):
                 return False
 
             sftpSession = t.open_session()
-            sftpClient = paramiko.SFTPClient.from_transport(t)
+            sftpClient = RSFTPClient.from_transport(t)
             
             dirRemote = os.path.join(client.appFolder,self.riaps_appName)
-            try:
-                sftpClient.mkdir(dirRemote)
-            except IOError as e:
-                self.logger.info ('(assuming %s exists)' % dirRemote)
+          
+            sftpClient.mkdir(dirRemote,ignore_existing=True)
             
             for fileName in files:
                 isUptodate = False
@@ -240,7 +261,14 @@ class Controller(object):
                 if not isUptodate:
                     self.logger.info ('Copying' + str(localFile) + ' to ' + str(remoteFile))
                     sftpClient.put(localFile, remoteFile)
-    
+            
+            for libraryName in libraries:
+                localDir = os.path.join(self.riaps_appFolder,libraryName)
+                remoteDir = os.path.join(dirRemote,libraryName)
+                sftpClient.mkdir(remoteDir,ignore_existing=True)
+                self.logger.info ('Copying' + str(localDir) + ' to ' + str(remoteDir))
+                sftpClient.put_dir(localDir,remoteDir)
+                
             t.close()
             return True
         except Exception as e:
@@ -251,13 +279,13 @@ class Controller(object):
             except:
                 return False
 
-    def downloadApp(self,files,clients):
+    def downloadApp(self,files,libraries,clients):
         with ctrlLock:
             for client in clients:
                 if client.stale:
                     self.log('S %s',client.name)    # Stale client, we don't deploy
                 else:
-                    ok = self.downloadAppToClient(files,client)
+                    ok = self.downloadAppToClient(files,libraries,client)
                     if not ok:
                         return False
         return True
@@ -317,6 +345,11 @@ class Controller(object):
         for device in appObj["devices"]:
             deviceFile = str(device) + ".py"
             download.append(deviceFile)
+        # Collect libraries
+        libraries = []
+        for library in appObj["libraries"]:
+            libraryName = library["name"]
+            libraries.append(libraryName)
         # Process the deployment and download app
         clients = set() 
         for depl in depls:
@@ -334,16 +367,16 @@ class Controller(object):
                             clients.add(client)
                         else:
                             self.log('? %s ' % target)
-        return (download,clients,depls)
+        return (download,libraries,clients,depls)
     
     def launch(self): 
         '''
         Launch an app. The model of the app is in self.riaps_model, and the corresponding deployment 
         is in self.riaps_depl. 
         '''
-        download,clients,depls = self.buildDownload()
+        download,libraries,clients,depls = self.buildDownload()
         # 
-        ok = self.downloadApp(download,clients)
+        ok = self.downloadApp(download,libraries,clients)
         if not ok:
             self.log("* App download fault")
             return False
@@ -406,7 +439,7 @@ class Controller(object):
                 self.rm(sftp,filepath)
         sftp.rmdir(path)
 
-    def removeAppFromClient(self,files,client):
+    def removeAppFromClient(self,files,libraries,client):
         hostName = client.name
         hostKey = None
         hostKeyType = None
@@ -442,13 +475,13 @@ class Controller(object):
             return False
             
     def removeApp(self):
-        files,clients,depls = self.buildDownload()
+        files,libraries,clients,depls = self.buildDownload()
         with ctrlLock:
             for client in clients:
                 if client.stale:
                     self.log('? %s',client.name)    # Stale client, we don't remove
                 else:
-                    ok = self.removeAppFromClient(files,client)
+                    ok = self.removeAppFromClient(files,libraries,client)
                     if not ok:
                         return False
         return True
