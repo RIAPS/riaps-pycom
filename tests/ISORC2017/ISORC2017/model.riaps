@@ -3,12 +3,12 @@ app ISORC2017 {
 
     component TemperatureSensor(address="") {
       timer clock 1000; 							// Periodic timer trigger to trigger sensor every 1 sec
-      timer stopComponent 40000;                    // Stop the component after 20 sec
+      //timer stopComponent 40000;                    // Stop the component after 20 sec
       pub sendTemperature : SensorValue ;			// Publish port for SensorReady messages
     }
 
     component Collector(address="") {
-      timer stopComponent 40000;                    // Stop the component after 40 sec
+      //timer stopComponent 40000;                    // Stop the component after 40 sec
       sub getTemperature : SensorValue ;			// Subscriber port to trigger component with SensorValue messages
     }
 

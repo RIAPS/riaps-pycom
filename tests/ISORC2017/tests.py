@@ -21,9 +21,19 @@ def test_pub_sub():
 
     # start the test
     for target in runtime.get_active_config("targets"):
-        deployerId = target["host"] + "_" + target["actor"]
-        deployer = runtime.get_deployer(deployerId)
-        deployer.start(target["actor"], configs={"sync": False})
+        if target["actor"]=="ActorCollector":
+            deployerId = target["host"] + "_" + target["actor"]
+            deployer = runtime.get_deployer(deployerId)
+            deployer.start(target["actor"], configs={"sync": False})
+
+    sleep(10)
+
+    # start the test
+    for target in runtime.get_active_config("targets"):
+        if target["actor"] == "ActorSensor":
+            deployerId = target["host"] + "_" + target["actor"]
+            deployer = runtime.get_deployer(deployerId)
+            deployer.start(target["actor"], configs={"sync": False})
 
     sleep(30)
 
