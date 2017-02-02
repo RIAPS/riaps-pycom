@@ -1,29 +1,38 @@
 app test_N_1 {
     message SensorValue;
 
-    component TemperatureSensor {
+    component TemperatureSensor(logfile="") {
       timer clock 1000; 							// Periodic timer trigger to trigger sensor every 1 sec
       pub sendTemperature : SensorValue ;			// Publish port for SensorReady messages
     }
 
     // Collects data from temperature sensors
-    component Collector {
+    component Collector(logfile="") {
       sub getTemperature : SensorValue ;			// Subscriber port to trigger component with SensorValue messages
     }
 
-    // Actor for sensors
-    actor ActorTestN1p {
-       {
-          sensor1     : TemperatureSensor;
-          sensor2     : TemperatureSensor;
-          sensor3     : TemperatureSensor;
-       }
+    actor ActorTestN1p_A(logfile="") {
+        {
+          sensor     : TemperatureSensor(logfile = logfile);
+        }
     }
 
-    actor ActorTestN1s {
-       {
-          collector : Collector;
-       }
+    actor ActorTestN1p_B(logfile="") {
+        {
+          sensor     : TemperatureSensor(logfile = logfile);
+        }
+    }
+
+    actor ActorTestN1p_C(logfile="") {
+        {
+          sensor     : TemperatureSensor(logfile = logfile);
+        }
+    }
+
+    actor ActorTestN1s(logfile="") {
+        {
+          collector : Collector(logfile = logfile);
+        }
     }
 
 

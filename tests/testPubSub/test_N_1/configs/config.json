@@ -12,10 +12,18 @@
   "targets": [
     {
       "host": "192.168.1.120",
-      "actor": "ActorTestN1p"
+      "actor": "ActorTestN1p_A"
     },
     {
       "host": "192.168.1.121",
+      "actor": "ActorTestN1p_B"
+    },
+    {
+      "host": "192.168.1.122",
+      "actor": "ActorTestN1p_C"
+    },
+    {
+      "host": "192.168.1.120",
       "actor": "ActorTestN1s"
     }
   ],

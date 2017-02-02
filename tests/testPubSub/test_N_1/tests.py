@@ -4,6 +4,118 @@ import os
 import perf
 from time import sleep
 
+def test_pub_send_pub_first():
+
+    print("Start test: pub_send_pub_first")
+
+    subActorName = "ActorTestN1s"
+
+    for target in runtime.get_active_config("targets"):
+        if target["actor"] != subActorName:
+            pubActorName = target["actor"]
+            testId = "pubfirst_" + pubActorName
+            deployer = runtime.get_deployer(pubActorName)
+            deployer.start(testId, configs={"sync": False,
+                                    'args': [runtime.get_active_config('app_dir'),
+                                             runtime.get_active_config('app_dir') + '.json',
+                                             pubActorName,
+                                             '--logfile="' + testId + '.log"']})
+
+    sleep(2)
+
+    testId = "pubfirst_" + subActorName
+    deployer = runtime.get_deployer(subActorName)
+    deployer.start(testId, configs={"sync": False,
+                                    'args': [runtime.get_active_config('app_dir'),
+                                             runtime.get_active_config('app_dir') + '.json',
+                                             subActorName,
+                                             '--logfile="' + testId + '.log"']})
+
+
+
+
+
+    sleep(30)
+
+def test_pub_send_sub_first():
+
+    subActorName = "ActorTestN1s"
+
+    testId = "subfirst_" + subActorName
+    deployer = runtime.get_deployer(subActorName)
+    deployer.start(testId, configs={"sync": False,
+                                    'args': [runtime.get_active_config('app_dir'),
+                                             runtime.get_active_config('app_dir') + '.json',
+                                             subActorName,
+                                             '--logfile="' + testId + '.log"']})
+
+
+
+    sleep(2)
+
+
+
+    for target in runtime.get_active_config("targets"):
+        if target["actor"] != subActorName:
+            pubActorName = target["actor"]
+            testId = "subfirst_" + pubActorName
+            deployer = runtime.get_deployer(pubActorName)
+            deployer.start(testId, configs={"sync": False,
+                                    'args': [runtime.get_active_config('app_dir'),
+                                             runtime.get_active_config('app_dir') + '.json',
+                                             pubActorName,
+                                             '--logfile="' + testId + '.log"']})
+
+    sleep(30)
+
+
+def validate_pub_send_pub_first():
+    print("Validate, pubsub 1:1 pub first")
+
+    subActorName = "ActorTestN1s"
+
+    testcase = "pubfirst_" + subActorName
+
+    sub_log_name = "{0}-{1}_{2}.log".format(testcase, "pubfirst", subActorName)
+    sub_log_file = os.path.join(perf.LOGS_DIRECTORY, sub_log_name)
+    sub_logs = testutilities.get_log_for_test("test_pub_send_pub_first", sub_log_file, "12:00:00")
+    assert "Received messages: 10" in sub_logs>2, "Subscriber didn't get enough messages"
+
+    for target in runtime.get_active_config("targets"):
+        if target["actor"] != subActorName:
+            pubActorName = target["actor"]
+            testcase = "pubfirst_" + pubActorName
+            pub_log_name = "{0}-{1}.log".format(testcase, testcase)
+            pub_log_file = os.path.join(perf.LOGS_DIRECTORY, pub_log_name)
+            pub_logs = testutilities.get_log_for_test("test_pub_send_pub_first", pub_log_file, "12:00:00")
+
+            assert "Sent messages: 5" in pub_logs, "Publisher (" + pubActorName +") couldn't send enough messages"
+
+
+def validate_pub_send_sub_first():
+    print("Validate, pubsub 1:1 sub first")
+
+    subActorName = "ActorTestN1s"
+
+    testcase = "subfirst_" + subActorName
+
+    sub_log_name = "{0}-{1}_{2}.log".format(testcase, "subfirst", subActorName)
+    sub_log_file = os.path.join(perf.LOGS_DIRECTORY, sub_log_name)
+    sub_logs = testutilities.get_log_for_test("test_pub_send_sub_first", sub_log_file, "12:00:00")
+    assert "Received messages: 10" in sub_logs>2, "Subscriber didn't get enough messages"
+
+    for target in runtime.get_active_config("targets"):
+        if target["actor"] != subActorName:
+            pubActorName = target["actor"]
+            testcase = "subfirst_" + pubActorName
+            pub_log_name = "{0}-{1}.log".format(testcase, testcase)
+            pub_log_file = os.path.join(perf.LOGS_DIRECTORY, pub_log_name)
+            pub_logs = testutilities.get_log_for_test("test_pub_send_sub_first", pub_log_file, "12:00:00")
+
+            assert "Sent messages: 5" in pub_logs, "Publisher (" + pubActorName +") couldn't send enough messages"
+
+
+'''
 def test_reach_discovery():
     for target in runtime.get_active_config("targets"):
         deployerId = "disco" + target["actor"]
@@ -41,3 +153,5 @@ def validate_pub_send():
   sub_logs = testutilities.get_log_for_test("test_pub_send", sub_log_file, "12:00:00")
 
   assert "Received messages: 5" in sub_logs, "Subscriber didn't get the messages"
+
+'''
