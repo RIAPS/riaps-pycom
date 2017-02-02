@@ -8,7 +8,7 @@ def test_pub_send_pub_first():
 
     print("Start test: pub_send_pub_first")
 
-    subActorName = "ActorTestN1s"
+    subActorName = "ActorTestN1s_loc"
 
     for target in runtime.get_active_config("targets"):
         if target["actor"] != subActorName:
@@ -39,7 +39,7 @@ def test_pub_send_pub_first():
 
 def test_pub_send_sub_first():
 
-    subActorName = "ActorTestN1s"
+    subActorName = "ActorTestN1s_loc"
 
     testId = "subfirst_" + subActorName
     deployer = runtime.get_deployer(subActorName)
@@ -72,7 +72,7 @@ def test_pub_send_sub_first():
 def validate_pub_send_pub_first():
     print("Validate, pubsub 1:1 pub first")
 
-    subActorName = "ActorTestN1s"
+    subActorName = "ActorTestN1s_loc"
 
     testcase = "pubfirst_" + subActorName
 
@@ -95,7 +95,7 @@ def validate_pub_send_pub_first():
 def validate_pub_send_sub_first():
     print("Validate, pubsub 1:1 sub first")
 
-    subActorName = "ActorTestN1s"
+    subActorName = "ActorTestN1s_loc"
 
     testcase = "subfirst_" + subActorName
 
