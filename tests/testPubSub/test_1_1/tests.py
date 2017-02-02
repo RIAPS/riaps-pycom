@@ -94,15 +94,16 @@ def validate_pub_send_pub_first():
 
     testcase = "pubfirst_" + pubActorName
 
-    pub_log_name = "{0}-{1}.log".format(testcase, pubActorName)
+    pub_log_name = "{0}-{1}_{2}.log".format(testcase, "pubfirst", pubActorName)
     pub_log_file = os.path.join(perf.LOGS_DIRECTORY, pub_log_name)
-    pub_logs = testutilities.get_log_for_test("pub_send_pub_first", pub_log_file, "12:00:00")
+    pub_logs = testutilities.get_log_for_test("test_pub_send_pub_first", pub_log_file, "12:00:00")
     assert "Sent messages: 1" in pub_logs, "Publisher couldn't send any messages"
-    assert "Sent messages: 5" in pub_logs, "Publisher couldn't send 5 messages"
+    assert "Sent messages: 5" in pub_logs, "Publisher couldn't send at least 5 messages"
 
-    sub_log_name = "{0}-{1}_{2}.log".format(subActorName, "pubfirst", subActorName)
+    testcase = "pubfirst_" + subActorName
+    sub_log_name = "{0}-{1}.log".format(testcase, testcase)
     sub_log_file = os.path.join(perf.LOGS_DIRECTORY, sub_log_name)
-    sub_logs = testutilities.get_log_for_test("pub_send_pub_first", sub_log_file, "12:00:00")
+    sub_logs = testutilities.get_log_for_test("test_pub_send_pub_first", sub_log_file, "12:00:00")
 
     assert "Received messages: 10" in sub_logs, "Subscriber didn't get 10 messages"
 
@@ -112,15 +113,18 @@ def validate_pub_send_sub_first():
     pubActorName = "ActorTest1p"
     subActorName = "ActorTest1s"
 
-    pub_log_name = "{0}-{1}_{2}.log".format(pubActorName, "subfirst", pubActorName)
+    testcase = "subfirst_" + pubActorName
+
+    pub_log_name = "{0}-{1}.log".format(testcase, testcase)
     pub_log_file = os.path.join(perf.LOGS_DIRECTORY, pub_log_name)
-    pub_logs = testutilities.get_log_for_test("pub_send_sub_first", pub_log_file, "12:00:00")
+    pub_logs = testutilities.get_log_for_test("test_pub_send_sub_first", pub_log_file, "12:00:00")
     assert "Sent messages: 1" in pub_logs, "Publisher couldn't send any messages"
     assert "Sent messages: 5" in pub_logs, "Publisher couldn't send 5 messages"
 
-    sub_log_name = "{0}-{1}_{2}.log".format(subActorName, "subfirst", subActorName)
+    testcase = "subfirst_" + subActorName
+    sub_log_name = "{0}-{1}.log".format(testcase, testcase)
     sub_log_file = os.path.join(perf.LOGS_DIRECTORY, sub_log_name)
-    sub_logs = testutilities.get_log_for_test("pub_send_pub_first", sub_log_file, "12:00:00")
+    sub_logs = testutilities.get_log_for_test("test_pub_send_pub_first", sub_log_file, "12:00:00")
 
     assert "Received messages: 10" in sub_logs, "Subscriber didn't get 10 messages"
 

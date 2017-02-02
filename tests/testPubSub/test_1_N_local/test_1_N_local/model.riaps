@@ -1,30 +1,42 @@
+// RIAPS 1 publisher N subscriber test
+
 app test_1_N_local {
     message SensorValue;
 
-    component TemperatureSensor {
+    component TemperatureSensor(logfile="") {
       timer clock 1000; 							// Periodic timer trigger to trigger sensor every 1 sec
       pub sendTemperature : SensorValue ;			// Publish port for SensorReady messages
     }
 
-    // Collects data from temperature sensors
-    component Collector {
+    component Collector(logfile="") {
       sub getTemperature : SensorValue ;			// Subscriber port to trigger component with SensorValue messages
     }
 
-    // Actor for sensors
-    actor ActorTest1repNreq_loc {
-       {
+    actor ActorTest1Np_loc(logfile="") {
           local SensorValue ;
           {
-            sensor     : TemperatureSensor;
-
-            collector1 : Collector;
-            collector2 : Collector;
-            collector3 : Collector;
+            sensor     : TemperatureSensor(logfile = logfile);
           }
-          collector1.getTemperature = sensor.sendTemperature;
-          collector2.getTemperature = sensor.sendTemperature;
-          collector3.getTemperature = sensor.sendTemperature;
-       }
+    }
+
+    actor ActorTest1Ns_A_loc(logfile="") {
+          local SensorValue ;
+          {
+             collector : Collector(logfile = logfile);
+          }
+    }
+
+    actor ActorTest1Ns_B_loc(logfile="") {
+          local SensorValue ;
+          {
+             collector : Collector(logfile = logfile);
+          }
+    }
+
+    actor ActorTest1Ns_C_loc(logfile="") {
+          local SensorValue ;
+          {
+             collector : Collector(logfile = logfile);
+          }
     }
 }

@@ -13,7 +13,7 @@ while True:
             break
         else:
             for pid in resultsList:
-                os.kill(int(pid), signal.SIGINT)
+                os.kill(int(pid), signal.SIGKILL)
 
     except subprocess.CalledProcessError as e:
         print("No process with the given name")

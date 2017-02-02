@@ -1,4 +1,4 @@
-import os
+import os, sys, inspect
 
 import zopkio.adhoc_deployer as adhoc_deployer
 import zopkio.runtime as runtime

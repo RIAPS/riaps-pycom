@@ -15,6 +15,8 @@ def machine_logs():
 
     logpath = "/tmp/{0}.log".format(pubfirstKey)
     results[pubfirstKey] = [logpath]
+
+    logpath = "/tmp/{0}.log".format(subfirstKey)
     results[subfirstKey] = [logpath]
 
     #for testcase in runtime.get_active_config("testcases"):

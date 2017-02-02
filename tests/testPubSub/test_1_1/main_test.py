@@ -1,7 +1,5 @@
-import os
-
 import zopkio.runtime as runtime
-
+import os
 
 
 test = {

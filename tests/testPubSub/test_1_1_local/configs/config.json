@@ -9,7 +9,11 @@
   "targets": [
     {
       "host": "192.168.1.120",
-      "actor": "ActorTest1p1s_loc"
+      "actor": "ActorTest1p_loc"
+    },
+    {
+      "host": "192.168.1.120",
+      "actor": "ActorTest1s_loc"
     }
   ],
   "riaps_apps_path": "riaps_apps",

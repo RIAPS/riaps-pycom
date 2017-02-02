@@ -3,16 +3,24 @@ from riaps.run.comp import Component
 import logging
 import os
 
+
 class Collector(Component):
-    def __init__(self):
+    def __init__(self, logfile):
         super(Collector, self).__init__()
+
+        logpath = '/tmp/' + logfile
+        try:
+            os.remove(logpath)
+        except OSError:
+            pass
+
         self.testlogger = logging.getLogger(__name__)
         self.testlogger.setLevel(logging.DEBUG)
-        self.fh = logging.FileHandler('/tmp/test_1_1_local_ActorTest1p1s_loc.log')
+        self.fh = logging.FileHandler(logpath)
         self.fh.setLevel(logging.DEBUG)
         self.testlogger.addHandler(self.fh)
         self.messageCounter = 0
-        
+
     def on_getTemperature(self):
         msg = self.getTemperature.recv_pyobj()
         self.testlogger.info("Received messages: %d", msg)
@@ -21,6 +29,7 @@ class Collector(Component):
         self.testlogger.info("Component commits suicide (pid: %d)", os.getpid())
         print("kill %d", os.getpid())
         os.kill(os.getpid(), -9)
+
 
     
 

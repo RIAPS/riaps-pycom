@@ -1,8 +1,8 @@
-import os
+import os, sys, inspect
 
 import zopkio.adhoc_deployer as adhoc_deployer
 import zopkio.runtime as runtime
-
+from time import sleep
 
 def setup_suite():
     # Set up authentication
@@ -28,9 +28,65 @@ def setup_suite():
     discoCheckScript = "checkDiscoveryService.py"
     discoCheckScriptPath = "../../test_common"
 
+    # Script to start the discovery
+    discoStartScript = "startDiscovery.py"
+    discoStartScriptPath = "../../test_common"
+
+    # Script to stop the discovery
+    discoStopScript = "stopDiscovery.py"
+    discoStopScriptPath = "../../test_common"
+
+    killRiapsScript = "killRiaps.py"
+    killRiapsScriptPath = "../../test_common"
+
+    # Deploy the riaps killer script
+    for target in runtime.get_active_config('targets'):
+        deployerId = "killer_" + target["host"]
+        killscriptpath = os.path.abspath(
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), killRiapsScriptPath, killRiapsScript))
+
+        killDeployer = adhoc_deployer.SSHDeployer(deployerId, {
+            'executable': killscriptpath,
+            'install_path': riaps_app_path,
+            'hostname': target["host"],
+            "start_command": "python3 " + os.path.join(riaps_app_path, killRiapsScript)
+        })
+        runtime.set_deployer(deployerId, killDeployer)
+        killDeployer.install(deployerId)
+
+        # Deploy the discovery starter script
+    for target in runtime.get_active_config('targets'):
+        deployerId = "discostart_" + target["host"]
+        startscriptpath = os.path.abspath(
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), discoStartScriptPath, discoStartScript))
+
+        startDiscoveryDeployer = adhoc_deployer.SSHDeployer(deployerId, {
+            'executable': startscriptpath,
+            'install_path': riaps_app_path,
+            'hostname': target["host"],
+            "start_command": "python3 " + os.path.join(riaps_app_path, discoStartScript)
+        })
+        runtime.set_deployer(deployerId, startDiscoveryDeployer)
+        startDiscoveryDeployer.install(deployerId)
+
+        # Deploy the discovery stop script
+    for target in runtime.get_active_config('targets'):
+        deployerId = "discostop_" + target["host"]
+        stopscriptpath = os.path.abspath(
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), discoStopScriptPath, discoStopScript))
+
+        stopDiscoveryDeployer = adhoc_deployer.SSHDeployer(deployerId, {
+            'executable': stopscriptpath,
+            'install_path': riaps_app_path,
+            'hostname': target["host"],
+            "start_command": "python3 " + os.path.join(riaps_app_path, discoStopScript)
+        })
+        runtime.set_deployer(deployerId, stopDiscoveryDeployer)
+        stopDiscoveryDeployer.install(deployerId)
+
     # Deploy the riaps-disco checker script
     for target in runtime.get_active_config('targets'):
-        deployerId = "disco" + target["actor"]
+        deployerId = "disco" + target["host"]
         checkscriptpath = os.path.abspath(
             os.path.join(os.path.dirname(os.path.abspath(__file__)), discoCheckScriptPath, discoCheckScript))
 
@@ -60,7 +116,17 @@ def setup_suite():
             'post_install_cmds': [start_riaps_lang]
         })
         runtime.set_deployer(target["actor"], model_deployer)
-        model_deployer.install(target["actor"])
+
+        # Add test cases
+        testcases = ["pubfirst_"+target["actor"], "subfirst_"+target["actor"]]
+
+        for testcase in testcases:
+            model_deployer.install(testcase, {
+                'args': [runtime.get_active_config('app_dir'),
+                         runtime.get_active_config('app_dir') + '.json',
+                         target["actor"],
+                         '--logfile="' + testcase + '.log"']})
+
 
         for component in runtime.get_active_config('components_py'):
             localPath = os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -84,21 +150,56 @@ def setup_suite():
 
     print("Deployment done.")
 
-
+def reach_discovery():
+    for target in runtime.get_active_config("targets"):
+        deployerId = "disco" + target["host"]
+        deployer = runtime.get_deployer(deployerId)
+        deployer.start(deployerId, configs={"sync": True})
 
 def setup():
-    print("Setup")
+    print("Start discovery service...")
+
+    started_hosts = set()
+
+    # Start discovery
+    for target in runtime.get_active_config("targets"):
+        deployerId = "discostart_" + target["host"]
+        if deployerId not in started_hosts:
+            started_hosts.add(deployerId)
+            deployer = runtime.get_deployer(deployerId)
+            deployer.start(deployerId, configs={"sync": False})
+    sleep(2)
+
+    reach_discovery()
+
+    #print("Setup")
     # for process in server_deployer.get_processes():
     #  server_deployer.start(process.unique_id)
 
 
 def teardown():
-    print("Teardown")
+    print("Stop riaps actors...")
+
+    # kill all the runing riaps actors
+    for target in runtime.get_active_config("targets"):
+        deployerId = "killer_" + target["host"]
+        deployer = runtime.get_deployer(deployerId)
+        deployer.start(deployerId, configs={"sync": True})
+
+    print("Stop discovery...")
+    # Stop discovery
+    for target in runtime.get_active_config("targets"):
+        deployerId = "discostop_" + target["host"]
+        deployer = runtime.get_deployer(deployerId)
+        deployer.start(deployerId, configs={"sync": True})
+    sleep(10)
+    print(" -- END -- ")
+
     # for process in client_deployer.get_processes():
     #  client_deployer.stop(process.unique_id)
 
 
 def teardown_suite():
     print("Teardown suite")
-    #for process in model_deployer.get_processes():
+    # for process in model_deployer.get_processes():
     #    model_deployer.undeploy(process.unique_id)

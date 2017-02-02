@@ -3,25 +3,29 @@
 app test_1_1_local {
     message SensorValue;
 
-    component TemperatureSensor {
+    component TemperatureSensor(logfile="")  {
       timer clock 1000; 							// Periodic timer trigger to trigger sensor every 1 sec
       timer stopComponent 20000;                    // Stop the component after 20 sec
       pub sendTemperature : SensorValue ;			// Publish port for SensorReady messages
     }
 
     // Collects data from temperature sensors
-    component Collector {
+    component Collector(logfile="")  {
       timer stopComponent 20000;                    // Stop the component after 20 sec
       sub getTemperature : SensorValue ;			// Subscriber port to trigger component with SensorValue messages
     }
 
-    // Actor for sensors
-    actor ActorTest1p1s_loc {
-            local SensorValue ;
-            {
-                  sensor : TemperatureSensor;
-                  collector : Collector;
-            }
-            collector.getTemperature = sensor.sendTemperature;
+    actor ActorTest1p_loc(logfile="")  {
+        local SensorValue ;
+        {
+              sensor : TemperatureSensor(logfile = logfile);
+        }
+    }
+
+    actor ActorTest1s_loc(logfile="")  {
+        local SensorValue;
+        {
+            collector : Collector(logfile = logfile);
+        }
     }
 }

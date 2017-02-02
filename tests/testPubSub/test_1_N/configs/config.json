@@ -12,7 +12,15 @@
     },
     {
       "host": "192.168.1.121",
-      "actor": "ActorTest1Ns"
+      "actor": "ActorTest1Ns_A"
+    },
+    {
+      "host": "192.168.1.122",
+      "actor": "ActorTest1Ns_B"
+    },
+    {
+      "host": "192.168.1.122",
+      "actor": "ActorTest1Ns_C"
     }
   ],
   "riaps_apps_path": "riaps_apps",

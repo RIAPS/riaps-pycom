@@ -5,14 +5,21 @@ import os
 import sys
 
 class TemperatureSensor(Component):
-    def __init__(self):
+    def __init__(self, logfile):
         super(TemperatureSensor, self).__init__()
+
+        logpath = '/tmp/' + logfile
+        try:
+            os.remove(logpath)
+        except OSError:
+            pass
+
         self.pid = os.getpid()
         self.pending = 0
 
         self.testlogger = logging.getLogger(__name__)
         self.testlogger.setLevel(logging.DEBUG)
-        self.fh = logging.FileHandler('/tmp/test_1_1_local_ActorTest1p1s_loc.log')
+        self.fh = logging.FileHandler(logpath)
         self.fh.setLevel(logging.DEBUG)
         self.testlogger.addHandler(self.fh)
         self.messageCounter = 0
