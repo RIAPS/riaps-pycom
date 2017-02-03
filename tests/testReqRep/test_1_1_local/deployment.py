@@ -158,11 +158,16 @@ def reach_discovery():
 
 def setup():
     print("Start discovery service...")
+
+    started_hosts = set()
+
     # Start discovery
     for target in runtime.get_active_config("targets"):
         deployerId = "discostart_" + target["host"]
-        deployer = runtime.get_deployer(deployerId)
-        deployer.start(deployerId, configs={"sync": False})
+        if deployerId not in started_hosts:
+            started_hosts.add(deployerId)
+            deployer = runtime.get_deployer(deployerId)
+            deployer.start(deployerId, configs={"sync": False})
     sleep(2)
 
     reach_discovery()

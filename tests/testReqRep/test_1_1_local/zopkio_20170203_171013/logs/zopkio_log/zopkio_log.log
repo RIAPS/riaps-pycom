@@ -1,0 +1,10 @@
+2017-02-03 17:10:14 zopkio [INFO] Starting zopkio
+2017-02-03 17:10:14 naarad [INFO] Available graphing modules:  
+2017-02-03 17:10:14 zopkio.test_runner [INFO] Setting up configuration: single execution
+2017-02-03 17:11:28 zopkio.deployer [ERROR] Log file /tmp/test_1_1_local_Actor11_A_loc.log does not exist on 192.168.1.120
+2017-02-03 17:11:29 zopkio.deployer [ERROR] Log file /tmp/test_1_1_local_Actor11_B_loc.log does not exist on 192.168.1.120
+2017-02-03 17:11:30 naarad.utils [WARNING] /home/istvan/work/riaps-pycom/tests/testReqRep/test_1_1_local/naarad.cfg : file does not exist.
+2017-02-03 17:11:30 naarad.utils [WARNING] /home/istvan/work/riaps-pycom/tests/testReqRep/test_1_1_local/naarad.cfg : file does not exist.
+2017-02-03 17:11:30 zopkio.test_runner [INFO] Execution of configuration: single execution complete
+2017-02-03 17:11:30 zopkio.test_runner [INFO] test_req_rep----passed
+2017-02-03 17:11:31 zopkio [INFO] Exiting zopkio

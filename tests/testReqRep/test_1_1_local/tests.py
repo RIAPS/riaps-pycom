@@ -10,7 +10,7 @@ def test_req_rep():
         deployer = runtime.get_deployer(target["actor"])
         deployer.start(target["actor"], configs={"sync": False})
 
-    sleep(20)
+    sleep(30)
 
 '''
 def validate_req_rep_send():
