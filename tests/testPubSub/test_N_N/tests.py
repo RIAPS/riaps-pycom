@@ -22,26 +22,35 @@ def test_pub_sub():
 
 
     sleep(40)
-'''
-def validate_pub_send_pub_first():
-    print("Validate, pubsub 1:1 pub first")
+    
+def validate_pub_sub():
+    print("Validate, pubsub N:N")
 
-    subActorName = "ActorTestN1s_loc"
+    # ActorA, CompA
+    log_name = "ActorTestNN_A-CompA_ActorTestNN_A.log"
+    log_path = os.path.join(perf.LOGS_DIRECTORY, log_name)
+    logs = testutilities.get_log_for_test("test_pub_sub", log_path, "12:00:00")
+    assert "Sent messages: topic1_10" in logs, "CompA in ActorA couldn't send enough topic1 messages"
+    assert "Sent messages: topic2_10" in logs, "CompA in ActorA couldn't send enough topic2 messages"
 
-    testcase = "pubfirst_" + subActorName
 
-    sub_log_name = "{0}-{1}_{2}.log".format(testcase, "pubfirst", subActorName)
-    sub_log_file = os.path.join(perf.LOGS_DIRECTORY, sub_log_name)
-    sub_logs = testutilities.get_log_for_test("test_pub_send_pub_first", sub_log_file, "12:00:00")
-    assert "Received messages: 10" in sub_logs>2, "Subscriber didn't get enough messages"
+    # ActorA, CompB
+    log_name = "ActorTestNN_A-CompB_ActorTestNN_A.log"
+    log_path = os.path.join(perf.LOGS_DIRECTORY, log_name)
+    logs = testutilities.get_log_for_test("test_pub_sub", log_path, "12:00:00")
+    assert "Received message: topic2_15" in logs, "CompB in ActorA couldn't get enough topic2 messages"
+    assert "Received message: topic3_15" in logs, "CompB in ActorA couldn't get enough topic3 messages"
 
-    for target in runtime.get_active_config("targets"):
-        if target["actor"] != subActorName:
-            pubActorName = target["actor"]
-            testcase = "pubfirst_" + pubActorName
-            pub_log_name = "{0}-{1}.log".format(testcase, testcase)
-            pub_log_file = os.path.join(perf.LOGS_DIRECTORY, pub_log_name)
-            pub_logs = testutilities.get_log_for_test("test_pub_send_pub_first", pub_log_file, "12:00:00")
+    # ActorB, CompC
+    log_name = "ActorTestNN_B-CompC_ActorTestNN_B.log"
+    log_path = os.path.join(perf.LOGS_DIRECTORY, log_name)
+    logs = testutilities.get_log_for_test("test_pub_sub", log_path, "12:00:00")
+    assert "Sent message: topic3_10" in logs, "CompC in ActorB couldn't send enough topic3 messages"
+    assert "Received message: topic1_13" in logs, "CompC in ActorB couldn't get enough topic1 messages"
 
-            assert "Sent messages: 5" in pub_logs, "Publisher (" + pubActorName +") couldn't send enough messages"
-'''
+    # ActorC, CompB
+    log_name = "ActorTestNN_C-CompB_ActorTestNN_C.log"
+    log_path = os.path.join(perf.LOGS_DIRECTORY, log_name)
+    logs = testutilities.get_log_for_test("test_pub_sub", log_path, "12:00:00")
+    assert "Received message: topic2_15" in logs, "CompB in ActorC couldn't get enough topic2 messages"
+    assert "Received message: topic3_15" in logs, "CompB in ActorC couldn't get enough topic3 messages"
