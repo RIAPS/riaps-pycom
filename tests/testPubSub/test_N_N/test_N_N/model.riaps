@@ -1,4 +1,4 @@
-app test_N_N_local {
+app test_N_N {
     message topic1;
     message topic2;
     message topic3;
@@ -20,21 +20,21 @@ app test_N_N_local {
       sub getTopic1  : topic1;
     }
 
-    actor ActorTestNN_A_loc(logfile="") {
-        local topic1, topic2, topic3 ;{
+    actor ActorTestNN_A(logfile="") {
+        {
           compA : CompA(logfile = logfile);
           compB : CompB(logfile = logfile);
         }
     }
 
-    actor ActorTestNN_B_loc(logfile="") {
-        local topic1, topic3 ;{
+    actor ActorTestNN_B(logfile="") {
+        {
           compC : CompC(logfile = logfile);
         }
     }
 
-    actor ActorTestNN_C_loc(logfile="") {
-        local topic2, topic3 ;{
+    actor ActorTestNN_C(logfile="") {
+        {
           compB : CompB(logfile = logfile);
         }
     }

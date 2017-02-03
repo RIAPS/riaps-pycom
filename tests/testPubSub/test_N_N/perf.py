@@ -10,14 +10,14 @@ def machine_logs():
   for target in runtime.get_active_config("targets"):
     testcase = target["actor"]
 
-    if testcase=="ActorTestNN_A_loc":
+    if testcase=="ActorTestNN_A":
       logPathCompA = "/tmp/CompA_{0}.log".format(testcase)
       logPathCompB = "/tmp/CompB_{0}.log".format(testcase)
       results[testcase] = [logPathCompA, logPathCompB]
-    elif testcase=="ActorTestNN_B_loc":
+    elif testcase=="ActorTestNN_B":
       logPathCompC = "/tmp/CompC_{0}.log".format(testcase)
       results[testcase] = [logPathCompC]
-    elif testcase=="ActorTestNN_C_loc":
+    elif testcase=="ActorTestNN_C":
       logPathCompB = "/tmp/CompB_{0}.log".format(testcase)
       results[testcase] = [logPathCompB]
 

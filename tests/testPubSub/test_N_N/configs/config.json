@@ -1,5 +1,5 @@
 {
-  "app_dir": "test_N_N_local",
+  "app_dir": "test_N_N",
   "model_file": "model.riaps",
   "components_py": [
     "CompA.py",
@@ -9,15 +9,15 @@
   "targets": [
     {
       "host": "192.168.1.120",
-      "actor": "ActorTestNN_A_loc"
+      "actor": "ActorTestNN_A"
     },
     {
-      "host": "192.168.1.120",
-      "actor": "ActorTestNN_B_loc"
+      "host": "192.168.1.121",
+      "actor": "ActorTestNN_B"
     },
     {
-      "host": "192.168.1.120",
-      "actor": "ActorTestNN_C_loc"
+      "host": "192.168.1.122",
+      "actor": "ActorTestNN_C"
     }
   ],
   "riaps_apps_path": "riaps_apps",
