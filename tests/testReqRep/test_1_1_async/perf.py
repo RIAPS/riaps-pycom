@@ -10,7 +10,7 @@ def machine_logs():
   results = {}
 
   for target in runtime.get_active_config("targets"):
-    logpath = "/tmp/{0}_{1}.log".format(runtime.get_active_config("app_dir"), target["actor"])
+    logpath = "/tmp/{1}.log".format(runtime.get_active_config("app_dir"), target["actor"])
     results[target["actor"]] = [logpath]
 
   return results

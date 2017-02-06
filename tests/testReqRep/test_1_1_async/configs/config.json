@@ -1,19 +1,19 @@
 {
 
-  "app_dir": "test_1_N",
+  "app_dir": "test_1_1_async",
   "model_file": "model.riaps",
   "components_py": [
-    "TemperatureSensor.py",
-    "Collector.py"
+    "CompA.py",
+    "CompB.py"
   ],
   "targets": [
     {
       "host": "192.168.1.120",
-      "actor": "ActorTest1rep"
+      "actor": "Actor11_B"
     },
     {
       "host": "192.168.1.121",
-      "actor": "ActorTestNreq"
+      "actor": "Actor11_A"
     }
   ],
   "riaps_apps_path": "riaps_apps",

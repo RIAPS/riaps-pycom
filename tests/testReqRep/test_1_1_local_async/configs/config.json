@@ -1,6 +1,6 @@
 {
 
-  "app_dir": "test_1_1_local",
+  "app_dir": "test_1_1_local_async",
   "model_file": "model.riaps",
   "components_py": [
     "CompA.py",
