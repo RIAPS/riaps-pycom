@@ -15,13 +15,13 @@ app test_1_1_local {
     }
 
     actor Actor11_A_loc(logfile="") {
-       {
+       local SensorValue, SensorQuery ;{
           sensor : CompA(logfile = logfile);
        }
     }
 
     actor Actor11_B_loc(logfile="") {
-       {
+       local SensorValue, SensorQuery ;{
           collector: CompB(logfile = logfile);
        }
     }
