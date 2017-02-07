@@ -23,4 +23,5 @@ def validate_service_messaging():
         serv_logs = testutilities.get_log_for_test("test_service_messaging", serv_log_file, "12:00:00")
 
         assert "Disco response: ok" in serv_logs, "Service didn't respond"
+        assert "Disco serviceReg response: ok" in serv_logs, "Service registration failed"
 
