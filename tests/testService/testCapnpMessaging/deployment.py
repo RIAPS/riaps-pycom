@@ -142,13 +142,7 @@ def setup():
 
 
 def teardown():
-    print("Stop riaps actors...")
 
-    # kill all the runing riaps actors
-    for target in runtime.get_active_config("targets"):
-        deployerId = "killer_" + target["host"]
-        deployer = runtime.get_deployer(deployerId)
-        deployer.start(deployerId, configs={"sync": True})
 
     print("Stop discovery...")
     # Stop discovery
