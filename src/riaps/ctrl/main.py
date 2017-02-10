@@ -29,10 +29,7 @@ def termHandler(signal,frame):
         except:
             pass
     sys.exit()
-    
-    
-    theController.terminate()
-  
+
 def main(debug=True):
     parser = argparse.ArgumentParser()
     parser.add_argument("-p","--port", type=int, 

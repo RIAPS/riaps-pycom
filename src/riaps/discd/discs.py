@@ -88,13 +88,30 @@ class DiscoService(object):
         channel between a specific client actor and the service.   
         '''
         sock = self.context.socket(zmq.PAIR)
-        port = sock.bind_to_random_port('tcp://*')
+        port = sock.bind_to_random_port('tcp://127.0.0.1')
         clientKeyBase = "/" + appName + '/' + appActorName + "/"
         self.clients[clientKeyBase] = sock
         clientKeyLocal = clientKeyBase + self.macAddress
         self.clients[clientKeyLocal] = port
         clientKeyGlobal = clientKeyBase + self.hostAddress
         self.clients[clientKeyGlobal] = port
+        return port
+    
+    def unsetupClient(self,appName,appVersion,appActorName):
+        '''
+        Remove a client   
+        '''
+        clientKeyBase = "/" + appName + '/' + appActorName + "/"
+        sock = self.clients[clientKeyBase]
+        clientKeyLocal = clientKeyBase + self.macAddress
+        port = self.clients[clientKeyLocal]
+        clientKeyGlobal = clientKeyBase + self.hostAddress
+        # port = self.clients[clientKeyGlobal] # Must have the same value
+        sock.unbind('tcp://127.0.0.1:' + str(port))
+        # TODO: remove all services registered by this client  
+        del self.clients[clientKeyBase]
+        del self.clients[clientKeyLocal]
+        del self.clients[clientKeyGlobal]
         return port
     
     def handleActorReg(self,msg):
@@ -119,7 +136,28 @@ class DiscoService(object):
         rspBytes = rsp.to_bytes()
         self.server.send(rspBytes)
     
-    
+    def handleActorUnreg(self,msg):
+        '''
+        Handle the unregistration of an application actor with the service. 
+        '''
+        actReg = msg.actorUnreg
+        appName = actReg.appName
+        appVersion = actReg.version   
+        appActorName = actReg.actorName
+         
+        self.logger.info("handleActorUnreg: %s %s" % (appName, appActorName))
+        
+        clientPort = self.unsetupClient(appName,appVersion,appActorName)
+        
+        # OptionL store in db host.app.vers.actr -> port? 
+        
+        rsp = disco_capnp.DiscoRep.new_message()
+        rspMessage = rsp.init('actorUnreg')
+        rspMessage.status = "ok"
+        rspMessage.port = clientPort
+        rspBytes = rsp.to_bytes()
+        self.server.send(rspBytes)
+        
     def buildInsertKeyValuePair(self,appName,msgType,kind,scope,host,port):
         '''
         Construct a database key,value pair to be used when a service is registered.
@@ -223,6 +261,8 @@ class DiscoService(object):
             self.handleServiceReg(msg)
         elif which == "serviceLookup":
             self.handleServiceLookup(msg)
+        elif which == 'actorUnreg':
+            self.handleActorUnreg(msg)
         else:
             pass
         
@@ -268,12 +308,12 @@ class DiscoService(object):
             
             msgBytes = updMsg.to_bytes()
             clientSocket.send(msgBytes)                     # Send message to client 
-        
-        def terminate(self):
-            self.logger.info("terminating")
-            # Clean up everything
-            self.context.destroy()
-            time.sleep(1.0)
-            self.logger.info("terminated")
-            sys.exit()
+
+    def terminate(self):
+        self.logger.info("terminating")
+        # Clean up everything
+        self.context.destroy()
+        time.sleep(1.0)
+        self.logger.info("terminated")
+        sys.exit()
     

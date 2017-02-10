@@ -42,6 +42,7 @@ def main(debug=True):
     global theDepl
     theDepl = DeploService(args.node,args.port)  # Assign the service to the singleton
     signal.signal(signal.SIGTERM,termHandler)
+    signal.signal(signal.SIGINT,termHandler)
     theDepl.setup()
     theDepl.run()
 #     if debug:

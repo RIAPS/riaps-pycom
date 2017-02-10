@@ -252,6 +252,19 @@ class DeploService(object):
     def terminate(self):
         self.logger.info("terminating")
         # Clean up everything
+        # Logout from service
+        # Kill actors
+        for proc in self.launchMap.values():
+            proc.terminate()
+        time.sleep(1.0) # Allow actors terminate cleanly
+        # Kill devm
+        if self.devm != None:
+            self.devm.terminate()
+            self.devm = None
+        # Kill disco
+        if self.disco != None:
+            self.disco.terminate()
+            self.disco = None
         self.context.destroy()
         time.sleep(1.0)
         self.logger.info("terminated")
