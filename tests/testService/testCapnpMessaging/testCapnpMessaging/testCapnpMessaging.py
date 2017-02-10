@@ -122,6 +122,7 @@ else:
     exit(-1)
 
 # query service, expecting the results later (async behavior)
+'''
 req = disco_capnp.DiscoReq.new_message()
 reqMsg = req.init('serviceLookup')
 reqMsgPath = reqMsg.path
@@ -159,6 +160,7 @@ if which == 'serviceLookup':
         pass
 else:
     raise SetupError("Service lookup error - bad response")
+'''
 
 socket.close()
 socket = None

@@ -1,3 +1,4 @@
 *.json
 *pycache*
 .idea
+tests/**/*.pyc
