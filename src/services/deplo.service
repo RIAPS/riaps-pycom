@@ -1,0 +1,16 @@
+[Unit]
+Description=RIAPS deployment manager service
+
+[Service]
+Environment="RIAPSHOME=/usr/local/riaps" "RIAPSAPPS=/home/riaps/riaps_apps"
+User=riaps
+Group=riaps
+StandardOutput=syslog
+StandardError=inherit
+SyslogIdentifier=deploy
+Type=simple
+ExecStart = /usr/local/bin/riaps_deplo -n 10.1.1.106 -p 8888
+Restart=always
+
+[Install]
+WantedBy = multi-user.target
