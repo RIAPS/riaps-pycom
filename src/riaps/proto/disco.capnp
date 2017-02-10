@@ -17,6 +17,17 @@ struct ActorRegRep {
   port @1 : Int32;
 }
 
+struct ActorUnregReq {
+  appName @0 : Text;
+  version @1 : Text;
+  actorName @2 : Text;
+}
+
+struct ActorUnregRep {
+  status @0 : Status;
+  port @1 : Int32;
+}
+
 struct Path {
   appName @0 : Text;
   msgType @1 : Text;
@@ -34,7 +45,7 @@ struct Client {
 
 struct Socket {
   host @0 : Text;
-  port @1 : Int32; 
+  port @1 : Int32;
  }
 
 struct ServiceRegReq  {
@@ -45,14 +56,14 @@ struct ServiceRegReq  {
 struct ServiceRegRep {
   status @0 : Status;
 }
- 
+
 struct ServiceLookupReq {
-  path @0 : Path; 
+  path @0 : Path;
   client @1 : Client;
 }
 
 struct ServiceLookupRep {
-  status @0  : Status; 
+  status @0  : Status;
   sockets @1 : List(Socket);
 }
 
@@ -67,6 +78,7 @@ struct DiscoReq {
       actorReg @0 : ActorRegReq;
       serviceReg @1 : ServiceRegReq;
       serviceLookup @2 : ServiceLookupReq;
+      actorUnreg @3 : ActorRegReq;
    }
 }
 
@@ -74,7 +86,8 @@ struct DiscoRep {
    union {
       actorReg @0 : ActorRegRep;
       serviceReg @1 : ServiceRegRep;
-      serviceLookup @2 : ServiceLookupRep; 
+      serviceLookup @2 : ServiceLookupRep;
+      actorUnreg @3 : ActorUnregRep;
    }
 }
 

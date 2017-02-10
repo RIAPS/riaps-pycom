@@ -70,7 +70,8 @@ class DiscoClient(object):
             status = respMessage.status
             port = respMessage.port
             if status == 'ok':
-                self.channel.connect("tcp://localhost:" + str(port))
+                self.logger.info("connecting to 127.0.0.1:%s" % str(port))
+                self.channel.connect("tcp://127.0.0.1:" + str(port))
             else:
                 raise SetupError("Error response from disco service at app registration")
         else:
@@ -186,5 +187,47 @@ class DiscoClient(object):
     
     def terminate(self):
         self.logger.info("terminating")
-        pass
+        if self.socket == None:
+            self.logger.info("No disco service - skipping termination")
+            return
+        req = disco_capnp.DiscoReq.new_message()
+        reqt = disco_capnp.DiscoReq.new_message()
+        appMessage = reqt.init('actorUnreg')
+        appMessage.appName = self.appName
+        appMessage.version = '0.0.0'
+        appMessage.actorName = self.actor.name
+                  
+        msgBytes = reqt.to_bytes()
+        
+        try:
+            self.socket.send(msgBytes)
+        except Exception as e:
+            self.logger.error("Unable to unregister app with discovery: %s" % e.args)
+            self.socket.close()
+            self.socket = None
+            return
+        
+        try:
+            respBytes = self.socket.recv()
+        except Exception as e:
+            self.logger.error("No response from discovery service: %s" % e.args)
+            self.socket.close()
+            self.socket = None
+            return
+        
+        resp = disco_capnp.DiscoRep.from_bytes(respBytes)
+        
+        which = resp.which()
+        if which == 'actorUnreg':
+            respMessage = resp.actorUnreg
+            status = respMessage.status
+            port = respMessage.port
+            if status == 'ok':
+                self.logger.info("disconnecting 127.0.0.1: %s" % str(port))
+                self.channel.disconnect("tcp://127.0.0.1:" + str(port))
+            else:
+                raise SetupError("Error response from disco service at app unregistration")
+        else:
+            raise SetupError("Unexpected response from disco service at app unregistration")
+        self.logger.info("terminated")
     

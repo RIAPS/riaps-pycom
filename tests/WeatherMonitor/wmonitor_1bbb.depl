@@ -1,0 +1,5 @@
+// Deploy on 1 BBB
+app WeatherMonitor {
+	on (bbb-4930.local) WeatherIndicator;
+	on (bbb-4930.local) WeatherReceiver; 
+}
