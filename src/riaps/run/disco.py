@@ -10,6 +10,7 @@ from ..proto import disco_capnp
 from riaps.consts.defs import *
 from .exc import SetupError, OperationError
 import logging
+import os
 
 class DiscoClient(object):
     '''
@@ -43,6 +44,7 @@ class DiscoClient(object):
         appMessage.appName = self.appName
         appMessage.version = '0.0.0'
         appMessage.actorName = self.actor.name
+        appMessage.pid = os.getpid()
                   
         msgBytes = reqt.to_bytes()
         
@@ -87,6 +89,7 @@ class DiscoClient(object):
         # All interactions below go via the REQ/REP socket ; the channel is for server pushes
         req = disco_capnp.DiscoReq.new_message()
         reqMsg = req.init('serviceReg')
+        reqMsg.pid = os.getpid()
         reqMsgPath = reqMsg.path
         reqMsg.socket.host = self.actor.localHost if isLocal else self.actor.globalHost
         reqMsg.socket.port = portNum

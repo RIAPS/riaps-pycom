@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(name='riaps',
-      version='0.3.2',
+      version='0.3.3',
       description='python implementation of riaps component model',
       url='',
       author='riaps',
