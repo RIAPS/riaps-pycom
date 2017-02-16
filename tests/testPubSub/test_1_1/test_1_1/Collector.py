@@ -24,10 +24,6 @@ class Collector(Component):
         msg = self.getTemperature.recv_pyobj()
         self.testlogger.info("Received messages: %d", msg)
 
-    def on_stopComponent(self):
-        self.testlogger.info("Component commits suicide (pid: %d)", os.getpid())
-        print("kill %d", os.getpid())
-        os.kill(os.getpid(), -9)
 
     
 
