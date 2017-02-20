@@ -198,7 +198,7 @@ class CommonFrame(metaclass=ABCMeta):
         if soc:
             self.set_soc(soc)
         else:
-            self.set_soc(int())  # Get current timestamp
+            self.set_soc(int(t))  # Get current timestamp
 
         if frasec:
             if isinstance(frasec, collections.Sequence):

@@ -31,6 +31,10 @@ app OpalIO {
       sub rx_c37header : C37Header;
       sub rx_c37config : C37Config;
     }
+	
+	component Logger() {
+      sub rx_c37data : C37Data;
+    }
 
     // PDC actor
     actor OpalIOActor() {
@@ -38,7 +42,8 @@ app OpalIO {
        {
        	  c37receiver : C37Receiver(pmu_ip='127.0.0.1', pmu_port=9876);
        	  c37sender : C37Sender(listen_port=9877);
-          processor : Processor(); 		
+          processor : Processor(); 	
+          logger : Logger();  		  
        }
     }
 }

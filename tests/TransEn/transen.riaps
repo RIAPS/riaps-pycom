@@ -1,0 +1,35 @@
+// RIAPS Transactive Energy
+// 
+
+app TransEn {
+    message SensorData; 
+    message ActuatorCommand;
+    
+    component GridlabD(gldServer,
+    				   sensorObject,sensorParameter,sensorUnit,
+                 	   actuatorObject,actuatorParameter,actuatorUnit) {
+    	timer clock 1000;
+    	pub sensor : SensorData;
+    	sub actuator : ActuatorCommand;
+    }
+    
+    component Controller(upperThreshold,upperValue,
+                 		 lowerThreshold,lowerValue,
+                 		 initialValue) {
+    	sub sensor : SensorData;
+    	pub actuator : ActuatorCommand;
+    }
+
+    // Averager actor
+    actor TransEnActor {
+       local SensorData,ActuatorCommand;	// Local message types
+       {
+       	  grid : GridlabD(gldServer='http://localhost:6267',
+    						sensorObject='Market_1',sensorParameter='fixed_price',sensorUnit='MW',
+    						actuatorObject='house15',actuatorParameter='heating_setpoint',actuatorUnit='degF');
+          controller : Controller(upperThreshold=100,upperValue=70,
+                 		 		  lowerThreshold=100,lowerValue=60,
+                 		 		  initialValue=70);
+       }
+    }
+}
