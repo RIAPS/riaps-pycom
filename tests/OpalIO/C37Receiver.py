@@ -79,7 +79,7 @@ class C37Receiver(Component):
 
     def on_clock(self):
         now = self.clock.recv_pyobj()   # Receive time (as float)
-        self.logger.info('on_clock():%s',now)
+        # self.logger.info('on_clock():%s', now)
         if self.readerThread == None:
             self.readerThread = C37ReceiverThread(self)           
             self.readerThread.start()
@@ -89,6 +89,8 @@ class C37Receiver(Component):
         
     def __destroy__(self):
         self.logger.info("__destroy__")
+        if self.readerThread:
+            self.readerThread.terminate()
         
     def on_data_queue(self):
         """Processing incoming data frames (application specific).
@@ -131,9 +133,8 @@ class C37Receiver(Component):
                 'VASPM': (vaspm_m, vaspm_a), 'VBZPM': (vbzpm_m, vbzpm_a), 'VCZPM': (vczpm_m, vczpm_a),
                 'VAGM': vagm, 'VAGA': vaga, 'VASM': vasm, 'VASA': vasa, 'SLIP1': slip1, 
                 'DIGITALS': digits, 'FREQ': freq, 'ROCOF': rocof}
-        
-        print(data)
-        self.c37data.send_pyobj((data, frame))
+
+        self.c37data.send_pyobj((frame, data))
 
     def on_config_queue(self):
         OFFSET_NUM_PMU = 18
@@ -158,9 +159,9 @@ class C37Receiver(Component):
         config = {'station': str_clean(stn), 'phasors': ch_names[0:phnmr],
                   'analogs': ch_names[phnmr:phnmr+annmr], 'digitals': ch_names[phnmr+annmr:]}
         
-        self.c37config.send_pyobj((config, frame))
+        self.c37config.send_pyobj((frame, config))
         
     def on_header_queue(self):
         #self.logger.info('on_header_queue()')       
         frame = self.header_queue.recv_pyobj()
-        self.c37header.send_pyobj(frame)
+        self.c37header.send_pyobj((frame.convert2bytes(), frame.header))

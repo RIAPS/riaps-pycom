@@ -77,14 +77,31 @@ class Controller(object):
         self.launchList = []        # List of launch operations
         self.setupHostKeys()
         
-    def setupIfaces(self):
+    def setupIfaces(self):        
         '''
         Find the IP addresses of the (host-)local and network(-global) interfaces
         '''
+        '''
+        Check if the preferred IP is present as an environment variables
+        CTRL_IP
+        '''
+        preferredip=os.getenv("CTRL_IP")
+        print("preferredip %s" %(preferredip))
         (globalIPs,globalMACs,localIP) = getNetworkInterfaces()
-        assert len(globalIPs) > 0 and len(globalMACs) > 0
-        globalIP = globalIPs[0]
-        globalMAC = globalMACs[0]
+        print(globalIPs)#, type(globalIPs))
+        if(preferredip is None):
+            assert len(globalIPs) > 0 and len(globalMACs) > 0
+            globalIP = globalIPs[0]
+            globalMAC = globalMACs[0]
+        else:
+            try:
+                indexfound=globalIPs.index(preferredip)
+                globalIP=globalIPs[indexfound]
+                globalMAC=globalMACs[indexfound]
+                self.logger.warn("globalIP is %s" %globalIP)
+            except:
+                self.logger.error(preferredip +" not found")
+                sys.exit(-1)
         self.hostAddress = globalIP
         self.macAddress = globalMAC
         self.nodeName = str(self.hostAddress)
