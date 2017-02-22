@@ -6,19 +6,13 @@ import logging
 from datetime import datetime
 import os
 
-DB_HOST = 'localhost'
-DB_PORT = '8086'
-DB_NAME = 'opalio'
-DB_USER = 'riapsdev'
-DB_PASSWORD = 'riaps'
-
 class Logger(Component):
-    def __init__(self):
+    def __init__(self, db_host, db_port, db_name, db_user, db_password):
         super().__init__()
         self.pid = os.getpid()
         self.logger.info("%s - starting",str(self.pid))
-        self.client = InfluxDBClient(host=DB_HOST, port=DB_PORT,
-            database=DB_NAME, username=DB_USER, password=DB_PASSWORD)
+        self.client = InfluxDBClient(host=db_host, port=db_port,
+            database=db_name, username=db_user, password=db_password)
 
     def on_rx_c37data(self):
         raw, data = self.rx_c37data.recv_pyobj()

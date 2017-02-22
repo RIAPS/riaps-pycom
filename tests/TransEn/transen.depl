@@ -1,3 +1,4 @@
 app TransEn {
-	on all TransEnActor;
+	on all GenPriceControl;
+	on all CustDemandControl;
 }

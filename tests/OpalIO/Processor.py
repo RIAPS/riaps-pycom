@@ -20,8 +20,8 @@ class Processor(Component):
         #self.logger.info("on_rx_c37data()[%s]: %s", str(self.pid), repr(data))
         timestamp = datetime.utcfromtimestamp(data['timestamp'])
         timestamp_str = timestamp.strftime("%Y-%m-%d %H:%M:%S.%f").rstrip('0')
-        #self.logger.info('%s: %s',  timestamp_str, pprint.pformat(data))
-        self.logger.info('%s: VAGA = %f deg, VASA = %f deg',  timestamp_str, data['VAGA'], data['VASA'])
+        #self.logger.debug('%s: %s',  timestamp_str, pprint.pformat(data))
+        #self.logger.debug('%s: VAGA = %f deg, VASA = %f deg',  timestamp_str, data['VAGA'], data['VASA'])
         
     def on_rx_c37header(self):
         header = self.rx_c37header.recv_pyobj() # Receive Header (raw, interpreted)

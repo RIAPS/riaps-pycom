@@ -14,7 +14,7 @@ ClientInfo = namedtuple('ClientInfo', ['buffer', 'streaming', 'socket', 'address
 class C37Sender(Component):
     def __init__(self, listen_port):
         super().__init__()
-        self.logger.setLevel(logging.DEBUG)
+        self.logger.setLevel(logging.INFO)
         
         self.port = listen_port
         self.ip = '0.0.0.0' # TODO: should be customizable
@@ -132,7 +132,7 @@ class C37Sender(Component):
                         
 
                 if client_info.streaming.is_set() and not client_info.buffer.empty():
-                    self.logger.info("[%d] - Sending data frame -> (%s)", self.pmu_id, address_info)
+                    self.logger.debug("[%d] - Sending data frame -> (%s)", self.pmu_id, address_info)
                     frame = client_info.buffer.get()
                     client_info.socket.sendall(frame)
 
