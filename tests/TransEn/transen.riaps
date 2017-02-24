@@ -41,7 +41,7 @@ app TransEn {
     actor GenPriceControl {
        local GenSensorData,GenActuatorCommand;	// Local message types
        {
-       	  grid : GenGridlabD(gldServer='http://localhost:6267',
+       	  grid : GenGridlabD(gldServer='http://192.168.0.108:6267',
        	  					 sensorObject='house15',sensorParameter='heating_setpoint',sensorUnit='degF',
     					  	 actuatorObject='Market_1',actuatorParameter='fixed_price',actuatorUnit='MW');
     				
@@ -54,7 +54,7 @@ app TransEn {
     actor CustDemandControl {
        local CustSensorData,CustActuatorCommand;	// Local message types
        {
-       	  grid : CustGridlabD(gldServer='http://localhost:6267',
+       	  grid : CustGridlabD(gldServer='http://192.168.0.108:6267',
        	      				 sensorObject='Market_1',sensorParameter='fixed_price',sensorUnit='MW',
        	  					 actuatorObject='house15',actuatorParameter='heating_setpoint',actuatorUnit='degF');
        	  					 
