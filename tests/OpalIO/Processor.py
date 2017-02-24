@@ -18,10 +18,11 @@ class Processor(Component):
     def on_rx_c37data(self):
         raw, data = self.rx_c37data.recv_pyobj() # Receive Data (raw, interpreted)
         #self.logger.info("on_rx_c37data()[%s]: %s", str(self.pid), repr(data))
-        timestamp = datetime.utcfromtimestamp(data['timestamp'])
-        timestamp_str = timestamp.strftime("%Y-%m-%d %H:%M:%S.%f").rstrip('0')
+        #timestamp = datetime.utcfromtimestamp(data['timestamp'])
+        #timestamp_str = timestamp.strftime("%Y-%m-%d %H:%M:%S.%f").rstrip('0')
         #self.logger.debug('%s: %s',  timestamp_str, pprint.pformat(data))
         #self.logger.debug('%s: VAGA = %f deg, VASA = %f deg',  timestamp_str, data['VAGA'], data['VASA'])
+        self.tx_phasorData.send_pyobj((raw, data))
         
     def on_rx_c37header(self):
         header = self.rx_c37header.recv_pyobj() # Receive Header (raw, interpreted)

@@ -1,3 +1,4 @@
 app OpalIO {
-	on all OpalIOActor;
+	on (192.168.10.104) OpalIOActor;
+	on (192.168.10.104) OpalLogger;
 }
