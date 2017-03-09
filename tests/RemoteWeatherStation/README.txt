@@ -8,6 +8,13 @@ The WeatherReporter will open the UART1 port and read the input when data arrive
 WeatherListener subscribes to the DataFrame message and when a new message is received, it will publish an acknowledgement (DataAck = "OKAY, got it!").
 The WeatherReporter listens for the DataAck and writes that message out to the UART port.
 
+UART Configuration
+------------------
+port = '/dev/ttyO1'
+baud rate = 115200
+8 bit, parity = None, 1 stopbit   
+timeout = 0, so it does not block 
+
 HW notes on testing this
 ------------------------
 Tools used:  
