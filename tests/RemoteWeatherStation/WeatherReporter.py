@@ -4,6 +4,12 @@ Created on Feb 12, 2017
 @author: riaps
 '''
 
+'''
+The UART device component utilizes pySerial for communications
+Need to install it in the development environment 
+    $ sudo pip3 install pyserial
+'''
+
 # import riaps
 from riaps.run.comp import Component
 import logging

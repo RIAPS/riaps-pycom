@@ -22,6 +22,10 @@ Tools used:
 * USB to 3.3 V TTL Cable (TTL-232R-3V3 by FTDI Chip) 
     - How to connect with BBB (P9 connector):  White (RX) to BBB TX (pin 24), Green (TX) to BBB RX (pin 26), GND on BBB pins 1, 2, 45, 46
 
+Library used:
+* pySerial used for UART communication
+    - sudo pip3 install pyserial
+    
 Configuration needed on the BBB image (to be updated in a future image)
 * in .bashrc, add setup environment variables for these tools 
     $ export SLOTS=/sys/devices/platform/bone_capemgr/slots
