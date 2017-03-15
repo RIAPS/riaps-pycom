@@ -1,0 +1,4 @@
+app testDevices {
+	on (192.168.1.120) PubActor;
+	on (192.168.1.121) SubActor;
+}

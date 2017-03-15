@@ -1,0 +1,33 @@
+{
+  "app_dir": "test_N_1",
+  "model_file": "model.riaps",
+  "components_py": [
+    "TemperatureSensor.py",
+    "Collector.py"
+  ],
+  "components_py": [
+    "TemperatureSensor.py",
+    "Collector.py"
+  ],
+  "targets": [
+    {
+      "host": "192.168.1.120",
+      "actor": "ActorTestN1p_A"
+    },
+    {
+      "host": "192.168.1.121",
+      "actor": "ActorTestN1p_B"
+    },
+    {
+      "host": "192.168.1.122",
+      "actor": "ActorTestN1p_C"
+    },
+    {
+      "host": "192.168.1.120",
+      "actor": "ActorTestN1s"
+    }
+  ],
+  "riaps_apps_path": "riaps_apps",
+  "username": "riaps",
+  "password":"riapspwd"
+}

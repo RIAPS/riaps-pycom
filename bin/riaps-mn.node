@@ -1,0 +1,10 @@
+#!/bin/sh
+# Set up a virtual host 
+# To be run 'non-lead' nodes
+# For riaps developers - NOT APP DEVELOPERS 
+
+# Add default gateway (mininet)
+route add default gw 10.0.0.1
+
+# Change to (non-privileged) user
+echo "source setup.node; export PYTHONPATH=`pwd`/src; cd src; python3 riaps/riaps_deplo.py" | sudo -s -u riaps 

@@ -1,0 +1,41 @@
+app test_N_N {
+    message topic1;
+    message topic2;
+    message topic3;
+
+    component CompA(logfile="") {
+      timer clock 1000;
+      pub sendTopic1 : topic1 ;
+      pub sendTopic2 : topic2 ;
+    }
+
+    component CompB(logfile="") {
+      sub getTopic2  : topic2;
+      sub getTopic3  : topic3;
+    }
+
+    component CompC(logfile="") {
+      timer clock 1000;
+      pub sendTopic3 : topic3 ;
+      sub getTopic1  : topic1;
+    }
+
+    actor ActorTestNN_A(logfile="") {
+        {
+          compA : CompA(logfile = logfile);
+          compB : CompB(logfile = logfile);
+        }
+    }
+
+    actor ActorTestNN_B(logfile="") {
+        {
+          compC : CompC(logfile = logfile);
+        }
+    }
+
+    actor ActorTestNN_C(logfile="") {
+        {
+          compB : CompB(logfile = logfile);
+        }
+    }
+}

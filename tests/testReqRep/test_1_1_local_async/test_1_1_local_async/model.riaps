@@ -1,0 +1,28 @@
+// RIAPS Sample
+
+app test_1_1_local_async {
+    message SensorValue;
+    message SensorQuery;
+
+    component CompB(logfile = "") {
+      rep sendTemperature : ( SensorQuery , SensorValue );
+    }
+
+    // Collects data from temperature sensors
+    component CompA(logfile = "") {
+      timer clock 4000;
+      req getTemperature : ( SensorQuery , SensorValue );
+    }
+
+    actor Actor11_A_loc(logfile="") {
+       local SensorValue, SensorQuery;{
+          sensor : CompA(logfile = logfile);
+       }
+    }
+
+    actor Actor11_B_loc(logfile="") {
+       local SensorValue, SensorQuery;{
+          collector: CompB(logfile = logfile);
+       }
+    }
+}

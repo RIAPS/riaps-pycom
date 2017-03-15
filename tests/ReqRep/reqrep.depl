@@ -1,0 +1,3 @@
+app ReqRep {
+	on all RequestorActor,ReplierActor;
+}

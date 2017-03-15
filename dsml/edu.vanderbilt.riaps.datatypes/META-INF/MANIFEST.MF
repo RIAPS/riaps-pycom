@@ -1,0 +1,30 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: edu.vanderbilt.riaps.datatypes
+Bundle-Vendor: My Company
+Bundle-Version: 1.0.0.qualifier
+Bundle-SymbolicName: edu.vanderbilt.riaps.datatypes; singleton:=true
+Bundle-ActivationPolicy: lazy
+Require-Bundle: org.eclipse.xtext,
+ org.eclipse.xtext.xbase,
+ org.eclipse.equinox.common;bundle-version="3.5.0",
+ org.eclipse.emf.ecore,
+ org.eclipse.xtext.xbase.lib,
+ org.antlr.runtime,
+ org.eclipse.xtext.util,
+ org.eclipse.xtend.lib,
+ org.eclipse.emf.common
+Bundle-RequiredExecutionEnvironment: JavaSE-1.8
+Export-Package: edu.vanderbilt.riaps.serializer,
+ edu.vanderbilt.riaps.formatting2,
+ edu.vanderbilt.riaps.parser.antlr.internal,
+ edu.vanderbilt.riaps.parser.antlr,
+ edu.vanderbilt.riaps.datatypes.util,
+ edu.vanderbilt.riaps.validation,
+ edu.vanderbilt.riaps.services,
+ edu.vanderbilt.riaps.datatypes,
+ edu.vanderbilt.riaps,
+ edu.vanderbilt.riaps.datatypes.impl,
+ edu.vanderbilt.riaps.scoping,
+ edu.vanderbilt.riaps.generator
+Import-Package: org.apache.log4j

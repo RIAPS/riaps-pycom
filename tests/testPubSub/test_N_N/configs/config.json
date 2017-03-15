@@ -1,0 +1,26 @@
+{
+  "app_dir": "test_N_N",
+  "model_file": "model.riaps",
+  "components_py": [
+    "CompA.py",
+    "CompB.py",
+    "CompC.py"
+  ],
+  "targets": [
+    {
+      "host": "192.168.1.120",
+      "actor": "ActorTestNN_A"
+    },
+    {
+      "host": "192.168.1.121",
+      "actor": "ActorTestNN_B"
+    },
+    {
+      "host": "192.168.1.122",
+      "actor": "ActorTestNN_C"
+    }
+  ],
+  "riaps_apps_path": "riaps_apps",
+  "username": "riaps",
+  "password":"riapspwd"
+}

@@ -1,0 +1,14 @@
+#!/bin/sh
+# Starts up the RIAPS controller on the mininet
+# To be run on the 'lead' node
+# For riaps developers - NOT APP DEVELOPERS 
+
+# Add default gateway
+route add default gw 10.0.0.1
+
+# Start registry - start it on one node only
+/usr/local/bin/rpyc_registry.py &
+
+# Change to (non-privileged) user and run mininet
+echo "source setup; export PYTHONPATH=`pwd`/src; cd src; python3 riaps/riaps_ctrl.py" | sudo -s -u riaps
+

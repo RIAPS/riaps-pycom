@@ -1,0 +1,15 @@
+{
+
+  "app_dir": "testCapnpMessaging",
+  "additionalFiles": [
+    "disco.capnp"
+  ],
+  "targets": [
+    {
+      "host": "192.168.1.120"
+    }
+  ],
+  "riaps_apps_path": "riaps_apps",
+  "username":"riaps",
+  "password":"riapspwd"
+}
