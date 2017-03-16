@@ -1,7 +1,0 @@
-#!/bin/sh
-# Set up basic RIAPS environment
-# Should be sourced on the CTRL node before using any other scripts.
-
-export RIAPSHOME=`pwd`/src/riaps
-export RIAPSAPPS=`pwd`/tests
-export PATH=$PATH:`pwd`/bin
