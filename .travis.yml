@@ -1,17 +1,17 @@
 dist: trusty
 language: python
 python:
-  - "3.5"
+- '3.5'
 env:
 - version="0.3.3"
 script:
-- ./mk-release.sh
+- "./mk-release.sh"
 deploy:
-  provider: releases  
+  provider: releases
   overwrite: true
   api_key:
-    secure: eKL5j2VunlQ74uiHzFW191CTsFFOPbcQDEdaQIVYtmakRht/0rBB1rQxpYzPhYQDRZ17vqN35N/giy6WEL8phyUbiM7k7fByQTe7isrCRMuAWQj5eH3rzhq9bvyqMQWTBFAZUSq2c7BGgfHr3c9lxHCKCMd4hmbAc3XTpiLbOmkfOYUcBrCXM2uY/MHu3Zt7d/JOPeAyBeLn1dShr3YmmQ9wSkw/3KxKEsFP8wTj8crK8NX+IkpE6N0d9gS6lIcxLrZ7qHJbNiDpeUDnaZxquM9fPEI9PIaZw9J/uZo9wkycB/2dB1a/NTVS9AwwaKsfg22YDSlwKBKjFHM0K5kFpN7Lhu17KQqfglY0Bguiyw4MdMcj7MeBaKkx69961ig2lhBT0t8jnY8KpjsHAXZaMKWN/Jyqv0+EwpLPNjmFVFqT7qtIXfgrmpJPQBaI2swHbVkRA0gypl/s9zSOIqtvz93guSmZ5anWEh6Ik9jX/ESNWHxaSnHiUYYLSNJe4HqffHmG9uXDW9ITk178DbsjvI2MudzSfLNUD72DJYgMw3M78vASV0XDenqBuWo28yJ7n2L2TbpUpeTvfxlslXIVFrwtPPe9Chf5gqoe6BsrjyfGQrXBTInwb/++jWfrG/vztuW4m2E8qUYipyBe4J5fsnJpopjgC7/QZletikXngMI=
-  file: riaps-pycom_v$version.tar.gz
-  skip_cleanup: true
-  on:
+    secure: SBKPRi+JScmA5kobbZi1U9M0wX2TDSZKpRe1Jg5qXVBwiWdiLOGvcrV+huxtk5MB1OkvP8nfkm4NdfJGnuNVBOwyS4jauwjsT5K8JnVjXqOGU1Ax/AhVpe7zOs1O0WRJDS0yj5gVLnJZHveT328yl3Cyo/OWvGIG2o5V8ENuNDJgHwoUCq/zpeYCXquARZmFSt/3VTYafUs01CiHGWdJg+Dbi0WqUcL8UxqMGL+YVK6uIMD74mICy1/xW9cAcJwlUIlrU/VGJ8V3N/oXqzHtXQOQmaKO/GuMkl2KvF8mZE4EcoPrLX1IGnpWRQV3OOjityDU2827LnrLc43zdQHytsjH8wDfUl9u9FbcW2ZW3NIQ6uHX+AqzEgRehiIN+ibugwu1/pEpLpEg93W4N9X76oqkcV8Ds23PeZ7wsl9gE7lCS8K+0uExvWC1yOg5qOnnuP/952v5GxqwKzUHwpWzUaIq3e32YR4XV9o9h4R6JDYai99ybuqt71cCZNd5Fbjwf/Gviucb08ando4ekN0sJL/ud/OOus3OrxvRiYJ10wubvRbWXjkWGue/IQu72P1q9n5V7bms/0ndC+RKuYwAYouWUrJNnlVEBYVJ+pUd7x+QcD7ugRIY90H5E8rcHSCmzMF0fNSMnaVYaPWsxEZ8tLm/lGwShs/Pp0sDnAS5SHY=
+ file: riaps-pycom_v$version.tar.gz
+ skip_cleanup: true
+ on:
     tags: true
