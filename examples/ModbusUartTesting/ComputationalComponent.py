@@ -36,13 +36,13 @@ class ComputationalComponent(Component):
     def on_clock(self):
         now = self.clock.recv_pyobj() 
         self.logger.info("on_clock()[%s]: %s",str(self.pid),str(now))
-        self.command = CommandFormat()
         self.command.commandType = ModbusCommands.READ_INPUTREG
         self.command.registerAddress = InputRegs.currentAC
         self.command.values = 0 # not necessary for a read - placeholder
         self.command.numberOfBytes = 1 # not necessary for read one register
         self.command.numberOfDecimals = 1 # for data interpretation
         self.command.signedValue = False
+        self.command = CommandFormat(self.command.commandType,self.command.registerAddress,self.command.values,self.command.numberOfBytes,self.command.numberOfDecimals,self.command.signedValue)
         
         msg = self.command
         self.logger.info('[%d] send req: %s' % (self.pid,msg))

@@ -12,10 +12,10 @@ from riaps.run.comp import Component
 import logging
 import os
 import serial
-from SerialModbusLib.SerialModbusComm import SerialModbusComm,PortConfig
+from serialModbusLib.serialModbusComm import SerialModbusComm,PortConfig
 from collections import namedtuple
 from enum import Enum
-#import pydevd
+import pydevd
 
 
 class ModbusCommands(Enum):
@@ -33,6 +33,7 @@ CommandFormat = namedtuple('CommandFormat', ['commandType','registerAddress','nu
 class ModbusUartDevice(Component):
     def __init__(self,slaveaddress=0,port="ttyO1",baudrate=19200,bytesize=serial.EIGHTBITS,parity=serial.PARITY_NONE,stopbits=serial.STOPBITS_ONE,serialTimeout=0.05): # defaults for Modbus spec
         super().__init__()
+        pydevd.settrace(host='192.168.1.102',port=5678)
         self.logger.setLevel(logging.DEBUG)
         self.pid = os.getpid()
         self.port_config = PortConfig("/dev/" + port, baudrate, bytesize, parity, stopbits, serialTimeout)        

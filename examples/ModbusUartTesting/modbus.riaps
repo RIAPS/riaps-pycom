@@ -5,7 +5,7 @@ app RIAPSModbusUART {
     message ModbusResponse;    // get response from Modbus action  
     message ModbusData;           // information for the logger to grab
         
-    library SerialModbusLib;
+    library serialModbusLib;
     
 	// Modbus (UART) device interface - UART1
 	//     considered the server for the request/response interaction
