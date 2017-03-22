@@ -33,20 +33,21 @@ CommandFormat = namedtuple('CommandFormat', ['commandType','registerAddress','nu
 class ModbusUartDevice(Component):
     def __init__(self,slaveaddress=0,port="ttyO1",baudrate=19200,bytesize=serial.EIGHTBITS,parity=serial.PARITY_NONE,stopbits=serial.STOPBITS_ONE,serialTimeout=0.05): # defaults for Modbus spec
         super().__init__()
-        pydevd.settrace(host='192.168.1.102',port=5678)
         self.logger.setLevel(logging.DEBUG)
         self.pid = os.getpid()
         self.port_config = PortConfig("/dev/" + port, baudrate, bytesize, parity, stopbits, serialTimeout)        
         self.slaveAddressDecimal = slaveaddress
         self.modbus = SerialModbusComm(self,self.slaveAddressDecimal,self.port_config)
         self.modbusReady = False
-        self.logger.info("ModbusUartDevice %d @%s:%d %d%s%d [%d]", self.slaveAddressDecimal,self.port_config.portname,self.port_config.baudrate,self.port_config.bytesize,self.port_config.parity,self.port_config.stopbits,self.pid)       
+        self.logger.info("Modbus settings %d @%s:%d %d%s%d [%d]", self.slaveAddressDecimal,self.port_config.portname,self.port_config.baudrate,self.port_config.bytesize,self.port_config.parity,self.port_config.stopbits,self.pid)       
 
     def on_clock(self):
         now = self.clock.recv_pyobj()   # Receive time (as float)
         self.logger.info("on_clock()[%s]: %s",str(self.pid),now)        
+        
         if self.modbusReady == False:
             self.modbus.startModbus()
+#            pydevd.settrace(host='192.168.1.102',port=5678)
             self.modbusReady = True
                     
     def __destroy__(self):
@@ -56,16 +57,22 @@ class ModbusUartDevice(Component):
     '''    
     Receive a Modbus command request.  Process command and send back response.
     '''
-    def on_modbusRepPort(self):                         
+    def on_modbusRepPort(self):                
+        '''Request Received'''         
         commandRequest = self.modbusRepPort.recv_pyobj()     
         self.logger.info("on_modbusRepPort()[%s]: %s",str(self.pid),commandRequest) 
+#        pydevd.settrace(host='192.168.1.102',port=5678)
         self.unpackCommand(commandRequest)
-        responseValue = self.sendModbusCommand()
-        self.modbusRepPort.send_pyobj()
+        responseValue = -1  # invalid response 
+        if self.modbusReady == True:
+            responseValue = self.sendModbusCommand()
+            
+        '''Send Results'''
+        self.modbusRepPort.send_pyobj(responseValue)
         self.logger.info("on_modbusRepPort()[%s]: %s,",str(self.pid),responseValue)        
         
     def unpackCommand(self,rxCommand):
-        self.commmandRequested = rxCommand.command
+        self.commmandRequested = rxCommand.commandType
         self.registerAddress = rxCommand.registerAddress
         self.numberOfBytes = rxCommand.numberOfBytes
         self.numberOfDecimals = rxCommand.numberOfDecimals

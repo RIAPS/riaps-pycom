@@ -11,12 +11,12 @@ app RIAPSModbusUART {
 	//     considered the server for the request/response interaction
     device ModbusUartDevice(slaveaddress=10,port='ttyO1',baudrate=57600) {      
       rep modbusRepPort : (ModbusCommand,ModbusResponse);	
-      timer clock 500;   
+      timer clock 1000;   
     }
     
     // Example Component to show Modbus I/F usage
     component ComputationalComponent() {
-      timer clock 3000;
+      timer clock 5000;
       pub tx_modbusData : ModbusData ;  	     // When data is ready, 
       req modbusReqPort : (ModbusCommand,ModbusResponse); // Port used to communicate with the ModbusUartDevice
     }

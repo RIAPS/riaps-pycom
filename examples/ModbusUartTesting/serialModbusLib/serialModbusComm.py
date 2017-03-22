@@ -1,5 +1,5 @@
 '''
-Created on Mar 16, 2017 
+Created on Mar 16, 2017
 
 @author: riaps
 
@@ -12,6 +12,7 @@ import serial
 from collections import namedtuple
 import sys
 from enum import Enum, unique
+import pydevd
 
     
 PortConfig = namedtuple('PortConfig', ['portname', 'baudrate', 'bytesize', 'parity', 'stopbits', 'serialTimeout'])
@@ -44,6 +45,7 @@ class SerialModbusComm(object):
         '''
         self.port_config = portConfig
         self.slaveAddress = slaveAddressDecimal
+        self.portOpen = False
         
     '''
     Allow user to start initiation of the Modbus and opening of the UART port    
@@ -53,11 +55,13 @@ class SerialModbusComm(object):
             precalculate_read_size=True - if False, serial port reads until timeout, instead of specific number of bytes
             handle_local_echo=False
     '''    
-    def startModbus(self):
+    def startModbus(self):       
         try:
             self.modbusInstrument = minimalmodbus.Instrument(self.port_config.portname,self.slaveAddress)  # defaults as RTU mode
+            self.portOpen = True
+            print("SerialModbusComm - open startModbus: %s, %d, %d, %s, %d, %d",self.port_config.portname,self.port_config.baudrate,self.port_config.bytesize,self.port_config.parity,self.port_config.stopbits,self.port_config.serialTimeout)
         except serial.SerialException:
-            print("SerialModbusComm - unable to startModbus: %s, %d, %d, %s, %d, %d",self.port_config.portname,self.port_config.baudrate,self.port_config.bytesize,self.port_config.parity,self.port_config.stopbits,self.port_config.timeout)
+            print("SerialModbusComm - unable to startModbus: %s, %d, %d, %s, %d, %d",self.port_config.portname,self.port_config.baudrate,self.port_config.bytesize,self.port_config.parity,self.port_config.stopbits,self.port_config.serialTimeout)
             self.modbusInstrument.serial.close()           
             sys.exit(-1)
 
@@ -67,11 +71,20 @@ class SerialModbusComm(object):
         self.modbusInstrument.serial.baudrate = self.port_config.baudrate
         print("SerialModbusComm - startModbus: %s, %d, %d",self.port_config.portname,self.slaveAddress,self.port_config.baudrate)      
 
+        '''MM TODO: For Testing only'''
+        '''value = 9999
+        value = self.readBit(2)
+        print("SerialModbusComm - writeBit test: register=2, value=%d", value)'''
+        
+        #answer = self.readBit(2)
+        #print("SerialModbusComm: read register=1, value=%d", answer)
+
     '''
     The user should stop the Modbus when their component ends (or wants to stop it).  This will also close the UART port.
     '''
     def stopModbus(self):
         self.modbusInstrument.serial.close()
+        self.portOpen = False
     
     '''
     Read a Slave bit value
@@ -80,11 +93,13 @@ class SerialModbusComm(object):
     Returns: single bit:  0 or 1
     '''    
     def readBit(self,registerAddress): 
+        value = -1
         try:
-            self.modbusInstrument.read_bit(registerAddress,FunctionCodes.READ_BIT)
+            value = self.modbusInstrument.read_bit(registerAddress,FunctionCodes.READ_BIT.value)
         except IOError:
             print("SerialModbusComm: Failed to read bit - address=%d",registerAddress) 
     
+        return value
     '''
     Read a Slave Input Register (16-bit)
     Arguments:  
@@ -95,10 +110,14 @@ class SerialModbusComm(object):
     Returns: single input register value: integer or float value
     '''
     def readInputRegValue(self,registerAddress,numberOfDecimals,signedValue):
+        value = -9999
         try:
-            self.modbusInstrument.read_register(registerAddress,numberOfDecimals,FunctionCodes.READ_INPUTREG,signedValue)
+        #            pydevd.settrace(host='192.168.1.102',port=5678)
+            value = self.modbusInstrument.read_register(registerAddress,numberOfDecimals,FunctionCodes.READ_INPUTREG.value,signedValue)
         except IOError:
-            print("SerialModbusComm: Failed to read input register - address=%d",registerAddress)          
+            print("SerialModbusComm: Failed to read input register - address=%d",registerAddress)  
+                
+        return value        
         
     '''
     Read one Slave Holding Register (16-bit)
@@ -110,11 +129,14 @@ class SerialModbusComm(object):
     Returns: single holding register value: integer or float value (divide by numberOfDecimals * 10)       
     '''
     def readHoldingRegValue(self,registerAddress,numberOfDecimals,signedValue):
+        value = -9999
         try:
-            self.modbusInstrument.read_register(registerAddress,numberOfDecimals,FunctionCodes.READ_HOLDINGREG,signedValue)
+            value = self.modbusInstrument.read_register(registerAddress,numberOfDecimals,FunctionCodes.READ_HOLDINGREG.value,signedValue)
         except IOError:
             print("SerialModbusComm: Failed to read holding register - address=%d",registerAddress)                                      
 
+        return value
+    
     '''
     Read multiple Slave Input Registers (16-bit per register)
     Arguments:  
@@ -123,10 +145,13 @@ class SerialModbusComm(object):
     Returns: register dataset: list of int       
     '''
     def readMultiInputRegValues(self,registerAddress,numberOfRegs):
+        value = -9999
         try:
-            self.modbusInstrument.read_registers(registerAddress,numberOfRegs,FunctionCodes.READ_INPUTREG)
+            value = self.modbusInstrument.read_registers(registerAddress,numberOfRegs,FunctionCodes.READ_INPUTREG.value)
         except IOError:
             print("SerialModbusComm: Failed to read input registers - address=%d, numberOfRegs=%d",registerAddress,numberOfRegs)      
+
+        return value
  
     '''
     Read multiple Slave Holding Registers (16-bit per register)
@@ -136,11 +161,14 @@ class SerialModbusComm(object):
     Returns: register dataset: list of int       
     '''
     def readMultiHoldingRegValues(self,registerAddress,numberOfRegs):
+        value = -9999
         try:
-            self.modbusInstrument.read_registers(registerAddress,numberOfRegs,FunctionCodes.READ_HOLDINGREG)
+            value = self.modbusInstrument.read_registers(registerAddress,numberOfRegs,FunctionCodes.READ_HOLDINGREG.value)
         except IOError:
             print("SerialModbusComm: Failed to read holding registers - address=%d, numberOfRegs=%d",registerAddress,numberOfRegs)      
    
+        return value
+    
     '''
     Write one Slave bit value
     Arguments:  
@@ -150,7 +178,7 @@ class SerialModbusComm(object):
     '''    
     def writeBit(self,registerAddress,value): 
         try:
-            self.modbusInstrument.write_bit(registerAddress, value, FunctionCodes.WRITE_BIT)
+            self.modbusInstrument.write_bit(registerAddress, value, FunctionCodes.WRITE_BIT.value)
         except IOError:
             print("SerialModbusComm: Failed to write bit - address=%d",registerAddress)      
     
@@ -169,7 +197,7 @@ class SerialModbusComm(object):
     '''  
     def writeHoldingRegister(self,registerAddress,value,numberOfDecimals,signedValue):
         try:
-            self.modbusInstrument.write_register(registerAddress,value,numberOfDecimals,FunctionCodes.WRITE_HOLDINGREG,signedValue)
+            self.modbusInstrument.write_register(registerAddress,value,numberOfDecimals,FunctionCodes.WRITE_HOLDINGREG.value,signedValue)
         except IOError:
             print("SerialModbusComm: Failed to write holding register - address=%d",registerAddress)      
               
