@@ -82,24 +82,18 @@ class ModbusUartDevice(Component):
     def sendModbusCommand(self):
         value = 999  # large invalid value
         
-        if self.commmandRequested == ModbusCommands.READ_BIT:
-            value = self.modbus.readBit(self.registerAddress)
-            self.logger.info("ModbusUartDevice: sent command %s, register=%d", ModbusCommands.READ_BIT.name,self.registerAddress)
-        elif self.commmandRequested == ModbusCommands.READ_INPUTREG:
+        if self.commmandRequested == ModbusCommands.READ_INPUTREG:
             value = self.modbus.readInputRegValue(self.registerAddress, self.numberOfDecimals, self.signedValue)
             self.logger.info("ModbusUartDevice: sent command %s, register=%d, numOfDecimals=%d, signed=%s", ModbusCommands.READ_INPUTREG.name,self.registerAddress,self.numberOfDecimals,str(self.signedValue))
         elif self.commmandRequested == ModbusCommands.READ_HOLDINGREG:
             value = self.modbus.readHoldingRegValue(self.registerAddress, self.numberOfDecimals, self.signedValue)
             self.logger.info("ModbusUartDevice: sent command %s, register=%d, numOfDecimals=%d, signed=%s", ModbusCommands.READ_HOLDINGREG.name,self.registerAddress,self.numberOfDecimals,str(self.signedValue))
         elif self.commmandRequested == ModbusCommands.READMULTI_INPUTREGS:
-            value = self.modbus.readMultiInputRegValues(self.registerAddress, self.numberOfRegs)
-            self.logger.info("ModbusUartDevice: sent command %s, register=%d, numOfRegisters=%d", ModbusCommands.READMULTI_INPUTREGS.name,self.registerAddress,self.numberOfRegs)
+            value = self.modbus.readMultiInputRegValues(self.registerAddress, self.numberOfBytes)
+            self.logger.info("ModbusUartDevice: sent command %s, register=%d, numOfBytes=%d", ModbusCommands.READMULTI_INPUTREGS.name,self.registerAddress,self.numberOfBytes)
         elif self.commmandRequested == ModbusCommands.READMULTI_HOLDINGREGS:
-            value = self.modbus.readMultiHoldingRegValues(self.registerAddress, self.numberOfRegs)
-            self.logger.info("ModbusUartDevice: sent command %s, register=%d, numOfRegisters=%d", ModbusCommands.READMULTI_HOLDINGREGS.name,self.registerAddress,self.numberOfRegs)
-        elif self.commmandRequested == ModbusCommands.WRITE_BIT:
-            self.modbus.writeBit(self.registerAddress, self.values)
-            self.logger.info("ModbusUartDevice: sent command %s, register=%d, value=%d",ModbusCommands.WRITE_BIT.name,self.registerAddress,self.values[0])
+            value = self.modbus.readMultiHoldingRegValues(self.registerAddress, self.numberOfBytes)
+            self.logger.info("ModbusUartDevice: sent command %s, register=%d, numOfBytes=%d", ModbusCommands.READMULTI_HOLDINGREGS.name,self.registerAddress,self.numberOfBytes)
         elif self.commmandRequested == ModbusCommands.WRITE_HOLDINGREG:
             self.modbus.writeHoldingRegister(self.registerAddress, self.values[0], self.numberOfDecimals, self.signedValue)
             self.logger.info("ModbusUartDevice: sent command %s, register=%d, value=%d, numberOfDecimals=%d, signed=%s",ModbusCommands.WRITE_HOLDINGREG.name,self.registerAddress,self.values[0],self.numberOfDecimals,str(self.signedValue))
