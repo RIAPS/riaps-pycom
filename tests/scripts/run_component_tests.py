@@ -2,6 +2,7 @@ import sys
 import os
 import subprocess
 import argparse
+import shutil
 
 sub_test_dirs = list()
 
@@ -15,8 +16,9 @@ def get_directory_contents(parent_dir):
 					#print("Parent Dir: \t" + parent_dir)
 					#print("FOLDER: \t" + path)
 					#print("Zopkio Script: \t" + zopkio_script)
-					if os.path.exists(os.path.join(parent_dir), 'configs_jenkins', )
-
+					configs_jenkins = os.path.join(parent_dir, 'configs_jenkins', 'config.json')
+					if os.path.exists(configs_jenkins):
+						shutil.copy(configs_jenkins, path)
 					sub_test_dirs.append(parent_dir)
 					return
 			else:
@@ -28,9 +30,6 @@ def main(test_dir, results_dir):
 
 	if os.path.exists(test_dir):
 		get_directory_contents(test_dir)
-
-	if os.path.exists(results_dir):
-		x = 2
 
 	test_to_result_dir_map = dict()
 	base_path_length = len(test_dir)
