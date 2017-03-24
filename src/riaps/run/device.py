@@ -202,36 +202,36 @@ class Device(Actor):
             args[argName] = argValue
         return args
     
-    def isLocalMessage(self,msgTypeName):
-        '''
-        Return True if the message type is local
-        '''
-        return msgTypeName in self.localNames
-        
-    def getLocalIface(self):
-        '''
-        Return the IP address of the host-local network interface (usually 127.0.0.1) 
-        '''
-        return self.localHost
-    
-    def getGlobalIface(self):
-        '''
-        Return the IP address of the global network interface
-        '''
-        return self.globalHost
-    
-    def setupIfaces(self):
-        '''
-        Find the IP addresses of the (host-)local and network(-global) interfaces
-        '''
-        (globalIPs,globalMACs,localIP) = getNetworkInterfaces()
-        assert len(globalIPs) > 0 and len(globalMACs) > 0
-        globalIP = globalIPs[0]
-        globalMAC = globalMACs[0]
-        self.localHost = localIP
-        self.globalHost = globalIP
-        self.macAddress = globalMAC
-               
+#     def isLocalMessage(self,msgTypeName):
+#         '''
+#         Return True if the message type is local
+#         '''
+#         return msgTypeName in self.localNames
+#         
+#     def getLocalIface(self):
+#         '''
+#         Return the IP address of the host-local network interface (usually 127.0.0.1) 
+#         '''
+#         return self.localHost
+#     
+#     def getGlobalIface(self):
+#         '''
+#         Return the IP address of the global network interface
+#         '''
+#         return self.globalHost
+#     
+#     def setupIfaces(self):
+#         '''
+#         Find the IP addresses of the (host-)local and network(-global) interfaces
+#         '''
+#         (globalIPs,globalMACs,localIP) = getNetworkInterfaces()
+#         assert len(globalIPs) > 0 and len(globalMACs) > 0
+#         globalIP = globalIPs[0]
+#         globalMAC = globalMACs[0]
+#         self.localHost = localIP
+#         self.globalHost = globalIP
+#         self.macAddress = globalMAC
+#                
     def setup(self):
         '''
         Perform a setup operation on the actor (after  the initial construction but before the activation of parts)
@@ -249,39 +249,39 @@ class Device(Actor):
         for inst in self.components:
             self.components[inst].setup()
     
-    def registerEndpoint(self,bundle):
-        '''
-        Relay the endpoint registration message to the discovery service client 
-        '''
-        result = self.disco.registerEndpoint(bundle)
-        for res in result:
-            (partName,portName,host,port) = res
-            self.updatePart(partName,portName,host,port)
+#     def registerEndpoint(self,bundle):
+#         '''
+#         Relay the endpoint registration message to the discovery service client 
+#         '''
+#         result = self.disco.registerEndpoint(bundle)
+#         for res in result:
+#             (partName,portName,host,port) = res
+#             self.updatePart(partName,portName,host,port)
 
-    def registerDevice(self,bundle):
-        '''
-        Relay the device registration message to the device interface service client
-        '''
-        typeName,args = bundle
-        msg = (self.appName,self.modelName,typeName,args)
-        result = self.devc.registerDevice(msg)
-        return result
+#     def registerDevice(self,bundle):
+#         '''
+#         Relay the device registration message to the device interface service client
+#         '''
+#         typeName,args = bundle
+#         msg = (self.appName,self.modelName,typeName,args)
+#         result = self.devc.registerDevice(msg)
+#         return result
 
-    def activate(self):
-        '''
-        Activate the parts
-        '''
-        self.logger.info("activate")
-        for inst in self.components:
-            self.components[inst].activate()
-            
-    def deactivate(self):
-        '''
-        Deactivate the parts
-        '''
-        self.logger.info("deactivate")
-        for inst in self.components:
-            self.components[inst].deactivate()
+#     def activate(self):
+#         '''
+#         Activate the parts
+#         '''
+#         self.logger.info("activate")
+#         for inst in self.components:
+#             self.components[inst].activate()
+#             
+#     def deactivate(self):
+#         '''
+#         Deactivate the parts
+#         '''
+#         self.logger.info("deactivate")
+#         for inst in self.components:
+#             self.components[inst].deactivate()
 
     def start(self):
         '''
@@ -298,9 +298,10 @@ class Device(Actor):
         while 1:
             sockets = dict(self.poller.poll())              
             if self.discoChannel in sockets:                # If there is a message from a service, handle it
-                msg = self.discoChannel.recv()
-                self.handleServiceUpdate(msg)               # Handle message from disco service
-                del sockets[self.discoChannel]
+                msgs = self.recvChannelMessages(self.discoChannel)
+                for msg in msgs:
+                    self.handleServiceUpdate(msg)               # Handle message from disco service
+                del sockets[self.discoChannel]    
 #            elif self.devicChannel in sockets:
 #                msg = self.devcChannel.recv()
 #                pass                                        # Handle message from devm service
@@ -308,32 +309,44 @@ class Device(Actor):
             else:
                 pass
             
-    def handleServiceUpdate(self,msgBytes):
-        '''
-        Handle a service update message from the discovery service
-        '''
-        msg = disco_capnp.DiscoUpd.from_bytes(msgBytes)     # Parse the incoming message
-        client = msg.client
-        actorHost = client.actorHost
-        assert actorHost == self.globalHost                 # It has to be addressed to this actor
-        actorName = client.actorName
-        assert actorName == self.name
-        instanceName = client.instanceName
-        assert instanceName in self.components              # It has to be for a part of this actor
-        portName = client.portName
-        scope = msg.scope
-        socket = msg.socket
-        host = socket.host
-        port = socket.port 
-        if scope == "local":
-            assert host == self.localHost
-        self.updatePart(instanceName,portName,host,port)    # Update the selected part
-    
-    def updatePart(self,instanceName,portName,host,port):
-        '''
-        Ask a part to update itself
-        '''
-        self.logger.info("updatePart %s" % str((instanceName,portName,host,port)))
-        part = self.components[instanceName]
-        part.handlePortUpdate(portName,host,port)
+#     def handleServiceUpdate(self,msgBytes):
+#         '''
+#         Handle a service update message from the discovery service
+#         '''
+#         msg = disco_capnp.DiscoUpd.from_bytes(msgBytes)     # Parse the incoming message
+#         client = msg.client
+#         actorHost = client.actorHost
+#         assert actorHost == self.globalHost                 # It has to be addressed to this actor
+#         actorName = client.actorName
+#         assert actorName == self.name
+#         instanceName = client.instanceName
+#         assert instanceName in self.components              # It has to be for a part of this actor
+#         portName = client.portName
+#         scope = msg.scope
+#         socket = msg.socket
+#         host = socket.host
+#         port = socket.port 
+#         if scope == "local":
+#             assert host == self.localHost
+#         self.updatePart(instanceName,portName,host,port)    # Update the selected part
+#     
+#     def updatePart(self,instanceName,portName,host,port):
+#         '''
+#         Ask a part to update itself
+#         '''
+#         self.logger.info("updatePart %s" % str((instanceName,portName,host,port)))
+#         part = self.components[instanceName]
+#         part.handlePortUpdate(portName,host,port)
+
+    def terminate(self):
+        self.logger.info("terminating")
+        for component in self.components.values():
+            component.terminate()
+        # self.devc.terminate()
+        self.disco.terminate()
+        # Clean up everything
+        # self.context.destroy()
+        time.sleep(1.0)
+        self.logger.info("terminated")
+        sys.exit()
         
