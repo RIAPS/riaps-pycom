@@ -28,8 +28,8 @@ def setup_suite():
 
     testCapnpMessagingScript = "testCapnpMessaging.py"
 
-    env = {"PATH": "~/.local/bin/:$PATH",
-           "RIAPSHOME": "$HOME/.local/riaps",
+    env = {"PATH": "/usr/local/bin/:$PATH",
+           "RIAPSHOME": "/usr/local/riaps",
            "RIAPSAPPS": "$HOME/riaps_apps"}
 
     # Deploy the discovery starter script
@@ -105,7 +105,7 @@ def setup_suite():
                 'executable': localPath,
                 'install_path': targetPath,
                 'hostname': target["host"],
-                'start_command': os.path.join(userdir, ".local/bin/riaps_actor"),
+                'start_command': os.path.join(userdir, "/usr/local/bin/riaps_actor"),
                 'terminate_only': True,
                 'pid_keyword': f,
             })

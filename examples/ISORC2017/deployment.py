@@ -12,8 +12,8 @@ def setup_suite():
     # Set up the target directories and properties
     userdir = os.path.join("/home", username)
     riaps_app_path = os.path.join(userdir, runtime.get_active_config("riaps_apps_path"))
-    env = {"PATH": "~/.local/bin/:$PATH",
-           "RIAPSHOME": "$HOME/.local/riaps",
+    env = {"PATH": "/usr/local/bin/:$PATH",
+           "RIAPSHOME": "/usr/local/riaps",
            "RIAPSAPPS": "$HOME/riaps_apps"}
 
     start_riaps_lang = "riaps_lang " + runtime.get_active_config('model_file')
@@ -108,7 +108,7 @@ def setup_suite():
             'install_path': os.path.join(riaps_app_path,
                                          runtime.get_active_config('app_dir')),
             'hostname': target["host"],
-            'start_command': os.path.join(userdir, ".local/bin/riaps_actor"),
+            'start_command': os.path.join(userdir, "/usr/local/bin/riaps_actor"),
             'args': [runtime.get_active_config('app_dir'),
                      runtime.get_active_config('app_dir') + '.json',
                      target["actor"],
@@ -130,7 +130,7 @@ def setup_suite():
                 'executable': localPath,
                 'install_path': targetPath,
                 'hostname': target["host"],
-                'start_command': os.path.join(userdir, ".local/bin/riaps_actor"),
+                'start_command': os.path.join(userdir, "/usr/local/bin/riaps_actor"),
                 'args': [runtime.get_active_config('app_dir'),
                          runtime.get_active_config('app_dir') + '.json',
                          target["actor"]],
