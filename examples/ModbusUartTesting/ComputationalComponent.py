@@ -12,10 +12,11 @@ from ModbusUartDevice import CommandFormat,ModbusCommands
 import pydevd
 
 
-InputRegs = namedtuple('InputRegs', ['currentAC','voltageAC','power','time','reg_extra1','reg_extra2'])
+RegSet = namedtuple('RegSet', ['idx', 'value'])
+InputRegs = namedtuple('InputRegs', ['outputCurrent','outputVolt','voltPhase','time'])
 
 '''For Inverter control'''
-HoldingRegs = namedtuple('HoldingRegs',['unused', 'startCmd', 'stopCmd', 'power'])
+HoldingRegs = namedtuple('HoldingRegs',['unused', 'startStopCmd', 'power'])
 '''For RIAPS future
 1.start/stop, 2.power command, 3. frequency shift from secondary control, 4. voltage magnitude shift from secondary control.
 HoldingRegs = namedtuple('HoldingRegs',['startStopCmd', 'powerCmd', 'freqShift', 'voltMagShift']) 
@@ -27,18 +28,15 @@ class ComputationalComponent(Component):
 #        pydevd.settrace(host='192.168.1.103',port=5678)
         self.uuid = uuid.uuid4().int
         self.pid = os.getpid()
-        self.inputRegs = InputRegs(0,1,2,3,4,5)
-        self.holdingRegs = HoldingRegs(0,1,2,3)
+        self.inputRegs = InputRegs(RegSet(0,45),RegSet(1,56),RegSet(2,78),RegSet(3,91))
+        self.holdingRegs = HoldingRegs(RegSet(0,0),RegSet(1,55),RegSet(2,66))
         
         '''Setup Commands'''
-        self.defaultNumOfBytes = 1
+        self.defaultNumOfRegs = 1
         self.dummyValue = [0]
         self.defaultNumOfDecimals = 0
         self.signedDefault = False
 
-        # MM TODO: setup list later after getting commands to work - 
-        #CommandList = [CommandFormat(CommandFormat.command=ModbusCommands.READ_INPUTREG,CommandFormat.registerAddress=InputRegs.currentAC,CommandFormat.numberOfBytes=1,CommandFormat.values=0,CommandFormat.numberOfDecimals=1,CommandFormat.signedValue=False)]
-        
         self.logger.info("ComputationalComponent: %s - starting",str(self.pid)) 
                
 
@@ -49,18 +47,19 @@ class ComputationalComponent(Component):
         '''Request:  Commands to send over Modbus - one command used at a time'''
         
         '''Read/Write (holding only) a single register'''
-        #self.command = CommandFormat(ModbusCommands.READ_INPUTREG,self.inputRegs.power,self.defaultNumOfBytes,self.dummyValue,self.defaultNumOfDecimals,self.signedDefault) 
-        self.command = CommandFormat(ModbusCommands.READ_HOLDINGREG,self.holdingRegs.power,self.defaultNumOfBytes,self.dummyValue,self.defaultNumOfDecimals,self.signedDefault)
+        #self.command = CommandFormat(ModbusCommands.READ_INPUTREG,self.inputRegs.time.idx,self.defaultNumOfRegs,self.dummyValue,self.defaultNumOfDecimals,self.signedDefault) 
+        #self.command = CommandFormat(ModbusCommands.READ_HOLDINGREG,self.holdingRegs.startStopCmd.idx,self.defaultNumOfRegs,self.dummyValue,self.defaultNumOfDecimals,self.signedDefault)
         #self.values = [83]
-        #self.command = CommandFormat(ModbusCommands.WRITE_HOLDINGREG,self.holdingRegs.power,self.defaultNumOfBytes,self.values,self.defaultNumOfDecimals,self.signedDefault)
+        #self.command = CommandFormat(ModbusCommands.WRITE_HOLDINGREG,self.holdingRegs.power.idx,self.defaultNumOfRegs,self.values,self.defaultNumOfDecimals,self.signedDefault)
        
         '''Read/Write all input registers'''
-        #self.command = CommandFormat(ModbusCommands.READMULTI_INPUTREGS,self.inputRegs.currentAC,len(self.inputRegs),self.dummyValue,self.defaultNumOfDecimals,self.signedDefault)
+        #numRegsToRead = len(self.inputRegs)
+        #self.command = CommandFormat(ModbusCommands.READMULTI_INPUTREGS,self.inputRegs.outputCurrent.idx,numRegsToRead,self.dummyValue,self.defaultNumOfDecimals,self.signedDefault)
 
         '''Read/Write all holding registers'''
-        #self.command = CommandFormat(ModbusCommands.READMULTI_HOLDINGREGS,self.holdingRegs.unused,len(self.holdingRegs),self.dummyValue,self.defaultNumOfDecimals,self.signedDefault)
-        #self.values = [34,45,56,67]
-        #self.command = CommandFormat(ModbusCommands.WRITEMULTI_HOLDINGREGS,self.holdingRegs.unused,len(self.holdingRegs),self.values,self.defaultNumOfDecimals,self.signedDefault)
+        self.command = CommandFormat(ModbusCommands.READMULTI_HOLDINGREGS,self.holdingRegs.unused.idx,len(self.holdingRegs),self.dummyValue,self.defaultNumOfDecimals,self.signedDefault)
+        #self.values = [75,67]
+        #self.command = CommandFormat(ModbusCommands.WRITEMULTI_HOLDINGREGS,self.holdingRegs.startStopCmd.idx,2,self.values,self.defaultNumOfDecimals,self.signedDefault)
          
         msg = self.command
         self.logger.info('[%d] send req: %s' % (self.pid,msg))
@@ -78,7 +77,7 @@ class ComputationalComponent(Component):
         elif self.command.commandType == ModbusCommands.WRITE_HOLDINGREG:
             logMsg = "Wrote Register " + str(self.command.registerAddress)
         elif self.command.commandType == ModbusCommands.WRITEMULTI_HOLDINGREGS:
-            logMsg = "Wrote Registers " + str(self.command.registerAddress) + " to " + str(self.command.registerAddress + self.command.numberOfBytes)
+            logMsg = "Wrote Registers " + str(self.command.registerAddress) + " to " + str(self.command.registerAddress + self.command.numberOfRegs - 1)
             
         self.tx_modbusData.send_pyobj(logMsg)  # Send log data
         

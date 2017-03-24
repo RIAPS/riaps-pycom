@@ -15,7 +15,7 @@ import serial
 from serialModbusLib.serialModbusComm import SerialModbusComm,PortConfig
 from collections import namedtuple
 from enum import Enum
-import pydevd
+#import pydevd
 
 
 class ModbusCommands(Enum):
@@ -28,7 +28,7 @@ class ModbusCommands(Enum):
     WRITE_HOLDINGREG = 7
     WRITEMULTI_HOLDINGREGS = 8
 
-CommandFormat = namedtuple('CommandFormat', ['commandType','registerAddress','numberOfBytes','values','numberOfDecimals','signedValue'])
+CommandFormat = namedtuple('CommandFormat', ['commandType','registerAddress','numberOfRegs','values','numberOfDecimals','signedValue'])
     
 class ModbusUartDevice(Component):
     def __init__(self,slaveaddress=0,port="ttyO1",baudrate=19200,bytesize=serial.EIGHTBITS,parity=serial.PARITY_NONE,stopbits=serial.STOPBITS_ONE,serialTimeout=0.05): # defaults for Modbus spec
@@ -61,7 +61,7 @@ class ModbusUartDevice(Component):
         '''Request Received'''         
         commandRequest = self.modbusRepPort.recv_pyobj()     
         self.logger.info("on_modbusRepPort()[%s]: %s",str(self.pid),commandRequest) 
-#        pydevd.settrace(host='192.168.1.102',port=5678)
+
         self.unpackCommand(commandRequest)
         responseValue = -1  # invalid response 
         if self.modbusReady == True:
@@ -69,12 +69,13 @@ class ModbusUartDevice(Component):
             
         '''Send Results'''
         self.modbusRepPort.send_pyobj(responseValue)
+#        pydevd.settrace(host='192.168.1.102',port=5678)
         self.logger.info("on_modbusRepPort()[%s]: %s,",str(self.pid),responseValue)        
         
     def unpackCommand(self,rxCommand):
         self.commmandRequested = rxCommand.commandType
         self.registerAddress = rxCommand.registerAddress
-        self.numberOfBytes = rxCommand.numberOfBytes
+        self.numberOfRegs = rxCommand.numberOfRegs
         self.numberOfDecimals = rxCommand.numberOfDecimals
         self.signedValue = rxCommand.signedValue
         self.values = rxCommand.values
@@ -89,11 +90,11 @@ class ModbusUartDevice(Component):
             value = self.modbus.readHoldingRegValue(self.registerAddress, self.numberOfDecimals, self.signedValue)
             self.logger.info("ModbusUartDevice: sent command %s, register=%d, numOfDecimals=%d, signed=%s", ModbusCommands.READ_HOLDINGREG.name,self.registerAddress,self.numberOfDecimals,str(self.signedValue))
         elif self.commmandRequested == ModbusCommands.READMULTI_INPUTREGS:
-            value = self.modbus.readMultiInputRegValues(self.registerAddress, self.numberOfBytes)
-            self.logger.info("ModbusUartDevice: sent command %s, register=%d, numOfBytes=%d", ModbusCommands.READMULTI_INPUTREGS.name,self.registerAddress,self.numberOfBytes)
+            value = self.modbus.readMultiInputRegValues(self.registerAddress, self.numberOfRegs)
+            self.logger.info("ModbusUartDevice: sent command %s, register=%d, numOfRegs=%d", ModbusCommands.READMULTI_INPUTREGS.name,self.registerAddress,self.numberOfRegs)
         elif self.commmandRequested == ModbusCommands.READMULTI_HOLDINGREGS:
-            value = self.modbus.readMultiHoldingRegValues(self.registerAddress, self.numberOfBytes)
-            self.logger.info("ModbusUartDevice: sent command %s, register=%d, numOfBytes=%d", ModbusCommands.READMULTI_HOLDINGREGS.name,self.registerAddress,self.numberOfBytes)
+            value = self.modbus.readMultiHoldingRegValues(self.registerAddress, self.numberOfRegs)
+            self.logger.info("ModbusUartDevice: sent command %s, register=%d, numOfRegs=%d", ModbusCommands.READMULTI_HOLDINGREGS.name,self.registerAddress,self.numberOfRegs)
         elif self.commmandRequested == ModbusCommands.WRITE_HOLDINGREG:
             self.modbus.writeHoldingRegister(self.registerAddress, self.values[0], self.numberOfDecimals, self.signedValue)
             self.logger.info("ModbusUartDevice: sent command %s, register=%d, value=%d, numberOfDecimals=%d, signed=%s",ModbusCommands.WRITE_HOLDINGREG.name,self.registerAddress,self.values[0],self.numberOfDecimals,str(self.signedValue))

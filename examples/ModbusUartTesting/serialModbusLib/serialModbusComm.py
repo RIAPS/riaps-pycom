@@ -59,10 +59,10 @@ class SerialModbusComm(object):
         try:
             self.modbusInstrument = minimalmodbus.Instrument(self.port_config.portname,self.slaveAddress)  # defaults as RTU mode
             self.portOpen = True
-            print("SerialModbusComm - open startModbus: %s, %d, %d, %s, %d, %d",self.port_config.portname,self.port_config.baudrate,self.port_config.bytesize,self.port_config.parity,self.port_config.stopbits,self.port_config.serialTimeout)
+            print("SerialModbusComm - open startModbus: " + self.port_config.portname + ", " + str(self.port_config.baudrate) + ", " + str(self.port_config.bytesize) + ", " + self.port_config.parity + ", " + str(self.port_config.stopbits) + ", " + str(self.port_config.serialTimeout))
             self.modbusInstrument.debug = True
         except serial.SerialException:
-            print("SerialModbusComm - unable to startModbus: %s, %d, %d, %s, %d, %d",self.port_config.portname,self.port_config.baudrate,self.port_config.bytesize,self.port_config.parity,self.port_config.stopbits,self.port_config.serialTimeout)
+            print("SerialModbusComm - unable to startModbus: " + self.port_config.portname + ", " + str(self.port_config.baudrate) + ", " + str(self.port_config.bytesize) + ", " + self.port_config.parity + ", " + str(self.port_config.stopbits) + ", " + str(self.port_config.serialTimeout))
             self.modbusInstrument.serial.close()           
             sys.exit(-1)
 
@@ -72,7 +72,7 @@ class SerialModbusComm(object):
         self.modbusInstrument.serial.baudrate = self.port_config.baudrate
         self.modbusInstrument.serial.timeout = self.port_config.serialTimeout
         
-        print("SerialModbusComm - startModbus: %s, %d, %d",self.port_config.portname,self.slaveAddress,self.port_config.baudrate)      
+        print("SerialModbusComm - startModbus: " + self.port_config.portname + ", " + str(self.slaveAddress) + ", " + str(self.port_config.baudrate))      
         
     '''
     The user should stop the Modbus when their component ends (or wants to stop it).  This will also close the UART port.
@@ -116,7 +116,9 @@ class SerialModbusComm(object):
         try:
             value = self.modbusInstrument.read_register(registerAddress,numberOfDecimals,FunctionCodes.READ_HOLDINGREG.value,signedValue)
         except IOError:
-            print("SerialModbusComm: Failed to read holding register - address=%d",registerAddress)                                      
+            print("SerialModbusComm IOError: Failed to read holding register - address=",registerAddress)  
+        except TypeError:
+            print("SerialModbusComm TypeError: Failed to read holding register - address=",registerAddress)                                      
 
         return value
     
@@ -132,7 +134,9 @@ class SerialModbusComm(object):
         try:
             value = self.modbusInstrument.read_registers(registerAddress,numberOfRegs,FunctionCodes.READ_INPUTREG.value)
         except IOError:
-            print("SerialModbusComm: Failed to read input registers - address=%d, numberOfRegs=%d",registerAddress,numberOfRegs)      
+            print("SerialModbusComm IOError: Failed to read input registers - address=" + str(registerAddress) + ", numberOfRegs=" + str(numberOfRegs))      
+        except TypeError:
+            print("SerialModbusComm TypeError: Failed to read input registers - address=" + str(registerAddress) + ", numberOfRegs=" + str(numberOfRegs))      
 
         return value
  
@@ -148,7 +152,9 @@ class SerialModbusComm(object):
         try:
             value = self.modbusInstrument.read_registers(registerAddress,numberOfRegs,FunctionCodes.READ_HOLDINGREG.value)
         except IOError:
-            print("SerialModbusComm: Failed to read holding registers - address=%d, numberOfRegs=%d",registerAddress,numberOfRegs)      
+            print("SerialModbusComm IOError: Failed to read holding registers - address=" + str(registerAddress) + ", numberOfRegs=" + str(numberOfRegs))      
+        except TypeError:
+            print("SerialModbusComm TypeError: Failed to read holding registers - address=" + str(registerAddress) + ", numberOfRegs=" + str(numberOfRegs))      
    
         return value
     
@@ -169,7 +175,9 @@ class SerialModbusComm(object):
         try:
             self.modbusInstrument.write_register(registerAddress,value,numberOfDecimals,FunctionCodes.WRITE_HOLDINGREG.value,signedValue)
         except IOError:
-            print("SerialModbusComm: Failed to write holding register - address=%d",registerAddress)      
+            print("SerialModbusComm IOError: Failed to write holding register - address=" + str(registerAddress))      
+        except TypeError:
+            print("SerialModbusComm TypeError: Failed to write holding register - address=" + str(registerAddress))      
               
     '''  
     Write multiple Slave holding register values (16 bits per register)
@@ -184,7 +192,9 @@ class SerialModbusComm(object):
         try:
             self.modbusInstrument.write_registers(registerAddress,values)
         except IOError:
-            print("SerialModbusComm: Failed to write holding registers - address=%d",registerAddress)   #MM TODO:  add number of values   
+            print("SerialModbusComm IOError: Failed to write holding registers - address=" + str(registerAddress))   #MM TODO:  add number of values   
+        except TypeError:
+            print("SerialModbusComm TypeError: Failed to write holding registers - address=" + str(registerAddress))   #MM TODO:  add number of values   
               
           
     
