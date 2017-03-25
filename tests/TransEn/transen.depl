@@ -1,4 +1,4 @@
 app TransEn {
-	on (bbb-ff98.local) GenPriceControl;
-	on (bbb-53b9.local) CustDemandControl;
+	on all GenPriceControl;
+	on all CustDemandControl;
 }
