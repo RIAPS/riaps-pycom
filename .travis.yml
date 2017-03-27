@@ -3,7 +3,7 @@ language: python
 python:
 - '3.5'
 env:
-- version="0.3.3"
+- version="0.3.5"
 script:
 - "./mk-release.sh"
 deploy:
