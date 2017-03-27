@@ -4,6 +4,7 @@ Created on Oct 19, 2016
 @author: riaps
 '''
 
+import os
 import zmq
 import capnp
 from ..proto import disco_capnp
@@ -43,6 +44,7 @@ class DiscoClient(object):
         appMessage.appName = self.appName
         appMessage.version = '0.0.0'
         appMessage.actorName = self.actor.name
+        appMessage.pid = os.getpid()
                   
         msgBytes = reqt.to_bytes()
         
@@ -90,6 +92,7 @@ class DiscoClient(object):
         reqMsgPath = reqMsg.path
         reqMsg.socket.host = self.actor.localHost if isLocal else self.actor.globalHost
         reqMsg.socket.port = portNum
+        reqMsg.pid = os.getpid()
         reqMsgPath.appName = self.appName
         reqMsgPath.msgType = portType 
         reqMsgPath.kind = kind
