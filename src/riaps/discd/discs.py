@@ -34,7 +34,11 @@ class DiscoService(object):
         Find the IP addresses of the (host-)local and network(-global) interfaces
         '''
         (globalIPs,globalMACs,localIP) = getNetworkInterfaces()
-        assert len(globalIPs) > 0 and len(globalMACs) > 0
+        try:
+            assert len(globalIPs) > 0 and len(globalMACs) > 0
+        except:
+            self.logger.error("Error: no active network interface")
+            raise
         globalIP = globalIPs[0]
         globalMAC = globalMACs[0]
         self.hostAddress = globalIP
@@ -307,6 +311,8 @@ class DiscoService(object):
             updMsg.socket.port = int(port)
             
             msgBytes = updMsg.to_bytes()
+            self.logger.info("send update to actor %s.%s.%s:%s %s:%s" 
+                             % (actorHost,actorName,instanceName,portName,str(host),str(port)))
             clientSocket.send(msgBytes)                     # Send message to client 
 
     def terminate(self):

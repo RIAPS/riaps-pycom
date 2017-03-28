@@ -10,6 +10,7 @@ import argparse
 # import logging
 
 from riaps.ctrl.ctrl import Controller
+#from riaps.ctrl.ctrl_tab import Controller_Tab
 from riaps.consts.defs import *
 from riaps.utils.config import Config 
 
@@ -37,7 +38,6 @@ def main(debug=True):
                         help="server port number")
     args = parser.parse_args()
     sys.path.append(os.getcwd())   # Ensure load_module works from current directory
-#
 #   logging.basicConfig(level=logging.INFO)
     global conf
     conf = Config()
@@ -47,6 +47,7 @@ def main(debug=True):
     signal.signal(signal.SIGINT,termHandler)
     try:
         theController = Controller(args.port)
+        # theController = Controller_Tab(args.port)
         theController.start()       # Start concurrent activities
         theController.run()         # Run the GUI Loop
         theController.stop()        # Stop all concurrent activities

@@ -104,7 +104,7 @@ class DiscoDbase(object):
         try:
             clientsToNotify = []
             self.r.sadd(key,value)
-            self.updateSubs(key)
+#            self.updateSubs(key)
             clientsKey = key + "_clients"
             clientsToNotify = self.r.smembers(clientsKey)
             return clientsToNotify
@@ -117,6 +117,7 @@ class DiscoDbase(object):
         '''
         Fetch value(s) under key. Add client to list of clients interested in the value
         '''
+        self.updateSubs(key)
         try:
             if self.r.exists(key):          
                 values = self.r.smembers(key)

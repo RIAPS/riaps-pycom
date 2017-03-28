@@ -77,31 +77,18 @@ class Controller(object):
         self.launchList = []        # List of launch operations
         self.setupHostKeys()
         
-    def setupIfaces(self):        
+    def setupIfaces(self):
         '''
         Find the IP addresses of the (host-)local and network(-global) interfaces
         '''
-        '''
-        Check if the preferred IP is present as an environment variables
-        CTRL_IP
-        '''
-        preferredip=os.getenv("CTRL_IP")
-        print("preferredip %s" %(preferredip))
         (globalIPs,globalMACs,localIP) = getNetworkInterfaces()
-        print(globalIPs)#, type(globalIPs))
-        if(preferredip is None):
+        try:
             assert len(globalIPs) > 0 and len(globalMACs) > 0
-            globalIP = globalIPs[0]
-            globalMAC = globalMACs[0]
-        else:
-            try:
-                indexfound=globalIPs.index(preferredip)
-                globalIP=globalIPs[indexfound]
-                globalMAC=globalMACs[indexfound]
-                self.logger.warn("globalIP is %s" %globalIP)
-            except:
-                self.logger.error(preferredip +" not found")
-                sys.exit(-1)
+        except:
+            self.logger.error("Error: no active network interface")
+            raise
+        globalIP = globalIPs[0]
+        globalMAC = globalMACs[0]
         self.hostAddress = globalIP
         self.macAddress = globalMAC
         self.nodeName = str(self.hostAddress)
@@ -522,8 +509,8 @@ class Controller(object):
         self.log("Compiling app: %s" % appName)
         try:
             self.riaps_model = compileModel(appName)
-        except:
-            self.log("Error in compiling %s" % appName)
+        except Exception  as e:
+            self.log("Error in compiling app %s:\n%s" % (appName,e.args[0]))
             self.gui.clearApplication()
     
     def compileDeployment(self,depName):
@@ -533,8 +520,8 @@ class Controller(object):
         self.log("Compiling deployment: %s" % depName)
         try:
             self.riaps_depl = DeploymentModel(depName)
-        except:
-            self.log("Error in compiling %s" % depName)
+        except Exception as e:
+            self.log("Error in compiling depl %s:\n%s" % (depName,e.args[0]))
             self.gui.clearDepoyment()
 
 

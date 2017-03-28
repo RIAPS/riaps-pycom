@@ -14,7 +14,6 @@ from .disco import DiscoClient
 from .devc import DevmClient
 from riaps.proto import disco_capnp
 from riaps.utils.ifaces import getNetworkInterfaces
-from riaps.utils.config import Config
 import getopt
 import logging
 from builtins import int, str
@@ -214,7 +213,11 @@ class Actor(object):
         Find the IP addresses of the (host-)local and network(-global) interfaces
         '''
         (globalIPs,globalMACs,localIP) = getNetworkInterfaces()
-        assert len(globalIPs) > 0 and len(globalMACs) > 0
+        try:
+            assert len(globalIPs) > 0 and len(globalMACs) > 0
+        except:
+            self.logger.error("Error: no active network interface")
+            raise
         globalIP = globalIPs[0]
         globalMAC = globalMACs[0]
         self.localHost = localIP
@@ -278,6 +281,16 @@ class Actor(object):
         self.logger.info("deactivate")
         for inst in self.components:
             self.components[inst].deactivate()
+            
+    def recvChannelMessages(self,channel):
+        msgs = []
+        while True:
+            try:
+                msg = channel.recv(flags=zmq.NOBLOCK)
+                msgs.append(msg)
+            except zmq.Again:
+                break
+        return msgs   
 
     def start(self):
         '''
@@ -294,12 +307,15 @@ class Actor(object):
         while 1:
             sockets = dict(self.poller.poll())              
             if self.discoChannel in sockets:                # If there is a message from a service, handle it
-                msg = self.discoChannel.recv()
-                self.handleServiceUpdate(msg)               # Handle message from disco service
-                del sockets[self.discoChannel]
+                msgs = self.recvChannelMessages(self.discoChannel)
+                for msg in msgs:
+                    self.handleServiceUpdate(msg)               # Handle message from disco service
+                del sockets[self.discoChannel]    
             elif self.devcChannel in sockets:
-                msg = self.devcChannel.recv()
-                pass                                        # Handle message from devm service
+                msgs = self.recvChannelMessages(self.devcChannel)
+                for msg in msgs:
+                    msg = self.devcChannel.recv()
+                    pass                                        # Handle message from devm service
                 del sockets[self.devcChannel]
             else:
                 pass
@@ -340,7 +356,7 @@ class Actor(object):
         self.devc.terminate()
         self.disco.terminate()
         # Clean up everything
-        self.context.destroy()
+        # self.context.destroy()
         time.sleep(1.0)
         self.logger.info("terminated")
         sys.exit()

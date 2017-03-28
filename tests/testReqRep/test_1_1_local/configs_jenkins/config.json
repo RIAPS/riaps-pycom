@@ -1,0 +1,22 @@
+{
+
+  "app_dir": "test_1_1_local",
+  "model_file": "model.riaps",
+  "components_py": [
+    "CompA.py",
+    "CompB.py"
+  ],
+  "targets": [
+    {
+      "host": "bbb-3ed2.local",
+      "actor": "Actor11_B_loc"
+    },
+    {
+      "host": "bbb-9cbd.local",
+      "actor": "Actor11_A_loc"
+    }
+  ],
+  "riaps_apps_path": "riaps_apps",
+  "username":"riaps",
+  "password":"riapspwd"
+}

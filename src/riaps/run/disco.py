@@ -4,13 +4,13 @@ Created on Oct 19, 2016
 @author: riaps
 '''
 
+import os
 import zmq
 import capnp
 from ..proto import disco_capnp
 from riaps.consts.defs import *
 from .exc import SetupError, OperationError
 import logging
-import os
 
 class DiscoClient(object):
     '''
@@ -89,10 +89,10 @@ class DiscoClient(object):
         # All interactions below go via the REQ/REP socket ; the channel is for server pushes
         req = disco_capnp.DiscoReq.new_message()
         reqMsg = req.init('serviceReg')
-        reqMsg.pid = os.getpid()
         reqMsgPath = reqMsg.path
         reqMsg.socket.host = self.actor.localHost if isLocal else self.actor.globalHost
         reqMsg.socket.port = portNum
+        reqMsg.pid = os.getpid()
         reqMsgPath.appName = self.appName
         reqMsgPath.msgType = portType 
         reqMsgPath.kind = kind
