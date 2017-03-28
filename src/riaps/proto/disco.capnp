@@ -46,7 +46,7 @@ struct Client {
 
 struct Socket {
   host @0 : Text;
-  port @1 : Int32;
+  port @1 : Int32; 
  }
 
 struct ServiceRegReq  {
@@ -58,14 +58,14 @@ struct ServiceRegReq  {
 struct ServiceRegRep {
   status @0 : Status;
 }
-
+ 
 struct ServiceLookupReq {
-  path @0 : Path;
+  path @0 : Path; 
   client @1 : Client;
 }
 
 struct ServiceLookupRep {
-  status @0  : Status;
+  status @0  : Status; 
   sockets @1 : List(Socket);
 }
 

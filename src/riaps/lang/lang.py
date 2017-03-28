@@ -17,6 +17,10 @@ import json
 import os
 import argparse
 
+class LangError(Exception):
+    def __init__(self, message):
+        super(LangError, self).__init__(message)
+
 class RiapsModel2JSON(object):
     '''
     Class to convert the RIAPS model (constructed by the parser) into a data structure
@@ -313,15 +317,22 @@ def compileModel(modelFileName,verbose=False,debug=False):
         # Instantiate the model object structure from the model file 
         example_riaps_model = riaps_meta.model_from_file(join(this_folder,modelFileName))
     except IOError as e:
-        print ("I/O error({0}): {1}".format(e.errno, e.strerror))
-        raise
+        errMsg = "I/O error({0}): {1}".format(e.errno, e.strerror)
+        print (errMsg)
+        raise LangError(errMsg)
     except TextXSyntaxError as e:
-        print ("Syntax error: %s" % e.args)
-        raise
-    except: 
-        print ("Unexpected error:", sys.exc_info()[0])
-        raise
-
+        errMsg = "Syntax error: %s" % e.args
+        print (errMsg)
+        raise LangError(errMsg)
+    except TextXSemanticError as e:
+        errMsg = "Semantic error: %s" % e.args
+        print (errMsg)
+        raise LangError(errMsg)
+    except Exception as e: 
+        errMsg = "Unexpected error %s:%s" % (sys.exc_info()[0],e.args())
+        print (errMsg)
+        raise LangError(errMsg)
+    
     # Optionally export model to dot
     # model_export(example_riaps_model, join(this_folder, 'sample.dot'))
 

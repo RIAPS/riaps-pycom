@@ -14,6 +14,10 @@ import sys
 import os
 import argparse
 
+class DeplError(Exception):
+    def __init__(self, message):
+        super(DeplError, self).__init__(message)
+
 class DeploymentModel(object):
     '''
     Deployment model loader/parser
@@ -83,9 +87,10 @@ def main(debug=False):
     args = parser.parse_args()
     try:
         deplo = DeploymentModel(args.model)
-    except: 
-        print ("Unexpected error:", sys.exc_info()[0])
-        raise
+    except Exception as e: 
+        errMsg = "Unexpected error %s: %s" % (sys.exc_info()[0],e.args())
+        print (errMsg)
+        raise DeplError(errMsg)
     print (deplo.deployments)
 
 

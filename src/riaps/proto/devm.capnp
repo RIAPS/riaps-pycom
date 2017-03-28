@@ -8,6 +8,7 @@ struct ActorRegReq {
   appName @0 : Text;
   version @1 : Text;
   actorName @2 : Text;
+  pid @3 : Int32;
 }
 
 struct ActorRegRep {

@@ -3,7 +3,7 @@ language: python
 python:
 - '3.5'
 env:
-- version="0.3.3"
+- version="0.3.5"
 script:
 - "./mk-release.sh"
 deploy:
@@ -11,7 +11,7 @@ deploy:
   overwrite: true
   api_key:
     secure: zy+siytsX8Y9u3UCdZHM26wUdXk3vcUZYUOhQoujtSro2kmGy/qtGJuwUNQdAiMuRjg73E+4Larfm5MTlpXrfMeIPV5kBykXWuZHMEKlRvld4gIlAevilONeeakVYE1fox3b/RREaz3nGmFElI3OasyYq2TsghgxfKioWXSjC4j4hbBKaycdj1bakx2/e4YYl7zmeP91hAkBgKak5CU4FCoKEJg3vwkvTP25WUUPed27CjRCQDhfqAtskm/hCvUI2lmTlYJoTckgIuDraWwPemC/qdwM00W3ZvEQSpAl47rgbfvdB3FSA2bZ9whsanHwVXyii8hx6fc11A7YvUT/As0mju4eC+tggaQCtdPvsIKRc1Ht6/fiJlqEs6eLrv8kBNUYGIG6UKODxpgUTlnz/zJJz0T2f3I921ohhWTQzatDC7GxeVDKNIbqDG5SMbe1UhZAAT5H7faJ8i6Cy28R+VPbIjQRXnOIR7aH3jczbkfjL+hEqQ2th8w5QQup0B/pHbYBa266tLTAvSttmIRiSDsAlhJ4M74bP1x1QfyQD+C9uP/LnmUPquOKv21bSifb/VBz3bjc53xHVT5fWHUVLApRMSkEKzUMGKX3XIfACZAfb6uKl/P3iJWNV+9x5bwB9/H4AEFWth4HhVhHqA5pMmX09IPOvCtFcLOYphdI3xk=
-  file: riaps-pycom_v$version.tar.gz
+  file: riaps-pycom.tar.gz
   skip_cleanup: true
   on:
     tags: true

@@ -17,6 +17,7 @@ class Config(object):
     '''
     TARGET_USER = 'riaps-user'
     SEND_TIMEOUT = -1
+    NIC_NAME = None
     
     def __init__(self):
         '''
@@ -65,7 +66,7 @@ class Config(object):
                         elif optType == float:
                             optValue = float(arg)
                         else:
-                            optValue = opt
+                            optValue = arg
                         setattr(Config,opt,optValue)
                     except:
                         logger.warning('Formal and actual type of configuration argument %s differ %s - ignored'

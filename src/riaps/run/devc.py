@@ -5,6 +5,7 @@ Created on Jan 3, 2017
 @author: riaps
 '''
 
+import os
 import zmq
 import capnp
 from riaps.proto import devm_capnp
@@ -44,6 +45,7 @@ class DevmClient(object):
         appMessage.appName = self.appName
         appMessage.version = '0.0.0'
         appMessage.actorName = self.actor.name
+        appMessage.pid = os.getpid()
                   
         msgBytes = reqt.to_bytes()
 
