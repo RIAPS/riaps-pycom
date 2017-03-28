@@ -1,0 +1,16 @@
+eclipse.preferences.version=1
+encoding//CPU1_RAM/Modbus/functions/subdir_rules.mk=UTF-8
+encoding//CPU1_RAM/Modbus/functions/subdir_vars.mk=UTF-8
+encoding//CPU1_RAM/Modbus/port/subdir_rules.mk=UTF-8
+encoding//CPU1_RAM/Modbus/port/subdir_vars.mk=UTF-8
+encoding//CPU1_RAM/Modbus/rtu/subdir_rules.mk=UTF-8
+encoding//CPU1_RAM/Modbus/rtu/subdir_vars.mk=UTF-8
+encoding//CPU1_RAM/Modbus/subdir_rules.mk=UTF-8
+encoding//CPU1_RAM/Modbus/subdir_vars.mk=UTF-8
+encoding//CPU1_RAM/cmd/subdir_rules.mk=UTF-8
+encoding//CPU1_RAM/cmd/subdir_vars.mk=UTF-8
+encoding//CPU1_RAM/makefile=UTF-8
+encoding//CPU1_RAM/objects.mk=UTF-8
+encoding//CPU1_RAM/sources.mk=UTF-8
+encoding//CPU1_RAM/subdir_rules.mk=UTF-8
+encoding//CPU1_RAM/subdir_vars.mk=UTF-8
