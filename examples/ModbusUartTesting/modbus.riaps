@@ -29,7 +29,7 @@ app RIAPSModbusUART {
     actor ModbusExampleActor() {
     	local ModbusCommand,ModbusResponse;	// Local message types
       	{
-     		modbus : ModbusUartDevice(slaveaddress=10,port='ttyO1',baudrate=57600,serialTimeout=3);  // Slave Address is in decimal
+     		modbus : ModbusUartDevice(slaveaddress=10,port='ttyO2',baudrate=57600,serialTimeout=3);  // Slave Address is in decimal
           	commInitiator : ComputationalComponent(); 		
        	}
     }
