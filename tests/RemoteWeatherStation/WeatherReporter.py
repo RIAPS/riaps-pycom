@@ -71,10 +71,10 @@ class WReporterThread(threading.Thread):
 #                pydevd.settrace(host="192.168.1.103",port=5678) #MM TODO:  for debugging
                 if bytesToRead != 0:
                     try:
-                        self.component.logger.info("WReporterThread - read UART1, %d bytes",bytesToRead)
+                        self.component.logger.info("WReporterThread - read UART, %d bytes",bytesToRead)
                         data = self.ser.read(bytesToRead) 
                     except serial.SerialException:
-                        self.component.logger.error("WReporterThread - UART1 reading error: %s",serial.SerialException.strerror)           
+                        self.component.logger.error("WReporterThread - UART reading error: %s",serial.SerialException.strerror)           
                         self.ser.close()
                         break                   
                                         
@@ -100,7 +100,7 @@ class WReporterThread(threading.Thread):
         self.terminated.set()
 
 class WeatherReporter(Component):
-    def __init__(self, port="ttyO1", baudrate=115200, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE, serialTimeout=0):
+    def __init__(self, port="ttyO2", baudrate=115200, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE, serialTimeout=0):
         super().__init__()
         self.logger.setLevel(logging.DEBUG)
         self.pid = os.getpid()
