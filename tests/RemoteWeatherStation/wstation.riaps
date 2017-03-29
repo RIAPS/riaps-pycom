@@ -1,11 +1,11 @@
 // RIAPS Remote Weather Station (RWS) Demo
 
 app RemoteWeatherStation {
-    message DataFrame; // data received from UART1
-    message DataAck;   // writing message out UART1 (just to test writing capability)
+    message DataFrame; // data received from UART2
+    message DataAck;   // writing message out UART2 (just to test writing capability)
      
-	// Weather Station device interface - UART1
-    device WeatherReporter(port='ttyO1', baudrate=115200) {
+	// Weather Station device interface - UART2
+    device WeatherReporter(port='ttyO2', baudrate=115200) {
       // Inside port for forwarding messages coming from an internal thread.
       // The 'default' is optional, it implies a 1 sec timer/ticker thread.
       inside dataIn_queue; 	 // Receive data from UART1 and send to component
@@ -27,7 +27,7 @@ app RemoteWeatherStation {
     actor RemoteWeatherStationActor() {
        local DataFrame, DataAck;	// Local message types
        {
-       	  reporter : WeatherReporter(port='ttyO1', baudrate=115200);
+       	  reporter : WeatherReporter(port='ttyO2', baudrate=115200);
           listener : WeatherListener(); 		
        }
     }
