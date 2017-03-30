@@ -21,6 +21,8 @@ def get_directory_contents(parent_dir):
 						shutil.copy(configs_jenkins, path)
 					sub_test_dirs.append(parent_dir)
 					return
+			elif child == 'ISORC2017':
+                                return
 			else:
 				get_directory_contents(path)
 
@@ -50,7 +52,6 @@ def call_zopkio(test_script_path, log_dir):
 	zopkio = '/usr/local/bin/zopkio'
 	try:
 		if os.path.exists(test_script_path):
-                        print ('*********** Running test: {0} ***********'.format(os.path.dirname(test_script_path)))
  			subprocess.call([zopkio, '--nopassword', test_script_path, '--output-dir', log_dir])
 	except Exception as e:
 		print (str(e))
