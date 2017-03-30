@@ -21,8 +21,6 @@ def get_directory_contents(parent_dir):
 						shutil.copy(configs_jenkins, path)
 					sub_test_dirs.append(parent_dir)
 					return
-			elif child == 'ISORC2017':
-                                return
 			else:
 				get_directory_contents(path)
 
