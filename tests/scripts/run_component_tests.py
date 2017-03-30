@@ -50,6 +50,7 @@ def call_zopkio(test_script_path, log_dir):
 	zopkio = '/usr/local/bin/zopkio'
 	try:
 		if os.path.exists(test_script_path):
+                        print ('*********** Running test: {0} ***********'.format(os.path.dirname(test_script_path)))
  			subprocess.call([zopkio, '--nopassword', test_script_path, '--output-dir', log_dir])
 	except Exception as e:
 		print (str(e))
