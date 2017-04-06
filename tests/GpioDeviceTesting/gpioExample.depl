@@ -1,0 +1,3 @@
+app GpioToggleExample {
+	on (bbb-f652.local) TestGpioToggleActor;
+}
