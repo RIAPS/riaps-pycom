@@ -139,7 +139,7 @@ GPIO Device Options:
   Note:  edge triggering will not be implemented in the initial release of this device component (MM)
 '''
 class GpioDeviceComponent(Component):
-    def __init__(self, bbb_pin_name, direction, pull_up_down, trigger_edge, initial_value, setup_delay):
+    def __init__(self, bbb_pin_name='P8_11', direction='OUT', pull_up_down='PUD_OFF', trigger_edge='RISING',initial_value=0, setup_delay=60):
         super().__init__()
         self.logger.setLevel(logging.DEBUG)
         self.pid = os.getpid()
