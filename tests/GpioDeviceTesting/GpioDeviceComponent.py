@@ -15,7 +15,7 @@ import logging
 import os
 import threading
 import Adafruit_BBIO.GPIO as GPIO
-import pydevd
+#import pydevd
 
     
 class GpioDeviceThread(threading.Thread):
@@ -136,7 +136,7 @@ GPIO Device Options:
   initial_value: if GPIO is OUT direction, then this initial value will be set - default = 0
   setup_delay: time in milliseconds to wait after exporting GPIO pin to give udev some time to set file permissions - default = 60 ms, should not use over 1000 ms
   
-  Note:  edge triggering, initial value and delay setup will not be implemented in the initial release of this device component (MM)
+  Note:  edge triggering will not be implemented in the initial release of this device component (MM)
 '''
 class GpioDeviceComponent(Component):
     def __init__(self, bbb_pin_name, direction, pull_up_down, trigger_edge, initial_value, setup_delay):
@@ -149,7 +149,7 @@ class GpioDeviceComponent(Component):
         self.trigger_edge = trigger_edge
         self.initial_value = initial_value
         self.setup_delay = setup_delay  
-        pydevd.settrace(host='192.168.1.102',port=5678)
+#        pydevd.settrace(host='192.168.1.102',port=5678)
         self.logger.info("GpioDeviceComponent @%s: %s %s %s ivalue=%d delay=%d [%d]", self.bbb_pin_name, self.direction, self.pull_up_down, self.trigger_edge, self.initial_value, self.setup_delay, self.pid)
         self.gpioDeviceThread = None                    # Cannot manipulate GPIOs in constructor or start threads 
                 

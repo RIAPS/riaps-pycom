@@ -6,10 +6,10 @@ app GpioToggleExample {
     message WriteRequest;  // request to write a value to the specified GPIO
      
 	// GPIO Device - pin name (P8_pin# or P9_pin#), direction (IN or OUT) and pull_up_down (PUD_OFF, PUD_UP or PUD_DOWN)
-	//               other configuration options are described in the GpioDeviceComponent code, defaults are used here
+	//               the device setup defaults are defined here
 	//
 	// Both read and write requests will return the current value of the GPIO as a published DataValue
-    device GpioDeviceComponent(bbb_pin_name='P8_11',direction='OUT',pull_up_down='PUD_OFF',trigger_edge='RISING',initial_value=0,setup_delay=100) {
+    device GpioDeviceComponent(bbb_pin_name='P8_11', direction='OUT', pull_up_down='PUD_OFF', trigger_edge='RISING', initial_value=0, setup_delay=60) {
       // Inside port for forwarding messages coming from an internal thread.
       // The 'default' is optional, it implies a 1 sec timer/ticker thread.
       inside dataIn_queue; 	 // Receive data from a specified GPIO and send to component
@@ -34,7 +34,7 @@ app GpioToggleExample {
     actor TestGpioToggleActor() {
        local DataValue, ReadRequest, WriteRequest;	// Local message types
        {
-       	  gpioDevice : GpioDeviceComponent(bbb_pin_name='P8_11', direction='OUT', delay='100');
+       	  gpioDevice : GpioDeviceComponent(bbb_pin_name='P8_11', direction='OUT', setup_delay=100); // application specific setup options
           gpioTester : ToggleGpioComponent(); 		
        }
     }
