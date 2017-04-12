@@ -15,7 +15,8 @@ def setup_suite():
     riaps_app_path = os.path.join(userdir, runtime.get_active_config("riaps_apps_path"))
     env = {"PATH": "/usr/local/bin/:$PATH",
            "RIAPSHOME": "/usr/local/riaps",
-           "RIAPSAPPS": "$HOME/riaps_apps"}
+           "RIAPSAPPS": "$HOME/riaps_apps",
+           "LD_LIBRARY_PATH": "/opt/riaps/armhf/lib"}
 
     start_riaps_lang = "riaps_lang " + runtime.get_active_config('model_file')
 
@@ -64,6 +65,7 @@ def setup_suite():
             'executable': startscriptpath,
             'install_path': riaps_app_path,
             'hostname': target["host"],
+            'env':env,
             "start_command": "python3 " + os.path.join(riaps_app_path, discoStartScript)
         })
         runtime.set_deployer(deployerId, startDiscoveryDeployer)
