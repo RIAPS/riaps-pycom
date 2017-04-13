@@ -12,11 +12,11 @@
       "actor": "ActorTestNN_A_loc"
     },
     {
-      "host": "bbb-3ed2.local",
+      "host": "bbb-266a.local",
       "actor": "ActorTestNN_B_loc"
     },
     {
-      "host": "bbb-9cbd.local",
+      "host": "bbb-266a.local",
       "actor": "ActorTestNN_C_loc"
     }
   ],
