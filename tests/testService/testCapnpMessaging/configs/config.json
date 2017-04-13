@@ -6,7 +6,7 @@
   ],
   "targets": [
     {
-      "host": "bbb-266a.local"
+      "host": "192.168.1.120"
     }
   ],
   "riaps_apps_path": "riaps_apps",

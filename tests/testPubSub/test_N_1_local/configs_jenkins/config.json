@@ -11,11 +11,11 @@
   ],
   "targets": [
     {
-      "host": "bbb-9cbd.local",
+      "host": "bbb-266a.local",
       "actor": "ActorTestN1p_A_loc"
     },
     {
-      "host": "bbb-9cbd.local",
+      "host": "bbb-3ed2.local",
       "actor": "ActorTestN1p_B_loc"
     },
     {

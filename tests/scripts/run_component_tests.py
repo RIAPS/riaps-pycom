@@ -5,12 +5,9 @@ import argparse
 import shutil
 
 sub_test_dirs = list()
-ignore_tests = ['ISORC2017']
 
 def get_directory_contents(parent_dir):
 	for child in os.listdir(parent_dir):
-		if child in ignore_tests:
-			continue
 		path = os.path.join(parent_dir, child)
 		if os.path.isdir(path):
 			if child == 'configs':
@@ -53,17 +50,17 @@ def call_zopkio(test_script_path, log_dir):
 	zopkio = '/usr/local/bin/zopkio'
 	try:
 		if os.path.exists(test_script_path):
-			subprocess.call([zopkio, '--nopassword', test_script_path, '--output-dir', log_dir])
+ 			subprocess.call([zopkio, '--nopassword', test_script_path, '--output-dir', log_dir])
 	except Exception as e:
 		print (str(e))
 
 
 if __name__ == "__main__":
-    test_dir = None
-    results_dir = None
+    test_dir = ''
+    results_dir = ''
     parser = argparse.ArgumentParser('Jenkins Zopkio Automation Script')
-    parser.add_argument('-t', action='store', help='Test directory where zopkio tests are located.')
-    parser.add_argument('-r', action='store', help='Results directory where logs will be.')
+    parser.add_argument('-t', action='store')
+    parser.add_argument('-r', action='store')
 
     try:
         args = parser.parse_args()
@@ -71,9 +68,7 @@ if __name__ == "__main__":
             test_dir = args.t
         if args.r is not None:
             results_dir = args.r
-
-        if test_dir is not None and results_dir is not None:
-			main(test_dir, results_dir)
-    except Exception as e:
-        print("Unexpected error: ", e)
+        main(test_dir, results_dir)
+    except:
+        print("Unexpected error:", sys.exc_info()[0])
 

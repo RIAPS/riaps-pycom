@@ -8,11 +8,11 @@
   ],
   "targets": [
     {
-      "host": "bbb-266a.local",
+      "host": "192.168.1.120",
       "actor": "Actor11_B"
     },
     {
-      "host": "bbb-3ed2.local",
+      "host": "192.168.1.121",
       "actor": "Actor11_A"
     }
   ],

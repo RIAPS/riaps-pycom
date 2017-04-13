@@ -8,15 +8,15 @@
   ],
   "targets": [
     {
-      "host": "bbb-266a.local",
+      "host": "192.168.1.120",
       "actor": "ActorTestNN_A"
     },
     {
-      "host": "bbb-3ed2.local",
+      "host": "192.168.1.121",
       "actor": "ActorTestNN_B"
     },
     {
-      "host": "bbb-9cbd.local",
+      "host": "192.168.1.122",
       "actor": "ActorTestNN_C"
     }
   ],

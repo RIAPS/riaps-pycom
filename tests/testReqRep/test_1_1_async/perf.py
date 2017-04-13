@@ -2,7 +2,7 @@
 import os
 import zopkio.runtime as runtime
 
-LOGS_DIRECTORY = "/tmp/riaps_test/collected_logs/testReqRep/test_1_1_async/"
+LOGS_DIRECTORY = "/tmp/riaps_test/collected_logs/"
 OUTPUT_DIRECTORY = "/tmp/riaps_test/results/"
 
 def machine_logs():
