@@ -114,6 +114,7 @@ def setup_suite():
             runtime.set_deployer(f, file_deployer)
             file_deployer.install(f)
 
+    print(" -- testCapnpMessaging -- ")
     print("Deployment done.")
 
 def reach_discovery():

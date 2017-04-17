@@ -150,6 +150,7 @@ def setup_suite():
             runtime.set_deployer(component, component_deployer)
             component_deployer.install(component)
 
+    print(" -- testReqRep/test_1_1_local -- ")
     print("Deployment done.")
 
 def reach_discovery():
