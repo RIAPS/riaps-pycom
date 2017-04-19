@@ -1,0 +1,4 @@
+pip3 install 'Adafruit_BBIO >= 1.0.3' 'pydevd' 'pyzmq>=16' 'textX>=1.4' 'redis>=2.10.5' 'hiredis >= 0.2.0' 'pycapnp >= 0.5.9' 'netifaces>=0.10.5' 'paramiko>=2.0.2' 'cryptography>=1.5.3'
+pip3 install 'git+https://github.com/adubey14/rpyc#egg=rpyc-3.3.1'
+
+pip3 install /opt/riaps-pycom/src
