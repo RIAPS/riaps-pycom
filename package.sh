@@ -8,7 +8,8 @@ sed s/@version@/$pycomversion/g -i package/riaps-pycom-amd64/DEBIAN/control
 sed s/@version@/$pycomversion/g -i package/riaps-pycom-amd64/opt/riaps-pycom/src/setup.py
 fakeroot dpkg-deb --build package/riaps-pycom-amd64
 
-rm -rf package
+cp package/riaps-pycom-amd64.deb .
+
 source version.sh
 mkdir -p package/riaps-pycom-armhf/DEBIAN
 mkdir -p package/riaps-pycom-armhf/opt/riaps-pycom/
@@ -18,6 +19,7 @@ sed s/@version@/$pycomversion/g -i package/riaps-pycom-armhf/DEBIAN/control
 sed s/@version@/$pycomversion/g -i package/riaps-pycom-armhf/opt/riaps-pycom/src/setup.py
 fakeroot dpkg-deb --build package/riaps-pycom-armhf
 
+cp package/riaps-pycom-armhf.deb .
 
 
 
