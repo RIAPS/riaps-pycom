@@ -16,6 +16,10 @@
       "actor": "ActorTest1s"
     }
   ],
+  "gateways":[
+    "192.168.1.120",
+    "192.168.1.121"
+  ],
   "riaps_apps_path": "riaps_apps",
   "username":"riaps",
   "password":"riapspwd"

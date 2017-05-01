@@ -37,6 +37,10 @@ def setup_suite():
     discoStopScript = "stopDiscovery.py"
     discoStopScriptPath = "../../test_common"
 
+    # Script to add gateways of subnets
+    addDhtNodeScript = "addDhtNode.py"
+    addDhtNodeScriptPath = "../../test_common"
+
     killRiapsScript = "killRiaps.py"
     killRiapsScriptPath = "../../test_common"
 
@@ -55,7 +59,25 @@ def setup_suite():
         runtime.set_deployer(deployerId, killDeployer)
         killDeployer.install(deployerId)
 
-        # Deploy the discovery starter script
+    # Deploy add DHT Node script
+    for target in runtime.get_active_config('targets'):
+        hostAddress = target["host"]
+        for gatewayAddress in runtime.get_active_config('gateways'):
+            deployerId = "gateway_" + hostAddress + "_" + gatewayAddress
+            fullPath = os.path.abspath(
+                os.path.join(os.path.dirname(os.path.abspath(__file__)), addDhtNodeScriptPath, addDhtNodeScript))
+
+            addDeployer = adhoc_deployer.SSHDeployer(deployerId, {
+                'executable': fullPath,
+                'install_path': riaps_app_path,
+                'hostname': target["host"],
+                'start_command': "python3 " + os.path.join(riaps_app_path, addDhtNodeScript),
+                'args': ["-a " + gatewayAddress]
+            })
+            runtime.set_deployer(deployerId, addDeployer)
+            addDeployer.install(deployerId)
+
+    # Deploy the discovery starter script
     for target in runtime.get_active_config('targets'):
         deployerId = "discostart_" + target["host"]
         startscriptpath = os.path.abspath(
@@ -159,6 +181,17 @@ def reach_discovery():
         deployer = runtime.get_deployer(deployerId)
         deployer.start(deployerId, configs={"sync": True})
 
+def add_gateways():
+    for target in runtime.get_active_config("targets"):
+        hostAddress = target["host"]
+        for gatewayAddress in runtime.get_active_config('gateways'):
+            if hostAddress == gatewayAddress:
+                continue
+            deployerId = "gateway_" + hostAddress + "_" + gatewayAddress
+            deployer = runtime.get_deployer(deployerId)
+            deployer.start(deployerId, configs={"sync": True})
+
+
 def setup():
     print("Start discovery service...")
     # Start discovery
@@ -168,7 +201,11 @@ def setup():
         deployer.start(deployerId, configs={"sync": False})
     sleep(2)
 
+    # Check if discovery service successfully started
     reach_discovery()
+
+    # Gateways (dht nodes from another subnets)
+    add_gateways()
 
     #print("Setup")
     # for process in server_deployer.get_processes():
