@@ -7,16 +7,20 @@
   ],
   "targets": [
     {
-      "host": "bbb-266a.local",
+      "host": "bbb-9cbd.local",
       "actor": "ActorTest1Np_loc"
     },
     {
-      "host": "bbb-3ed2.local",
+      "host": "bbb-9cbd.local",
       "actor": "ActorTest1Ns_A_loc"
     },
     {
       "host": "bbb-9cbd.local",
       "actor": "ActorTest1Ns_B_loc"
+    },
+    {
+      "host": "bbb-9cbd.local",
+      "actor": "ActorTest1Ns_C_loc"
     }
   ],
   "riaps_apps_path": "riaps_apps",

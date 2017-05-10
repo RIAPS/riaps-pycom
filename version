@@ -1,5 +1,0 @@
-if [ -z "$version" ]; then
-    echo "setting version"
-    export version='0.3.4'
-fi  
-

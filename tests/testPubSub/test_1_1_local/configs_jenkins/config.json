@@ -8,7 +8,7 @@
   ],
   "targets": [
     {
-      "host": "bbb-266a.local",
+      "host": "bbb-3ed2.local",
       "actor": "ActorTest1p_loc"
     },
     {

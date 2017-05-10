@@ -1,0 +1,3 @@
+pip3 uninstall -y riaps-pycom || true
+echo "the following python3 packages were automatically installed and can now be removed."
+echo "pip3 uninstall rpyc pydevd pyzmq redis hiredis pycapnp netifaces paramiko cryptography"

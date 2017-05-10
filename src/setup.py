@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-setup(name='riaps',
+setup(name='riaps-pycom',
       version='@version@',
       description='python implementation of riaps component model',
       url='',
