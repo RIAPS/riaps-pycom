@@ -1,11 +1,11 @@
 Hardware Configuration
 ----------------------
 Test was done with an LED and resistor in series attached to P8_11 (connector_pin) on the BBB.  
-The resister side to ground and the LED in the pin location indicated.
+The resistor side to ground and the LED in the pin location indicated.
 
 Software Configuration
 ----------------------
-This software setup will be done as part of the release in the future.  They are noted here to explain how this test was performed,.
+This software setup will be done as part of the release in the future.  They are noted here to explain how this test was performed.
 
 On VM: 
 * Install GPIO Python Library
