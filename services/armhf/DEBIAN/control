@@ -1,0 +1,8 @@
+Package: riaps-systemd-armhf
+Architecture: armhf
+Maintainer: Institute for Software Integrated Systems 
+Depends: riaps-pycom-armhf, riaps-core-armhf
+Conflicts: 
+Priority: required
+Version:  @version@
+Description: This configures the required systemd services

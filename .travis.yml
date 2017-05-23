@@ -13,6 +13,8 @@ deploy:
   file:
    - riaps-pycom-amd64.deb 
    - riaps-pycom-armhf.deb
+   - riaps-systemd-amd64.deb 
+   - riaps-systemd-armhf.deb 
   skip_cleanup: true
   on:
     tags: true
