@@ -1,5 +1,4 @@
 set -e
-pip3 install cython --verbose
 CFLAGS=-I/opt/riaps/amd64/include LDFLAGS=-L/opt/riaps/amd64/lib PATH=$PATH:/opt/riaps/amd64/bin pip3 install pyzmq --global-option="--zmq=/opt/riaps/amd64" --verbose
 CFLAGS=-I/opt/riaps/amd64/include LDFLAGS=-L/opt/riaps/amd64/lib PATH=$PATH:/opt/riaps/amd64/bin pip3 install 'pycapnp >=0.5.9' --verbose
 pip3 install 'git+https://github.com/adubey14/rpyc#egg=rpyc-3.3.1' --verbose
