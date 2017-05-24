@@ -6,6 +6,7 @@ Before=riaps-deplo.service
   
 [Service] 
 Type=simple 
+User=riaps
 StandardOutput=syslog 
 StandardError=inherit 
 SyslogIdentifier=rdiscoveryd 
