@@ -8,9 +8,9 @@ Before=riaps-deplo.service
 Type=simple 
 StandardOutput=syslog 
 StandardError=inherit 
-SyslogIdentifier=rdiscovery 
+SyslogIdentifier=rdiscoveryd 
 SyslogLevel=info 
-ExecStart=/opt/riaps/armhf/bin/rdiscovery 
+ExecStart=/opt/riaps/armhf/bin/rdiscoveryd 
 Restart=always
 RestartSec=10s
   
