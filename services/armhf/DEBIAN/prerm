@@ -1,6 +1,7 @@
 
 systemctl disable riaps-disco.service 
 systemctl disable riaps-deplo.service 
+systemctl disable sethostname.service 
 systemctl stop riaps-deplo.service || true 
 systemctl stop riaps-deplo.service || true 
 

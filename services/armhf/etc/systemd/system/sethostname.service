@@ -1,0 +1,11 @@
+[Unit]
+Description=Set hostname based on Ethernet MAC address
+Before=network-online.target
+Requires=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/set_unique_hostname
+
+[Install]
+WantedBy=multi-user.target
