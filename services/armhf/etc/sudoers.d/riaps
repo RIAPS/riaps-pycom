@@ -1,0 +1,4 @@
+# Persist device interface environment variables 
+Defaults    env_keep += SLOTS 
+Defaults    env_keep += PINS
+

@@ -2,3 +2,6 @@ systemctl daemon-reload
 systemctl enable riaps-disco.service 
 systemctl enable riaps-deplo.service 
 systemctl enable sethostname.service 
+getent group gpio ||groupadd gpio
+getent group dialout ||groupadd dialout
+udevadm trigger --subsystem-match=gpio
