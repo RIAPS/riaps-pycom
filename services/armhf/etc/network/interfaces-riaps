@@ -1,0 +1,15 @@
+auto lo
+iface lo inet loopback
+
+auto eth0
+iface eth0 inet dhcp
+#	address 0.0.0.0
+#	hwaddress ether DE:AD:BE:EF:CA:FE
+
+# Ethernet/RNDIS gadget (g_ether)
+# Used by: /opt/scripts/boot/autoconfigure_usb0.sh
+iface usb0 inet static
+    address 192.168.7.2
+    netmask 255.255.255.252
+    network 192.168.7.0
+    gateway 192.168.7.1

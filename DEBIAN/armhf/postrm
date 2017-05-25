@@ -4,4 +4,4 @@ rmdir /etc/riaps || true
 
 pip3 uninstall -y riaps-pycom || true
 echo "the following python3 packages rpyc pydevd pyzmq redis hiredis pycapnp netifaces paramiko cryptography were automatically installed and can now be removed."
-echo "You can run  sudo pip3 uninstall rpyc pydevd pyzmq redis hiredis pycapnp netifaces paramiko cryptography"
+echo "You can run  sudo pip3 uninstall rpyc pydevd pyzmq redis hiredis pycapnp netifaces paramiko cryptography Adafruit_BBIO minimalmodbus pyserial"
