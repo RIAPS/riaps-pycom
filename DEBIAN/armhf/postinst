@@ -9,6 +9,10 @@ pip3 install /opt/riaps-pycom/src --verbose
 mkdir -p /etc/riaps
 for i in `ls /usr/local/riaps/etc`; do ln -s  /usr/local/riaps/etc/$i /etc/riaps/$i ;done
 
+#Create soft link from rdiscoveryd to run as default
+mv /usr/local/bin/riaps_disco /usr/local/bin/riaps_disco_redis
+ln -s /opt/riaps/armhf/bin/rdiscoveryd /usr/local/bin/riaps_disco
+
 #packages used by Device Components
 pip3 install pyserial minimalmodbus
 
