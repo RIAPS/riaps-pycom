@@ -1,6 +1,6 @@
 systemctl daemon-reload
-systemctl enable riaps-disco.service 
-systemctl enable riaps-deplo.service 
+systemctl disable riaps-disco.service 
+systemctl disable riaps-deplo.service 
 systemctl enable sethostname.service 
 getent group gpio ||groupadd gpio
 getent group dialout ||groupadd dialout
