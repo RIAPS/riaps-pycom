@@ -81,14 +81,15 @@ of physical nodes connected by a physical network.
 
 RIAPS - Mininet
 ---------------
-- This is for riaps developers - NOT for APP developers - 
+
+This is for riaps developers - NOT for APP developers - 
 
 To run the riaps tools on mininet:
 
-The ssh public key needs to be installed in ~/.ssh as the app files are 
+The ssh public key needs to be installed in `~/.ssh` as the app files are 
 transferred using sftp from the virtual CTRL node to the virtual SLAVE nodes.
 To add the public key:
-  cat src/ssh/id_rsa.pub >>~/.ssh/authorized_keys
+    cat src/ssh/id_rsa.pub >>~/.ssh/authorized_keys
 Make sure that authorized_keys has permissions set 644, and the ~/.ssh folder has 755.
 
 On the shell:
@@ -96,9 +97,9 @@ On the shell:
  bin/riaps.mn		# Starts up mininet with topo=single,4 and sshd on each node
  
 At the mn prompt:
-# Starts up the RIAPS Controller on the lead node (h1) (registry,dbase,ctrl)
-  h1 xterm -e bin/riaps-mn.ctrl	& 
-# Starts up the RIAPS Deployment Manager on host hX (X = 2,3,4)
+Starts up the RIAPS Controller on the lead node (h1) (registry,dbase,ctrl):
+  h1 xterm -e bin/riaps-mn.ctrl & 
+Starts up the RIAPS Deployment Manager on host hX (X = 2,3,4)
   hX xterm -e bin/riaps-mn.node & 
 
 
