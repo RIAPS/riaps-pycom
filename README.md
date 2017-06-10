@@ -3,15 +3,13 @@
 # pycom
 
 
-Running RIAPS Applications
-==========================
+## Running RIAPS Applications
 
 There are three ways to launch and run a riaps application, described below. The file
 launch/readme.txt describes the various launch configurations that can be used from 
 within Eclipse. 
 
-1. Running a riaps app solely in the development environment
-------------------------------------------------------------
+### Running a riaps app solely in the development environment
  
 This method runs the entire app on the development machine and all actors use a single network
 interface to communicate with each other. This means that all actor run on the same 'node'.
@@ -41,8 +39,8 @@ gui. This will instruct
 the deplo manager to terminate all actors. Then the riaps controller can be terminated (by 
 closing  its window) and all the other process launched (using the Eclipse 'teminate all' button).  
 
-Debugging an application
-------------------------
+#### Debugging an application
+
 
 To debug the application, we have to use the 'Pydev Remote Debugger', described on this page: 
 http://www.pydev.org/manual_adv_remote_debugger.html
@@ -52,12 +50,14 @@ complex, it can also be used to debug applications running on any node(s) of a n
 
 The debugger works as follows
 (1) The program to be debugged must include the statement
+```
       import pydevd			# This is at the beginning of the file
       
       ....
       	pydevd.settrace()	# This must be placed somewhere in the component code.
       ....
-     A typical good place for the settrace() statement is the component constructor.  
+```      
+A typical good place for the `settrace()` statement is the component constructor.  
      
 (2) In the Eclipse environment a 'Debug server' must be started (see the url above). 
 (3) The application should be started as described above (registry,ctrl,deplo)
@@ -66,8 +66,8 @@ The debugger works as follows
     execution of the component code: can set breakpoints, single step, etc. - just like 
     in a normal debugging session. 
  
-2. Running a riaps app in the development environment on a virtual network
---------------------------------------------------------------------------
+### Running a riaps app in the development environment on a virtual network
+
 
 While the above method to run an application works well it has a few serious shortcoming: it 
 can run only single copies of actors and all the actors share the same network interface of 
@@ -79,34 +79,43 @@ interfaces. This means is that application processes (actors) executing on the (
 of the emulated network run concurrently and communicate as if they were running on a network
 of physical nodes connected by a physical network. 
 
-RIAPS - Mininet
----------------
+#### RIAPS - Mininet
 
-This is for riaps developers - NOT for APP developers - 
+This is for riaps developers - NOT for APP developers. 
 
-To run the riaps tools on mininet:
-
-The ssh public key needs to be installed in `~/.ssh` as the app files are 
+To run the riaps tools on mininet
+1. The ssh public key needs to be installed in `~/.ssh` as the app files are 
 transferred using sftp from the virtual CTRL node to the virtual SLAVE nodes.
 To add the public key:
-    cat src/ssh/id_rsa.pub >>~/.ssh/authorized_keys
-Make sure that authorized_keys has permissions set 644, and the ~/.ssh folder has 755.
+    `cat src/ssh/id_rsa.pub >>~/.ssh/authorized_keys`
+Make sure that authorized_keys has permissions set 644, and the `~/.ssh` folder has 755.
 
-On the shell:
+2. Use the shell commands: 
+```
  source setup		# Sets up environment variables
  bin/riaps.mn		# Starts up mininet with topo=single,4 and sshd on each node
- 
-At the mn prompt:
-Starts up the RIAPS Controller on the lead node (h1) (registry,dbase,ctrl):
-  h1 xterm -e bin/riaps-mn.ctrl & 
-Starts up the RIAPS Deployment Manager on host hX (X = 2,3,4)
-  hX xterm -e bin/riaps-mn.node & 
+```
+
+3. At the mininet prompt:
+
+Start up the RIAPS Controller on the lead node (h1) (registry,dbase,ctrl):
+```
+h1 xterm -e bin/riaps-mn.ctrl &
+``` 
+
+Start up the RIAPS Deployment Manager on host hX (X = 2,3,4)
+```
+hX xterm -e bin/riaps-mn.node &
+``` 
 
 
-*** mininet with DNS ***
+#### mininet with DNS
+
 If the deployment model has DNS names for the mininet nodes (instead of the default IP addresses:
 10.0.0.[1-4]) a local DNS server can be used on the virtual network. Launching the controller start script
-   bin/riaps-mn-dns.ctrl 
+```
+  bin/riaps-mn-dns.ctrl
+``` 
 on the first node (h1) will reconfigure the DNS resolver by switching to a custom /etc/resolv.conf file. 
 This script also starts a small DNS server configured for the following DNS names and IP addresses: 
 ctrl.:10.0.0.1
@@ -117,7 +126,9 @@ If this script is used, the deployment models can use the names: ctrl. , bbb1. ,
 IP addresses. 
  
 If the controller program crashes then the original DNS resolver configuration must be restored as follows:
+```
  sudo mv /etc/resolv.conf.org /etc/resolv.conf
+```
 
 If the controller terminates correctly, the script will automatically restores this.
   
@@ -132,14 +143,13 @@ Note that while the riaps controller and deplo tools are started manually (withi
 application component code - when executed - will connect to the Eclipse debug server via a (virtual)
 network connection. 
 
-3. Running a riaps app on a network of bbb nodes connected to a physical network 
---------------------------------------------------------------------------------
+### Running a riaps app on a network of bbb nodes connected to a physical network 
 
-
- 
+To be written...
       
-# Required packages that should be installed manually
+## Required packages that should be installed manually
 
+```
 redis
 url = http://redis.io/
 version = http://download.redis.io/releases/redis-3.2.5.tar.gz
@@ -156,9 +166,10 @@ version = rpyc-master (i.e. the version on github, not the release!)
 PYGObject:
 url = https://wiki.gnome.org/action/show/Projects/PyGObject
 version = xenial (16.04LTS)
+```
 
-#Other Packages Required
-
+Other required packages:
+````
 textX >= 1.4
 redis >= 2.10.5
 hiredis >= 0.2.0
@@ -167,9 +178,11 @@ pycapnp >= 0.5.9
 netifaces >= 0.10.5
 paramiko >= 2.0.2
 cryptography >= 1.5.3
+```
 
-
-use: apt install python3-pip python3-dev libhiredis-dev libcapnp-dev libssl-dev libffi-dev glade python3-gi
-
+To install: 
+```
+apt install python3-pip python3-dev libhiredis-dev libcapnp-dev libssl-dev libffi-dev glade python3-gi
+```
 
 Alternative: use the vagrant riaps devbox
