@@ -57,10 +57,10 @@ To run this from a command line in the development environment, run the followin
 	```
 
 Then use the 'RIAPS Control' app gui to 
-(1) Select the application folder (.../pro)
-(2) Select the model file (pro.riaps)
-(3) Select the deployment file (pro.depl)
-(4) Click the 'Launch' button on to start the actor(s) of the app.
+1) Select the application folder (.../pro)
+2) Select the model file (pro.riaps)
+3) Select the deployment file (pro.depl)
+4) Click the 'Launch' button on to start the actor(s) of the app.
 
 This last step will transfer the application's files to the riaps deplo manager that in turn 
 will start the actor(s) of the application. 
@@ -75,12 +75,10 @@ To concentrate on debugging application actors from Eclipse (or a command line) 
 - launch 'riaps_actor app model actor args'
 
 where  
-	```
-  	app    : Name of parent app
-  	model : Name of processed (JSON) model file
-  	actor  : Name of specific actor from the model this process will run
-  	args   : List of arguments for the actor of the form: --argName argValue 
-    ```
+- app    : Name of parent app
+- model : Name of processed (JSON) model file
+- actor  : Name of specific actor from the model this process will run
+- args   : List of arguments for the actor of the form: --argName argValue 
     
 Place breakpoints in the code where desired.
 
