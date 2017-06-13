@@ -86,8 +86,7 @@ Place breakpoints in the code where desired.
 
 This method runs the control application on a development machine and applications on separate hardware nodes that are attached to the same local network using a router.
 
-As indicated in the previous method, create the project ('pro'), model file ('pro.riaps') and deployment file ('pro.deplo').  
-This deployment file will identify the IP address (xxx.xxx.xxx.xxx) or hostname (bbb-xxxx.local) of the hardware nodes that each actor will run.  If the actor is intended run on 'all' nodes, utilize the 'all' keyword.  The hostname is configured to be the last four digits of the hardware MAC address, be sure to include the .local added to the end.  An example of the possible node identification forms are shown below
+As indicated in the previous method, create the project ('pro'), model file ('pro.riaps') and deployment file ('pro.deplo').  This deployment file will identify the IP address (xxx.xxx.xxx.xxx) or hostname (bbb-xxxx.local) of the hardware nodes that each actor will run.  If the actor is intended run on 'all' nodes, utilize the 'all' keyword.  The hostname is configured to be the last four digits of the hardware MAC address, be sure to include the .local added to the end.  An example of the possible node identification forms are shown below
 ```
 	on 192.168.1.103 a1
 	on bbb-1234.local a2
