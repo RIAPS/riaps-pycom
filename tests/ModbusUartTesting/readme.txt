@@ -36,7 +36,7 @@ Configuration needed on the BBB image (to be updated in a future image)
     * After "Defaults  env_reset"
     * Add
         * Defaults    env_keep += "SLOTS"  
-        * Defaults    env_keep += "PINS" 
+        * Defaults    env_keep += "PINS"
 * To deal with user permission on UART
     $ sudo usermod -a -G dialout riaps     
     $ sudo usermod -a -G dialout riapsdev  (if running on the host VM)
@@ -46,8 +46,7 @@ To turn on the UART2, modify /boot/uEnv.txt by uncommenting the following line a
 	#cape_disable=bone_capemgr.disable_partno=
 	cape_enable=bone_capemgr.enable_partno=BB-UART2
 	
-Reboot the beaglebone to see the UART2 enabled. UART2 device is setup as ttyO2 (where the fourth letter is the letter 'O', no zero) 
-that references ttyS2 (a special character files)
+Reboot the beaglebone to see the UART2 enabled. UART2 device is setup as ttyO2 (where the fourth letter is the letter 'O', no zero) that references ttyS2 (a special character files)
 
 To verify that UART2 is enabled, do the following:
 $ cat $SLOTS
