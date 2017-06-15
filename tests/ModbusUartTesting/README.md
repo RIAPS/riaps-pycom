@@ -1,3 +1,8 @@
+# RIAPS Application Description
+* ComputationalComponent.py - this is the application code that send and reads data as desired by the application needs 
+* ModbusUartDevice.py - this is the device actor that utilizes the Modbus UART interface and uses the developed library for communications
+  - RIAPS developed library:  serialModbusLib
+
 # BBB Software Setup Requirements
 ```
 	sudo pip3 install minimalmodbus (which installs pyserial)
