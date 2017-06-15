@@ -95,6 +95,8 @@ $ ls -l /dev/ttyO*
   - Simulator found at www.plcsimulator.org
 * DSP is slave, master simulator used was QModMaster 0.4.7
   - libmodbus 3.1.4 found at https://sourceforge.net/projects/qmodmaster
+* Modbus Message Parser
+  - http://modbus.rapidscada.net/
 
 # Debugging hints
 * If serial port is busy, make sure to stop the gpsd service using the following command
