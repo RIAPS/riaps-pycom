@@ -26,7 +26,8 @@ HW notes setting up the UART on the BBB
 Tools used to test UART2:  
 * Terminal tool on the host
 * USB to 3.3 V TTL Cable (TTL-232R-3V3 by FTDI Chip) 
-    - How to connect with BBB (P9 connector):  White (RX) to BBB TX (pin 21), Green (TX) to BBB RX (pin 22), GND on BBB pins 1, 2, 45, 46
+    - How to connect with BBB (P9 connector):  White (RX) to BBB TX (pin 21), Green (TX) to BBB RX (pin 22), 
+      GND on BBB pins 1, 2, 45, 46
     
 Configuration needed on the BBB image (to be updated in a future image)
 * in .bashrc, add setup environment variables for these tools 
@@ -41,12 +42,14 @@ Configuration needed on the BBB image (to be updated in a future image)
     $ sudo usermod -a -G dialout riaps     
     $ sudo usermod -a -G dialout riapsdev  (if running on the host VM)
 
-To turn on the UART2, modify /boot/uEnv.txt by uncommenting the following line and adding BB-UART2 (which points to an overlay in /lib/firmware)
+To turn on the UART2, modify /boot/uEnv.txt by uncommenting the following line and adding BB-UART2 (which points to an overlay 
+in /lib/firmware)
 	#Example v4.1.x
 	#cape_disable=bone_capemgr.disable_partno=
 	cape_enable=bone_capemgr.enable_partno=BB-UART2
 	
-Reboot the beaglebone to see the UART2 enabled. UART2 device is setup as ttyO2 (where the fourth letter is the letter 'O', no zero) that references ttyS2 (a special character files)
+Reboot the beaglebone to see the UART2 enabled. UART2 device is setup as ttyO2 (where the fourth letter is the letter 'O', no zero) 
+that references ttyS2 (a special character files)
 
 To verify that UART2 is enabled, do the following:
 $ cat $SLOTS
