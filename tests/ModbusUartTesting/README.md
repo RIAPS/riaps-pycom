@@ -35,7 +35,7 @@
     
 * Configuration needed on the BBB image (to be updated in a future image)
   - in .bashrc, add setup environment variables for these tools 
-  ```
+```
     	$ export SLOTS=/sys/devices/platform/bone_capemgr/slots
     	$ export PINS=/sys/kernel/debug/pinctrl/44e10800.pinmux/pins
 ```
@@ -71,7 +71,7 @@ is the letter 'O', no zero) that references ttyS2 (a special character files)
 	 2: PF----  -1 
 	 3: PF----  -1 
 	 4: P-O-L-   0 Override Board Name,00A0,Override Manuf,BB-UART2
- ```
+```
  
 $ ls -l /dev/ttyO*
 ```
