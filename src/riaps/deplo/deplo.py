@@ -28,6 +28,7 @@ class DeploService(object):
         script must be in the path. One way to achieve this is to run this script in the same folder 
         '''
         self.ctrlrHost = host 
+        self.logger.info("Controller host is %s" %self.ctrlrHost)
         self.ctrlrPort = port
         self.conn = None
         self.bgsrv = None

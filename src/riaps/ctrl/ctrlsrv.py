@@ -111,6 +111,7 @@ class ServiceThread(threading.Thread):
     def __init__(self,port):
         threading.Thread.__init__(self)
         self.port = port
+        self.logger = logging.getLogger(__name__)
     
     def setController(self,ctrl):
         '''
@@ -124,6 +125,7 @@ class ServiceThread(threading.Thread):
         Runs the rpyc ThreadedServer with the service implementation.
         NOTE: it expects a rpyc service registry running 
         '''
+        self.logger.info("Start RPYC Threaded Server")
         self.server = ThreadedServer(ControllerService,port=self.port,auto_register=True)
         self.server.start()
         
