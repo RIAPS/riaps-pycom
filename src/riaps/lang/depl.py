@@ -70,8 +70,7 @@ class DeploymentModel(object):
         for actual in actuals:
             actualObj = { }
             actualObj["name"] = actual.argName
-            # value is used in all (value) options, textX makes it a list
-            actualObj["value"] = actual.argValue.value[0]
+            actualObj["value"] = actual.argValue.value
             res.append(actualObj)
         return res
     

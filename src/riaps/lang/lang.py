@@ -69,8 +69,7 @@ class RiapsModel2JSON(object):
                 names.append(argName)
             formalObj["name"] = argName
             if formal.argDefault != None:
-                # default is used in all options, textX makes it a list
-                formalObj["default"] = formal.argDefault.default[0]
+                formalObj["default"] = formal.argDefault.default
             res.append(formalObj)
         return res
     def getIOComponents(self,components):
@@ -195,8 +194,7 @@ class RiapsModel2JSON(object):
             if actual.argValue.param != '':
                 actualObj["param"] = actual.argValue.param
             else:
-                # value is used in all (value) options, textX makes it a list
-                actualObj["value"] = actual.argValue.value[0]
+                actualObj["value"] = actual.argValue.value
             res.append(actualObj)
         return res
     def getInstances(self,instances):
