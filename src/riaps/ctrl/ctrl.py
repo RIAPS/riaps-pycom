@@ -88,6 +88,7 @@ class Controller(object):
             self.logger.error("Error: no active network interface")
             raise
         globalIP = globalIPs[0]
+        self.logger.info("globalIP: %s" %globalIP)
         globalMAC = globalMACs[0]
         self.hostAddress = globalIP
         self.macAddress = globalMAC
