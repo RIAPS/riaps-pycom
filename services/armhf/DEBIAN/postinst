@@ -5,14 +5,30 @@ systemctl start sethostname.service
 systemctl enable sethostname.service 
 getent group gpio ||groupadd gpio
 getent group dialout ||groupadd dialout
+getent group pwm ||groupadd pwm
+
+if [ ! -f "/etc/udev/rules.d/80-gpio-noroot.rules" ]
+then
+    echo "# /etc/udev/rules.d/80-gpio-noroot.rules" > /etc/udev/rules.d/80-gpio-noroot.rules
+    echo "#" >> /etc/udev/rules.d/80-gpio-noroot.rules
+    echo "# From: https://forum.pine64.org/showthread.php?tid=2233" >> /etc/udev/rules.d/80-gpio-noroot.rules
+    echo "#" >> /etc/udev/rules.d/80-gpio-noroot.rules
+    echo "# Corrects sys GPIO permissions on the Pine64 so non-root users in the gpio group can manipulate bits" >> /etc/udev/rules.d/80-gpio-noroot.rules
+    echo "#" >> /etc/udev/rules.d/80-gpio-noroot.rules
+    echo "# Change group to gpio" >> /etc/udev/rules.d/80-gpio-noroot.rules
+    echo "SUBSYSTEM=="gpio", PROGRAM="/bin/sh -c '/bin/chown -R root:gpio /sys/devices/platform/ocp/*.gpio'"" >> /etc/udev/rules.d/80-gpio-noroot.rules
+    echo "# Change user permissions to ensure user and group have read/write permissions" >> /etc/udev/rules.d/80-gpio-noroot.rules
+    echo "SUBSYSTEM=="gpio", PROGRAM="/bin/sh -c '/bin/chmod -R ug+rw /sys/devices/platform/ocp/*.gpio'"" >> /etc/udev/rules.d/80-gpio-noroot.rules
+fi
+
 udevadm trigger --subsystem-match=gpio
+
 echo "replacing network/interfaces with network/interfaces-riaps"
 echo "copying old network/interfaces to network/interfaces.preriaps"
 touch /etc/network/interfaces
 cp /etc/network/interfaces /etc/network/interfaces.preriaps
 cp /etc/network/interfaces-riaps /etc/network/interfaces
 echo "replaced network interfaces"
-
 
 echo "replacing resolv.conf"
 touch /etc/resolv.conf
