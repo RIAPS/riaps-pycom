@@ -16,9 +16,13 @@ then
     echo "# Corrects sys GPIO permissions on the Pine64 so non-root users in the gpio group can manipulate bits" >> /etc/udev/rules.d/80-gpio-noroot.rules
     echo "#" >> /etc/udev/rules.d/80-gpio-noroot.rules
     echo "# Change group to gpio" >> /etc/udev/rules.d/80-gpio-noroot.rules
-    echo "SUBSYSTEM=="gpio", PROGRAM="/bin/sh -c '/bin/chown -R root:gpio /sys/devices/platform/ocp/*.gpio'"" >> /etc/udev/rules.d/80-gpio-noroot.rules
+    echo "SUBSYSTEM==\"gpio\", PROGRAM=\"/bin/sh -c '/bin/chown -R root:gpio /sys/devices/platform/ocp/*.gpio'\"" >> /etc/udev/rules.d/80-gpio-noroot.rules
     echo "# Change user permissions to ensure user and group have read/write permissions" >> /etc/udev/rules.d/80-gpio-noroot.rules
-    echo "SUBSYSTEM=="gpio", PROGRAM="/bin/sh -c '/bin/chmod -R ug+rw /sys/devices/platform/ocp/*.gpio'"" >> /etc/udev/rules.d/80-gpio-noroot.rules
+    echo "SUBSYSTEM==\"gpio\", PROGRAM=\"/bin/sh -c '/bin/chmod -R ug+rw /sys/devices/platform/ocp/*.gpio'\"" >> /etc/udev/rules.d/80-gpio-noroot.rules
+
+    echo "Created 80-gpio-noroot.rules file"
+else
+    echo "80-gpio-noroot.rules file already exists, this is a good thing"
 fi
 
 udevadm trigger --subsystem-match=gpio
