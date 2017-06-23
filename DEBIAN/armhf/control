@@ -1,7 +1,7 @@
 Package: riaps-pycom-armhf
 Architecture: armhf
 Maintainer: Institute for Software Integrated Systems 
-Depends: debconf (>= 0.5.00),libssl-dev, python3, python3-pip, cython3 
+Depends: debconf (>= 0.5.00),libssl-dev, python3, python3-pip, cython3, riaps-core-armhf 
 Conflicts: 
 Priority: required
 Version:  @version@
