@@ -46,7 +46,7 @@ class ControlGUIClient(object):
                                       "onRemove" : self.on_Remove
                                       })
 
-        self.conn = rpyc.connect("localhost",port)  # Local connection to the service
+        self.conn = rpyc.connect(self.controller.hostAddress,port)  # Local connection to the service
         GLib.io_add_watch(self.conn,1,GLib.IO_IN,self.bg_server)    # Register the callback with the service
         self.conn.root.login("*gui*",self.on_serverMessage)         # Log in to the service
         
