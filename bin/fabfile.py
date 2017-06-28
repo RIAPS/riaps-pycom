@@ -34,27 +34,19 @@ def hello_hosts():
 # RIAPS Platform Update
 # First download the latest riaps-release.tar.gz from https://github.com/RIAPS/riaps-integration/releases
 def update_riaps():
-    """update RIAPS platform"""
-    localFilePath = '/home/riaps/Downloads/'
-    nodePutPath = '/home/riaps/'
-    filename = 'riaps-release.tar.gz'
-
-    put(localFilePath + filename, nodePutPath + filename)
-    run('tar xvzf ' + nodePutPath + filename)
-    run('sudo dpkg -i riaps-release/riaps-externals-armhf.deb')
+    """update RIAPS platform on hosts"""
+    
+    sudo('apt-get install riaps-externals-armhf -y')
     run('echo "installed externals"')
-    run('sudo dpkg -i riaps-release/riaps-core-armhf.deb')
+    sudo('apt-get install riaps-core-armhf')
     run('echo "installed core"')
-    run('sudo dpkg -i riaps-release/riaps-pycom-armhf.deb')
+    sudo('apt-get install riaps-pycom-armhf')
     run('echo "installed pycom"')
-    run('sudo dpkg -i riaps-release/riaps-systemd-armhf.deb') 
+    sudo('apt-get install riaps-systemd-armhf') 
     run('echo "installed services"')
-    run('sudo dpkg -i riaps-release/riaps-timesync-armhf.deb') 
+    sudo('apt-get install riaps-timesync-armhf') 
     run('echo "installed timesync"')
-    run('rm ' + nodePutPath + filename)
-
-    run('rm -R ' + nodePutPath + 'riaps-release')
-
+    
 
 # Control RIAPS operation (manual control)
 #------------------------------------------
@@ -79,13 +71,13 @@ def stop():
 @parallel
 def halt():
     """halt the hosts"""
-    run('sudo halt')
+    sudo('halt')
 
 # Reboot the hosts
 @parallel
 def reboot():
     """reboot the hosts"""
-    run('sudo reboot')
+    sudo('reboot')
 
 # Launch the riaps controller on the control host
 # Note: starts and stops the rpyc registry as well
@@ -141,14 +133,14 @@ def stopDeplo():
 def createDeployLogs():
     """create deployment log"""
     host_ID = env.host_string
-    run('sudo journalctl -u deplo.service --since today > /home/riaps/deploy_' + host_ID + '.log')
+    sudo('journalctl -u deplo.service --since today > /home/riaps/deploy_' + host_ID + '.log')
 
 # The system journal run continuously with no regard to login session. So to isolate testing data, the system journal can be cleared.
 @parallel
 def clear_journal_log():
     """clear system journal"""
-    run('sudo rm -rf  /run/log/journal/*')
-    run('sudo systemctl restart systemd-journald')
+    sudo('rm -rf  /run/log/journal/*')
+    sudo('systemctl restart systemd-journald')
 
 
 # System Utilities
@@ -175,7 +167,7 @@ def fileTransferTo():
 def config_routing():
     """Configure routing"""
     env.warn_only = True
-    run('sudo route add default gw 10.1.1.249 dev eth0')
+    sudo('route add default gw 10.1.1.249 dev eth0')
 
 def noPass():
     """Create riaps file in sudoers directory and allow riaps to sudo with no password"""
