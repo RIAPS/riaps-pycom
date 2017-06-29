@@ -56,9 +56,7 @@ def update_riaps():
 @parallel
 def deplo():
     """start deplo on hosts"""
-    # ---- START OF EDIT HERE ----
-    run('riaps_deplo -n 192.168.1.103 >~/riaps.log')
-    # ----  END OF EDIT HERE  ----
+    run('riaps_deplo >~/riaps.log')
 
 # Stop anything related to riaps on the hosts
 @parallel
@@ -114,26 +112,26 @@ def checkPTP():
 @parallel
 def startDeplo():
     """start deplo.service"""
-    sudo('systemctl enable disco.service')
-    sudo('systemctl start disco.service')
-    sudo('systemctl enable deplo.service')
-    sudo('systemctl start deplo.service')
+    sudo('systemctl enable riaps-disco.service')
+    sudo('systemctl start riaps-disco.service')
+    sudo('systemctl enable riaps-deplo.service')
+    sudo('systemctl start riaps-deplo.service')
 
 @parallel
 def stopDeplo():
     """stop deplo.service"""
-    sudo('systemctl stop disco.service')
-    sudo('systemctl disable disco.service')
-    sudo('systemctl stop deplo.service')
-    sudo('systemctl disable deplo.service')
+    sudo('systemctl stop riaps-disco.service')
+    sudo('systemctl disable riaps-disco.service')
+    sudo('systemctl stop riaps-deplo.service')
+    sudo('systemctl disable riaps-deplo.service')
 
-# If using deplo.service, the log data is being recorded in a system journal.
+# If using riaps-deplo.service, the log data is being recorded in a system journal.
 # This function pulls that data from the system journal and places them in a log file
 @parallel
 def createDeployLogs():
     """create deployment log"""
     host_ID = env.host_string
-    sudo('journalctl -u deplo.service --since today > /home/riaps/deploy_' + host_ID + '.log')
+    sudo('journalctl -u riaps-deplo.service --since today > /home/riaps/deploy_' + host_ID + '.log')
 
 # The system journal run continuously with no regard to login session. So to isolate testing data, the system journal can be cleared.
 @parallel
@@ -147,7 +145,7 @@ def clear_journal_log():
 #--------------------
 def fileTransferFrom():
     """Transfer files from hosts (BBBs) to control host"""
-    localFilePath = '/home/riaps/Download/'
+    localFilePath = '/home/riaps/Downloads/'
     nodeGetPath = '/home/riaps/'
     filename = 'hostfile'
 
@@ -169,7 +167,5 @@ def config_routing():
     env.warn_only = True
     sudo('route add default gw 10.1.1.249 dev eth0')
 
-def noPass():
-    """Create riaps file in sudoers directory and allow riaps to sudo with no password"""
-    sudo('cd /etc/sudoers.d && echo \'%riaps ALL=NOPASSWD: ALL\' >riaps')
+
 
