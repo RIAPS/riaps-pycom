@@ -165,6 +165,8 @@ def fileTransferTo():
 def config_routing():
     """Configure routing"""
     env.warn_only = True
+    # ---- EDIT HERE ----
+    # Provide appropriate IP address
     sudo('route add default gw 10.1.1.249 dev eth0')
 
 
