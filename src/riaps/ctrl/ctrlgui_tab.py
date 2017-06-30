@@ -321,24 +321,20 @@ class ControlGUIClient_Tab(object):
 
         self.nodeIDDict[ip] = False
         col_keys = list(self.nodeIDDict.keys())
-        col_id = col_keys.index(ip) + 1
-        c_cell = self.gridTable.get_child_at(col_id, 0)
+        col_idx = col_keys.index(ip) + 1
+        c_cell = self.gridTable.get_child_at(col_idx, 0)
 
         if c_cell is not None:
             self.modify_text_cell_color(c_cell, 'black')
             self.modify_text_cell_text(c_cell)
 
-            # modify data - reset the data at a particular index (col_id)
-            #data_index = col_id
-            #for index, key in enumerate(self.appStatusDict, 1):
-            #    self.appStatusDict[key][data_index] = ''
-            #    r_cell = self.gridTable.get_child_at(data_index, index)
-            #    if r_cell is not None:
-            #        self.modify_text_cell_color(r_cell, 'gray')
-            #        self.modify_text_cell_text(r_cell, self.cellTextPlaceHolder)
-
-            for app in self.appStatusDict:
-                self.remove_app(app)
+            # modify data - reset the data at a particular (col_idx)
+            for row_idx, key in enumerate(self.appStatusDict, 1):
+                self.appStatusDict[key][col_idx] = ''
+                r_cell = self.gridTable.get_child_at(col_idx, row_idx)
+                if r_cell is not None:
+                    self.modify_text_cell_color(r_cell, 'white')
+                    self.modify_text_cell_text(r_cell, self.cellTextPlaceHolder)
 
         self.gridTable.show_all()
 
