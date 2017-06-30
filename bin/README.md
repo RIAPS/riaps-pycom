@@ -35,20 +35,20 @@ The fabfile.py provides tools for configuring and controlling multiple BBBs.  Th
 ```
 
 ## To control RIAPS services (for more automation)
-	- Start the deployment on the host nodes when the system is booted up with *startDeplo*.  This will also start the discovery process. 
-	- Turn the deployment service off on the host nodes by using *stopDeplo*.  This will also stop and disable the discovery service.
-	- When using the RIAPS services, the application logs are stored in the system logs with a tag for the service.  To pull this information into your own file, use the *createDeployLogs* command.  These logs are continuous.  So if you want only the logs from the current testing set, first *clear_journal_log*.
+- Start the deployment on the host nodes when the system is booted up with *startDeplo*.  This will also start the discovery process. 
+- Turn the deployment service off on the host nodes by using *stopDeplo*.  This will also stop and disable the discovery service.
+- When using the RIAPS services, the application logs are stored in the system logs with a tag for the service.  To pull this information into your own file, use the *createDeployLogs* command.  These logs are continuous.  So if you want only the logs from the current testing set, first *clear_journal_log*.
 - To control activity on RIAPS host nodes use either *stop*, *halt*, or *reboot*.  The *halt* should be done prior to powering down the hosts.
 
 ## Time synchronization functions 
-	- *timeStamp* will compare the clocks on the hosts
-	- *checkPTP* checks to see if ptp is running on the control host
+- *timeStamp* will compare the clocks on the hosts
+- *checkPTP* checks to see if ptp is running on the control host
 
 ## System utilities available	
-	- Transfer files between the control host and the host nodes use the following command.  Be sure to edit the fabfile.py to find the right locations of where to get and place the files.  If transferring to a system location, use_sudo=True.
-		*fileTransferFrom* will transfer files from host nodes to the control host
-		*fileTransferTo* will transfer files to the host nodes from the control host 
-	- Configure routing in a cluster that has a gateway to the internet using *config_routing*.  Be sure to edit the fabfile.py to update the gateway address.
+- Transfer files between the control host and the host nodes use the following command.  Be sure to edit the fabfile.py to find the right locations of where to get and place the files.  If transferring to a system location, use_sudo=True.
+	*fileTransferFrom* will transfer files from host nodes to the control host
+	*fileTransferTo* will transfer files to the host nodes from the control host 
+- Configure routing in a cluster that has a gateway to the internet using *config_routing*.  Be sure to edit the fabfile.py to update the gateway address.
 
 # Utilities for Mininet Operations
 This is for RIAPS developers - NOT for APP developers.
