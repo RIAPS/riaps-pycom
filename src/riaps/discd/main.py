@@ -44,6 +44,7 @@ def main(debug=True):
     global theDisco
     theDisco = DiscoService(args.database)  # Assign the service to the singleton
     signal.signal(signal.SIGTERM,termHandler)
+    signal.signal(signal.SIGINT,termHandler)
     theDisco.start()
     theDisco.run()
 #    if debug:

@@ -326,6 +326,7 @@ class ControlGUIClient_Tab(object):
 
         if c_cell is not None:
             self.modify_text_cell_color(c_cell, 'black')
+            self.modify_text_cell_text(c_cell)
 
             # modify data - reset the data at a particular index (col_id)
             #data_index = col_id

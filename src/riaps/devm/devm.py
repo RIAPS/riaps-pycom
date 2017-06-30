@@ -223,3 +223,6 @@ class DevmService(object):
         else:
             pass
         
+    def terminate(self):
+        pass
+        
