@@ -42,7 +42,7 @@ class ControlGUIClient_Tab(object):
         self.builder = Gtk.Builder()
         riaps_folder = os.getenv('RIAPSHOME', './')
         try:
-            self.builder.add_from_file(join(riaps_folder, "etc/riaps-ctrl-table.gladeR"))  # GUI construction
+            self.builder.add_from_file(join(riaps_folder, "etc/riaps-ctrl-table.glade"))  # GUI construction
         except RuntimeError:
             self.logger.error('Cannot find GUI configuration file')
             raise
