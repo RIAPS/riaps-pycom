@@ -12,7 +12,7 @@ import os
 from os.path import join
 from _collections import OrderedDict
 import re
-
+import logging
 
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, GLib, Gdk
@@ -36,11 +36,16 @@ class ControlGUIClient_Tab(object):
         '''
         global guiClient
         guiClient = self
+        self.logger = logging.getLogger(__name__)
         self.port = port
         self.controller = controller
         self.builder = Gtk.Builder()
         riaps_folder = os.getenv('RIAPSHOME', './')
-        self.builder.add_from_file(join(riaps_folder, "etc/riaps-ctrl-table.glade"))  # GUI construction
+        try:
+            self.builder.add_from_file(join(riaps_folder, "etc/riaps-ctrl-table.gladeR"))  # GUI construction
+        except RuntimeError:
+            self.logger.error('Cannot find GUI configuration file')
+            raise
         self.builder.connect_signals({"onDeleteWindow": self.on_Quit,
                                       "onConsoleEntryActivate": self.on_ConsoleEntry,
                                       "onSelectApplication": self.on_SelectApplication,
