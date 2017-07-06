@@ -330,8 +330,8 @@ class ControlGUIClient_Tab(object):
         c_cell = self.gridTable.get_child_at(col_idx, 0)
 
         if c_cell is not None:
-            self.modify_text_cell_color(c_cell, 'black')
-            self.modify_text_cell_text(c_cell)
+            self.modify_text_cell_color(c_cell, 'black', 'gray')
+
 
             # modify data - reset the data at a particular (col_idx)
             for row_idx, key in enumerate(self.appStatusDict, 1):
