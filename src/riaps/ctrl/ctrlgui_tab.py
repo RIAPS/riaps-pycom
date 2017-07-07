@@ -366,12 +366,13 @@ class ControlGUIClient_Tab(object):
         if node not in self.nodeIDDict:
             return
 
-        col_map = list(self.nodeIDDict.keys())
-        col_id = col_map.index(node) + 1
-        row_map = list(self.appStatusDict.keys())
-        row_id = row_map.index(app) + 1
-        cell = self.gridTable.get_child_at (col_id, row_id)
-        self.modify_text_cell_color(cell, 'grey')
+        if self.nodeIDDict[node] is True:
+            col_map = list(self.nodeIDDict.keys())
+            col_id = col_map.index(node) + 1
+            row_map = list(self.appStatusDict.keys())
+            row_id = row_map.index(app) + 1
+            cell = self.gridTable.get_child_at (col_id, row_id)
+            self.modify_text_cell_color(cell, 'grey')
 
     def launch_app(self, node, app, actor):
         '''
