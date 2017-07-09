@@ -14,8 +14,7 @@ setup(name='riaps-pycom',
       data_files=[('riaps/etc', ['riaps/etc/riaps.conf',  'riaps/etc/riaps-log.conf']),
                   ('riaps/lang',['riaps/lang/riaps.tx', 'riaps/lang/depl.tx']),
                   ('riaps/etc',['riaps/etc/redis.conf']),
-                  ('riaps/etc',['riaps/etc/riaps-ctrl.glade']),
-                  ('riaps/keys',['riaps/keys/id_rsa.key','riaps/keys/id_rsa.pub'])
+                  ('riaps/etc',['riaps/etc/riaps-ctrl-table.glade'])
                ],
       scripts = [
         "scripts/riaps_actor", "scripts/riaps_ctrl", "scripts/riaps_deplo", "scripts/riaps_disco", "scripts/riaps_lang", "scripts/riaps_depll", "scripts/riaps_device", "scripts/riaps_devm"

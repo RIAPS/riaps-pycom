@@ -28,7 +28,6 @@ class DeploService(object):
         script must be in the path. One way to achieve this is to run this script in the same folder 
         '''
         self.ctrlrHost = host 
-        self.logger.info("Controller host is %s" %self.ctrlrHost)
         self.ctrlrPort = port
         self.conn = None
         self.bgsrv = None
@@ -36,6 +35,8 @@ class DeploService(object):
         self.launchMap = { }            # Map of launched actors
         self.riapsApps = os.getenv('RIAPSAPPS', './')
         self.logger.info("Starting with apps in %s" % self.riapsApps)
+        self.disco = None
+        self.devm = None
         
         self.riaps_actor_file = 'riaps_actor'       # Default name for the executable riaps actor shell
         try:
