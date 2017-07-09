@@ -9,4 +9,15 @@ pip3 install /opt/riaps-pycom/src --verbose
 mkdir -p /etc/riaps
 for i in `ls /usr/local/riaps/etc`; do ln -s  /usr/local/riaps/etc/$i /etc/riaps/$i ;done
 
+#Create soft link from rdiscoveryd to run as default
+mv /usr/local/bin/riaps_disco /usr/local/bin/riaps_disco_redis
+ln -s /opt/riaps/amd64/bin/rdiscoveryd /usr/local/bin/riaps_disco
+
 pip3 install minimalmodbus pyserial 
+
+#install user ssh keys
+sudo cp /home/riaps/.ssh/id_rsa.key /usr/local/riaps/keys/id_rsa.key
+sudo cp /home/riaps/.ssh/id_rsa.pub /usr/local/riaps/keys/id_rsa.pub
+sudo chown riaps:riaps /usr/local/riaps/keys/id_rsa.key
+sudo chown riaps:riaps /usr/local/riaps/keys/id_rsa.pub
+sudo -H -u riaps chmod 600 /usr/local/riaps/keys/id_rsa.key
