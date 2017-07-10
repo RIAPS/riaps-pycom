@@ -16,4 +16,9 @@ ln -s /opt/riaps/armhf/bin/rdiscoveryd /usr/local/bin/riaps_disco
 #packages used by Device Components
 pip3 install pyserial minimalmodbus
 
-
+#install user ssh keys
+sudo cp /home/riaps/.ssh/id_rsa.key /usr/local/riaps/keys/id_rsa.key
+sudo cp /home/riaps/.ssh/id_rsa.pub /usr/local/riaps/keys/id_rsa.pub
+sudo chown riaps:riaps /usr/local/riaps/keys/id_rsa.key
+sudo chown riaps:riaps /usr/local/riaps/keys/id_rsa.pub
+sudo -H -u riaps chmod 600 /usr/local/riaps/keys/id_rsa.key
