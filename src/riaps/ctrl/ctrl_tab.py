@@ -196,7 +196,13 @@ class Controller_Tab(object):
         keys available from an SSH agent or from a local private RSA key file (assumes no pass phrase).
         """
         rsa_private_key = join(self.riaps_Folder,"keys/" + str(const.ctrlPrivateKey))
-        
+        # check if the rsa_private_key exists or not
+        if not os.path.isfile(rsa_private_key):
+           self.logger.warning('cannot find key %s. Looking in different location' %(rsa_private_key))
+           #set the private key to /home/riaps/.ssh/
+           rsa_private_key = join("/home/riaps/.ssh" + str(const.ctrlPrivateKey))
+           if not os.path.isfile(rsa_private_key):
+             self.logger.error('cannot find key %s' %(rsa_private_key))
         try:
             ki = paramiko.RSAKey.from_private_key_file(rsa_private_key)
         except Exception as e:
