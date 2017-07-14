@@ -38,13 +38,13 @@ def update_riaps():
     
     sudo('apt-get install riaps-externals-armhf -y')
     run('echo "installed externals"')
-    sudo('apt-get install riaps-core-armhf')
+    sudo('apt-get install riaps-core-armhf -y')
     run('echo "installed core"')
-    sudo('apt-get install riaps-pycom-armhf')
+    sudo('apt-get install riaps-pycom-armhf -y')
     run('echo "installed pycom"')
-    sudo('apt-get install riaps-systemd-armhf') 
+    sudo('apt-get install riaps-systemd-armhf -y') 
     run('echo "installed services"')
-    sudo('apt-get install riaps-timesync-armhf') 
+    sudo('apt-get install riaps-timesync-armhf -y') 
     run('echo "installed timesync"')
     
 
