@@ -36,6 +36,7 @@ def hello_hosts():
 def update_riaps():
     """update RIAPS platform on hosts"""
     
+    sudo('apt-get update')
     sudo('apt-get install riaps-externals-armhf -y')
     run('echo "installed externals"')
     sudo('apt-get install riaps-core-armhf -y')
