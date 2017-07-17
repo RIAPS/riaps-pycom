@@ -200,7 +200,7 @@ class Controller_Tab(object):
         if not os.path.isfile(rsa_private_key):
            self.logger.warning('cannot find key %s. Looking in different location' %(rsa_private_key))
            #set the private key to /home/riaps/.ssh/
-           rsa_private_key = join(os.path.expanduser('~/.ssh/') + str(const.ctrlPrivateKey))
+           rsa_private_key = join(os.path.expanduser('~','.ssh/',str(const.ctrlPrivateKey))
            if not os.path.isfile(rsa_private_key):
              self.logger.error('cannot find key %s' %(rsa_private_key))
         try:
