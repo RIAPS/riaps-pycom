@@ -182,11 +182,11 @@ class Controller_Tab(object):
         # get host key, if we know one
         self.hostKeys = {}
         try:
-            self.hostKeys = paramiko.util.load_host_keys(os.path.expanduser('~/.ssh/known_hosts'))
+            self.hostKeys = paramiko.util.load_host_keys(os.path.expanduser(os.path.join('~','.ssh','known_hosts')))
         except IOError:
             try:
                 # try ~/ssh/ too, e.g. on windows
-                self.hostKeys = paramiko.util.load_host_keys(os.path.expanduser('~/ssh/known_hosts'))
+                self.hostKeys = paramiko.util.load_host_keys(os.path.expanduser(os.path.join('~','ssh','known_hosts')))
             except IOError:
                 pass     
 
@@ -200,7 +200,7 @@ class Controller_Tab(object):
         if not os.path.isfile(rsa_private_key):
            self.logger.warning('cannot find key %s. Looking in different location' %(rsa_private_key))
            #set the private key to /home/riaps/.ssh/
-           rsa_private_key = join(os.path.expanduser('~','.ssh/',str(const.ctrlPrivateKey))
+           rsa_private_key = os.path.expanduser(os.path.join('~','.ssh',str(const.ctrlPrivateKey)))
            if not os.path.isfile(rsa_private_key):
              self.logger.error('cannot find key %s' %(rsa_private_key))
         try:
