@@ -7,7 +7,7 @@ pip3 install 'Adafruit_BBIO == 1.0.3' 'pydevd==1.0.0' 'redis==2.10.5' 'hiredis =
 pip3 install /opt/riaps-pycom/src --verbose
 
 mkdir -p /etc/riaps
-for i in `ls /usr/local/riaps/etc`; do ln -s  /usr/local/riaps/etc/$i /etc/riaps/$i ;done
+for i in `ls /usr/local/riaps/etc`; do rm -f /usr/local/riaps/etc/$i;ln -s  /usr/local/riaps/etc/$i /etc/riaps/$i ;done
 
 #Create soft link from rdiscoveryd to run as default
 mv /usr/local/bin/riaps_disco /usr/local/bin/riaps_disco_redis
