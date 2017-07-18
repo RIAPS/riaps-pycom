@@ -7,7 +7,9 @@ pip3 install  'pydevd==1.0.0' 'textX==1.5.1' 'redis==2.10.5' 'hiredis == 0.2.0' 
 pip3 install /opt/riaps-pycom/src --verbose
 
 mkdir -p /etc/riaps
-for i in `ls /usr/local/riaps/etc`; do ln -s  /usr/local/riaps/etc/$i /etc/riaps/$i ;done
+
+#delete and create links again
+for i in `ls /usr/local/riaps/etc`; do rm -f /etc/riaps/$i;ln -s  /usr/local/riaps/etc/$i /etc/riaps/$i ;done
 
 #Create soft link from rdiscoveryd to run as default
 mv /usr/local/bin/riaps_disco /usr/local/bin/riaps_disco_redis
