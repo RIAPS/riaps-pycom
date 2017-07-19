@@ -190,32 +190,32 @@ class Controller_Tab(object):
             except IOError:
                 pass     
 
+    def addKeyToAgent(self,agent_keys,rsa_private_key):
+        if os.path.isfile(rsa_private_key):
+           try:
+              ki = paramiko.RSAKey.from_private_key_file(rsa_private_key)
+              agent_keys=agent_keys + (ki,)
+              self.logger.warning('added key %s'% rsa_private_key)
+           except Exception as e:
+              self.logger.error('Failed loading %s' % (rsa_private_key, e))
+        return agent_keys
+
     def authenticate(self,transport,username):
         """
         Attempt to authenticate to the given transport using any of the private
         keys available from an SSH agent or from a local private RSA key file (assumes no pass phrase).
         """
-        rsa_private_key = join(self.riaps_Folder,"keys/" + str(const.ctrlPrivateKey))
-        # check if the rsa_private_key exists or not
-        if not os.path.isfile(rsa_private_key):
-           self.logger.warning('cannot find key %s. Looking in different location' %(rsa_private_key))
-           #set the private key to /home/riaps/.ssh/
-           rsa_private_key = os.path.expanduser(os.path.join('~','.ssh',str(const.ctrlPrivateKey)))
-           if not os.path.isfile(rsa_private_key):
-             self.logger.error('cannot find key %s' %(rsa_private_key))
-        try:
-            ki = paramiko.RSAKey.from_private_key_file(rsa_private_key)
-        except Exception as e:
-                self.logger.error('Failed loading %s' % (rsa_private_key, e))
-                return
-
         agent = paramiko.Agent()
-        agent_keys = agent.get_keys() + (ki,)
+        agent_keys = agent.get_keys() 
+        rsa_private_key = join(self.riaps_Folder,"keys/" + str(const.ctrlPrivateKey))
+        agent_keys=self.addKeyToAgent(agent_keys,rsa_private_key)
+        rsa_private_key = os.path.expanduser(os.path.join('~','.ssh',str(const.ctrlPrivateKey)))        
+        agent_keys=self.addKeyToAgent(agent_keys,rsa_private_key)
         if len(agent_keys) == 0:
+            self.logger.error('no suitable key found.')
             return
-
         for key in agent_keys:
-            self.logger.info ('Trying user %s ssh-agent key %s' % (username,key.get_fingerprint().hex()))
+            self.logger.warning ('Trying user %s ssh-agent key %s' % (username,key.get_fingerprint().hex()))
             try:
                 transport.auth_publickey(username, key)
                 self.logger.info ('... success!')
@@ -230,7 +230,7 @@ class Controller_Tab(object):
         if hostName in self.hostKeys:
             hostKeyType = self.hostKeys[hostName].keys()[0]
             hostKey= self.hostKeys[hostName][hostKeyType]
-            self.logger.info ('Using host key of type %s' % hostKeyType)
+            self.logger.error ('Using host key of type %s' % hostKeyType)
 
         appFolder = self.riaps_appInfoDict[appName]['riaps_appFolder']
         try:
@@ -239,6 +239,7 @@ class Controller_Tab(object):
             t = paramiko.Transport((hostName, port))
             t.start_client()
             self.authenticate(t,Config.TARGET_USER)
+            logging.info('out of authenticate')
             if not t.is_authenticated():
                 self.logger.warning ('RSA key auth failed!') 
                 # t.connect(username=username, password=password, hostkey=hostkey)
