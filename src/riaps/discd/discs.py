@@ -9,6 +9,7 @@ import capnp
 import time
 import sys
 import re
+import os
 
 from .dbase import DiscoDbase
 from riaps.proto import disco_capnp
@@ -321,5 +322,6 @@ class DiscoService(object):
         self.context.destroy()
         time.sleep(1.0)
         self.logger.info("terminated")
-        sys.exit()
+        os._exit(0)
+
     

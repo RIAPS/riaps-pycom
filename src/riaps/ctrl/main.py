@@ -29,7 +29,7 @@ def termHandler(signal,frame):
             theController.stop()
         except:
             pass
-    sys.exit()
+    os._exit(0)
 
 def main(debug=True):
     parser = argparse.ArgumentParser()
@@ -46,7 +46,7 @@ def main(debug=True):
     signal.signal(signal.SIGTERM,termHandler)
     signal.signal(signal.SIGINT,termHandler)
     try:
-        #theController = Controller(args.port)
+#        theController = Controller(args.port)
         theController = Controller_Tab(args.port)
         theController.start()       # Start concurrent activities
         theController.run()         # Run the GUI Loop
@@ -54,8 +54,8 @@ def main(debug=True):
     except:
         if theController != None:
             theController.stop()
-    #print ("Unexpected error:", sys.exc_info()[0])
-    sys.exit()
+        # print ("Unexpected error:", sys.exc_info()[0])
+    os._exit(0)
 
 if __name__ == '__main__':
     pass

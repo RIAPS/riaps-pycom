@@ -270,4 +270,5 @@ class DeploService(object):
         self.context.destroy()
         time.sleep(1.0)
         self.logger.info("terminated")
-        sys.exit()
+        os._exit(0)
+        
