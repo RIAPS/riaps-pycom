@@ -1,4 +1,4 @@
-export externalsversion="0.4.4" 
-export coreversion="0.4.5"
-export pycomversion="0.4.17"
+export externalsversion="0.4.8" 
+export coreversion="0.5.0"
+export pycomversion="0.4.18"
 
