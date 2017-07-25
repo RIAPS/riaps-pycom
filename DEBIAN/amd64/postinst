@@ -17,3 +17,5 @@ ln -s /opt/riaps/amd64/bin/rdiscoveryd /usr/local/bin/riaps_disco
 
 pip3 install 'minimalmodbus==0.7' 'pyserial==3.3' 
 
+rm -rf /opt/riaps-pycom/
+

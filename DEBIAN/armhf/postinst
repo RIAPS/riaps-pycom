@@ -16,3 +16,5 @@ ln -s /opt/riaps/armhf/bin/rdiscoveryd /usr/local/bin/riaps_disco
 #packages used by Device Components
 pip3 install 'minimalmodbus==0.7' 'pyserial==3.3'
 
+rm -rf /opt/riaps-pycom/
+
