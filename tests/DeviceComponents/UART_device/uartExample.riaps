@@ -1,0 +1,30 @@
+// Uart example model file
+
+app UartExample {
+
+    message CltReq;
+    message SrvRep;
+
+    device UartDeviceComponent(uart_port_name='UART1',baud_rate = 9600) {
+      inside trigger;
+
+      timer clock 100;
+      rep uartRepPort : (CltReq, SrvRep);
+    }
+
+
+    component TestUartComponent() {
+
+      req uartReqPort : (CltReq, SrvRep);
+      timer activity 1000;
+    }
+
+    // TestUart actor
+    actor TestUartActor() {
+       local CltReq, SrvRep;	// Local message types
+       {
+       	  uartDevice : UartDeviceComponent(uart_port_name = 'UART1', baud_rate = 9600);
+          uartTester : TestUartComponent();
+       }
+    }
+}

@@ -1,0 +1,3 @@
+app UartExample {
+	on (100.0.0.162) TestUartActor;
+}
