@@ -16,6 +16,8 @@
       "actor": "Actor11_A"
     }
   ],
+  "gateways":[
+  ],  
   "riaps_apps_path": "riaps_apps",
   "username":"riaps",
   "password":"riapspwd"

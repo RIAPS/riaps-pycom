@@ -23,6 +23,8 @@
       "actor": "ActorTestN1s"
     }
   ],
+  "gateways":[
+  ],  
   "riaps_apps_path": "riaps_apps",
   "username": "riaps",
   "password":"riapspwd"
