@@ -1,4 +1,4 @@
-import os, sys, inspect
+import os, sys, inspect, subprocess
 
 import zopkio.adhoc_deployer as adhoc_deployer
 import zopkio.runtime as runtime
@@ -18,7 +18,6 @@ def setup_suite():
            "RIAPSAPPS": "$HOME/riaps_apps",
            "LD_LIBRARY_PATH": "/opt/riaps/armhf/lib"}
 
-    start_riaps_lang = "riaps_lang " + runtime.get_active_config('model_file')
 
     # Set up the sources
     model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -102,9 +101,14 @@ def setup_suite():
         checkDiscoDeployer.install(deployerId)
 
     # Deploy the riaps-components/model file
+    local_riaps_lang = "riaps_lang " + model_path
+    subprocess.call(local_riaps_lang, shell=True)
+    local_model_json = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                    runtime.get_active_config('app_dir') + '.json')
+ 
     for target in runtime.get_active_config('targets'):
         model_deployer = adhoc_deployer.SSHDeployer(target["actor"], {
-            'executable': model_path,
+            'executable': local_model_json,
             'install_path': os.path.join(riaps_app_path,
                                          runtime.get_active_config('app_dir')),
             'hostname': target["host"],
@@ -114,8 +118,7 @@ def setup_suite():
                      target["actor"]],
             'env': env,
             'terminate_only': True,
-            'pid_keyword': model_path,
-            'post_install_cmds': [start_riaps_lang]
+            'pid_keyword': model_path
         })
         runtime.set_deployer(target["actor"], model_deployer)
 
