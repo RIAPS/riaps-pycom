@@ -13,7 +13,7 @@ def setup_suite():
     # Set up the target directories and properties
     userdir = os.path.join("/home", username)
     riaps_app_path = os.path.join(userdir, runtime.get_active_config("riaps_apps_path"))
-    env = {"PATH": "/usr/local/bin/:$PATH",
+    env = {"PATH": "/usr/local/bin/:$PATH", 
            "RIAPSHOME": "/usr/local/riaps",
            "RIAPSAPPS": "$HOME/riaps_apps",
            "LD_LIBRARY_PATH": "/opt/riaps/armhf/lib"}
@@ -101,8 +101,15 @@ def setup_suite():
 
     # Deploy the riaps-components/model file
     local_riaps_lang = "riaps_lang " + model_path
+    local_test_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                  runtime.get_active_config('app_dir'))
+    
     subprocess.call(local_riaps_lang, shell=True)
-    local_model_json = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+
+    move_cmd = "mv " + runtime.get_active_config('app_dir') + '.json ' + local_test_dir
+    subprocess.call(move_cmd, shell=True)
+    
+    local_model_json = os.path.join(local_test_dir,
                                     runtime.get_active_config('app_dir') + '.json')
  
     for target in runtime.get_active_config('targets'):
