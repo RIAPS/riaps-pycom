@@ -7,26 +7,24 @@ from riaps.run.comp import Component
 import os
 
 
-class TestUartComponent(Component):
+class TestUartComponentA(Component):
     def __init__(self):
         super().__init__()
         self.pid = os.getpid()
         self.setValue = 0  # default off
         self.logger.info('TestUartComponent: %s - starting',str(self.pid))
-        self.written = 0
+        self.count = 0
 
     def on_activity(self):
         msg = self.activity.recv_pyobj()
-        if self.written == 0:
-            self.written = 1
-            msg = ('write',str.encode('RIAPS'))
-            self.uartReqPort.send_pyobj(msg)
-            self.logger.info('on_activity()[%s]: sent read request',str(self.pid))
-        else:
-            self.written = 0
-            msg = ('read',5)
-            self.uartReqPort.send_pyobj(msg)
-            self.logger.info('on_activity()[%s]: sent read request',str(self.pid))
+        self.activity.setPeriod(1.0)
+
+        msg = ('write',str.encode('hello'))
+        self.uartReqPort.send_pyobj(msg)
+        self.count = self.count + 1
+
+        self.logger.info('on_activity()[%s]: requested to write: %s',
+            str(self.pid),repr(msg))
 
 
     def on_uartReqPort(self):

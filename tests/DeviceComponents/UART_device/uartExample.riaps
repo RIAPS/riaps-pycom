@@ -13,18 +13,31 @@ app UartExample {
     }
 
 
-    component TestUartComponent() {
+    component TestUartComponentA() {
 
       req uartReqPort : (CltReq, SrvRep);
-      timer activity 1000;
+      timer activity 5000;
     }
 
-    // TestUart actor
-    actor TestUartActor() {
+    component TestUartComponentB() {
+
+      req uartReqPort : (CltReq, SrvRep);
+      timer activity 5000;
+    }
+
+    actor TestUartActorA() {
        local CltReq, SrvRep;	// Local message types
        {
-       	  uartDevice : UartDeviceComponent(uart_port_name = 'UART1', baud_rate = 9600);
-          uartTester : TestUartComponent();
+       	  uartDevice : UartDeviceComponent(uart_port_name = 'UART2', baud_rate = 9600);
+          uartTester : TestUartComponentA();
+       }
+    }
+
+    actor TestUartActorB() {
+       local CltReq, SrvRep;	// Local message types
+       {
+          uartDevice : UartDeviceComponent(uart_port_name = 'UART2', baud_rate = 9600);
+          uartTester : TestUartComponentB();
        }
     }
 }
