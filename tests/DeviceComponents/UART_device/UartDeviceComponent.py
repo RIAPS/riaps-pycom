@@ -28,6 +28,18 @@ class UartDeviceThread(threading.Thread):
         self.trigger = trigger
         self.uartAvailable = False
         self.pid = os.getpid()
+
+        self.readingActive = False
+        self.readBuffer = bytes(0)
+
+        self.localZmqContext = zmq.Context()
+        self.localZmqPublisher = self.localZmqContext.socket(zmq.PUB)
+        self.localZmqSubscriber = self.localZmqContext.socket(zmq.SUB)
+        self.localZmqPublisher.bind('tcp://*:6789')
+        self.localZmqSubscriber.connect('tcp://localhost:6798')
+        self.localZmqSubscriber.setsockopt_string(zmq.SUBSCRIBE,'localTopic')
+
+
         self.component.logger.info("UartDeviceThread [%s]: init",self.pid)
 
         # Convert input configurations into enums that represent the requests
@@ -50,6 +62,7 @@ class UartDeviceThread(threading.Thread):
         self.plug = self.trigger.setupPlug(self)
         self.poller = zmq.Poller()
         self.poller.register(self.plug, zmq.POLLIN)
+        self.poller.register(self.localZmqSubscriber, zmq.POLLIN)
         if self.terminated.is_set(): return
         self.enableUart()
 
@@ -79,11 +92,17 @@ class UartDeviceThread(threading.Thread):
                         self.plug.send_pyobj((msgType,1))
 
                     elif msgType == 2:
-                        self.component.logger.info(
-                            'UartDeviceThread - Reading %s bytes on %s...',
-                            str(msgVal), self.component.uart_port_name)
-                        inputBytes = self.readUart(int(msgVal))
-                        self.plug.send_pyobj((msgType,inputBytes))
+                        # self.component.logger.info(
+                        #     'UartDeviceThread - Reading %s bytes on %s...',
+                        #     str(msgVal), self.component.uart_port_name)
+                        # inputBytes = self.readUart(int(msgVal))
+                        # self.plug.send_pyobj((msgType,inputBytes))
+
+                        if self.readingActive == False:
+                            self.readingActive = True
+                            self.readSize = msgVal
+                            self.readUart()
+                            self.plug.send_pyobj((msgType,1))
 
                     elif msgType == 3:
                         self.component.logger.info(
@@ -115,9 +134,13 @@ class UartDeviceThread(threading.Thread):
                     else:
                         self.component.logger.warning(
                             'UartDeviceThread - LOCAL MESSAGE ERROR'
-                            ' RECEIVED: %s',
-                            msgType)
+                            ' RECEIVED: %s',msgType)
                         self.plug.send_pyobj((msgType,0))
+
+                elif self.localZmqSubscriber in socks and socks[self.localZmqSubscriber] == zmq.POLLIN:
+                    msg = self.localZmqSubscriber.recv_string()
+                    self.readUart()
+
 
 
     def openUart(self):
@@ -126,8 +149,16 @@ class UartDeviceThread(threading.Thread):
     def closeUart(self):
         self.ser.close()
 
-    def readUart(self,numBytes):
-        return self.ser.read(numBytes)
+    def readUart(self):
+        self.readBuffer = self.readBuffer+self.ser.read(128)
+        if len(self.readBuffer < self.readSize):
+            self.localZmqPublisher.send_string('localTopic')
+        else:
+            bytesOut = self.readBuffer[0:self.readSize]
+            self.readBuffer = self.readBuffer[self.readSize:]
+            self.readingActive = False
+            self.readSize = 0
+            self.uartReadPub.send_pyobj(('read',bytesOut))
 
     def writeUart(self, data):
         return self.ser.write(data)
@@ -155,7 +186,8 @@ class UartDeviceThread(threading.Thread):
             ' baudrate=%s [%d]', self.component.uart_port_name,
             self.component.baud_rate, self.pid)
         self.ser = serial.Serial(port = self.serial_port,
-                                 baudrate = self.component.baud_rate)
+                                 baudrate = self.component.baud_rate,
+                                 timeout = 0)
         self.component.logger.info('UartDeviceThread %s setup and'
             ' available for use', self.component.uart_port_name)
         self.uartAvailable = True
