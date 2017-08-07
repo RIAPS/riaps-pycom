@@ -36,7 +36,7 @@ class UartDeviceThread(threading.Thread):
         self.localZmqPublisher = self.localZmqContext.socket(zmq.PUB)
         self.localZmqSubscriber = self.localZmqContext.socket(zmq.SUB)
         self.localZmqPublisher.bind('tcp://*:6789')
-        self.localZmqSubscriber.connect('tcp://localhost:6798')
+        self.localZmqSubscriber.connect('tcp://localhost:6789')
         self.localZmqSubscriber.setsockopt_string(zmq.SUBSCRIBE,'localTopic')
 
 
