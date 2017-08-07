@@ -1,9 +1,6 @@
 // GPIO Example Model File
 
 app GpioToggleExample {
-    //message DataValue;     // value read on the specified GPIO
-    //message ReadRequest;   // request to read the specified GPIO
-    //message WriteRequest;  // request to write a value to the specified GPIO
 
     message CltReq;
     message SrvRep;
@@ -18,17 +15,11 @@ app GpioToggleExample {
       inside trigger;
 
       timer clock 100;                      // Connect to GPIO on first clock
-      //pub reportedData : DataValue    ;	    // Publish value read from the specified GPIO
-      //sub readGpio     : ReadRequest  ;     // Received request to read the value of the specific GPIO
-      //sub writeGpio    : WriteRequest ;     // Received request to write a value to the specific GPIO
       rep gpioRepPort : (CltReq, SrvRep);
     }
 
     // Toggle GPIO component
     component ToggleGpioComponent() {
-      //pub pollGpioValue    : ReadRequest  ;	// Publish request to read the specific GPIO value
-      //pub writeGpioValue   : WriteRequest ; // Publish request to write a value to the specific GPIO
-      //sub currentGpioValue : DataValue    ; // Receive the value of the specific GPIO
       req gpioReqPort : (CltReq, SrvRep);
       timer toggle 5000;                    // Toggle GPIO value
       timer readValue 7000;                 // Read current GPIO value

@@ -78,13 +78,13 @@ class GpioDeviceThread(threading.Thread):
                         GPIO.output(self.component.bbb_pin_name, message[1])
                         self.component.logger.info("GpioDeviceThread - value written to GPIO %s: %s",
                                                     self.component.bbb_pin_name, str(message[1]))
-                        self.plug.send_pyobj(message[1])
+                        self.plug.send_pyobj(('write',message[1]))
 
                     elif 'read' in message:
                         val = GPIO.input(self.component.bbb_pin_name)
                         self.component.logger.info("GpioDeviceThread - value read from GPIO %s: %s",
                                                     self.component.bbb_pin_name, val)
-                        self.plug.send_pyobj(val)
+                        self.plug.send_pyobj(('read',val))
 
 
     def isGpioAvailable(self):
@@ -157,6 +157,11 @@ class GpioDeviceComponent(Component):
             self.gpioDeviceThread.deactivate()
             self.gpioDeviceThread.terminate()
 
+    def on_trigger(self):
+        msg = self.trigger.recv_pyobj()
+        self.gpioRepPort.send_pyobj(msg)
+
+
     def on_gpioRepPort(self):
         msg = self.gpioRepPort.recv_pyobj()
         self.logger.info("on_gpioRepPort")
@@ -169,18 +174,12 @@ class GpioDeviceComponent(Component):
                 msgType, msgVal = msg
                 if msgType == 'read':
                     self.trigger.send_pyobj('read')
-                    response = self.trigger.recv_pyobj()
                     self.logger.info("on_gpioRepPort()[%s]: %s",str(self.pid),repr(msg))
-                    self.gpioRepPort.send_pyobj(('read',response))
-                    self.logger.info("on_gpioRepPort(): reading data from GPIO=%s", self.bbb_pin_name)
 
                 elif msgType == 'write':
                     if msgVal == 1 or msgVal == 0:
                         self.trigger.send_pyobj((msgType,msgVal))
-                        response = self.trigger.recv_pyobj()
                         self.logger.info("on_gpioRepPort()[%s]: %s",str(self.pid),repr(msg))
-                        self.gpioRepPort.send_pyobj(('write',response))
-                        self.logger.info("on_gpioRepPort(): sending data to GPIO=%s", self.bbb_pin_name)
                     else:
                         self.logger.info("on_gpioRepPort()[%s]: invalid write value",str(self.pid))
                         msg = ('ERROR',-1)

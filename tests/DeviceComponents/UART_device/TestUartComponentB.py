@@ -21,7 +21,7 @@ class TestUartComponentB(Component):
         self.activity.setPeriod(1.0)
 
         if self.protectRead.acquire(blocking = False):
-            msg = ('read',5)
+            msg = ('read',10)
             self.uartReqPort.send_pyobj(msg)
 
             self.logger.info('on_activity()[%s]: requested to read: %s',

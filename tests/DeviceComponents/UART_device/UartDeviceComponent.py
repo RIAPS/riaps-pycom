@@ -1,12 +1,13 @@
 '''
 Created on Jul 28, 2017
 @author: Tim Krentz
-'''
 
-'''
-The UART device component utilizes Adafruit_BBIO.UART to setup the device tree
-overlays, to be used with pySerial. To install Adafruit_BBIO, run:
-    $ sudo pip3 install Adafruit_BBIO
+
+The UART Device Component assumes the BBB has the appropriate device tree
+overlay installed.
+
+Add the below line to /boot/uEnv.txt and restart (for UART2 only)
+cape_enable=bone_capemgr.enable_partno=BB-UART2
 '''
 
 from riaps.run.comp import Component
@@ -14,7 +15,6 @@ import logging
 import os
 import threading
 import serial
-#import pydevd
 import zmq
 
 
@@ -47,22 +47,22 @@ class UartDeviceThread(threading.Thread):
             self.terminated.set()
 
     def run(self):
-        # Ask parent port to make a plug for this end
         self.plug = self.trigger.setupPlug(self)
         self.poller = zmq.Poller()
         self.poller.register(self.plug, zmq.POLLIN)
         if self.terminated.is_set(): return
-        self.enableUart()  # setup the requested GPIO
+        self.enableUart()
 
         while True:
             self.active.wait(None)
             if self.terminated.is_set():
-                self.disableGpio()
+                self.disableUart()
                 break
             if self.active.is_set():
                 socks = dict(self.poller.poll())
                 if self.plug in socks and socks[self.plug] == zmq.POLLIN:
                     msgType, msgVal = self.plug.recv_pyobj()
+
 
                     if msgType == 0:
                         self.component.logger.info(
@@ -185,16 +185,16 @@ UART Device Options:
 '''
 
 class UartDeviceComponent(Component):
-    def __init__(self, uart_port_name='UART1', baud_rate=9600):
+    def __init__(self, uart_port_name='UART2', baud_rate=9600):
         super().__init__()
         self.logger.setLevel(logging.DEBUG)
         self.pid = os.getpid()
         self.uart_port_name = uart_port_name
         self.baud_rate = baud_rate
 
-#        pydevd.settrace(host='192.168.1.102',port=5678)
-        self.logger.info("UartDeviceComponent @%s: baudrate=%s [%d]", self.uart_port_name, self.baud_rate, self.pid)
-        self.UartDeviceThread = None                    # Cannot manipulate GPIOs in constructor or start threads
+        self.logger.info("UartDeviceComponent @%s: baudrate=%s [%d]",
+                        self.uart_port_name, self.baud_rate, self.pid)
+        self.UartDeviceThread = None
 
 
     def on_clock(self):
