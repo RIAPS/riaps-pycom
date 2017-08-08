@@ -19,25 +19,27 @@ import zmq
 
 
 class UartDeviceThread(threading.Thread):
-    def __init__(self, component, trigger):
+    def __init__(self, component, command, data):
         threading.Thread.__init__(self)
         self.terminated = threading.Event()
         self.terminated.clear()
         self.active = threading.Event()
         self.component = component
-        self.trigger = trigger
+        self.command = command
+        self.data = data
         self.uartAvailable = False
         self.pid = os.getpid()
+        self.pollerTimeout = None
 
         self.readingActive = False
         self.readBuffer = bytes(0)
 
-        self.localZmqContext = zmq.Context()
-        self.localZmqPublisher = self.localZmqContext.socket(zmq.PUB)
-        self.localZmqSubscriber = self.localZmqContext.socket(zmq.SUB)
-        self.localZmqPublisher.bind('tcp://*:6789')
-        self.localZmqSubscriber.connect('tcp://localhost:6789')
-        self.localZmqSubscriber.setsockopt_string(zmq.SUBSCRIBE,'localTopic')
+        # self.localZmqContext = zmq.Context()
+        # self.localZmqPublisher = self.localZmqContext.socket(zmq.PUB)
+        # self.localZmqSubscriber = self.localZmqContext.socket(zmq.SUB)
+        # self.localZmqPublisher.bind('tcp://*:6789')
+        # self.localZmqSubscriber.connect('tcp://localhost:6789')
+        # self.localZmqSubscriber.setsockopt_string(zmq.SUBSCRIBE,'localTopic')
 
 
         self.component.logger.info("UartDeviceThread [%s]: init",self.pid)
@@ -59,10 +61,10 @@ class UartDeviceThread(threading.Thread):
             self.terminated.set()
 
     def run(self):
-        self.plug = self.trigger.setupPlug(self)
+        self.plug = self.command.setupPlug(self)
         self.poller = zmq.Poller()
         self.poller.register(self.plug, zmq.POLLIN)
-        self.poller.register(self.localZmqSubscriber, zmq.POLLIN)
+        # self.poller.register(self.localZmqSubscriber, zmq.POLLIN)
         if self.terminated.is_set(): return
         self.enableUart()
 
@@ -72,9 +74,12 @@ class UartDeviceThread(threading.Thread):
                 self.disableUart()
                 break
             if self.active.is_set():
-                socks = dict(self.poller.poll())
-                if self.plug in socks and socks[self.plug] == zmq.POLLIN:
-                    msgType, msgVal = self.plug.recv_pyobj()
+                socks = dict(self.poller.poll(timeout = self.pollerTimeout))
+                if self.plug in socks and socks[self.plug] == zmq.POLLIN
+                or self.readingActive == True:
+
+                    if self.plug in socks and socks[self.plug] == zmq.POLLIN:
+                        msgType, msgVal = self.plug.recv_pyobj()
 
 
                     if msgType == 0:
@@ -91,7 +96,7 @@ class UartDeviceThread(threading.Thread):
                         self.closeUart()
                         self.plug.send_pyobj((msgType,1))
 
-                    elif msgType == 2:
+                    elif msgType == 2 or self.readingActive == True:
                         # self.component.logger.info(
                         #     'UartDeviceThread - Reading %s bytes on %s...',
                         #     str(msgVal), self.component.uart_port_name)
@@ -101,8 +106,9 @@ class UartDeviceThread(threading.Thread):
                         if self.readingActive == False:
                             self.readingActive = True
                             self.readSize = msgVal
-                            self.readUart()
                             self.plug.send_pyobj((msgType,1))
+
+                        self.readUart()
 
                     elif msgType == 3:
                         self.component.logger.info(
@@ -137,9 +143,9 @@ class UartDeviceThread(threading.Thread):
                             ' RECEIVED: %s',msgType)
                         self.plug.send_pyobj((msgType,0))
 
-                elif self.localZmqSubscriber in socks and socks[self.localZmqSubscriber] == zmq.POLLIN:
-                    msg = self.localZmqSubscriber.recv_string()
-                    self.readUart()
+                # elif self.localZmqSubscriber in socks and socks[self.localZmqSubscriber] == zmq.POLLIN:
+                #     msg = self.localZmqSubscriber.recv_string()
+                #     self.readUart()
 
 
 
@@ -150,15 +156,22 @@ class UartDeviceThread(threading.Thread):
         self.ser.close()
 
     def readUart(self):
-        self.readBuffer = self.readBuffer+self.ser.read(128)
-        if len(self.readBuffer < self.readSize):
-            self.localZmqPublisher.send_string('localTopic')
-        else:
+        self.readBuffer = self.readBuffer+self.ser.read(self.readSize)
+
+        # Limit buffer size to 16KB, more than the maximum number of bytes
+        # one could expect to receive in 1s at 115200/8N1
+        self.readBuffer = self.readBuffer[-16384:]
+
+        if len(self.readBuffer) < self.readSize:
+            # self.localZmqPublisher.send_string('localTopic')
+            self.pollerTimeout = 0
+        else
             bytesOut = self.readBuffer[0:self.readSize]
             self.readBuffer = self.readBuffer[self.readSize:]
             self.readingActive = False
             self.readSize = 0
-            self.uartReadPub.send_pyobj(('read',bytesOut))
+            self.pollerTimeout = None
+            self.data.send_pyobj(('read',bytesOut))
 
     def writeUart(self, data):
         return self.ser.write(data)
@@ -187,7 +200,7 @@ class UartDeviceThread(threading.Thread):
             self.component.baud_rate, self.pid)
         self.ser = serial.Serial(port = self.serial_port,
                                  baudrate = self.component.baud_rate,
-                                 timeout = 0)
+                                 timeout = 1)
         self.component.logger.info('UartDeviceThread %s setup and'
             ' available for use', self.component.uart_port_name)
         self.uartAvailable = True
@@ -234,9 +247,10 @@ class UartDeviceComponent(Component):
         self.logger.info("on_clock()[%s]: %s",str(self.pid),now)
 
         if self.UartDeviceThread == None:
-            self.UartDeviceThread = UartDeviceThread(self,self.trigger)
+            self.UartDeviceThread = UartDeviceThread(self,self.command)
             self.UartDeviceThread.start()
-            self.trigger.activate()
+            self.command.activate()
+            self.data.activate()
 
         self.clock.halt()
 
@@ -246,8 +260,12 @@ class UartDeviceComponent(Component):
             self.UartDeviceThread.deactivate()
             self.UartDeviceThread.terminate()
 
-    def on_trigger(self):
-        msg = self.trigger.recv_pyobj()
+    def on_data(self):
+        msg = self.data.recv_pyobj()
+        self.uartReadSub.send_pyobj(msg)
+
+    def on_command(self):
+        msg = self.command.recv_pyobj()
         self.uartRepPort.send_pyobj(msg)
 
     def on_uartRepPort(self):
@@ -263,31 +281,31 @@ class UartDeviceComponent(Component):
                 self.logger.info("on_uartRepPort()[%s]: %s",str(self.pid),repr(msg))
 
                 if msgType == 'open':
-                    self.trigger.send_pyobj((0,0))
+                    self.command.send_pyobj((0,0))
 
                 if msgType == 'close':
-                    self.trigger.send_pyobj((1,0))
+                    self.command.send_pyobj((1,0))
 
                 elif msgType == 'read':
-                    self.trigger.send_pyobj((2,msgVal))
+                    self.command.send_pyobj((2,msgVal))
 
                 elif msgType == 'write':
-                    self.trigger.send_pyobj((3,msgVal))
+                    self.command.send_pyobj((3,msgVal))
 
                 elif msgType == 'get_in_waiting':
-                    self.trigger.send_pyobj((4,0))
+                    self.command.send_pyobj((4,0))
 
                 elif msgType == 'get_out_waiting':
-                    self.trigger.send_pyobj((5,0))
+                    self.command.send_pyobj((5,0))
 
                 elif msgType == 'send_break':
-                    self.trigger.send_pyobj((6,0))
+                    self.command.send_pyobj((6,0))
 
                 elif msgType == 'get_break_condition':
-                    self.trigger.send_pyobj((7,0))
+                    self.command.send_pyobj((7,0))
 
                 elif msgType == 'set_break_condition':
-                    self.trigger.send_pyobj((8,msgVal))
+                    self.command.send_pyobj((8,msgVal))
 
             else:
                 self.logger.info("on_uartRepPort()[%s]: UART not available yet",str(self.pid))
