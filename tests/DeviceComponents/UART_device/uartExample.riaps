@@ -7,7 +7,8 @@ app UartExample {
     message BytesRead;
 
     device UartDeviceComponent(uart_port_name='UART1',baud_rate = 9600) {
-      inside trigger;
+      inside data;
+      inside command;
 
       timer clock 100;
       rep uartRepPort : (CltReq, SrvRep);
@@ -26,10 +27,11 @@ app UartExample {
       req uartReqPort : (CltReq, SrvRep);
       sub uartReadSub : BytesRead;
       timer activity 5000;
+      timer closer;
     }
 
     actor TestUartActorA() {
-       local CltReq, SrvRep;	// Local message types
+       local CltReq, SrvRep, BytesRead;	// Local message types
        {
        	  uartDevice : UartDeviceComponent(uart_port_name = 'UART2', baud_rate = 9600);
           uartTester : TestUartComponentA();

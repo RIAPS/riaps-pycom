@@ -19,7 +19,8 @@ class TestUartComponentA(Component):
         msg = self.activity.recv_pyobj()
         self.activity.setPeriod(1.0)
 
-        msg = ('write',str.encode(str(self.count)))
+        # msg = ('write',str.encode(str(self.count)))
+        msg = ('write',str.encode('RiapsIsRad'))
         self.uartReqPort.send_pyobj(msg)
         self.count = self.count + 1
 

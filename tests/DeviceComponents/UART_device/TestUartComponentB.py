@@ -15,17 +15,28 @@ class TestUartComponentB(Component):
         self.setValue = 0  # default off
         self.logger.info('TestUartComponent: %s - starting',str(self.pid))
         self.protectReq = threading.Semaphore()
+        self.protectRead = threading.Semaphore()
 
     def on_activity(self):
         msg = self.activity.recv_pyobj()
         self.activity.setPeriod(1.0)
 
-        if self.protectReq.acquire(blocking = False):
+        if self.protectReq.acquire(blocking = False) and self.protectRead.acquire(blocking = False):
             msg = ('read',10)
             self.uartReqPort.send_pyobj(msg)
 
             self.logger.info('on_activity()[%s]: requested to read: %s',
                 str(self.pid),repr(msg))
+
+    def on_closer(self):
+        msg = self.closer.recv_pyobj()
+        if self.protectReq.acquire(blocking = False):
+            msg = ('close',1)
+            self.uartReqPort.send_pyobj(msg)
+
+            self.logger.info('on_closer()[%s]: requested to close: %s',
+                str(self.pid),repr(msg))
+
 
 
     def on_uartReqPort(self):
@@ -38,3 +49,4 @@ class TestUartComponentB(Component):
         msg = self.uartReadSub.recv_pyobj()
         self.logger.info('on_uartReadSub()[%s]: got bytes : %s ',
                         str(self.pid),repr(msg))
+        self.protectRead.release()
