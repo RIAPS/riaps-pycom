@@ -16,6 +16,7 @@ import os
 import threading
 import serial
 import zmq
+from enum import Enum
 
 
 class UartDeviceThread(threading.Thread):
@@ -33,14 +34,6 @@ class UartDeviceThread(threading.Thread):
 
         self.readingActive = False
         self.readBuffer = bytes(0)
-
-        # self.localZmqContext = zmq.Context()
-        # self.localZmqPublisher = self.localZmqContext.socket(zmq.PUB)
-        # self.localZmqSubscriber = self.localZmqContext.socket(zmq.SUB)
-        # self.localZmqPublisher.bind('tcp://*:6789')
-        # self.localZmqSubscriber.connect('tcp://localhost:6789')
-        # self.localZmqSubscriber.setsockopt_string(zmq.SUBSCRIBE,'localTopic')
-
 
         self.component.logger.info("UartDeviceThread [%s]: init",self.pid)
 
@@ -65,7 +58,6 @@ class UartDeviceThread(threading.Thread):
         self.dataPlug = self.data.setupPlug(self)
         self.poller = zmq.Poller()
         self.poller.register(self.plug, zmq.POLLIN)
-        # self.poller.register(self.localZmqSubscriber, zmq.POLLIN)
         if self.terminated.is_set(): return
         self.enableUart()
 
@@ -79,57 +71,51 @@ class UartDeviceThread(threading.Thread):
                 if self.plug in socks and socks[self.plug] == zmq.POLLIN:
                     msgType, msgVal = self.plug.recv_pyobj()
 
-                    if msgType == 0:
+                    if msgType == UartDeviceComponent.Message.open:
                         self.component.logger.info(
                             'UartDeviceThread - Opening %s on %s',
                             self.component.uart_port_name, self.serial_port)
                         self.openUart()
                         self.plug.send_pyobj((msgType,1))
 
-                    elif msgType == 1:
+                    elif msgType == UartDeviceComponent.Message.close:
                         self.component.logger.info(
                             'UartDeviceThread - Closing %s on %s',
                             self.component.uart_port_name, self.serial_port)
                         self.closeUart()
                         self.plug.send_pyobj((msgType,1))
 
-                    elif msgType == 2:
-                        # self.component.logger.info(
-                        #     'UartDeviceThread - Reading %s bytes on %s...',
-                        #     str(msgVal), self.component.uart_port_name)
-                        # inputBytes = self.readUart(int(msgVal))
-                        # self.plug.send_pyobj((msgType,inputBytes))
-
+                    elif msgType == UartDeviceComponent.Message.read:
                         if self.readingActive == False:
                             self.readingActive = True
                             self.readSize = msgVal
                             self.plug.send_pyobj((msgType,1))
                             self.readUart()
 
-                    elif msgType == 3:
+                    elif msgType == UartDeviceComponent.Message.write:
                         self.component.logger.info(
                             'UartDeviceThread - Writing on %s...',
                             self.component.uart_port_name)
                         returnVal = self.writeUart(msgVal)
                         self.plug.send_pyobj((msgType,returnVal))
 
-                    elif msgType == 4:
+                    elif msgType == UartDeviceComponent.Message.get_in_waiting:
                         self.plug.send_pyobj((msgType,getInWaiting()))
 
-                    elif msgType == 5:
+                    elif msgType == UartDeviceComponent.Message.get_out_waiting:
                         self.plug.send_pyobj((msgType,getOutWaiting()))
 
-                    elif msgType == 6:
+                    elif msgType == UartDeviceComponent.Message.send_break:
                         self.component.logger.info(
                             'UartDeviceThread - Sending break on %s...',
                             self.component.uart_port_name)
                         self.sendUartBreak()
                         self.plug.send_pyobj((msgType,1))
 
-                    elif msgType == 7:
+                    elif msgType == UartDeviceComponent.Message.get_break_condition:
                         self.plug.send_pyobj((msgType,getUartBreak()))
 
-                    elif msgType == 8:
+                    elif msgType == UartDeviceComponent.Message.set_break_condition:
                         self.setUartBreak(msgVal)
                         self.plug.send_pyobj((msgType,1))
 
@@ -242,6 +228,16 @@ class UartDeviceComponent(Component):
                         self.uart_port_name, self.baud_rate, self.pid)
         self.UartDeviceThread = None
 
+    class Message(Enum):
+        open = 0
+        close = 1
+        read = 2
+        write = 3
+        get_in_waiting = 4
+        get_out_waiting = 5
+        send_break = 6
+        get_break_condition = 7
+        set_break_condition = 8
 
     def on_clock(self):
         now = self.clock.recv_pyobj()   # Receive time (as float)
@@ -272,7 +268,6 @@ class UartDeviceComponent(Component):
 
     def on_uartRepPort(self):
         msg = self.uartRepPort.recv_pyobj()
-        self.logger.info("on_uartRepPort")
         if self.UartDeviceThread == None:
             self.logger.info("on_uartRepPort()[%s]: UartDeviceThread not available yet",str(self.pid))
             msg = ('ERROR',-1)
@@ -283,31 +278,31 @@ class UartDeviceComponent(Component):
                 self.logger.info("on_uartRepPort()[%s]: %s",str(self.pid),repr(msg))
 
                 if msgType == 'open':
-                    self.command.send_pyobj((0,0))
+                    self.command.send_pyobj((UartDeviceComponent.Message.open,0))
 
                 if msgType == 'close':
-                    self.command.send_pyobj((1,0))
+                    self.command.send_pyobj((UartDeviceComponent.Message.close,0))
 
                 elif msgType == 'read':
-                    self.command.send_pyobj((2,msgVal))
+                    self.command.send_pyobj((UartDeviceComponent.Message.read,msgVal))
 
                 elif msgType == 'write':
-                    self.command.send_pyobj((3,msgVal))
+                    self.command.send_pyobj((UartDeviceComponent.Message.write,msgVal))
 
                 elif msgType == 'get_in_waiting':
-                    self.command.send_pyobj((4,0))
+                    self.command.send_pyobj((UartDeviceComponent.Message.get_in_waiting,0))
 
                 elif msgType == 'get_out_waiting':
-                    self.command.send_pyobj((5,0))
+                    self.command.send_pyobj((UartDeviceComponent.Message.get_out_waiting,0))
 
                 elif msgType == 'send_break':
-                    self.command.send_pyobj((6,0))
+                    self.command.send_pyobj((UartDeviceComponent.Message.send_break,0))
 
                 elif msgType == 'get_break_condition':
-                    self.command.send_pyobj((7,0))
+                    self.command.send_pyobj((UartDeviceComponent.Message.get_break_condition,0))
 
                 elif msgType == 'set_break_condition':
-                    self.command.send_pyobj((8,msgVal))
+                    self.command.send_pyobj((UartDeviceComponent.Message.set_break_condition,msgVal))
 
             else:
                 self.logger.info("on_uartRepPort()[%s]: UART not available yet",str(self.pid))

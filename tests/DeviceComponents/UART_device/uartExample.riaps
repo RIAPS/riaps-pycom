@@ -1,4 +1,5 @@
 // Uart example model file
+// To run this test, connect UART2 between two beaglebones
 
 app UartExample {
 
@@ -27,7 +28,6 @@ app UartExample {
       req uartReqPort : (CltReq, SrvRep);
       sub uartReadSub : BytesRead;
       timer activity 5000;
-      timer closer;
     }
 
     actor TestUartActorA() {
