@@ -38,25 +38,6 @@
       - Green (TX) to BBB RX (pin 22), 
       - GND on BBB pins 1, 2, 45, 46
     
-* Configuration needed on the BBB image (to be updated in a future image)
-  - in .bashrc, add setup environment variables for these tools 
-```
-    	$ export SLOTS=/sys/devices/platform/bone_capemgr/slots
-    	$ export PINS=/sys/kernel/debug/pinctrl/44e10800.pinmux/pins
-```
-* Update visudo to retain the environment variables on a su call
-    - After "Defaults  env_reset"
-    - Add
-```
-        Defaults    env_keep += "SLOTS"  
-        Defaults    env_keep += "PINS"
-```
-* To deal with user permission on UART
-```
-    	$ sudo usermod -a -G dialout riaps     
-    	$ sudo usermod -a -G dialout riapsdev  (if running on the host VM)
-```
-
 * To turn on the UART2, modify /boot/uEnv.txt by uncommenting the following line and adding BB-UART2 
 (which points to an overlay in /lib/firmware)
 ```
