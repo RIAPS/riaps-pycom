@@ -1,4 +1,4 @@
-@0xbfb632a00018ca1b;
+@0x86bbe73a97ada7d3;
 
 # RIAPS disco messages
 
@@ -31,9 +31,10 @@ struct ActorUnregRep {
 
 struct Path {
   appName @0 : Text;
-  msgType @1 : Text;
-  kind @2 : Kind;
-  scope @3 : Scope;
+  actorName @1 : Text;
+  msgType @2 : Text;
+  kind @3 : Kind;
+  scope @4 : Scope;
 }
 
 struct Client {

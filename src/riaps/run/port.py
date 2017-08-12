@@ -7,6 +7,7 @@ Created on Oct 9, 2016
 '''
 from .exc import SetupError,OperationError
 from riaps.utils.config import Config
+import logging
 
 class Port(object):
     '''
@@ -17,6 +18,7 @@ class Port(object):
         '''
         Constructor
         '''
+        self.logger = logging.getLogger(__name__)
         self.parent = parentPart
         self.name = portName
         self.context = parentPart.context
