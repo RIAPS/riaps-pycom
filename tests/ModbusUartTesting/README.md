@@ -8,8 +8,8 @@
 ```
     sudo pip3 install minimalmodbus (which installs pyserial)
 ```
-	
-    For InfluxDB: On BBB or VM (where logging is happening)
+
+   For InfluxDB: On BBB or VM (where logging is happening)
    
 ```
     $ curl -sL https://repos.influxdata.com/influxdb.key | sudo apt-key add -      
