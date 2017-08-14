@@ -47,7 +47,7 @@
 ```
 
 * Reboot the beaglebone to see the UART2 enabled. UART2 device is setup as ttyO2 (where the fourth letter 
-is the letter 'O', no zero) that references ttyS2 (a special character files)
+is the letter 'O', not zero) that references ttyS2 (a special character files)
 
 * To verify that UART2 is enabled, do the following:
 ```
