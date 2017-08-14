@@ -87,9 +87,9 @@ $ ls -l /dev/ttyO*
 * BBB RX (P9, pin 22) --> DSP TX (J4, pin 38, SCIRXDB, GPIO14)
       
 # Tools used for debugging Modbus I/F  
-* BBB is master, slave simulator used was MODBUS RTU RS-232 PLC 
+* BBB is master, so to debug this interface a slave simulator was used: MODBUS RTU RS-232 PLC 
   - Simulator found at www.plcsimulator.org
-* DSP is slave, master simulator used was QModMaster 0.4.7
+* DSP is slave, so to debug this interface a master simulator was used: QModMaster 0.4.7
   - libmodbus 3.1.4 found at https://sourceforge.net/projects/qmodmaster
 * Modbus Message Parser
   - http://modbus.rapidscada.net/
