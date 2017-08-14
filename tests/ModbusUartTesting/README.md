@@ -49,7 +49,7 @@
       - GND on BBB pins 1, 2, 45, 46
     - Cable information from https://www.adafruit.com/product/954?gclid=EAIaIQobChMIlIWZzJvX1QIVlyOBCh3obgJjEAQYASABEgImJfD_BwE
     
-* To turn on the UART2, modify /boot/uEnv.txt by uncommenting the following line and adding BB-UART2 
+* To turn on the UART2, on the beaglebone, modify /boot/uEnv.txt by uncommenting the following line and adding BB-UART2 
 (which points to an overlay in /lib/firmware)
 ```
 	#Example v4.1.x
