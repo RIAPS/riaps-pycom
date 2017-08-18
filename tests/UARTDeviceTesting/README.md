@@ -63,7 +63,7 @@ is the letter 'O', not zero) that references ttyS2 (a special character files)
 * Install GPIO Python Library
 
 ```
-      $ sudo pip3 install Adafruit_BBIO
+    $ sudo pip3 install Adafruit_BBIO
 ```
  
 ### On the BBB:
@@ -71,22 +71,23 @@ is the letter 'O', not zero) that references ttyS2 (a special character files)
 * For this to work, the user account must be in the 'dialout' group (which it is for the base BBB image)
     * Verify that ‘riaps’ user is in the ‘dialout’ group
     
-    ```
-      $ groups riaps
-    ```
+```
+    $ groups riaps
+```
 
 ## Setting up an Application to Use UART Device Component
 
 In the application model (.riaps file), create two UART device components with the configuration desired.  
 
 ```
-      device UartDeviceComponent(uart_port_name = 'UART2', baud_rate = 9600); 
+    device UartDeviceComponent(uart_port_name = 'UART2', baud_rate = 9600); 
 ```
 
 where,
 - Port Name: BBB UART port (UART1, 2, 3, 4, or 5)
-  ***Note:  UART1 port is reserved for the ChronoCape hardware and should not be use***
 - Baud Rate: UART rate in bits/sec, usually specified by slave device
+
+  ***Note:  UART1 port is reserved for the ChronoCape hardware and should not be use*** 
   
 Requests can be made to the UartDeviceComponent to read from the UART or write to it.  The UartDeviceComponent will respond once the action is complete.  
 
@@ -100,19 +101,20 @@ To write to the UART, create a message to indicate that this is a write command 
 To read from the UART, create a message to indicate that this is a read command and how many bytes to be read.  This will be sent as a request (uartReqPort) to the UART device component.  An acknowledgement of the command's receipt will be provided in a response immediately (before the read happens).  The response will indicate this was a 'read' command and return a message value of 1.
 
 ```
-   msg = ('read', numBytes)
+    msg = ('read', numBytes)
 ```
         
 If the UART port is not available, the response message will be the following
 
 ```
-       msg = ('ERROR',-1)
+    msg = ('ERROR',-1)
 ```
 
 ## Debugging hints
 
 * If serial port is busy, make sure to stop the gpsd service using the following command
+
 ```
-	$ sudo systemctl stop gpsd
+    $ sudo systemctl stop gpsd
 ```
 
