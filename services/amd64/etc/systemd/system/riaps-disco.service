@@ -1,0 +1,19 @@
+[Unit] 
+Description=RIAPS Discovery Service 
+Wants=network.target 
+After=network.target 
+Before=riaps-deplo.service
+  
+[Service] 
+Type=simple 
+User=riaps
+StandardOutput=syslog 
+StandardError=inherit 
+SyslogIdentifier=rdiscoveryd 
+SyslogLevel=info 
+ExecStart=/opt/riaps/amd64/bin/rdiscoveryd 
+Restart=always
+RestartSec=10s
+  
+[Install] 
+WantedBy=multi-user.target

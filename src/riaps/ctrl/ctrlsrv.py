@@ -69,10 +69,13 @@ class ControllerService(rpyc.Service):
     
     ALIASES = ["RIAPSCONTROL"]              # Registry name for the service
     
+    STOPPING = None
+    
     def on_connect(self):
         '''
         Called when a client connects. Subsequently the client must login. 
         '''
+        if ControllerService.STOPPING: return
         self.client = None
         self.logger = logging.getLogger('riapsCtrl')
 
@@ -80,6 +83,7 @@ class ControllerService(rpyc.Service):
         '''
         Called when a client disconnects
         '''
+        if ControllerService.STOPPING: return
         if self.client:
             self.client.exposed_logout()
             theController.delClient(self.client.name)
@@ -88,6 +92,7 @@ class ControllerService(rpyc.Service):
         '''
         Log into the service. 
         '''
+        if ControllerService.STOPPING: return
         global theController,ctrlLock,guiClient
         if clientName == "*gui*":       # NOTE: the GUI is client of the service
             assert self.client == None and guiClient == None
@@ -124,13 +129,17 @@ class ServiceThread(threading.Thread):
         Runs the rpyc ThreadedServer with the service implementation.
         NOTE: it expects a rpyc service registry running 
         '''
-        self.server = ThreadedServer(ControllerService,port=self.port,auto_register=True)
+        global theController
+        host = theController.hostAddress
+        self.server = ThreadedServer(ControllerService,hostname=host, port=self.port,auto_register=True)
         self.server.start()
+        time.sleep(0.010)
         
     def stop(self):
         '''
         Terminates the service. Called when the program exits. 
         '''
+        ControllerService.STOPPING = True
         self.server.close()
 
 

@@ -22,6 +22,14 @@ fakeroot dpkg-deb --build package/riaps-pycom-armhf
 cp package/riaps-pycom-armhf.deb .
 
 
+# services
+cp -r services package/.
+sed s/@version@/$pycomversion/g -i package/services/amd64/DEBIAN/control
+sed s/@version@/$pycomversion/g -i package/services/armhf/DEBIAN/control
+fakeroot dpkg-deb --build package/services/amd64
+fakeroot dpkg-deb --build package/services/armhf
+mv package/services/amd64.deb riaps-systemd-amd64.deb
+mv package/services/armhf.deb riaps-systemd-armhf.deb
 
 
 

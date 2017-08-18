@@ -20,6 +20,7 @@ import logging
 from builtins import int, str
 import re
 import sys
+import os
 from .actor import Actor
 
 class Device(Actor):
@@ -348,5 +349,5 @@ class Device(Actor):
         # self.context.destroy()
         time.sleep(1.0)
         self.logger.info("terminated")
-        sys.exit()
+        os._exit(0)
         

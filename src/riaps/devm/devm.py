@@ -8,6 +8,7 @@ import zmq
 import capnp
 import os
 import sys
+import time
 from os.path import join
 import subprocess
 
@@ -222,4 +223,18 @@ class DevmService(object):
             self.handleDeviceUnreq(msg)
         else:
             pass
+        
+    def terminate(self):
+        self.logger.info("terminating")
+        # Clean up everything
+        # Logout from service
+        # Kill actors
+        for proc in self.launchMap.values():
+            proc.terminate()
+        time.sleep(1.0) # Allow actors terminate cleanly
+        # Kill devm
+        self.context.destroy()
+        time.sleep(1.0)
+        self.logger.info("terminated")
+        os._exit(0)
         

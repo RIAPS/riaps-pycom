@@ -2,6 +2,10 @@ dist: trusty
 language: python
 python:
 - '3.5'
+addons:
+  apt:
+    packages:
+    - fakeroot
 script:
 - chmod +x package.sh
 - ./package.sh
@@ -13,6 +17,8 @@ deploy:
   file:
    - riaps-pycom-amd64.deb 
    - riaps-pycom-armhf.deb
+   - riaps-systemd-amd64.deb 
+   - riaps-systemd-armhf.deb 
   skip_cleanup: true
   on:
     tags: true

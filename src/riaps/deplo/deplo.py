@@ -35,6 +35,8 @@ class DeploService(object):
         self.launchMap = { }            # Map of launched actors
         self.riapsApps = os.getenv('RIAPSAPPS', './')
         self.logger.info("Starting with apps in %s" % self.riapsApps)
+        self.disco = None
+        self.devm = None
         
         self.riaps_actor_file = 'riaps_actor'       # Default name for the executable riaps actor shell
         try:
@@ -268,4 +270,5 @@ class DeploService(object):
         self.context.destroy()
         time.sleep(1.0)
         self.logger.info("terminated")
-        sys.exit()
+        os._exit(0)
+        

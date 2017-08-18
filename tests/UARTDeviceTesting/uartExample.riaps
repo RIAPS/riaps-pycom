@@ -1,0 +1,48 @@
+// Uart example model file
+// To run this test, connect UART2 between two beaglebones
+
+app UartExample {
+
+    message CltReq;
+    message SrvRep;
+    message BytesRead;
+
+    device UartDeviceComponent(uart_port_name='UART2',baud_rate = 9600) {
+      inside data;
+      inside command;
+
+      timer clock 100;
+      rep uartRepPort : (CltReq, SrvRep);
+      pub uartReadPub : BytesRead;
+    }
+
+
+    component TestUartComponentA() {
+
+      req uartReqPort : (CltReq, SrvRep);
+      timer activity 5000;
+    }
+
+    component TestUartComponentB() {
+
+      req uartReqPort : (CltReq, SrvRep);
+      sub uartReadSub : BytesRead;
+      timer activity 5000;
+    }
+
+    actor TestUartActorA() {
+       local CltReq, SrvRep, BytesRead;	// Local message types
+       {
+       	  uartDevice : UartDeviceComponent(uart_port_name = 'UART2', baud_rate = 9600);
+          uartTester : TestUartComponentA();
+       }
+    }
+
+    actor TestUartActorB() {
+       local CltReq, SrvRep, BytesRead;
+       {
+          uartDevice : UartDeviceComponent(uart_port_name = 'UART2', baud_rate = 9600);
+          uartTester : TestUartComponentB();
+       }
+    }
+}

@@ -1,3 +1,3 @@
 app GpioToggleExample {
-	on (bbb-f652.local) TestGpioToggleActor;
+	on (100.0.0.162) TestGpioToggleActor;
 }

@@ -1,0 +1,21 @@
+[Unit] 
+Description=RIAPS Deployment Manager Service 
+BindsTo=riaps-disco.service 
+After=riaps-disco.service
+  
+[Service] 
+Type=simple 
+EnvironmentFile=/etc/riaps/env.conf 
+User=riaps 
+Group=riaps 
+StandardOutput=syslog 
+StandardError=inherit 
+SyslogIdentifier=deploy 
+SyslogLevel=info 
+ExecStart=/usr/local/bin/riaps_deplo 
+Restart=always
+RestartSec=10s
+  
+[Install]
+WantedBy=multi-user.target
+

@@ -180,34 +180,40 @@ class Controller(object):
         # get host key, if we know one
         self.hostKeys = {}
         try:
-            self.hostKeys = paramiko.util.load_host_keys(os.path.expanduser('~/.ssh/known_hosts'))
+            self.hostKeys = paramiko.util.load_host_keys(os.path.expanduser(os.path.join('~','.ssh','known_hosts')))
         except IOError:
             try:
                 # try ~/ssh/ too, e.g. on windows
-                self.hostKeys = paramiko.util.load_host_keys(os.path.expanduser('~/ssh/known_hosts'))
+                self.hostKeys = paramiko.util.load_host_keys(os.path.expanduser(os.path.join('~','ssh','known_hosts')))
             except IOError:
                 pass     
+
+    def addKeyToAgent(self,agent_keys,rsa_private_key):
+        if os.path.isfile(rsa_private_key):
+           try:
+              ki = paramiko.RSAKey.from_private_key_file(rsa_private_key)
+              agent_keys=agent_keys + (ki,)
+              self.logger.warning('added key %s'% rsa_private_key)
+           except Exception as e:
+              self.logger.error('Failed loading %s' % (rsa_private_key, e))
+        return agent_keys
 
     def authenticate(self,transport,username):
         """
         Attempt to authenticate to the given transport using any of the private
         keys available from an SSH agent or from a local private RSA key file (assumes no pass phrase).
         """
-        rsa_private_key = join(self.riaps_Folder,"keys/" + str(const.ctrlPrivateKey))
-        
-        try:
-            ki = paramiko.RSAKey.from_private_key_file(rsa_private_key)
-        except Exception as e:
-                self.logger.error('Failed loading %s' % (rsa_private_key, e))
-                return
-
         agent = paramiko.Agent()
-        agent_keys = agent.get_keys() + (ki,)
+        agent_keys = agent.get_keys() 
+        rsa_private_key = join(self.riaps_Folder,"keys/" + str(const.ctrlPrivateKey))
+        agent_keys=self.addKeyToAgent(agent_keys,rsa_private_key)
+        rsa_private_key = os.path.expanduser(os.path.join('~','.ssh',str(const.ctrlPrivateKey)))        
+        agent_keys=self.addKeyToAgent(agent_keys,rsa_private_key)
         if len(agent_keys) == 0:
+            self.logger.error('no suitable key found.')
             return
-
         for key in agent_keys:
-            self.logger.info ('Trying user %s ssh-agent key %s' % (username,key.get_fingerprint().hex()))
+            self.logger.warning ('Trying user %s ssh-agent key %s' % (username,key.get_fingerprint().hex()))
             try:
                 transport.auth_publickey(username, key)
                 self.logger.info ('... success!')
