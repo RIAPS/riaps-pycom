@@ -7,7 +7,9 @@ The resistor side to ground and the LED in the pin location indicated.
 
 ## Software Configuration
 
-* Install GPIO Python Library on both VM and BBBs
+### On Both VM and BBB
+
+* Install GPIO Python Library
 	- sudo pip3 install Adafruit_BBIO
  
 ### On the BBB:
