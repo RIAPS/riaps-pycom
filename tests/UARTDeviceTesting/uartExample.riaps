@@ -7,7 +7,7 @@ app UartExample {
     message SrvRep;
     message BytesRead;
 
-    device UartDeviceComponent(uart_port_name='UART1',baud_rate = 9600) {
+    device UartDeviceComponent(uart_port_name='UART2',baud_rate = 9600) {
       inside data;
       inside command;
 
