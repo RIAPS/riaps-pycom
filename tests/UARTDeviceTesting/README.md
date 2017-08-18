@@ -96,7 +96,7 @@ To write to the UART, create a message to indicate that this is a write command 
 ```
     msg = ('write',str.encode(<information to write>))
 ```
-<TBD: indicate what the return value means>
+<***TBD: indicate what the return value means***>
 
 To read from the UART, create a message to indicate that this is a read command and how many bytes to be read.  This will be sent as a request (uartReqPort) to the UART device component.  An acknowledgement of the command's receipt will be provided in a response immediately (before the read happens).  The response will indicate this was a 'read' command and return a message value of 1.
 
