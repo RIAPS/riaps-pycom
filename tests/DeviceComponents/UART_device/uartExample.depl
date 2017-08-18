@@ -1,4 +1,0 @@
-app UartExample {
-	on (100.0.0.162) TestUartActorA;
-	on (100.0.0.156) TestUartActorB;
-}
