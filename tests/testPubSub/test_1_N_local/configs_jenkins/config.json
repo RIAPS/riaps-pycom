@@ -23,7 +23,9 @@
       "actor": "ActorTest1Ns_C_loc"
     }
   ],
+  "gateways":[
+  ],  
   "riaps_apps_path": "riaps_apps",
   "username": "riaps",
-  "password":"riapspwd"
+  "password":"riaps"
 }

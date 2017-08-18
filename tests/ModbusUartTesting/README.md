@@ -4,11 +4,21 @@
   - RIAPS developed library:  serialModbusLib
 
 # BBB Software Setup Requirements
+
 ```
-	sudo pip3 install minimalmodbus (which installs pyserial)
-	sudo pip3 install influxdb  # for logging
+    sudo pip3 install minimalmodbus (which installs pyserial)
 ```
 
+   For InfluxDB: On BBB or VM (where logging is happening)
+   
+```
+    $ curl -sL https://repos.influxdata.com/influxdb.key | sudo apt-key add -      
+    $ source /etc/lsb-release     
+    $ echo "deb https://repos.influxdata.com/${DISTRIB_ID,,} ${DISTRIB_CODENAME} stable" | sudo tee /etc/apt/sources.list.d/influxdb.list     
+    $ sudo apt-get update -y && sudo apt-get install influxdb -y      
+    $ sudo systemctl start influxdb
+```
+    
 # UART Configuration
 * port = '/dev/ttyO2'
 * baud rate = 57600
@@ -37,27 +47,9 @@
       - White (RX) to BBB TX (pin 21), 
       - Green (TX) to BBB RX (pin 22), 
       - GND on BBB pins 1, 2, 45, 46
+    - Cable information from https://www.adafruit.com/product/954?gclid=EAIaIQobChMIlIWZzJvX1QIVlyOBCh3obgJjEAQYASABEgImJfD_BwE
     
-* Configuration needed on the BBB image (to be updated in a future image)
-  - in .bashrc, add setup environment variables for these tools 
-```
-    	$ export SLOTS=/sys/devices/platform/bone_capemgr/slots
-    	$ export PINS=/sys/kernel/debug/pinctrl/44e10800.pinmux/pins
-```
-* Update visudo to retain the environment variables on a su call
-    - After "Defaults  env_reset"
-    - Add
-```
-        Defaults    env_keep += "SLOTS"  
-        Defaults    env_keep += "PINS"
-```
-* To deal with user permission on UART
-```
-    	$ sudo usermod -a -G dialout riaps     
-    	$ sudo usermod -a -G dialout riapsdev  (if running on the host VM)
-```
-
-* To turn on the UART2, modify /boot/uEnv.txt by uncommenting the following line and adding BB-UART2 
+* To turn on the UART2, on the beaglebone, modify /boot/uEnv.txt by uncommenting the following line and adding BB-UART2 
 (which points to an overlay in /lib/firmware)
 ```
 	#Example v4.1.x
@@ -66,7 +58,7 @@
 ```
 
 * Reboot the beaglebone to see the UART2 enabled. UART2 device is setup as ttyO2 (where the fourth letter 
-is the letter 'O', no zero) that references ttyS2 (a special character files)
+is the letter 'O', not zero) that references ttyS2 (a special character files)
 
 * To verify that UART2 is enabled, do the following:
 ```
@@ -96,9 +88,9 @@ $ ls -l /dev/ttyO*
 * BBB RX (P9, pin 22) --> DSP TX (J4, pin 38, SCIRXDB, GPIO14)
       
 # Tools used for debugging Modbus I/F  
-* BBB is master, slave simulator used was MODBUS RTU RS-232 PLC 
+* BBB is master, so to debug this interface a slave simulator was used: MODBUS RTU RS-232 PLC 
   - Simulator found at www.plcsimulator.org
-* DSP is slave, master simulator used was QModMaster 0.4.7
+* DSP is slave, so to debug this interface a master simulator was used: QModMaster 0.4.7
   - libmodbus 3.1.4 found at https://sourceforge.net/projects/qmodmaster
 * Modbus Message Parser
   - http://modbus.rapidscada.net/
