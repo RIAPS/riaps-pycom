@@ -31,7 +31,7 @@ The resistor side to ground and the LED in the pin location indicated.
 In the application model (.riaps file), create a GPIO device component with the configuration desired.  
 
 ```
-      $ device GpioDeviceComponent(bbb_pin_name='P8_11', direction='OUT', pull_up_down='PUD_OFF', setup_delay=60) 
+      device GpioDeviceComponent(bbb_pin_name='P8_11', direction='OUT', pull_up_down='PUD_OFF', setup_delay=60) 
 ```
 
 where,
