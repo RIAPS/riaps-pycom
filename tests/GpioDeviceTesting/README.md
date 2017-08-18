@@ -10,7 +10,7 @@ The resistor side to ground and the LED in the pin location indicated.
 * Install GPIO Python Library on both VM and BBBs
 	- sudo pip3 install Adafruit_BBIO
  
-On the BBB:
+### On the BBB:
 
 * For this to work, the user account must be in the 'gpio' group (which it is for the base BBB image)
     * Verify that ‘riaps’ user is in the ‘gpio’ group
