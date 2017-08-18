@@ -88,27 +88,26 @@ where,
   ***Note:  UART1 port is reserved for the ChronoCape hardware and should not be use***
 - Baud Rate: UART rate in bits/sec, usually specified by slave device
   
-<STILL WORKING ON THIS PART>
-     open = 0
-        close = 1
-        read = 2
-        write = 3
-        get_in_waiting = 4
-        get_out_waiting = 5
-        send_break = 6
-        get_break_condition = 7
-        set_break_condition = 8
-        
-        
-### Tips
+Requests can be made to the UartDeviceComponent to read from the UART or write to it.  The UartDeviceComponent will respond once the action is complete.  
 
+To write to the UART, create a message to indicate that this is a write command and the 'information to write'.  This will be sent as a request (uartReqPort) to the UART device component.  The response will indicate this was a 'write' command and provide a return value.
+
+```
+    msg = ('write',str.encode(<information to write>))
+```
+<TBD: indicate what the return value means>
+
+To read from the UART, create a message to indicate that this is a read command and how many bytes to be read.  This will be sent as a request (uartReqPort) to the UART device component.  An acknowledgement of the command's receipt will be provided in a response immediately (before the read happens).  The response will indicate this was a 'read' command and return a message value of 1.
+
+```
+   msg = ('read', numBytes)
+```
+        
 If the UART port is not available, the response message will be the following
 
 ```
        msg = ('ERROR',-1)
 ```
-
-
 
 ## Debugging hints
 
