@@ -37,7 +37,7 @@ In the application model (.riaps file), create a GPIO device component with the 
 where,
 - Pin name: connector and pin used on the BBB - P8_pin# or P9_pin# (***required input***)
 - direction: pin direction - IN or OUT (***required input***)
-- pull_up_down: BBB pin resistor configuration - *** PUD_OFF (default) ***, PUD_UP or PUD_DOWN
+- pull_up_down: BBB pin resistor configuration - ***PUD_OFF*** (***default***), PUD_UP or PUD_DOWN
 - setup_delay: time in milliseconds to wait after exporting GPIO pin to give udev some time to set file permissions - ***default = 60 ms***, should not use over 1000 ms
   
 To read a GPIO pin, the application publishes a ReadRequest message.  A timer (readValue) is used to call pollGpioValue.  The GPIO device component subscribes to the ReadRequest message and will publish the pin value as the DataValue message.  The application can subscribe (currentGpioValue) to the DataValue message to get the GPIO value that was read.
