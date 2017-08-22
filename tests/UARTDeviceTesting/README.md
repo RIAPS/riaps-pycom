@@ -91,14 +91,13 @@ where,
   
 Requests can be made to the UartDeviceComponent to read from the UART or write to it.  The UartDeviceComponent will respond once the action is complete.  
 
-To write to the UART, create a message to indicate that this is a write command and the 'information to write'.  This will be sent as a request (uartReqPort) to the UART device component.  The response will indicate this was a 'write' command and provide a return value.
+To write to the UART, create a message to indicate that this is a write command and the 'information to write'.  This will be sent as a request (uartReqPort) to the UART device component - see example message below.  The response will indicate this was a 'write' command and how many bytes were written (int value).
 
 ```
     msg = ('write',str.encode(<information to write>))
 ```
-<***TBD: indicate what the return value means***>
 
-To read from the UART, create a message to indicate that this is a read command and how many bytes to be read.  This will be sent as a request (uartReqPort) to the UART device component.  An acknowledgement of the command's receipt will be provided in a response immediately (before the read happens).  The response will indicate this was a 'read' command and return a message value of 1.
+To read from the UART, create a message to indicate that this is a read command and how many bytes to be read.  This will be sent as a request (uartReqPort) to the UART device component - see example message below.  An acknowledgement of the command's receipt will be provided in a response immediately (before the read happens).  The response will indicate this was a 'read' command and return a message value of 1.
 
 ```
     msg = ('read', numBytes)
@@ -109,6 +108,8 @@ If the UART port is not available, the response message will be the following
 ```
     msg = ('ERROR',-1)
 ```
+
+Other UART commands possible are to open or close the UART port.  The initialization of the UART device component will automatically open the UART2 port.  It is also possible to monitor the UART activity for debugging reasons using get_in_waiting, get_out_waiting, send_break, get_break_condition, and set_break_condition.  This test does not utilize these messages.
 
 ## Debugging hints
 
