@@ -357,7 +357,7 @@ class Actor(object):
         self.disco.terminate()
         # Clean up everything
         # self.context.destroy()
-        time.sleep(1.0)
+        # time.sleep(1.0)
         self.logger.info("terminated")
         os._exit(0)
 

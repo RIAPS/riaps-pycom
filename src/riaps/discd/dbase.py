@@ -57,6 +57,7 @@ class DiscoDbase(object):
         '''
          Update the list of subscribed keys with the new key
         '''
+        self.logger.info("updateSubs: %s" % newKey)
         if newKey in self.subKeys:
             return
         self.subKeys.append(newKey)
@@ -101,6 +102,7 @@ class DiscoDbase(object):
         A key may have multiple values associated with it, hence the new value 
         is added to the set of values that belong to the key
         '''
+        self.logger.info("insert %s -> %s" % (repr(key),repr(value)))
         try:
             clientsToNotify = []
             self.r.sadd(key,value)
@@ -117,6 +119,7 @@ class DiscoDbase(object):
         '''
         Fetch value(s) under key. Add client to list of clients interested in the value
         '''
+        self.logger.info("fetch %s for %s" % (repr(key),repr(client)))
         self.updateSubs(key)
         try:
             if self.r.exists(key):          
@@ -135,6 +138,7 @@ class DiscoDbase(object):
         '''
         Remove value from values under key.
         '''
+        self.logger.info("remove %s from %s" % (repr(value),repr(key)))
         try:
             self.r.srem(key,value)
             return self.r.smembers(key)
@@ -147,6 +151,7 @@ class DiscoDbase(object):
         '''
         Completely delete key and list of clients for that key.
         '''
+        self.logger.info("delete %s" % (repr(key)))
         try:
             self.rLocal.delete(key)
             clientsKey = key + "_client"
