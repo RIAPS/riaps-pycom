@@ -1,1 +1,1 @@
-This is a file to setup changes to trigger testing on Jenkins.
+This is a file to setup changes to trigger testing on Jenkins.  Configuration changes.
