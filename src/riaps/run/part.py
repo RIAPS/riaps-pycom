@@ -157,7 +157,7 @@ class Part(object):
         
         self.thread = ComponentThread(self)         # Create and launch the component thread
         self.thread.start() 
-        time.sleep(0.0001)                          # Hack to yield to the component thread
+        time.sleep(0.001)                          # Hack to yield to the component thread
         self.sendControl("build",-1)                # Command the component thread to build itself
         prefix = (self.name,self.typeName)
         queue = []
@@ -246,6 +246,7 @@ class Part(object):
     def terminate(self):
         self.logger.info("terminating")
         self.sendControl("kill",-1)         # Send message to the thread to kill itself
+        time.sleep(0.001)
         if self.thread != None:
             self.thread.join()
         for portObj in self.ports.values():
