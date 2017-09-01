@@ -14,13 +14,13 @@ app test_1_1_local_async {
       req getTemperature : ( SensorQuery , SensorValue );
     }
 
-    actor Actor11_A_loc(logfile="") {
+    actor Actor11_A_loc_async(logfile="") {
        local SensorValue, SensorQuery;{
           sensor : CompA(logfile = logfile);
        }
     }
 
-    actor Actor11_B_loc(logfile="") {
+    actor Actor11_B_loc_async(logfile="") {
        local SensorValue, SensorQuery;{
           collector: CompB(logfile = logfile);
        }

@@ -159,7 +159,7 @@ def setup_suite():
             runtime.set_deployer(component, component_deployer)
             component_deployer.install(component)
 
-    print(" -- testRepRep/test_1_1_async -- ")
+    print(" -- testReqRep/test_1_1_async -- ")
     print("Deployment done.")
 
 def reach_discovery():
