@@ -7,11 +7,13 @@ from .port import Port
 import threading
 import zmq
 import time
+import logging
 from .exc import OperationError
 
 class TimerThread(threading.Thread):
     def __init__(self,parent):
         threading.Thread.__init__(self)
+        self.logger = logging.getLogger(__name__)
         self.name = parent.instName
         self.context = parent.context
         if parent.period == 0:
@@ -31,7 +33,7 @@ class TimerThread(threading.Thread):
         self.started.clear()
         
     def run(self):
-        self.socket = self.context.socket(zmq.PUB)
+        self.socket = self.context.socket(zmq.PAIR) # PUB
         self.socket.bind('inproc://timer_' + self.name)     
         while 1:
             self.active.wait(None)                  # Wait for activation
@@ -141,6 +143,7 @@ class TimPort(Port):
         Constructor
         '''
         super(TimPort,self).__init__(parentPart,portName)
+        self.logger = logging.getLogger(__name__)
         self.instName = self.parent.name + '.' + self.name
         self.period = portSpec["period"]
         self.thread = None
@@ -151,9 +154,9 @@ class TimPort(Port):
     
     def setupSocket(self):
         assert self.instName == self.thread.name       
-        self.socket = self.context.socket(zmq.SUB)
+        self.socket = self.context.socket(zmq.PAIR) # SUB
         self.socket.connect('inproc://timer_' + self.instName)
-        self.socket.setsockopt_string(zmq.SUBSCRIBE, u'')
+        # self.socket.setsockopt_string(zmq.SUBSCRIBE, u'')
         return ('tim',self.name)
 
     def activate(self):
@@ -175,7 +178,11 @@ class TimPort(Port):
         Terminate the timer 
         '''
         if self.thread != None:
+            self.logger.info("terminating")
+            self.thread.halt()
             self.thread.terminate()
+            self.thread.join()
+            self.logger.info("terminated")
 
     def getPeriod(self):
         ''' 

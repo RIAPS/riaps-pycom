@@ -14,13 +14,14 @@ from riaps.consts.defs import *
 from riaps.utils.ifaces import getNetworkInterfaces
 from riaps.run.exc import SetupError
 import logging
+from subprocess import TimeoutExpired
 
 class DeploService(object):
     '''
     Deployment service main class. Each RIAPS mode runs a copy of the Deployment Service, which is
     responsible for starting and managing all RIAPS processes. 
     '''
-    def __init__(self, host,port):
+    def __init__(self,host,port):
         self.logger = logging.getLogger(__name__)
         '''
         Initialize the service with the host:port of the controller node (if provided)
@@ -185,8 +186,15 @@ class DeploService(object):
         key = str(appName) + "." + str(actorName)
         if key in self.launchMap:
             proc = self.launchMap[key]
-            self.logger.info("Halting %s" % key)
+            self.logger.info("halting %s" % key)
             proc.terminate()                             # Should check for errors
+            while True:
+                try:
+                    proc.wait(3.0)
+                    break
+                except TimeoutExpired:
+                    self.logger.info("%s did not terminate" % key)
+            self.logger.info("halted %s" % key)
             del self.launchMap[key]
 
         

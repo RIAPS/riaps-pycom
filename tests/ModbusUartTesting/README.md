@@ -18,6 +18,12 @@
     $ sudo apt-get update -y && sudo apt-get install influxdb -y      
     $ sudo systemctl start influxdb
 ```
+
+   On BBB, configure python library
+  
+```
+    $ sudo pip3 install influxdb
+```
     
 # UART Configuration
 * port = '/dev/ttyO2'

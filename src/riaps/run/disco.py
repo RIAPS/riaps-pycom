@@ -94,6 +94,7 @@ class DiscoClient(object):
         reqMsg.socket.port = portNum
         reqMsg.pid = os.getpid()
         reqMsgPath.appName = self.appName
+        reqMsgPath.actorName = self.actor.name
         reqMsgPath.msgType = portType 
         reqMsgPath.kind = kind
         reqMsgPath.scope = 'local' if isLocal else 'global'
@@ -127,6 +128,7 @@ class DiscoClient(object):
         reqMsg = req.init('serviceLookup')
         reqMsgPath = reqMsg.path
         reqMsgPath.appName = self.appName
+        reqMsgPath.actorName = self.actor.name
         reqMsgPath.msgType = portType 
         reqMsgPath.kind = kind
         reqMsgPath.scope = 'local' if isLocal else 'global'

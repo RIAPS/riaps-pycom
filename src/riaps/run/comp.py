@@ -16,6 +16,7 @@ class ComponentThread(threading.Thread):
     '''
     def __init__(self,parent):
         threading.Thread.__init__(self)
+        self.logger = logging.getLogger(__name__)
         self.name = parent.name
         self.parent = parent
         self.context = parent.context
@@ -62,17 +63,21 @@ class ComponentThread(threading.Thread):
         res = False
         msg = self.control.recv_pyobj()
         if msg == "kill":
+            self.logger.info("kill")
             res = True
         elif msg == "activate":
+            self.logger.info("activate")
             pass                            
         else: 
             cmd = msg[0]
             if cmd == "portUpdate":
+                self.logger.info("portUpdate")
                 (_,portName,host,port) = msg
                 portObj = self.parent.ports[portName]
                 res = portObj.update(host,port)
                 self.control.send_pyobj("ok")
             else:
+                self.logger.info("unknown command %s" % cmd)
                 pass            # Should report an error
         return res
     
@@ -98,9 +103,11 @@ class ComponentThread(threading.Thread):
                 portName = self.portMap[socket]
                 func_ = getattr(self.instance, 'on_' + portName)
                 func_()
+        self.logger.info("stopping")
         if hasattr(self.instance,'__destroy__'):
             destroy_ = getattr(self.instance,'__destroy__')
             destroy_()
+        self.logger.info("stopped")
 
                    
 
