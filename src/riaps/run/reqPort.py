@@ -67,6 +67,8 @@ class ReqPort(Port):
         except ZMQError as e:
             if e.errno == zmq.EAGAIN:
                 return False
+            elif e.errno == zmq.EFSM:
+                return False
             else:
                 raise
         return True
