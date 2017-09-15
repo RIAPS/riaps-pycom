@@ -12,7 +12,7 @@ from os.path import join
 import subprocess
 import zmq
 from riaps.consts.defs import *
-from .exc import BuildError
+from riaps.run.exc import BuildError
 from riaps.utils.ifaces import getNetworkInterfaces
 from riaps.run.exc import SetupError
 import logging
