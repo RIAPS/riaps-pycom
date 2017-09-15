@@ -7,10 +7,12 @@ import rpyc
 import time
 import sys
 import os
+import json
 from os.path import join
 import subprocess
 import zmq
 from riaps.consts.defs import *
+from .exc import BuildError
 from riaps.utils.ifaces import getNetworkInterfaces
 from riaps.run.exc import SetupError
 import logging
@@ -153,12 +155,37 @@ class DeploService(object):
         '''
         Start an actor of an application 
         '''
-        riaps_prog = 'riaps_actor'
+
+        # Python / C++ starters
+        riaps_py_prog = 'riaps_actor'
+        riaps_cc_prog = 'start_actor'
+
+
+
+        appFolder = join(self.riapsApps, appName)
+        appModelPath = join(appFolder, appModel)
+
+        # Use Python starter by default
+        riaps_prog = riaps_py_prog
+        isPython = True
+        componentTypes = self.getComponentTypes(appModelPath, actorName)
+        for componentType in componentTypes:
+            # Look up the python version
+            pyFilePath = join(appFolder, componentType + '.py')
+            if not os.path.isfile(pyFilePath):
+                isPython = False
+
+        if not isPython:
+            for componentType in componentTypes:
+                # Look up the python version
+                ccFilePath = join(appFolder, 'lib' + componentType.lower() + '.so')
+                if not os.path.isfile(ccFilePath):
+                    raise BuildError('Component not found: %s' % componentType)
+            riaps_prog = riaps_cc_prog
+
         riaps_mod = self.riaps_actor_file   #  File name for python script 'riaps_actor.py'
         
-        appFolder = join(self.riapsApps,appName)
-        appModelPath = join(appFolder,appModel)
-        riaps_arg1 = appName 
+        riaps_arg1 = appName
         riaps_arg2 = appModelPath
         riaps_arg3 = actorName
         command = [riaps_prog,riaps_arg1,riaps_arg2,riaps_arg3]
@@ -169,7 +196,10 @@ class DeploService(object):
             proc = subprocess.Popen(command,cwd=appFolder)
         except FileNotFoundError:
             try:
-                command = ['python3',riaps_mod] + command[1:]
+                if isPython:
+                    command = ['python3',riaps_mod] + command[1:]
+                else:
+                    command = [riaps_prog] + command[1:]
                 proc = subprocess.Popen(command,cwd=appFolder)
             except:
                 self.logger.error("Error while starting actor: %s" % sys.exc_info()[0])
@@ -178,6 +208,32 @@ class DeploService(object):
         # ADD HERE: build comm channel to the actor for control purposes
         self.launchMap[key] = proc
 
+    def getComponentTypes(self, modelFileName, actorName):
+        '''
+        Collects all the component types of an actor.
+        '''
+
+        componentTypes = []
+
+        try:
+            fp = open(modelFileName, 'r')  # Load model file
+            model = json.load(fp)
+        except IOError as e:
+            print ("I/O error({0}): {1}".format(e.errno, e.strerror))
+            raise
+        except:
+            print ("Unexpected error:", sys.exc_info()[0])
+            raise
+
+        if actorName not in model["actors"]:
+            raise BuildError('Actor "%s" unknown' % actorName)
+        actorModel = model["actors"][actorName]
+
+        for actorConfig in actorModel.values():
+            for compInstance in actorConfig["instances"].values():
+                componentTypes.append(compInstance["type"])
+
+        return componentTypes
     
     def haltActor(self,appName,actorName):
         '''
