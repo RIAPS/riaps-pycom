@@ -27,6 +27,7 @@ pycapnp >= 0.5.9
 netifaces >= 0.10.5
 paramiko >= 2.0.2
 cryptography >= 1.5.3
+python-magic >= 0.4.13
 
 
 use: apt install python3-pip python3-dev libhiredis-dev libcapnp-dev libssl-dev libffi-dev glade python3-gi
