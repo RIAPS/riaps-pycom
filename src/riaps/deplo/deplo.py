@@ -165,6 +165,9 @@ class DeploService(object):
         appFolder = join(self.riapsApps, appName)
         appModelPath = join(appFolder, appModel)
 
+        if not os.path.isdir(appFolder):
+            raise BuildError('App folder is missing: %s' % appFolder)
+
         # Use Python starter by default
         riaps_prog = riaps_py_prog
         isPython = True
@@ -180,7 +183,7 @@ class DeploService(object):
                 # Look up the python version
                 ccFilePath = join(appFolder, 'lib' + componentType.lower() + '.so')
                 if not os.path.isfile(ccFilePath):
-                    raise BuildError('Component not found: %s' % componentType)
+                    raise BuildError('Implementation of component %s is missing' % componentType)
             riaps_prog = riaps_cc_prog
 
         riaps_mod = self.riaps_actor_file   #  File name for python script 'riaps_actor.py'
@@ -229,9 +232,9 @@ class DeploService(object):
             raise BuildError('Actor "%s" unknown' % actorName)
         actorModel = model["actors"][actorName]
 
-        for actorConfig in actorModel.values():
-            for compInstance in actorConfig["instances"].values():
-                componentTypes.append(compInstance["type"])
+        for key in actorModel["instances"]:
+            compType = actorModel["instances"][key]["type"]
+            componentTypes.append(compType)
 
         return componentTypes
     
