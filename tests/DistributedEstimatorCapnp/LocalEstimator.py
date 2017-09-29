@@ -32,9 +32,8 @@ class LocalEstimator(Component):
         #msg = "sensor_query"
         #self.query.send_pyobj(msg)
         queryBytes = queryMsg.to_bytes()
-        self.query.send_bytes(queryBytes)
-
-        self.pending += 1
+        if self.query.send_bytes(queryBytes):
+            self.pending += 1
     
     def on_query(self):
         #msg = self.query.recv_pyobj()
