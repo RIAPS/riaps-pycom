@@ -62,6 +62,16 @@ class PubPort(Port):
             else:
                 raise
         return True
+
+    def send_capnp(self, msg):
+        try:
+            self.socket.send(msg)
+        except ZMQError as e:
+            if e.errno == zmq.EAGAIN:
+                return False
+            else:
+                raise
+        return True
         
     def recv_pyobj(self):
         raise OperationError("attempt to receive through a publish port")

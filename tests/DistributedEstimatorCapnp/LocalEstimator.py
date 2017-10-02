@@ -19,7 +19,7 @@ class LocalEstimator(Component):
         
     def on_ready(self):
         # msg = self.ready.recv_pyobj()
-        msgSensorReadyBytes = self.ready.recv_bytes()
+        msgSensorReadyBytes = self.ready.recv_capnp()
         msgSensorReady = distributedestimator_capnp.SensorReady.from_bytes(msgSensorReadyBytes)
 
         self.logger.info("on_ready():%s [%d]", msgSensorReady.msg, self.pid)
@@ -32,12 +32,12 @@ class LocalEstimator(Component):
         #msg = "sensor_query"
         #self.query.send_pyobj(msg)
         queryBytes = queryMsg.to_bytes()
-        if self.query.send_bytes(queryBytes):
+        if self.query.send_capnp(queryBytes):
             self.pending += 1
     
     def on_query(self):
         #msg = self.query.recv_pyobj()
-        queryBytes = self.query.recv_bytes()
+        queryBytes = self.query.recv_capnp()
         queryMsg   = distributedestimator_capnp.SensorValue.from_bytes(queryBytes)
         self.logger.info("on_query():%s", queryMsg.msg)
         self.pending -= 1
@@ -47,5 +47,5 @@ class LocalEstimator(Component):
         #msg = "local_est(" + str(self.pid) + ")"
         #self.estimate.send_pyobj(msg)
         estimateMsgBytes = estimateMsg.to_bytes()
-        self.estimate.send_bytes(estimateMsgBytes)
+        self.estimate.send_capnp(estimateMsgBytes)
     
