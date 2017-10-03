@@ -60,6 +60,9 @@ class ReqPort(Port):
         
     def recv_pyobj(self):
         return self.socket.recv_pyobj()
+
+    def recv_capnp(self):
+        return self.socket.recv()
     
     def send_pyobj(self,msg):
         try:
@@ -68,6 +71,16 @@ class ReqPort(Port):
             if e.errno == zmq.EAGAIN:
                 return False
             elif e.errno == zmq.EFSM:
+                return False
+            else:
+                raise
+        return True
+
+    def send_capnp(self, msg):
+        try:
+            self.socket.send(msg)
+        except ZMQError as e:
+            if e.errno == zmq.EAGAIN:
                 return False
             else:
                 raise

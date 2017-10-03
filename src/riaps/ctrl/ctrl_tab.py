@@ -365,6 +365,12 @@ class Controller_Tab(object):
             if os.path.isfile(ccComponentFile):
                 download.append(ccComponentFile)
 
+        # Get capnp files
+        entries = os.scandir(self.riaps_appFolder)
+        for entry in entries:
+            if entry.is_file() and os.path.splitext(entry.name)[1] == '.capnp':
+                download.append(entry.name)
+
         for device in appObj["devices"]:
             pyDeviceFile = str(device) + ".py"
             ccDeviceFile = "lib" + str(device).lower() + ".so"

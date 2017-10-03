@@ -66,6 +66,19 @@ class RepPort(Port):
                 raise
         return True
 
+    def send_capnp(self, msg):
+        try:
+            self.socket.send(msg)
+        except ZMQError as e:
+            if e.errno == zmq.EAGAIN:
+                return False
+            else:
+                raise
+        return True
+
+    def recv_capnp(self):
+        return self.socket.recv()
+
     def getInfo(self):
         return ("rep",self.name,(self.req_type,self.rep_type), self.host, self.portNum)
     
