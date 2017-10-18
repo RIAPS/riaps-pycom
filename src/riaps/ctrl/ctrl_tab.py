@@ -356,13 +356,29 @@ class Controller_Tab(object):
                 if actorName not in appObj['actors']:
                     self.log("Error: Actor '%s' not found in model" % actorName)
                     return
-        # Collect all app components
+        # Collect all app components (python and c++)
         for component in appObj["components"]:
-            componentFile = str(component) + ".py"
-            download.append(componentFile)
+            pyComponentFile = str(component) + ".py"
+            ccComponentFile = "lib" + str(component).lower() + ".so"
+            if os.path.isfile(pyComponentFile):
+                download.append(pyComponentFile)
+            if os.path.isfile(ccComponentFile):
+                download.append(ccComponentFile)
+
+        # Get capnp files
+        entries = os.scandir(self.riaps_appFolder)
+        for entry in entries:
+            if entry.is_file() and os.path.splitext(entry.name)[1] == '.capnp':
+                download.append(entry.name)
+
         for device in appObj["devices"]:
-            deviceFile = str(device) + ".py"
-            download.append(deviceFile)
+            pyDeviceFile = str(device) + ".py"
+            ccDeviceFile = "lib" + str(device).lower() + ".so"
+            if os.path.isfile(pyDeviceFile):
+                download.append(pyDeviceFile)
+            if os.path.isfile(ccDeviceFile):
+                download.append(ccDeviceFile)
+
         # Collect libraries
         libraries = []
         for library in appObj["libraries"]:

@@ -360,6 +360,13 @@ class Controller(object):
         for library in appObj["libraries"]:
             libraryName = library["name"]
             libraries.append(libraryName)
+
+        # Get capnp files
+        entries = os.scandir(self.riaps_appFolder)
+        for entry in entries:
+            if entry.is_file() and os.path.splitext(entry.name)[1] == '.capnp':
+                download.append(entry.name)
+
         # Process the deployment and download app
         clients = set() 
         for depl in depls:

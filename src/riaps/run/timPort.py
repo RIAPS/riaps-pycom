@@ -45,7 +45,8 @@ class TimerThread(threading.Thread):
                 if self.waiting.is_set():           # Period was cancelled
                     self.waiting.clear()            # Start next period, but do not send tick
                     continue
-                if self.active.is_set():            # Send tick (if active)
+                if self.active.is_set() and self.started.is_set()
+:            # Send tick (if active)
                     value = time.time()
                     self.socket.send_pyobj(value)
             else:                                   # One shot timer
@@ -66,6 +67,7 @@ class TimerThread(threading.Thread):
         '''
         Activate the timer port
         '''
+
         self.active.set()
         if self.periodic:
             self.started.set()

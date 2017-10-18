@@ -20,8 +20,8 @@ def test_req_rep():
 
 
 def validate_req_rep():
-    actorRep = "Actor11_B_loc"
-    actorReq = "Actor11_A_loc"
+    actorRep = "Actor11_B_loc_async"
+    actorReq = "Actor11_A_loc_async"
 
     rep_log_name = "{0}-{1}.log".format(actorRep, actorRep)
     rep_log_file = os.path.join(perf.LOGS_DIRECTORY, rep_log_name)
