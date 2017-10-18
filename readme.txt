@@ -1,4 +1,4 @@
-Running RIAPS Applications
+Running RIAPS Applications      
 ==========================
 
 There are three ways to launch and run a riaps application, described below. The file
