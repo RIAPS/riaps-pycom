@@ -36,6 +36,7 @@ class ComputationalComponent(Component):
         self.dummyValue = [0]
         self.defaultNumOfDecimals = 0
         self.signedDefault = False
+        self.ModbusPending = 0
 
         self.logger.info("ComputationalComponent: %s - starting",str(self.pid)) 
                
@@ -63,23 +64,26 @@ class ComputationalComponent(Component):
          
         msg = self.command
         self.logger.info('[%d] send req: %s' % (self.pid,msg))
-        self.modbusReqPort.send_pyobj(msg)
+        if self.modbusReqPort.send_pyobj(msg):
+            self.ModbusPending += 1
               
         '''Receive Response'''
-        msg = self.modbusReqPort.recv_pyobj()
-        self.logger.info("on_modbusReqPort()[%s]: %s",str(self.pid),repr(msg))
-#        pydevd.settrace(host='192.168.1.102',port=5678)  
+        if self.ModbusPending > 0:
+            msg = self.modbusReqPort.recv_pyobj()
+            self.logger.info("on_modbusReqPort()[%s]: %s",str(self.pid),repr(msg))
+            self.ModbusPending -= 1
+#           pydevd.settrace(host='192.168.1.102',port=5678)  
         
-        if self.command.commandType == ModbusCommands.READ_INPUTREG or self.command.commandType == ModbusCommands.READ_HOLDINGREG:
-            logMsg = "Register " + str(self.command.registerAddress) + " value is " + str(msg)
-        elif self.command.commandType == ModbusCommands.READMULTI_INPUTREGS or self.command.commandType == ModbusCommands.READMULTI_HOLDINGREGS:
-            logMsg = "Register " + str(self.command.registerAddress) + " values are " + str(msg)
-        elif self.command.commandType == ModbusCommands.WRITE_HOLDINGREG:
-            logMsg = "Wrote Register " + str(self.command.registerAddress)
-        elif self.command.commandType == ModbusCommands.WRITEMULTI_HOLDINGREGS:
-            logMsg = "Wrote Registers " + str(self.command.registerAddress) + " to " + str(self.command.registerAddress + self.command.numberOfRegs - 1)
+            if self.command.commandType == ModbusCommands.READ_INPUTREG or self.command.commandType == ModbusCommands.READ_HOLDINGREG:
+                logMsg = "Register " + str(self.command.registerAddress) + " value is " + str(msg)
+            elif self.command.commandType == ModbusCommands.READMULTI_INPUTREGS or self.command.commandType == ModbusCommands.READMULTI_HOLDINGREGS:
+                logMsg = "Register " + str(self.command.registerAddress) + " values are " + str(msg)
+            elif self.command.commandType == ModbusCommands.WRITE_HOLDINGREG:
+                logMsg = "Wrote Register " + str(self.command.registerAddress)
+            elif self.command.commandType == ModbusCommands.WRITEMULTI_HOLDINGREGS:
+                logMsg = "Wrote Registers " + str(self.command.registerAddress) + " to " + str(self.command.registerAddress + self.command.numberOfRegs - 1)
             
-        self.tx_modbusData.send_pyobj(logMsg)  # Send log data
+            self.tx_modbusData.send_pyobj(logMsg)  # Send log data
         
     def __destroy__(self):
         self.logger.info("[%d] destroyed" % self.pid)
