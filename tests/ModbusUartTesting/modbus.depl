@@ -1,4 +1,4 @@
 app RIAPSModbusUART {
-	on (192.168.1.103) ModbusExampleActor;
-	on (192.168.1.103) ModbusLogger;
+	on (192.168.1.104) ModbusExampleActor;
+	on (192.168.1.101) ModbusLogger;
 }

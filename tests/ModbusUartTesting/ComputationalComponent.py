@@ -8,7 +8,7 @@ from riaps.run.comp import Component
 import uuid
 import os
 from collections import namedtuple
-from ModbusUartDevice import CommandFormat,ModbusCommands
+from ModbusUartDevice import ModbusRequest,ModbusCommands,RequestFormat,CommandFormat
 import pydevd
 
 
@@ -21,16 +21,16 @@ HoldingRegs = namedtuple('HoldingRegs',['unused', 'startStopCmd', 'power'])
 1.start/stop, 2.power command, 3. frequency shift from secondary control, 4. voltage magnitude shift from secondary control.
 HoldingRegs = namedtuple('HoldingRegs',['startStopCmd', 'powerCmd', 'freqShift', 'voltMagShift']) 
 '''
- 
+
 class ComputationalComponent(Component):
     def __init__(self):
         super().__init__()
-#        pydevd.settrace(host='192.168.1.103',port=5678)
+        # pydevd.settrace(host='192.168.1.103',port=5678)
         self.uuid = uuid.uuid4().int
         self.pid = os.getpid()
         self.inputRegs = InputRegs(RegSet(0,45),RegSet(1,56),RegSet(2,78),RegSet(3,91))
         self.holdingRegs = HoldingRegs(RegSet(0,0),RegSet(1,55),RegSet(2,66))
-        
+
         '''Setup Commands'''
         self.defaultNumOfRegs = 1
         self.dummyValue = [0]
@@ -41,21 +41,20 @@ class ComputationalComponent(Component):
         self.dataExpected = False
         self.pollCmdList = []
 
-        self.logger.info("ComputationalComponent: %s - starting",str(self.pid)) 
-               
+        self.logger.info("ComputationalComponent: %s - starting",str(self.pid))
 
     def on_clock(self):
-        now = self.clock.recv_pyobj() 
+        now = self.clock.recv_pyobj()
         self.logger.info("ComputationalComponent - on_clock()[%s]: %s",str(self.pid),str(now))
 
         '''Request:  Query Commands to send over Modbus - one command used at a time, options to test below'''
-        
+
         '''Read/Write (holding only) a single register'''
         #Option1: self.command = CommandFormat(ModbusCommands.READ_INPUTREG,self.inputRegs.time.idx,self.defaultNumOfRegs,self.dummyValue,self.defaultNumOfDecimals,self.signedDefault) 
         #Option2: self.command = CommandFormat(ModbusCommands.READ_HOLDINGREG,self.holdingRegs.startStopCmd.idx,self.defaultNumOfRegs,self.dummyValue,self.defaultNumOfDecimals,self.signedDefault)
         #Option3: self.values = [83]
         #         self.command = CommandFormat(ModbusCommands.WRITE_HOLDINGREG,self.holdingRegs.power.idx,self.defaultNumOfRegs,self.values,self.defaultNumOfDecimals,self.signedDefault)
-       
+
         '''Read/Write all input registers'''
         #Option4: numRegsToRead = len(self.inputRegs)
         #         self.command = CommandFormat(ModbusCommands.READMULTI_INPUTREGS,self.inputRegs.outputCurrent.idx,numRegsToRead,self.dummyValue,self.defaultNumOfDecimals,self.signedDefault)
@@ -63,54 +62,49 @@ class ComputationalComponent(Component):
         '''Read/Write all holding registers'''
         #Option5:
         self.command = CommandFormat(ModbusCommands.READMULTI_HOLDINGREGS,self.holdingRegs.unused.idx,len(self.holdingRegs),self.dummyValue,self.defaultNumOfDecimals,self.signedDefault)
-        
-        # MM TODO:  RequestFormat = namedtuple('RequestFormat', ['requestType','requestData'])
-        
-        # MM TODO: update other commands once test first
-        
+
         #Option6: self.values = [75,67]
         #         self.command = CommandFormat(ModbusCommands.WRITEMULTI_HOLDINGREGS,self.holdingRegs.startStopCmd.idx,2,self.values,self.defaultNumOfDecimals,self.signedDefault)
-        
-        '''Setup Request - requestType and requestData '''    
-        self.requestCommand = ModbusRequest(ModbusRequest.QUERY_MODBUS,self.command)  
-         
+
+        '''Setup Request - requestType and requestData '''
+        self.requestCommand = RequestFormat(ModbusRequest.QUERY_MODBUS,self.command)
+
         '''Polling Setup Command'''
         #command1 = CommandFormat(ModbusCommands.READ_HOLDINGREG,self.holdingRegs.startStopCmd.idx,self.defaultNumOfRegs,self.dummyValue,self.defaultNumOfDecimals,self.signedDefault)
         #self.pollCmdList.append(command1)
         #value = [83]
         #command2 = CommandFormat(ModbusCommands.WRITE_HOLDINGREG,self.holdingRegs.power.idx,self.defaultNumOfRegs,value,self.defaultNumOfDecimals,self.signedDefault)
         #self.pollCmdList.append(command2)
-        #self.requestCommand = ModbusRequest(ModbusRequest.SETUP_POLLER,self.pollCmdList) 
-        
+        #self.requestCommand = RequestFormat(ModbusRequest.SETUP_POLLER,self.pollCmdList) 
+
         '''Start Polling Command'''
         #self.pollPeriod = 40  # in ms
-        #self.requestCommand = ModbusRequest(ModbusRequest.START_POLLING,self.pollPeriod) 
-        
-        '''Stop Polling Command''' 
-        #noData = None
-        #self.requestCommand = ModbusRequest(ModbusRequest.STOP_POLLING,noData)  
+        #self.requestCommand = RequestFormat(ModbusRequest.START_POLLING,self.pollPeriod)
 
-         
+        '''Stop Polling Command'''
+        #noData = None
+        #self.requestCommand = RequestFormat(ModbusRequest.STOP_POLLING,noData)
+
         msg = self.requestCommand
         self.logger.info('ComputationalComponent on_clock()[%d] send request: %s' % (self.pid,msg))
         if self.modbusReqPort.send_pyobj(msg):
             self.modbusPending += 1
-              
+
         '''Receive Response - ACK or ERROR'''
         if self.modbusPending > 0:
-            msg = self.modbusReqPort.recv_pyobj() 
+            msg = self.modbusReqPort.recv_pyobj()
             self.logger.info("ComputationalComponent on_clock()[%s] receive response: %s",str(self.pid),repr(msg))
             self.modbusPending -= 1
-            # pydevd.settrace(host='192.168.1.102',port=5678)  
-            if msg=="ACK"
-                self.dataExpected = True  
-           
-    def on_rx_modbusData
+            # pydevd.settrace(host='192.168.1.102',port=5678)
+            if msg=='ACK':
+                self.dataExpected = True
+
+    def on_rx_modbusData(self):
         msg = self.on_rx_modbusData.recv_pyobj()
         self.logger.info("ComputationalComponent on_rx_modbusData()[%s]: %s",str(self.pid),repr(msg))
-        # pydevd.settrace(host='192.168.1.102',port=5678)  
-        
-        if self.dataExpected == True:        
+        # pydevd.settrace(host='192.168.1.102',port=5678)
+
+        if self.dataExpected == True:
             if self.command.commandType == ModbusCommands.READ_INPUTREG or self.command.commandType == ModbusCommands.READ_HOLDINGREG:
                 logMsg = "Register " + str(self.command.registerAddress) + " value is " + str(msg)
             elif self.command.commandType == ModbusCommands.READMULTI_INPUTREGS or self.command.commandType == ModbusCommands.READMULTI_HOLDINGREGS:
@@ -119,15 +113,14 @@ class ComputationalComponent(Component):
                 logMsg = "Wrote Register " + str(self.command.registerAddress)
             elif self.command.commandType == ModbusCommands.WRITEMULTI_HOLDINGREGS:
                 logMsg = "Wrote Registers " + str(self.command.registerAddress) + " to " + str(self.command.registerAddress + self.command.numberOfRegs - 1)
-            
+
             self.tx_modbusData.send_pyobj(logMsg)  # Send log data
             self.dataExpected = False  # reset for next modbus read
-            
-        else  # this should not happen, but capturing it to make sure
+
+        else:  # this should not happen, but capturing it to make sure
             self.logger.info("ComputationalComponent on_rx_modbusData()[%s]: Stray message arrived - %s",str(self.pid),repr(msg))
-          
+
     def __destroy__(self):
         self.logger.info("ComputationalComponent[%d] destroyed" % self.pid)
-        
-        
+
         

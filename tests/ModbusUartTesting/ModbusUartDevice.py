@@ -198,7 +198,7 @@ class ModbusUartThread(threading.Thread):
             self.modbus.writeHoldingRegisters(self.registerAddress, self.values)
             self.component.logger.info("ModbusUartThread: sent command %s, register=%d",ModbusCommands.WRITEMULTI_HOLDINGREGS.name,self.registerAddress)
             self.component.logger.info("ModbusUartThread: Values - %s", str(self.values).strip('[]'))   
-        else # MM TODO:  invalid query command
+        else:s # MM TODO:  invalid query command
             self.component.logger.info("ModbusUartThread: Invalid query command sent: command=%s",self.commandtype.name)  
         
         return value
@@ -207,12 +207,12 @@ class ModbusUartThread(threading.Thread):
     Start a thread that will read the appropriate registers in the pollCmdList and then sleep for the period specified
     '''
     # MM TODO:  stopped here to test query first
-    def startPolling(self)
+    def startPolling(self):
         self.pollingActive = True
         self.component.logger.info("ModbusUartThread[%s]: Polling started",str(self.pid))
 
     # MM TODO:  stopped here to test query first
-    def stopPolling(self)
+    def stopPolling(self):
         if self.pollingActive:
             self.pollingActive = False
         self.component.logger.info("ModbusUartThread[%s]: Polling stopped",str(self.pid))
