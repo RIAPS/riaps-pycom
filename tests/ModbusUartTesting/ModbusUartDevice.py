@@ -135,7 +135,7 @@ class ModbusUartThread(threading.Thread):
                     self.command.send_pyobj(msg)
 
                     # Single Modbus Query
-                    if requestType == QUERY_MODBUS:
+                    if requestType == ModbusRequest.QUERY_MODBUS:
                         self.unpackRegisterCommand(requestData)
                         responseValue = self.sendModbusCommand()  
                         self.component.logger.info("ModbusUartThread[%s]: Query Cmd sent to Modbus",str(self.pid))   
@@ -147,17 +147,17 @@ class ModbusUartThread(threading.Thread):
                         
                     # MM TODO:  stopped here to test query first    
                     # Setup a list of Modbus commands to query during polling
-                    elif requestType == SETUP_POLLER:
+                    elif requestType == ModbusRequest.SETUP_POLLER:
                         self.component.logger.info("ModbusUartThread[%s]: Poller Setup requested",str(self.pid))   
                     
                     # MM TODO:  stopped here to test query first   
                     # Start Polling
-                    elif requestType == START_POLLING:
+                    elif requestType == ModbusRequest.START_POLLING:
                         self.component.logger.info("ModbusUartThread[%s]: Poller Start requested",str(self.pid))   
                     
                     # MM TODO:  stopped here to test query first   
                     # Stop Polling
-                    elif requestType == STOP_POLLING:
+                    elif requestType == ModbusRequest.STOP_POLLING:
                         self.pollingActive = False
                         self.pollerTimeout = None
                         self.component.logger.info("ModbusUartThread[%s]: Poller Stop requested",str(self.pid))   
@@ -198,7 +198,7 @@ class ModbusUartThread(threading.Thread):
             self.modbus.writeHoldingRegisters(self.registerAddress, self.values)
             self.component.logger.info("ModbusUartThread: sent command %s, register=%d",ModbusCommands.WRITEMULTI_HOLDINGREGS.name,self.registerAddress)
             self.component.logger.info("ModbusUartThread: Values - %s", str(self.values).strip('[]'))   
-        else:s # MM TODO:  invalid query command
+        else: # MM TODO:  invalid query command
             self.component.logger.info("ModbusUartThread: Invalid query command sent: command=%s",self.commandtype.name)  
         
         return value
