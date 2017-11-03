@@ -38,77 +38,96 @@ class ComputationalComponent(Component):
         self.signedDefault = False
         self.modbusPending = 0
         self.pollRequested = False
+        self.dataExpected = False
+        self.pollCmdList = []
 
         self.logger.info("ComputationalComponent: %s - starting",str(self.pid)) 
                
 
     def on_clock(self):
         now = self.clock.recv_pyobj() 
-        self.logger.info("on_clock()[%s]: %s",str(self.pid),str(now))
+        self.logger.info("ComputationalComponent - on_clock()[%s]: %s",str(self.pid),str(now))
 
-        '''Request:  Commands to send over Modbus - one command used at a time'''
+        '''Request:  Query Commands to send over Modbus - one command used at a time, options to test below'''
         
         '''Read/Write (holding only) a single register'''
-        #self.command = CommandFormat(ModbusCommands.READ_INPUTREG,self.inputRegs.time.idx,self.defaultNumOfRegs,self.dummyValue,self.defaultNumOfDecimals,self.signedDefault) 
-        #self.command = CommandFormat(ModbusCommands.READ_HOLDINGREG,self.holdingRegs.startStopCmd.idx,self.defaultNumOfRegs,self.dummyValue,self.defaultNumOfDecimals,self.signedDefault)
-        #self.values = [83]
-        #self.command = CommandFormat(ModbusCommands.WRITE_HOLDINGREG,self.holdingRegs.power.idx,self.defaultNumOfRegs,self.values,self.defaultNumOfDecimals,self.signedDefault)
+        #Option1: self.command = CommandFormat(ModbusCommands.READ_INPUTREG,self.inputRegs.time.idx,self.defaultNumOfRegs,self.dummyValue,self.defaultNumOfDecimals,self.signedDefault) 
+        #Option2: self.command = CommandFormat(ModbusCommands.READ_HOLDINGREG,self.holdingRegs.startStopCmd.idx,self.defaultNumOfRegs,self.dummyValue,self.defaultNumOfDecimals,self.signedDefault)
+        #Option3: self.values = [83]
+        #         self.command = CommandFormat(ModbusCommands.WRITE_HOLDINGREG,self.holdingRegs.power.idx,self.defaultNumOfRegs,self.values,self.defaultNumOfDecimals,self.signedDefault)
        
         '''Read/Write all input registers'''
-        #numRegsToRead = len(self.inputRegs)
-        #self.command = CommandFormat(ModbusCommands.READMULTI_INPUTREGS,self.inputRegs.outputCurrent.idx,numRegsToRead,self.dummyValue,self.defaultNumOfDecimals,self.signedDefault)
+        #Option4: numRegsToRead = len(self.inputRegs)
+        #         self.command = CommandFormat(ModbusCommands.READMULTI_INPUTREGS,self.inputRegs.outputCurrent.idx,numRegsToRead,self.dummyValue,self.defaultNumOfDecimals,self.signedDefault)
 
         '''Read/Write all holding registers'''
-        self.registerConfig = RegisterConfig(self.holdingRegs.unused.idx,len(self.holdingRegs),self.dummyValue,self.defaultNumOfDecimals,self.signedDefault,self.pollRequested)
-        self.command = CommandFormat(ModbusCommands.READMULTI_HOLDINGREGS,self.registerConfig)
+        #Option5:
+        self.command = CommandFormat(ModbusCommands.READMULTI_HOLDINGREGS,self.holdingRegs.unused.idx,len(self.holdingRegs),self.dummyValue,self.defaultNumOfDecimals,self.signedDefault)
+        
+        # MM TODO:  RequestFormat = namedtuple('RequestFormat', ['requestType','requestData'])
         
         # MM TODO: update other commands once test first
         
-        #self.values = [75,67]
-        #self.command = CommandFormat(ModbusCommands.WRITEMULTI_HOLDINGREGS,self.holdingRegs.startStopCmd.idx,2,self.values,self.defaultNumOfDecimals,self.signedDefault)
+        #Option6: self.values = [75,67]
+        #         self.command = CommandFormat(ModbusCommands.WRITEMULTI_HOLDINGREGS,self.holdingRegs.startStopCmd.idx,2,self.values,self.defaultNumOfDecimals,self.signedDefault)
+        
+        '''Setup Request - requestType and requestData '''    
+        self.requestCommand = ModbusRequest(ModbusRequest.QUERY_MODBUS,self.command)  
          
-        msg = self.command
-        self.logger.info('[%d] send req: %s' % (self.pid,msg))
+        '''Polling Setup Command'''
+        #command1 = CommandFormat(ModbusCommands.READ_HOLDINGREG,self.holdingRegs.startStopCmd.idx,self.defaultNumOfRegs,self.dummyValue,self.defaultNumOfDecimals,self.signedDefault)
+        #self.pollCmdList.append(command1)
+        #value = [83]
+        #command2 = CommandFormat(ModbusCommands.WRITE_HOLDINGREG,self.holdingRegs.power.idx,self.defaultNumOfRegs,value,self.defaultNumOfDecimals,self.signedDefault)
+        #self.pollCmdList.append(command2)
+        #self.requestCommand = ModbusRequest(ModbusRequest.SETUP_POLLER,self.pollCmdList) 
+        
+        '''Start Polling Command'''
+        #self.pollPeriod = 40  # in ms
+        #self.requestCommand = ModbusRequest(ModbusRequest.START_POLLING,self.pollPeriod) 
+        
+        '''Stop Polling Command''' 
+        #noData = None
+        #self.requestCommand = ModbusRequest(ModbusRequest.STOP_POLLING,noData)  
+
+         
+        msg = self.requestCommand
+        self.logger.info('ComputationalComponent on_clock()[%d] send request: %s' % (self.pid,msg))
         if self.modbusReqPort.send_pyobj(msg):
             self.modbusPending += 1
               
-        '''Receive Response'''
+        '''Receive Response - ACK or ERROR'''
         if self.modbusPending > 0:
-            msg = self.modbusReqPort.recv_pyobj()
-            self.logger.info("on_modbusReqPort()[%s]: %s",str(self.pid),repr(msg))
+            msg = self.modbusReqPort.recv_pyobj() 
+            self.logger.info("ComputationalComponent on_clock()[%s] receive response: %s",str(self.pid),repr(msg))
             self.modbusPending -= 1
-#           pydevd.settrace(host='192.168.1.102',port=5678)  
+            # pydevd.settrace(host='192.168.1.102',port=5678)  
+            if msg=="ACK"
+                self.dataExpected = True  
+           
+    def on_rx_modbusData
+        msg = self.on_rx_modbusData.recv_pyobj()
+        self.logger.info("ComputationalComponent on_rx_modbusData()[%s]: %s",str(self.pid),repr(msg))
+        # pydevd.settrace(host='192.168.1.102',port=5678)  
         
+        if self.dataExpected == True:        
             if self.command.commandType == ModbusCommands.READ_INPUTREG or self.command.commandType == ModbusCommands.READ_HOLDINGREG:
-                logMsg = "Register " + str(self.command.commandData.registerAddress) + " value is " + str(msg)
+                logMsg = "Register " + str(self.command.registerAddress) + " value is " + str(msg)
             elif self.command.commandType == ModbusCommands.READMULTI_INPUTREGS or self.command.commandType == ModbusCommands.READMULTI_HOLDINGREGS:
-                logMsg = "Register " + str(self.command.commandData.registerAddress) + " values are " + str(msg)
+                logMsg = "Register " + str(self.command.registerAddress) + " values are " + str(msg)
             elif self.command.commandType == ModbusCommands.WRITE_HOLDINGREG:
-                logMsg = "Wrote Register " + str(self.command.commandData.registerAddress)
-            elif self.command.commandType == ModbusCommands.WRITEMULTI_HOLDINGREGS:
-                logMsg = "Wrote Registers " + str(self.command.commandData.registerAddress) + " to " + str(self.command.commandData.registerAddress + self.command.commandData.numberOfRegs - 1)
-            
-            self.tx_modbusData.send_pyobj(logMsg)  # Send log data
-   
-    def on_rx_pollModbusData
-    # MM TODO:  started, relook at this
-        msg = self.rx_pollModbusData.recv_pyobj()
-        self.logger.info("on_pollModbusData()[%s]: %s",str(self.pid),repr(msg))
-#       pydevd.settrace(host='192.168.1.102',port=5678)  
-        
-        if self.command.commandType == ModbusCommands.READ_INPUTREG or self.command.commandType == ModbusCommands.READ_HOLDINGREG:
-            logMsg = "Register " + str(self.command.registerAddress) + " value is " + str(msg)
-        elif self.command.commandType == ModbusCommands.READMULTI_INPUTREGS or self.command.commandType == ModbusCommands.READMULTI_HOLDINGREGS:
-            logMsg = "Register " + str(self.command.registerAddress) + " values are " + str(msg)
-        elif self.command.commandType == ModbusCommands.WRITE_HOLDINGREG:
-            logMsg = "Wrote Register " + str(self.command.registerAddress)
+                logMsg = "Wrote Register " + str(self.command.registerAddress)
             elif self.command.commandType == ModbusCommands.WRITEMULTI_HOLDINGREGS:
                 logMsg = "Wrote Registers " + str(self.command.registerAddress) + " to " + str(self.command.registerAddress + self.command.numberOfRegs - 1)
             
             self.tx_modbusData.send_pyobj(logMsg)  # Send log data
+            self.dataExpected = False  # reset for next modbus read
+            
+        else  # this should not happen, but capturing it to make sure
+            self.logger.info("ComputationalComponent on_rx_modbusData()[%s]: Stray message arrived - %s",str(self.pid),repr(msg))
           
     def __destroy__(self):
-        self.logger.info("[%d] destroyed" % self.pid)
+        self.logger.info("ComputationalComponent[%d] destroyed" % self.pid)
         
         
         

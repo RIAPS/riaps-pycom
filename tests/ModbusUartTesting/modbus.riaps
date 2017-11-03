@@ -1,40 +1,41 @@
 // RIAPS Modbus (UART) Device Testing
 
 app RIAPSModbusUART {
-    message ModbusCommand;     // send Modbus action Request 
-    message ModbusResponse;    // get response from Modbus action  
-    message ModbusData;        // information for the logger to grab
-    message PollModbusData;    // periodic poll of Modbus data
-        
+    message ModbusRequest;     // send Modbus action Request 
+    message ModbusResponse;    // get response from Modbus action, generally an ACK  
+    message ModbusReadData;    // sampled Modbus data
+    message ModbusLogData;     // information for the logger to grab
+            
     library serialModbusLib;
     
-	// Modbus (UART) device interface - UART1
+	// Modbus (UART) device interface - UART1 (default)
 	//     considered the server for the request/response interaction
-    device ModbusUartDevice(slaveaddress=10,port='ttyO1',baudrate=57600,serialTimeout=1.0) {    
-      inside pollData;
+    device ModbusUartDevice(slaveaddress=10,port='UART1',baudrate=57600,serialTimeout=1.0) { 
+      inside command;   
+      inside data;
             
-      rep modbusRepPort : (ModbusCommand,ModbusResponse);	
-      pub pollDataPub : PollModbusData ;                  // Modbus data available when polling is started
-      timer clock 1000;   
+      rep modbusRepPort : (ModbusRequest,ModbusResponse); // Port used to communicate with the ComputationalComponent	
+      pub modbusDataPub : ModbusReadData ;                // Modbus data available (single read and polling read)
+      timer clock 50;                                     // This value is arbitrary since UART must be configured prior to code running
     }
     
     // Example Component to show Modbus I/F usage
     component ComputationalComponent() {
       timer clock 5000;
-      pub tx_modbusData : ModbusData ;  	              // When data is ready, whether it is a single read/write or polled dataset 
-      sub rx_pollModbusData : PollModbusData ;            // Receive the polled modbus data from the ModbusUartDevice
-      req modbusReqPort : (ModbusCommand,ModbusResponse); // Port used to communicate with the ModbusUartDevice
+      pub tx_modbusData : ModbusLogData ;  	              // When data is ready, whether it is a single read/write or polled dataset 
+      sub rx_modbusData : ModbusReadData ;                // Receive the modbus data from the ModbusUartDevice
+      req modbusReqPort : (ModbusRequest,ModbusResponse); // Port used to communicate with the ModbusUartDevice
     }
 
 	component Logger(db_host='127.0.0.1', db_port=8086, db_name='MOdbusIO', db_user='riaps', db_password='riaps') {
-	  sub rx_modbusData : ModbusData;	
+	  sub rx_modbusData : ModbusLogData;	
 	}
 
-    // Modbus Communication Example actor
+    // Modbus Communication Example actor using UART2
     actor ModbusExampleActor() {
-    	local ModbusCommand,ModbusResponse;	              // Local message types
+    	local ModbusRequest,ModbusResponse;	              // Local message types
       	{
-     		modbus : ModbusUartDevice(slaveaddress=10,port='ttyO2',baudrate=57600,serialTimeout=3);  // Slave Address is in decimal
+     		modbus : ModbusUartDevice(slaveaddress=10,port='UART2',baudrate=57600,serialTimeout=3);  // Slave Address is in decimal
           	commInitiator : ComputationalComponent(); 		
        	}
     }
