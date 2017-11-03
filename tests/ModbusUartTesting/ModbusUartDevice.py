@@ -129,21 +129,22 @@ class ModbusUartThread(threading.Thread):
                 socks = dict(self.poller.poll(timeout = self.pollerTimeout))
                 if self.plug in socks and socks[self.plug] == zmq.POLLIN:
                     requestType, requestData = self.plug.recv_pyobj()
+                    self.component.logger.info("ModbusUartThread[%s]: Thread receives request=%s, data=%s",str(self.pid),requestType.name,requestData)
                     
                     # Acknowledge receipt of a command request
                     msg = ('ACK')
-                    self.command.send_pyobj(msg)
+                    self.plug.send_pyobj(msg)
 
                     # Single Modbus Query
                     if requestType == ModbusRequest.QUERY_MODBUS:
                         self.unpackRegisterCommand(requestData)
-                        responseValue = self.sendModbusCommand()  
-                        self.component.logger.info("ModbusUartThread[%s]: Query Cmd sent to Modbus",str(self.pid))   
-                            
+                        self.component.logger.info("ModbusUartThread[%s]: Sending Query Cmd to Modbus",str(self.pid)) 
+                        responseValue = self.sendModbusCommand()    
+                        self.component.logger.info("ModbusUartThread[%s]: responseValue=%s",str(self.pid),responseValue)
+
                         # Publish Modbus read results (999 sent if a write was performed - see sendModbusCommand return value)
                         self.dataPlug.send_pyobj(responseValue)
-                        # pydevd.settrace(host='192.168.1.102',port=5678)
-                        self.component.logger.info("ModbusUartThread[%s]: responseValue=%s",str(self.pid),responseValue)   
+                        # pydevd.settrace(host='192.168.1.102',port=5678)   
                         
                     # MM TODO:  stopped here to test query first    
                     # Setup a list of Modbus commands to query during polling

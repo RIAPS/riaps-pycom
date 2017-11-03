@@ -100,7 +100,7 @@ class ComputationalComponent(Component):
                 self.dataExpected = True
 
     def on_rx_modbusData(self):
-        msg = self.on_rx_modbusData.recv_pyobj()
+        msg = self.rx_modbusData.recv_pyobj()
         self.logger.info("ComputationalComponent on_rx_modbusData()[%s]: %s",str(self.pid),repr(msg))
         # pydevd.settrace(host='192.168.1.102',port=5678)
 
