@@ -28,6 +28,11 @@ HoldingRegs = namedtuple('HoldingRegs',['startStopCmd', 'powerCmd', 'freqShift',
 class ComputationalComponent(Component):
     def __init__(self):
         super().__init__()
+        if debugMode:
+            self.logger.setLevel(logging.DEBUG)
+        else:
+            self.logger.setLevel(logging.INFO)
+
         # pydevd.settrace(host='192.168.1.103',port=5678)
         self.uuid = uuid.uuid4().int
         self.pid = os.getpid()

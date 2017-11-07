@@ -148,7 +148,7 @@ class ModbusUartThread(threading.Thread):
                     
                     if debugMode:
                         t0 = time.perf_counter()     
-                        self.logger.debug("ModbusUartThread: run()[%s]: Received requested Modbus command at %f",str(self.pid),t0)
+                        self.component.logger.debug("ModbusUartThread: run()[%s]: Received requested Modbus command at %f",str(self.pid),t0)
                                         
                     # Acknowledge receipt of a command request
                     msg = ('ACK')
@@ -169,7 +169,7 @@ class ModbusUartThread(threading.Thread):
                         
                         if debugMode:
                             t1 = time.perf_counter()     
-                            self.logger.debug("ModbusUartThread: run()[%s]: Sending data back to ModbusUartDevice at %f",str(self.pid),t1)
+                            self.component.logger.debug("ModbusUartThread: run()[%s]: Sending data back to ModbusUartDevice at %f",str(self.pid),t1)
 
                         
                     # MM TODO:  stopped here to test query first    
@@ -196,7 +196,7 @@ class ModbusUartThread(threading.Thread):
                     
                     if debugMode:
                         t2 = time.perf_counter()     
-                        self.logger.debug("ModbusUartThread: run()[%s]: Poller timeout reached, begin Poll period at %f",str(self.pid),t2)
+                        self.component.logger.debug("ModbusUartThread: run()[%s]: Poller timeout reached, begin Poll period at %f",str(self.pid),t2)
                         
                     # MM TODO:  do polling, calculate new timeout period, print out new timeout and debug time of completion                    
                     
@@ -213,7 +213,7 @@ class ModbusUartThread(threading.Thread):
     def sendModbusCommand(self):
         if debugMode:
             t0 = time.perf_counter()     
-            self.logger.debug("ModbusUartThread: sendModbusCommand()[%s]: Sending command to Modbus library at %f",str(self.pid),t0)
+            self.component.logger.debug("ModbusUartThread: sendModbusCommand()[%s]: Sending command to Modbus library at %f",str(self.pid),t0)
 
         value = 999  # large invalid value
         
@@ -241,7 +241,7 @@ class ModbusUartThread(threading.Thread):
         
         if debugMode:
             t1 = time.perf_counter()
-            self.logger.debug("ModbusUartDevice: sendModbusCommand()[%s]: Modbus library command complete at %f, timeInFunction=%f",str(self.pid),t1,t1-t0)
+            self.component.logger.debug("ModbusUartDevice: sendModbusCommand()[%s]: Modbus library command complete at %f, timeInFunction=%f",str(self.pid),t1,t1-t0)
 
         return value
  
@@ -255,7 +255,7 @@ class ModbusUartThread(threading.Thread):
     def startPolling(self, period):
         if debugMode:
             t0 = time.perf_counter()     
-            self.logger.debug("ModbusUartThread: startPolling()[%s]: Start polling requested at %f",str(self.pid),t0)
+            self.component.logger.debug("ModbusUartThread: startPolling()[%s]: Start polling requested at %f",str(self.pid),t0)
 
         self.pollingActive = True
         self.component.logger.info("ModbusUartThread[%s]: Polling started",str(self.pid))
@@ -265,7 +265,7 @@ class ModbusUartThread(threading.Thread):
     def stopPolling(self):
         if debugMode:
             t0 = time.perf_counter()     
-            self.logger.debug("ModbusUartThread: stopPolling()[%s]: Stop polling requested at %f",str(self.pid),t0)  
+            self.component.logger.debug("ModbusUartThread: stopPolling()[%s]: Stop polling requested at %f",str(self.pid),t0)  
 
         if self.pollingActive:
             self.pollingActive = False
@@ -277,7 +277,7 @@ class ModbusUartThread(threading.Thread):
     def enableModbus(self):
         if debugMode:
             t0 = time.perf_counter()     
-            self.logger.debug("ModbusUartThread: enableModbus()[%s]: Request Modbus start at %f",str(self.pid),t0)
+            self.component.logger.debug("ModbusUartThread: enableModbus()[%s]: Request Modbus start at %f",str(self.pid),t0)
 
         self.modbus.startModbus()
         # pydevd.settrace(host='192.168.1.102',port=5678)
@@ -286,13 +286,13 @@ class ModbusUartThread(threading.Thread):
         
         if debugMode:
             t1 = time.perf_counter()     
-            self.logger.debug("ModbusUartThread: enableModbus()[%s]: Modbus ready at %f, timeToStart=%f",str(self.pid),t1,t1-t0)
+            self.component.logger.debug("ModbusUartThread: enableModbus()[%s]: Modbus ready at %f, timeToStart=%f",str(self.pid),t1,t1-t0)
 
 
     def disableModbus(self):
         if debugMode:
             t0 = time.perf_counter()     
-            self.logger.debug("ModbusUartThread: disableModbus()[%s]: Request Modbus be disabled at %f",str(self.pid),t0)
+            self.component.logger.debug("ModbusUartThread: disableModbus()[%s]: Request Modbus be disabled at %f",str(self.pid),t0)
 
         self.modbus.stopModbus()
         self.modbusReady = False
@@ -300,7 +300,7 @@ class ModbusUartThread(threading.Thread):
         
         if debugMode:
             t1 = time.perf_counter()     
-            self.logger.debug("ModbusUartThread: disableModbus()[%s]: Modbus disabled at %f, timeToStart=%f",str(self.pid),t1,t1-t0)
+            self.component.logger.debug("ModbusUartThread: disableModbus()[%s]: Modbus disabled at %f, timeToStart=%f",str(self.pid),t1,t1-t0)
 
 
     def activate(self):
@@ -336,7 +336,7 @@ class ModbusUartDevice(Component):
         elif port == 'UART5':
             self.port = '/dev/ttyO5'
         else:
-            self.component.logger.error('ModbusUartDevice[%s]: Invalid UART argument, use UART1..5', self.pid)
+            self.logger.error('ModbusUartDevice[%s]: Invalid UART argument, use UART1..5', self.pid)
             sys.exit(-1)
         
         self.port_config = PortConfig(self.port, baudrate, bytesize, parity, stopbits, serialTimeout)        
