@@ -10,6 +10,7 @@ import os
 from collections import namedtuple
 from ModbusUartDevice import ModbusRequest,ModbusCommands,RequestFormat,CommandFormat
 import pydevd
+import time
 
 ''' Enable debugging to gather timing information on the code execution'''
 debugMode = True
