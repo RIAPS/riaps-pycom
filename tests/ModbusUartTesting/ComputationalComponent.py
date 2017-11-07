@@ -11,6 +11,8 @@ from collections import namedtuple
 from ModbusUartDevice import ModbusRequest,ModbusCommands,RequestFormat,CommandFormat
 import pydevd
 
+''' Enable debugging to gather timing information on the code execution'''
+debugMode = True
 
 RegSet = namedtuple('RegSet', ['idx', 'value'])
 InputRegs = namedtuple('InputRegs', ['outputCurrent','outputVolt','voltPhase','time'])
@@ -45,8 +47,8 @@ class ComputationalComponent(Component):
 
     def on_clock(self):
         now = self.clock.recv_pyobj()
-        self.logger.info("ComputationalComponent - on_clock()[%s]: %s",str(self.pid),str(now))
-
+        self.logger.info("ComputationalComponent: on_clock()[%s]: %s",str(self.pid),str(now))
+        
         '''Request:  Query Commands to send over Modbus - one command used at a time, options to test below'''
 
         '''Read/Write (holding only) a single register'''
@@ -85,24 +87,37 @@ class ComputationalComponent(Component):
         #noData = None
         #self.requestCommand = RequestFormat(ModbusRequest.STOP_POLLING,noData)
 
+        if debugMode:
+            t0 = time.perf_counter()     
+            self.logger.debug("ComputationalComponent: on_clock()[%s]: Send command to ModbusUartDevice at %f",str(self.pid),t0)
+
         msg = self.requestCommand
-        self.logger.info('ComputationalComponent on_clock()[%d] send request: %s' % (self.pid,msg))
+        self.logger.info('ComputationalComponent: on_clock()[%d] send request: %s' % (self.pid,msg))
         if self.modbusReqPort.send_pyobj(msg):
             self.modbusPending += 1
 
         '''Receive Response - ACK or ERROR'''
         if self.modbusPending > 0:
             msg = self.modbusReqPort.recv_pyobj()
-            self.logger.info("ComputationalComponent on_clock()[%s] receive response: %s",str(self.pid),repr(msg))
+            self.logger.info("ComputationalComponent: on_clock()[%s] receive response: %s",str(self.pid),repr(msg))
             self.modbusPending -= 1
             # pydevd.settrace(host='192.168.1.102',port=5678)
             if msg=='ACK':
                 self.dataExpected = True
+                
+            if debugMode:
+                t1 = time.perf_counter()     
+                self.logger.debug("ComputationalComponent: on_clock()[%s]: Received ACK from ModbusUartDevice at %f, timeInFunction=%f",str(self.pid),t1,t1-t0)
+
 
     def on_rx_modbusData(self):
         msg = self.rx_modbusData.recv_pyobj()
-        self.logger.info("ComputationalComponent on_rx_modbusData()[%s]: %s",str(self.pid),repr(msg))
+        self.logger.info("ComputationalComponent: on_rx_modbusData()[%s]: %s",str(self.pid),repr(msg))
         # pydevd.settrace(host='192.168.1.102',port=5678)
+
+        if debugMode:
+            t0 = time.perf_counter()     
+            self.logger.debug("ComputationalComponent: on_rx_modbusData()[%s]: Received Modbus data from ModbusUartDevice at %f",str(self.pid),t0)
 
         if self.dataExpected == True:
             if self.command.commandType == ModbusCommands.READ_INPUTREG or self.command.commandType == ModbusCommands.READ_HOLDINGREG:
@@ -115,12 +130,13 @@ class ComputationalComponent(Component):
                 logMsg = "Wrote Registers " + str(self.command.registerAddress) + " to " + str(self.command.registerAddress + self.command.numberOfRegs - 1)
 
             self.tx_modbusData.send_pyobj(logMsg)  # Send log data
+            self.logger.info("ComputationalComponent: on_rx_modbusData()[%s]: Sent log message - %s",str(self.pid),repr(logMsg))
             self.dataExpected = False  # reset for next modbus read
 
         else:  # this should not happen, but capturing it to make sure
-            self.logger.info("ComputationalComponent on_rx_modbusData()[%s]: Stray message arrived - %s",str(self.pid),repr(msg))
+            self.logger.info("ComputationalComponent: on_rx_modbusData()[%s]: Stray message arrived - %s",str(self.pid),repr(msg))
 
     def __destroy__(self):
-        self.logger.info("ComputationalComponent[%d] destroyed" % self.pid)
+        self.logger.info("ComputationalComponent[%d]: destroyed" % self.pid)
 
         
