@@ -367,7 +367,7 @@ class ModbusUartDevice(Component):
         
         if debugMode:
             t1 = time.perf_counter()
-            self.logger.debug("ModbusUartDevice: on_clock()[%s]: functionStopTime=%f, timeInFunction=%f",str(self.pid),t1,t1-t0)
+            self.logger.debug("ModbusUartDevice: on_clock()[%s]: functionStopTime=%f, timeInFunction=%f ms",str(self.pid),t1,(t1-t0)*1000)
                     
     def __destroy__(self):
         self.logger.info("ModbusUartDevice[%s]: __destroy__",str(self.pid))
