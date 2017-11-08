@@ -157,7 +157,7 @@ class ModbusUartThread(threading.Thread):
                     
                     if debugMode:
                         self.ackTxByThreadTime = time.perf_counter()
-                        self.component.logger.debug("ModbusUartThread: run()[%s]: Sent ACK back at %f, time from cmd to ACK send is %f ms",str(self.pid),(self.ackTxByThreadTime-self.cmdRxByThreadTime)*1000)
+                        self.component.logger.debug("ModbusUartThread: run()[%s]: Sent ACK back at %f, time from cmd to ACK send is %f ms",str(self.pid),self.ackTxByThreadTime,(self.ackTxByThreadTime-self.cmdRxByThreadTime)*1000)
 
                     # Single Modbus Query
                     if requestType == ModbusRequest.QUERY_MODBUS:
@@ -322,7 +322,7 @@ class ModbusUartDevice(Component):
     def __init__(self,slaveaddress=0,port="UART1",baudrate=19200,bytesize=serial.EIGHTBITS,parity=serial.PARITY_NONE,stopbits=serial.STOPBITS_ONE,serialTimeout=0.05): # defaults for Modbus spec
         super().__init__()
         if debugMode:
-            #self.logger.setLevel(logging.DEBUG)
+            self.logger.setLevel(logging.DEBUG)
             self.logger.handlers[0].setLevel(logging.DEBUG) # a workaround for hardcoded INFO level of StreamHandler logger
         else:
             self.logger.setLevel(logging.INFO)

@@ -30,7 +30,7 @@ class ComputationalComponent(Component):
     def __init__(self):
         super().__init__()
         if debugMode:
-            #self.logger.setLevel(logging.DEBUG)
+            self.logger.setLevel(logging.DEBUG)
             self.logger.handlers[0].setLevel(logging.DEBUG) # a workaround for hardcoded INFO level of StreamHandler logger
         else:
             self.logger.setLevel(logging.INFO)
