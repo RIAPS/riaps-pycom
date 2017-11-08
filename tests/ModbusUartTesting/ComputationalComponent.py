@@ -115,7 +115,7 @@ class ComputationalComponent(Component):
                 
             if debugMode:
                 self.cmdAckRxTime = time.perf_counter()     
-                self.logger.debug("ComputationalComponent: on_clock()[%s]: Received ACK from ModbusUartDevice at %f, time to get ACK back is %f ms",str(self.pid),self.cmdAckRxTime,(self.cmdAckRxTime-self.cmdSendStartTime)*1000)
+                self.logger.debug("ComputationalComponent: on_clock()[%s]: Received ACK from ModbusUartDevice at %f, time to get ACK back is %f",str(self.pid),self.cmdAckRxTime,(self.cmdAckRxTime-self.cmdSendStartTime))
 
 
     def on_rx_modbusData(self):
@@ -125,7 +125,7 @@ class ComputationalComponent(Component):
 
         if debugMode:
             self.cmdResultsRxTime = time.perf_counter()     
-            self.logger.debug("ComputationalComponent: on_rx_modbusData()[%s]: Received Modbus data from ModbusUartDevice at %f, time from cmd to data is %f ms",str(self.pid),self.cmdResultsRxTime,(self.cmdResultsRxTime-self.cmdSendStartTime)*1000)
+            self.logger.debug("ComputationalComponent: on_rx_modbusData()[%s]: Received Modbus data from ModbusUartDevice at %f, time from cmd to data is %f",str(self.pid),self.cmdResultsRxTime,(self.cmdResultsRxTime-self.cmdSendStartTime))
 
         if self.dataExpected == True:
             if self.command.commandType == ModbusCommands.READ_INPUTREG or self.command.commandType == ModbusCommands.READ_HOLDINGREG:

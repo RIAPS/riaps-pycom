@@ -157,7 +157,7 @@ class ModbusUartThread(threading.Thread):
                     
                     if debugMode:
                         self.ackTxByThreadTime = time.perf_counter()
-                        self.component.logger.debug("ModbusUartThread: run()[%s]: Sent ACK back at %f, time from cmd to ACK send is %f ms",str(self.pid),self.ackTxByThreadTime,(self.ackTxByThreadTime-self.cmdRxByThreadTime)*1000)
+                        self.component.logger.debug("ModbusUartThread: run()[%s]: Sent ACK back at %f, time from cmd to ACK send is %f",str(self.pid),self.ackTxByThreadTime,(self.ackTxByThreadTime-self.cmdRxByThreadTime))
 
                     # Single Modbus Query
                     if requestType == ModbusRequest.QUERY_MODBUS:
@@ -173,7 +173,7 @@ class ModbusUartThread(threading.Thread):
                         
                         if debugMode:
                             self.dataRxModbusTime = time.perf_counter()     
-                            self.component.logger.debug("ModbusUartThread: run()[%s]: Sending data back to ModbusUartDevice at %f, time from cmd to data sent is %f ms",str(self.pid),self.dataRxModbusTime,(self.dataRxModbusTime-self.cmdRxByThreadTime)*1000)
+                            self.component.logger.debug("ModbusUartThread: run()[%s]: Sending data back to ModbusUartDevice at %f, time from cmd to data sent is %f",str(self.pid),self.dataRxModbusTime,(self.dataRxModbusTime-self.cmdRxByThreadTime))
                         
                     # MM TODO:  stopped here to test query first    
                     # Setup a list of Modbus commands to query during polling
@@ -244,7 +244,7 @@ class ModbusUartThread(threading.Thread):
         
         if debugMode:
             t1 = time.perf_counter()
-            self.component.logger.debug("ModbusUartThread: sendModbusCommand()[%s]: Modbus library command complete at %f, timeInFunction=%f ms",str(self.pid),t1,(t1-t0)*1000)
+            self.component.logger.debug("ModbusUartThread: sendModbusCommand()[%s]: Modbus library command complete at %f, timeInFunction=%f",str(self.pid),t1,(t1-t0))
 
         return value
  
@@ -289,7 +289,7 @@ class ModbusUartThread(threading.Thread):
         
         if debugMode:
             t1 = time.perf_counter()     
-            self.component.logger.debug("ModbusUartThread: enableModbus()[%s]: Modbus ready at %f, timeToStart=%f ms",str(self.pid),t1,(t1-t0)*1000)
+            self.component.logger.debug("ModbusUartThread: enableModbus()[%s]: Modbus ready at %f, timeToStart=%f",str(self.pid),t1,(t1-t0))
 
 
     def disableModbus(self):
@@ -303,7 +303,7 @@ class ModbusUartThread(threading.Thread):
         
         if debugMode:
             t1 = time.perf_counter()     
-            self.component.logger.debug("ModbusUartThread: disableModbus()[%s]: Modbus disabled at %f, timeToStart=%f ms",str(self.pid),t1,(t1-t0)*1000)
+            self.component.logger.debug("ModbusUartThread: disableModbus()[%s]: Modbus disabled at %f, timeToStart=%f",str(self.pid),t1,(t1-t0))
 
 
     def activate(self):
@@ -367,7 +367,7 @@ class ModbusUartDevice(Component):
         
         if debugMode:
             t1 = time.perf_counter()
-            self.logger.debug("ModbusUartDevice: on_clock()[%s]: functionStopTime=%f, timeInFunction=%f ms",str(self.pid),t1,(t1-t0)*1000)
+            self.logger.debug("ModbusUartDevice: on_clock()[%s]: functionStopTime=%f, timeInFunction=%f",str(self.pid),t1,(t1-t0))
                     
     def __destroy__(self):
         self.logger.info("ModbusUartDevice[%s]: __destroy__",str(self.pid))
@@ -397,7 +397,7 @@ class ModbusUartDevice(Component):
             
         if debugMode:
             t1 = time.perf_counter()
-            self.logger.debug("ModbusUartDevice: on_modbusRepPort()[%s]: functionStopTime=%f, timeInFunction=%f ms",str(self.pid),t1,(t1-self.modbusReqRxTime)*1000)
+            self.logger.debug("ModbusUartDevice: on_modbusRepPort()[%s]: functionStopTime=%f, timeInFunction=%f",str(self.pid),t1,(t1-self.modbusReqRxTime))
      
                         
     def on_data(self):
@@ -405,7 +405,7 @@ class ModbusUartDevice(Component):
         
         if debugMode:
             self.dataRxFromThreadTime = time.perf_counter()     
-            self.logger.debug("ModbusUartDevice: on_data()[%s]: Data received from internal device thread at %f, time from request to data is %f ms",str(self.pid),self.dataRxFromThreadTime,(self.dataRxFromThreadTime-self.modbusReqRxTime)*1000)
+            self.logger.debug("ModbusUartDevice: on_data()[%s]: Data received from internal device thread at %f, time from request to data is %f",str(self.pid),self.dataRxFromThreadTime,(self.dataRxFromThreadTime-self.modbusReqRxTime))
         
         self.modbusDataPub.send_pyobj(msg)  # publish results for calling component to subscribe
         self.logger.info("ModbusUartDevice: on_data[%s]: Publishing Data, msg=%s",str(self.pid),msg)
@@ -418,7 +418,7 @@ class ModbusUartDevice(Component):
         
         if debugMode:
             self.cmdAckRxFromThreadTime = time.perf_counter()     
-            self.logger.debug("ModbusUartDevice: on_command()[%s]: Command ACK received from internal device thread at %f, time to get ACK back is %f ms",str(self.pid),self.cmdAckRxFromThreadTime,(self.cmdAckRxFromThreadTime-self.modbusReqRxTime)*1000)
+            self.logger.debug("ModbusUartDevice: on_command()[%s]: Command ACK received from internal device thread at %f, time to get ACK back is %f",str(self.pid),self.cmdAckRxFromThreadTime,(self.cmdAckRxFromThreadTime-self.modbusReqRxTime))
 
         self.logger.info("ModbusUartDevice: on_command[%s]: Receive ACK from device thread, sending ACK to requester, msg=%s",str(self.pid),msg)
         self.modbusRepPort.send_pyobj(msg)      
