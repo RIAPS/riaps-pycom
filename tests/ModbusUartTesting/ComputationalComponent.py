@@ -30,7 +30,8 @@ class ComputationalComponent(Component):
     def __init__(self):
         super().__init__()
         if debugMode:
-            self.logger.setLevel(logging.DEBUG)
+            #self.logger.setLevel(logging.DEBUG)
+            self.logger.handlers[0].setLevel(logging.DEBUG) # a workaround for hardcoded INFO level of StreamHandler logger
         else:
             self.logger.setLevel(logging.INFO)
 
@@ -94,14 +95,14 @@ class ComputationalComponent(Component):
         #noData = None
         #self.requestCommand = RequestFormat(ModbusRequest.STOP_POLLING,noData)
 
-        if debugMode:
-            t0 = time.perf_counter()     
-            self.logger.debug("ComputationalComponent: on_clock()[%s]: Send command to ModbusUartDevice at %f",str(self.pid),t0)
-
         msg = self.requestCommand
         self.logger.info('ComputationalComponent: on_clock()[%d] send request: %s' % (self.pid,msg))
         if self.modbusReqPort.send_pyobj(msg):
             self.modbusPending += 1
+
+        if debugMode:
+            self.cmdSendStartTime = time.perf_counter()  
+            self.logger.debug("ComputationalComponent: on_clock()[%s]: Send command to ModbusUartDevice at %f",str(self.pid),self.cmdSendStartTime)
 
         '''Receive Response - ACK or ERROR'''
         if self.modbusPending > 0:
@@ -113,8 +114,8 @@ class ComputationalComponent(Component):
                 self.dataExpected = True
                 
             if debugMode:
-                t1 = time.perf_counter()     
-                self.logger.debug("ComputationalComponent: on_clock()[%s]: Received ACK from ModbusUartDevice at %f, timeInFunction=%f",str(self.pid),t1,t1-t0)
+                self.cmdAckRxTime = time.perf_counter()     
+                self.logger.debug("ComputationalComponent: on_clock()[%s]: Received ACK from ModbusUartDevice at %f, time to get ACK back is %f ms",str(self.pid),self.cmdAckRxTime,(self.cmdAckRxTime-self.cmdSendStartTime)*1000)
 
 
     def on_rx_modbusData(self):
@@ -123,8 +124,8 @@ class ComputationalComponent(Component):
         # pydevd.settrace(host='192.168.1.102',port=5678)
 
         if debugMode:
-            t0 = time.perf_counter()     
-            self.logger.debug("ComputationalComponent: on_rx_modbusData()[%s]: Received Modbus data from ModbusUartDevice at %f",str(self.pid),t0)
+            self.cmdResultsRxTime = time.perf_counter()     
+            self.logger.debug("ComputationalComponent: on_rx_modbusData()[%s]: Received Modbus data from ModbusUartDevice at %f, time from cmd to data is %f ms",str(self.pid),self.cmdResultsRxTime,(self.cmdResultsRxTime-self.cmdSendStartTime)*1000)
 
         if self.dataExpected == True:
             if self.command.commandType == ModbusCommands.READ_INPUTREG or self.command.commandType == ModbusCommands.READ_HOLDINGREG:
