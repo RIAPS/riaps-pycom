@@ -241,7 +241,7 @@ class ModbusUartThread(threading.Thread):
         
         if debugMode:
             t1 = time.perf_counter()
-            self.component.logger.debug("ModbusUartDevice: sendModbusCommand()[%s]: Modbus library command complete at %f, timeInFunction=%f",str(self.pid),t1,t1-t0)
+            self.component.logger.debug("ModbusUartThread: sendModbusCommand()[%s]: Modbus library command complete at %f, timeInFunction=%f",str(self.pid),t1,t1-t0)
 
         return value
  
@@ -282,7 +282,7 @@ class ModbusUartThread(threading.Thread):
         self.modbus.startModbus()
         # pydevd.settrace(host='192.168.1.102',port=5678)
         self.modbusReady = True
-        self.component.logger.info('ModbusUartThread: enableModbus()[%s]: Modbus opened portname=%s, slaveaddress=%s',self.component.port_config.portname,self.component.slaveAddressDecimal)
+        self.component.logger.info('ModbusUartThread: enableModbus()[%s]: Modbus opened portname=%s, slaveaddress=%s',str(self.pid),self.component.port_config.portname,self.component.slaveAddressDecimal)
         
         if debugMode:
             t1 = time.perf_counter()     
@@ -296,7 +296,7 @@ class ModbusUartThread(threading.Thread):
 
         self.modbus.stopModbus()
         self.modbusReady = False
-        self.component.logger.info('ModbusUartThread: disableModbus()[%s]: Modbus closed portname=%s, slaveaddress=%s',self.component.port_config.portname,self.component.slaveAddressDecimal)
+        self.component.logger.info('ModbusUartThread: disableModbus()[%s]: Modbus closed portname=%s, slaveaddress=%s',str(self.pid),self.component.port_config.portname,self.component.slaveAddressDecimal)
         
         if debugMode:
             t1 = time.perf_counter()     
