@@ -51,11 +51,11 @@ class ComputationalComponent(Component):
         self.dataExpected = False
         self.pollCmdList = []
 
-        self.logger.info("ComputationalComponent: %s - starting",str(self.pid))
+        self.logger.info("__init__: %s - starting",str(self.pid))
 
     def on_clock(self):
         now = self.clock.recv_pyobj()
-        self.logger.info("ComputationalComponent: on_clock()[%s]: %s",str(self.pid),str(now))
+        self.logger.info("on_clock()[%s]: %s",str(self.pid),str(now))
         
         '''Request:  Query Commands to send over Modbus - one command used at a time, options to test below'''
 
@@ -97,17 +97,17 @@ class ComputationalComponent(Component):
 
         if debugMode:
             self.cmdSendStartTime = time.perf_counter()  
-            self.logger.debug("ComputationalComponent: on_clock()[%s]: Send command to ModbusUartDevice at %f",str(self.pid),self.cmdSendStartTime)
+            self.logger.debug("on_clock()[%s]: Send command to ModbusUartDevice at %f",str(self.pid),self.cmdSendStartTime)
 
         msg = self.requestCommand
-        self.logger.info('ComputationalComponent: on_clock()[%d] send request: %s' % (self.pid,msg))
+        self.logger.info("on_clock()[%d] send request: %s" % (self.pid,msg))
         if self.modbusReqPort.send_pyobj(msg):
             self.modbusPending += 1
 
         '''Receive Response - ACK or ERROR'''
         if self.modbusPending > 0:
             msg = self.modbusReqPort.recv_pyobj()
-            self.logger.info("ComputationalComponent: on_clock()[%s] receive response: %s",str(self.pid),repr(msg))
+            self.logger.info("on_clock()[%s] receive response: %s",str(self.pid),repr(msg))
             self.modbusPending -= 1
             # pydevd.settrace(host='192.168.1.102',port=5678)
             if msg=='ACK':
@@ -115,17 +115,17 @@ class ComputationalComponent(Component):
                 
             if debugMode:
                 self.cmdAckRxTime = time.perf_counter()     
-                self.logger.debug("ComputationalComponent: on_clock()[%s]: Received ACK from ModbusUartDevice at %f, time to get ACK back is %f",str(self.pid),self.cmdAckRxTime,(self.cmdAckRxTime-self.cmdSendStartTime))
+                self.logger.debug("on_clock()[%s]: Received ACK from ModbusUartDevice at %f, time to get ACK back is %f",str(self.pid),self.cmdAckRxTime,(self.cmdAckRxTime-self.cmdSendStartTime))
 
 
     def on_rx_modbusData(self):
         msg = self.rx_modbusData.recv_pyobj()
-        self.logger.info("ComputationalComponent: on_rx_modbusData()[%s]: %s",str(self.pid),repr(msg))
+        self.logger.info("on_rx_modbusData()[%s]: %s",str(self.pid),repr(msg))
         # pydevd.settrace(host='192.168.1.102',port=5678)
 
         if debugMode:
             self.cmdResultsRxTime = time.perf_counter()     
-            self.logger.debug("ComputationalComponent: on_rx_modbusData()[%s]: Received Modbus data from ModbusUartDevice at %f, time from cmd to data is %f",str(self.pid),self.cmdResultsRxTime,(self.cmdResultsRxTime-self.cmdSendStartTime))
+            self.logger.debug("on_rx_modbusData()[%s]: Received Modbus data from ModbusUartDevice at %f, time from cmd to data is %f",str(self.pid),self.cmdResultsRxTime,(self.cmdResultsRxTime-self.cmdSendStartTime))
 
         if self.dataExpected == True:
             if self.command.commandType == ModbusCommands.READ_INPUTREG or self.command.commandType == ModbusCommands.READ_HOLDINGREG:
@@ -138,13 +138,13 @@ class ComputationalComponent(Component):
                 logMsg = "Wrote Registers " + str(self.command.registerAddress) + " to " + str(self.command.registerAddress + self.command.numberOfRegs - 1)
 
             self.tx_modbusData.send_pyobj(logMsg)  # Send log data
-            self.logger.info("ComputationalComponent: on_rx_modbusData()[%s]: Sent log message - %s",str(self.pid),repr(logMsg))
+            self.logger.info("on_rx_modbusData()[%s]: Sent log message - %s",str(self.pid),repr(logMsg))
             self.dataExpected = False  # reset for next modbus read
 
         else:  # this should not happen, but capturing it to make sure
-            self.logger.info("ComputationalComponent: on_rx_modbusData()[%s]: Stray message arrived - %s",str(self.pid),repr(msg))
+            self.logger.info("on_rx_modbusData()[%s]: Stray message arrived - %s",str(self.pid),repr(msg))
 
     def __destroy__(self):
-        self.logger.info("ComputationalComponent[%d]: destroyed" % self.pid)
+        self.logger.info("__destroy__[%d]: destroyed" % self.pid)
 
         
