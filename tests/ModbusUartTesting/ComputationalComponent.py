@@ -95,14 +95,14 @@ class ComputationalComponent(Component):
         #noData = None
         #self.requestCommand = RequestFormat(ModbusRequest.STOP_POLLING,noData)
 
+        if debugMode:
+            self.cmdSendStartTime = time.perf_counter()  
+            self.logger.debug("ComputationalComponent: on_clock()[%s]: Send command to ModbusUartDevice at %f",str(self.pid),self.cmdSendStartTime)
+
         msg = self.requestCommand
         self.logger.info('ComputationalComponent: on_clock()[%d] send request: %s' % (self.pid,msg))
         if self.modbusReqPort.send_pyobj(msg):
             self.modbusPending += 1
-
-        if debugMode:
-            self.cmdSendStartTime = time.perf_counter()  
-            self.logger.debug("ComputationalComponent: on_clock()[%s]: Send command to ModbusUartDevice at %f",str(self.pid),self.cmdSendStartTime)
 
         '''Receive Response - ACK or ERROR'''
         if self.modbusPending > 0:
