@@ -122,7 +122,7 @@ class ModbusUartThread(threading.Thread):
         self.pollingActive = False
         self.pollerTimeout = None
         self.pollCmdList = []
-        self.component.logger.info("__init__ [%s]: init thread",self.pid)
+        self.component.logger.info("thread __init__ [%s]: init thread",self.pid)
 
     def run(self):
         self.plug = self.command.setupPlug(self)
@@ -144,62 +144,62 @@ class ModbusUartThread(threading.Thread):
                 socks = dict(self.poller.poll(timeout = self.pollerTimeout))
                 if self.plug in socks and socks[self.plug] == zmq.POLLIN:
                     requestType, requestData = self.plug.recv_pyobj()                    
-                    self.component.logger.info("run()[%s]: Thread receives a command request=%s, data=%s",str(self.pid),requestType.name,requestData)
+                    self.component.logger.info("thread run()[%s]: Thread receives a command request=%s, data=%s",str(self.pid),requestType.name,requestData)
                     
                     if debugMode:
                         self.cmdRxByThreadTime = time.perf_counter()     
-                        self.component.logger.debug("run()[%s]: Received requested Modbus command at %f",str(self.pid),self.cmdRxByThreadTime)
+                        self.component.logger.debug("thread run()[%s]: Received requested Modbus command at %f",str(self.pid),self.cmdRxByThreadTime)
                                         
                     # Acknowledge receipt of a command request
                     msg = ('ACK')
                     self.plug.send_pyobj(msg)
-                    self.component.logger.info("run()[%s]: Sending ACK back to ModbusUartDevice",str(self.pid))
+                    self.component.logger.info("thread run()[%s]: Sending ACK back to ModbusUartDevice",str(self.pid))
                     
                     if debugMode:
                         self.ackTxByThreadTime = time.perf_counter()
-                        self.component.logger.debug("run()[%s]: Sent ACK back at %f, time from cmd to ACK send is %f",str(self.pid),self.ackTxByThreadTime,(self.ackTxByThreadTime-self.cmdRxByThreadTime))
+                        self.component.logger.debug("thread run()[%s]: Sent ACK back at %f, time from cmd to ACK send is %f",str(self.pid),self.ackTxByThreadTime,(self.ackTxByThreadTime-self.cmdRxByThreadTime))
 
                     # Single Modbus Query
                     if requestType == ModbusRequest.QUERY_MODBUS:
                         self.unpackRegisterCommand(requestData)
-                        self.component.logger.info("run()[%s]: Sending Query Cmd to Modbus",str(self.pid))                        
+                        self.component.logger.info("thread run()[%s]: Sending Query Cmd to Modbus",str(self.pid))                        
                         responseValue = self.sendModbusCommand()    
-                        self.component.logger.info("run()[%s]: responseValue=%s",str(self.pid),responseValue)
+                        self.component.logger.info("thread run()[%s]: responseValue=%s",str(self.pid),responseValue)
 
                         if debugMode:
                             self.dataRxModbusTime = time.perf_counter()     
-                            self.component.logger.debug("run()[%s]: Sending data back to ModbusUartDevice at %f, time from cmd to data sent is %f",str(self.pid),self.dataRxModbusTime,(self.dataRxModbusTime-self.cmdRxByThreadTime))
+                            self.component.logger.debug("thread run()[%s]: Sending data back to ModbusUartDevice at %f, time from cmd to data sent is %f",str(self.pid),self.dataRxModbusTime,(self.dataRxModbusTime-self.cmdRxByThreadTime))
                         
                         # Publish Modbus read results (999 sent if a write was performed - see sendModbusCommand return value)
                         self.dataPlug.send_pyobj(responseValue)
-                        self.component.logger.info("run()[%s]: Sending data back to ModbusUartDevice",str(self.pid))
+                        self.component.logger.info("thread run()[%s]: Sending data back to ModbusUartDevice",str(self.pid))
                         # pydevd.settrace(host='192.168.1.102',port=5678)   
                         
                     # MM TODO:  stopped here to test query first    
                     # Setup a list of Modbus commands to query during polling
                     elif requestType == ModbusRequest.SETUP_POLLER:
-                        self.component.logger.info("run()[%s]: Poller Setup requested",str(self.pid))   
+                        self.component.logger.info("thread run()[%s]: Poller Setup requested",str(self.pid))   
                     
                     # MM TODO:  stopped here to test query first   
                     # Start Polling
                     elif requestType == ModbusRequest.START_POLLING:
-                        self.component.logger.info("run()[%s]: Poller Start requested",str(self.pid))  
+                        self.component.logger.info("thread run()[%s]: Poller Start requested",str(self.pid))  
                         self.startPolling(requestData) 
                     
                     # MM TODO:  stopped here to test query first   
                     # Stop Polling
                     elif requestType == ModbusRequest.STOP_POLLING:
-                        self.component.logger.info("run()[%s]: Poller Stop requested",str(self.pid)) 
+                        self.component.logger.info("thread run()[%s]: Poller Stop requested",str(self.pid)) 
                         self.stopPolling()
                     
                 # MM TODO:  stopped here to test query first   
                 # In polling mode
                 if self.pollingActive == True:
-                    self.component.logger.info("run()[%s]: Polling Active",str(self.pid))
+                    self.component.logger.info("thread run()[%s]: Polling Active",str(self.pid))
                     
                     if debugMode:
                         t2 = time.perf_counter()     
-                        self.component.logger.debug("run()[%s]: Poller timeout reached, begin Poll period at %f",str(self.pid),t2)
+                        self.component.logger.debug("thread run()[%s]: Poller timeout reached, begin Poll period at %f",str(self.pid),t2)
                         
                     # MM TODO:  do polling, calculate new timeout period, print out new timeout and debug time of completion                    
                     
@@ -216,35 +216,35 @@ class ModbusUartThread(threading.Thread):
     def sendModbusCommand(self):
         if debugMode:
             t0 = time.perf_counter()     
-            self.component.logger.debug("sendModbusCommand()[%s]: Sending command to Modbus library at %f",str(self.pid),t0)
+            self.component.logger.debug("thread sendModbusCommand()[%s]: Sending command to Modbus library at %f",str(self.pid),t0)
 
         value = 999  # large invalid value
         
         if self.commandType == ModbusCommands.READ_INPUTREG:
             value = self.modbus.readInputRegValue(self.registerAddress, self.numberOfDecimals, self.signedValue)
-            self.component.logger.info("sendModbusCommand()[%s]: sent command %s, register=%d, numOfDecimals=%d, signed=%s",str(self.pid),ModbusCommands.READ_INPUTREG.name,self.registerAddress,self.numberOfDecimals,str(self.signedValue))
+            self.component.logger.info("thread sendModbusCommand()[%s]: sent command %s, register=%d, numOfDecimals=%d, signed=%s",str(self.pid),ModbusCommands.READ_INPUTREG.name,self.registerAddress,self.numberOfDecimals,str(self.signedValue))
         elif self.commandType == ModbusCommands.READ_HOLDINGREG:
             value = self.modbus.readHoldingRegValue(self.registerAddress, self.numberOfDecimals, self.signedValue)
-            self.component.logger.info("sendModbusCommand()[%s]: sent command %s, register=%d, numOfDecimals=%d, signed=%s",str(self.pid),ModbusCommands.READ_HOLDINGREG.name,self.registerAddress,self.numberOfDecimals,str(self.signedValue))
+            self.component.logger.info("thread sendModbusCommand()[%s]: sent command %s, register=%d, numOfDecimals=%d, signed=%s",str(self.pid),ModbusCommands.READ_HOLDINGREG.name,self.registerAddress,self.numberOfDecimals,str(self.signedValue))
         elif self.commandType == ModbusCommands.READMULTI_INPUTREGS:
             value = self.modbus.readMultiInputRegValues(self.registerAddress, self.numberOfRegs)
-            self.component.logger.info("sendModbusCommand()[%s]: sent command %s, register=%d, numOfRegs=%d",str(self.pid),ModbusCommands.READMULTI_INPUTREGS.name,self.registerAddress,self.numberOfRegs)
+            self.component.logger.info("thread sendModbusCommand()[%s]: sent command %s, register=%d, numOfRegs=%d",str(self.pid),ModbusCommands.READMULTI_INPUTREGS.name,self.registerAddress,self.numberOfRegs)
         elif self.commandType == ModbusCommands.READMULTI_HOLDINGREGS:
             value = self.modbus.readMultiHoldingRegValues(self.registerAddress, self.numberOfRegs)
-            self.component.logger.info("sendModbusCommand()[%s]: sent command %s, register=%d, numOfRegs=%d",str(self.pid),ModbusCommands.READMULTI_HOLDINGREGS.name,self.registerAddress,self.numberOfRegs)
+            self.component.logger.info("thread sendModbusCommand()[%s]: sent command %s, register=%d, numOfRegs=%d",str(self.pid),ModbusCommands.READMULTI_HOLDINGREGS.name,self.registerAddress,self.numberOfRegs)
         elif self.commandType == ModbusCommands.WRITE_HOLDINGREG:
             self.modbus.writeHoldingRegister(self.registerAddress, self.values[0], self.numberOfDecimals, self.signedValue)
-            self.component.logger.info("sendModbusCommand()[%s]: sent command %s, register=%d, value=%d, numberOfDecimals=%d, signed=%s",str(self.pid),ModbusCommands.WRITE_HOLDINGREG.name,self.registerAddress,self.values[0],self.numberOfDecimals,str(self.signedValue))
+            self.component.logger.info("thread sendModbusCommand()[%s]: sent command %s, register=%d, value=%d, numberOfDecimals=%d, signed=%s",str(self.pid),ModbusCommands.WRITE_HOLDINGREG.name,self.registerAddress,self.values[0],self.numberOfDecimals,str(self.signedValue))
         elif self.commandType == ModbusCommands.WRITEMULTI_HOLDINGREGS:
             self.modbus.writeHoldingRegisters(self.registerAddress, self.values)
-            self.component.logger.info("sendModbusCommand()[%s]: sent command %s, register=%d",str(self.pid),ModbusCommands.WRITEMULTI_HOLDINGREGS.name,self.registerAddress)
-            self.component.logger.info("sendModbusCommand()[%s]: Values - %s",str(self.pid),str(self.values).strip('[]'))   
+            self.component.logger.info("thread sendModbusCommand()[%s]: sent command %s, register=%d",str(self.pid),ModbusCommands.WRITEMULTI_HOLDINGREGS.name,self.registerAddress)
+            self.component.logger.info("thread sendModbusCommand()[%s]: Values - %s",str(self.pid),str(self.values).strip('[]'))   
         else: # MM TODO:  invalid query command
-            self.component.logger.info("sendModbusCommand()[%s]: Invalid query command sent: command=%s",str(self.pid),self.commandtype.name)  
+            self.component.logger.info("thread sendModbusCommand()[%s]: Invalid query command sent: command=%s",str(self.pid),self.commandtype.name)  
         
         if debugMode:
             t1 = time.perf_counter()
-            self.component.logger.debug("sendModbusCommand()[%s]: Modbus library command complete at %f, time to interact with Modbus library is %f",str(self.pid),t1,(t1-t0))
+            self.component.logger.debug("thread sendModbusCommand()[%s]: Modbus library command complete at %f, time to interact with Modbus library is %f",str(self.pid),t1,(t1-t0))
 
         return value
  
@@ -258,52 +258,52 @@ class ModbusUartThread(threading.Thread):
     def startPolling(self, period):
         if debugMode:
             t0 = time.perf_counter()     
-            self.component.logger.debug("startPolling()[%s]: Start polling requested at %f",str(self.pid),t0)
+            self.component.logger.debug("thread startPolling()[%s]: Start polling requested at %f",str(self.pid),t0)
 
         self.pollingActive = True
-        self.component.logger.info("startPolling()[%s]: Polling started",str(self.pid))
+        self.component.logger.info("thread startPolling()[%s]: Polling started",str(self.pid))
 
 
     # MM TODO:  stopped here to test query first
     def stopPolling(self):
         if debugMode:
             t0 = time.perf_counter()     
-            self.component.logger.debug("stopPolling()[%s]: Stop polling requested at %f",str(self.pid),t0)  
+            self.component.logger.debug("thread stopPolling()[%s]: Stop polling requested at %f",str(self.pid),t0)  
 
         if self.pollingActive:
             self.pollingActive = False
             self.pollerTimeout = None
             
-        self.component.logger.info("stopPolling[%s]: Polling stopped",str(self.pid))
+        self.component.logger.info("thread stopPolling[%s]: Polling stopped",str(self.pid))
         
         
     def enableModbus(self):
         if debugMode:
             t0 = time.perf_counter()     
-            self.component.logger.debug("enableModbus()[%s]: Request Modbus start at %f",str(self.pid),t0)
+            self.component.logger.debug("thread enableModbus()[%s]: Request Modbus start at %f",str(self.pid),t0)
 
         self.modbus.startModbus()
         # pydevd.settrace(host='192.168.1.102',port=5678)
         self.modbusReady = True
-        self.component.logger.info("enableModbus()[%s]: Modbus opened portname=%s, slaveaddress=%s",str(self.pid),self.component.port_config.portname,self.component.slaveAddressDecimal)
+        self.component.logger.info("thread enableModbus()[%s]: Modbus opened portname=%s, slaveaddress=%s",str(self.pid),self.component.port_config.portname,self.component.slaveAddressDecimal)
         
         if debugMode:
             t1 = time.perf_counter()     
-            self.component.logger.debug("enableModbus()[%s]: Modbus ready at %f, time to start Modbus is %f",str(self.pid),t1,(t1-t0))
+            self.component.logger.debug("thread enableModbus()[%s]: Modbus ready at %f, time to start Modbus is %f",str(self.pid),t1,(t1-t0))
 
 
     def disableModbus(self):
         if debugMode:
             t0 = time.perf_counter()     
-            self.component.logger.debug("disableModbus()[%s]: Request Modbus be disabled at %f",str(self.pid),t0)
+            self.component.logger.debug("thread disableModbus()[%s]: Request Modbus be disabled at %f",str(self.pid),t0)
 
         self.modbus.stopModbus()
         self.modbusReady = False
-        self.component.logger.info("disableModbus()[%s]: Modbus closed portname=%s, slaveaddress=%s",str(self.pid),self.component.port_config.portname,self.component.slaveAddressDecimal)
+        self.component.logger.info("thread disableModbus()[%s]: Modbus closed portname=%s, slaveaddress=%s",str(self.pid),self.component.port_config.portname,self.component.slaveAddressDecimal)
         
         if debugMode:
             t1 = time.perf_counter()     
-            self.component.logger.debug("disableModbus()[%s]: Modbus disabled at %f, time to stop Modbus is %f",str(self.pid),t1,(t1-t0))
+            self.component.logger.debug("thread disableModbus()[%s]: Modbus disabled at %f, time to stop Modbus is %f",str(self.pid),t1,(t1-t0))
 
 
     def activate(self):

@@ -51,7 +51,7 @@ class ComputationalComponent(Component):
         self.dataExpected = False
         self.pollCmdList = []
 
-        self.logger.info("__init__: %s - starting",str(self.pid))
+        self.logger.info("__init__[%s]: starting",str(self.pid))
 
     def on_clock(self):
         now = self.clock.recv_pyobj()
