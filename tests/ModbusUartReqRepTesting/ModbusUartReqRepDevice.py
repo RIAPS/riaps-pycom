@@ -34,7 +34,7 @@ class ModbusCommands(Enum):
 
 CommandFormat = namedtuple('CommandFormat', ['commandType','registerAddress','numberOfRegs','values','numberOfDecimals','signedValue'])
 
-class ModbusUartDevice(Component):
+class ModbusUartReqRepDevice(Component):
     def __init__(self,slaveaddress=0,port="UART2",baudrate=19200,bytesize=serial.EIGHTBITS,parity=serial.PARITY_NONE,stopbits=serial.STOPBITS_ONE,serialTimeout=0.05): # defaults for Modbus spec
         super().__init__()
         if debugMode:

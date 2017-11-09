@@ -9,7 +9,7 @@ app RIAPSModbusUART {
 
     // Modbus (UART) device interface - UART2
     //     considered the server for the request/response interaction
-    device ModbusUartDevice(slaveaddress=10,port='UART2',baudrate=57600,serialTimeout=1.0) {
+    device ModbusUartReqRepDevice(slaveaddress=10,port='UART2',baudrate=57600,serialTimeout=1.0) {
       rep modbusRepPort : (ModbusCommand,ModbusResponse);
       timer clock 1000;   
     }
@@ -29,7 +29,7 @@ app RIAPSModbusUART {
     actor ModbusExampleActor() {
         local ModbusCommand,ModbusResponse;               // Local message types
         {
-            modbus : ModbusUartDevice(slaveaddress=10,port='UART2',baudrate=57600,serialTimeout=3);  // Slave Address is in decimal
+            modbus : ModbusUartReqRepDevice(slaveaddress=10,port='UART2',baudrate=57600,serialTimeout=3);  // Slave Address is in decimal
             commInitiator : ComputationalComponent();
         }
     }
