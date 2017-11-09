@@ -192,9 +192,9 @@ class SerialModbusComm(object):
         try:
             self.modbusInstrument.write_registers(registerAddress,values)
         except IOError:
-            print("SerialModbusComm IOError: Failed to write holding registers - address=" + str(registerAddress) + ", numberOfValues=" + str(len(values)))      
+            print("SerialModbusComm IOError: Failed to write holding registers - address=" + str(registerAddress))   #MM TODO:  add number of values   
         except TypeError:
-            print("SerialModbusComm TypeError: Failed to write holding registers - address=" + str(registerAddress) + ", numberOfValues=" + str(len(values)))     
+            print("SerialModbusComm TypeError: Failed to write holding registers - address=" + str(registerAddress))   #MM TODO:  add number of values   
               
           
     
