@@ -8,7 +8,7 @@ from riaps.run.comp import Component
 import uuid
 import os
 from collections import namedtuple
-from ModbusUartDevice import CommandFormat,ModbusCommands
+from ModbusUartReqRepDevice import CommandFormat,ModbusCommands
 import pydevd
 import time
 import logging
@@ -81,7 +81,7 @@ class ComputationalComponent(Component):
         self.logger.info('on_clock()[%d]: send req: %s' % (self.pid,msg))
         if self.modbusReqPort.send_pyobj(msg):
             self.ModbusPending += 1
-              
+
         '''Receive Response'''
         if self.ModbusPending > 0:
             msg = self.modbusReqPort.recv_pyobj()
