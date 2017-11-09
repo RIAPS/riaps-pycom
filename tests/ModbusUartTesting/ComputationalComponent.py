@@ -115,7 +115,7 @@ class ComputationalComponent(Component):
                 
             if debugMode:
                 self.cmdAckRxTime = time.perf_counter()     
-                self.logger.debug("on_clock()[%s]: Received ACK from ModbusUartDevice at %f, time to get ACK back is %f",str(self.pid),self.cmdAckRxTime,(self.cmdAckRxTime-self.cmdSendStartTime))
+                self.logger.debug("on_clock()[%s]: Received ACK from ModbusUartDevice at %f, time from cmd to get ACK back is %f ms",str(self.pid),self.cmdAckRxTime,(self.cmdAckRxTime-self.cmdSendStartTime)*1000)
 
 
     def on_rx_modbusData(self):
@@ -125,7 +125,7 @@ class ComputationalComponent(Component):
 
         if debugMode:
             self.cmdResultsRxTime = time.perf_counter()     
-            self.logger.debug("on_rx_modbusData()[%s]: Received Modbus data from ModbusUartDevice at %f, time from cmd to data is %f",str(self.pid),self.cmdResultsRxTime,(self.cmdResultsRxTime-self.cmdSendStartTime))
+            self.logger.debug("on_rx_modbusData()[%s]: Received Modbus data from ModbusUartDevice at %f, time from cmd to data is %f ms",str(self.pid),self.cmdResultsRxTime,(self.cmdResultsRxTime-self.cmdSendStartTime)*1000)
 
         if self.dataExpected == True:
             if self.command.commandType == ModbusCommands.READ_INPUTREG or self.command.commandType == ModbusCommands.READ_HOLDINGREG:
@@ -147,4 +147,4 @@ class ComputationalComponent(Component):
     def __destroy__(self):
         self.logger.info("__destroy__[%d]: destroyed" % self.pid)
 
-        
+        s
