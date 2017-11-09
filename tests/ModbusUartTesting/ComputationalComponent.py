@@ -145,6 +145,4 @@ class ComputationalComponent(Component):
             self.logger.info("on_rx_modbusData()[%s]: Stray message arrived - %s",str(self.pid),repr(msg))
 
     def __destroy__(self):
-        self.logger.info("__destroy__[%d]: destroyed" % self.pid)
-
-        s
+        self.logger.info("__destroy__[%s]",str(self.pid))

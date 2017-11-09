@@ -393,7 +393,7 @@ class ModbusUartDevice(Component):
             self.logger.debug("on_clock()[%s]: functionStopTime=%f, timeInFunction=%f ms",str(self.pid),t1,(t1-t0)*1000)
                     
     def __destroy__(self):
-        self.logger.info("__destroy__[%s]: __destroy__",str(self.pid))
+        self.logger.info("__destroy__[%s]",str(self.pid))
         if self.ModbusUartThread != None:
             self.ModbusUartThread.deactivate()
             self.ModbusUartThread.terminate()
