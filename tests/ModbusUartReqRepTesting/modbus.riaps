@@ -1,6 +1,6 @@
 // RIAPS Modbus (UART) Device Testing
 
-app RIAPSModbusUART {
+app RIAPSModbusReqRepUART {
     message ModbusCommand;     // send Modbus action Request
     message ModbusResponse;    // get response from Modbus action
     message ModbusData;           // information for the logger to grab
