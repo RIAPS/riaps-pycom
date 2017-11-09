@@ -63,7 +63,7 @@ class ModbusUartDevice(Component):
         self.slaveAddressDecimal = slaveaddress
         self.modbus = SerialModbusComm(self,self.slaveAddressDecimal,self.port_config)
         self.modbusReady = False
-        self.logger.info("Modbus settings %d @%s:%d %d%s%d [%d]", self.slaveAddressDecimal,self.port_config.portname,self.port_config.baudrate,self.port_config.bytesize,self.port_config.parity,self.port_config.stopbits,self.pid)       
+        self.logger.info("Modbus settings %d @%s:%d %d%s%d [%d]", self.slaveAddressDecimal,self.port_config.portname,self.port_config.baudrate,self.port_config.bytesize,self.port_config.parity,self.port_config.stopbits,self.pid)
 
     def on_clock(self):
         now = self.clock.recv_pyobj()   # Receive time (as float)
@@ -155,7 +155,7 @@ class ModbusUartDevice(Component):
 
         if debugMode:
             t1 = time.perf_counter()
-            self.logger.debug("sendModbusCommand()[%s]: Modbus library command complete at %f, time to interact with Modbus library is %f ms",str(self.pid),t1$
+            self.logger.debug("sendModbusCommand()[%s]: Modbus library command complete at %f, time to interact with Modbus library is %f ms",str(self.pid),t1,(t1-t0)*1000)
 
         return value
 

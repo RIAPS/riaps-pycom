@@ -91,7 +91,7 @@ class ComputationalComponent(Component):
 
             if debugMode:
                 self.cmdResultsRxTime = time.perf_counter()
-                self.logger.debug("on_clock()[%s]: Received Modbus data from ModbusUartDevice at %f, time from cmd to data is %f ms",str(self.pid),self.cmdResults$
+                self.logger.debug("on_clock()[%s]: Received Modbus data from ModbusUartDevice at %f, time from cmd to data is %f ms",str(self.pid),self.cmdResultsRxTime,(self.cmdResultsRxTime-self.cmdSendStartTime)*1000)
 
             if self.command.commandType == ModbusCommands.READ_INPUTREG or self.command.commandType == ModbusCommands.READ_HOLDINGREG:
                 logMsg = "Register " + str(self.command.registerAddress) + " value is " + str(msg)
