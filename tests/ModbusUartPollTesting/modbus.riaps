@@ -15,6 +15,7 @@ app RIAPSModbusPollUART {
 
       rep modbusRepPort : (ModbusRequest,ModbusResponse); // Port used to communicate with the ComputationalComponent
       pub modbusDataPub : ModbusReadData ;                // Modbus data available (single and polling commands)
+      timer clock 50;
     }
 
     // Example Component to show Modbus I/F usage

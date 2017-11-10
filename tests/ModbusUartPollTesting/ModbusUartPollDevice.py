@@ -377,9 +377,26 @@ class ModbusUartPollDevice(Component):
                          self.port_config.parity,self.port_config.stopbits)
 
         self.cmds = queue.Queue()
-        self.ModbusUartPollThread = ModbusUartPollThread(self,self.cmds,self.data)  # data is an inside port
-        self.ModbusUartPollThread.start()
-        self.data.activate()
+
+    def on_clock(self):
+        now = self.clock.recv_pyobj()  # Receive time (as float)
+        self.logger.info("on_clock()[%s]: eventTime=%s", str(self.pid), now)
+
+        if debugMode:
+            t0 = time.perf_counter()
+            self.logger.debug("on_clock()[%s]: functionStartTime=%f", str(self.pid), t0)
+
+        if self.ModbusUartPollThread == None:
+            self.ModbusUartPollThread = ModbusUartPollThread(self, self.cmds, self.data)  # data is an inside port
+            self.ModbusUartPollThread.start()
+            self.data.activate()
+
+        self.clock.halt()
+
+        if debugMode:
+            t1 = time.perf_counter()
+            self.logger.debug("on_clock()[%s]: functionStopTime=%f, timeInFunction=%f ms", str(self.pid), t1,
+                              (t1 - t0) * 1000)
 
                     
     def __destroy__(self):
