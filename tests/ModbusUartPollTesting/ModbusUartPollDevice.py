@@ -138,7 +138,7 @@ class ModbusUartPollThread(threading.Thread):
             return
         
         if not self.modbusReady:
-            #self.enableModbus()
+            self.enableModbus()
                         
         while True:
             self.active.wait(None)
