@@ -1,6 +1,6 @@
-// RIAPS Modbus (UART) Device Testing
+// RIAPS Modbus (UART) Poll Device Testing
 
-app RIAPSModbusUART {
+app RIAPSModbusPollUART {
     message ModbusRequest;     // send Modbus action Request
     message ModbusResponse;    // get response from Modbus action, generally an ACK
     message ModbusReadData;    // sampled Modbus data
@@ -10,13 +10,11 @@ app RIAPSModbusUART {
 
     // Modbus (UART) device interface - UART1 (default)
     // considered the server for the request/response interaction
-    device ModbusUartDevice(slaveaddress=10,port='UART1',baudrate=57600,serialTimeout=1.0) {
-      inside command;
+    device ModbusUartPollDevice(slaveaddress=10,port='UART1',baudrate=57600,serialTimeout=1.0) {
       inside data;
 
       rep modbusRepPort : (ModbusRequest,ModbusResponse); // Port used to communicate with the ComputationalComponent
-      pub modbusDataPub : ModbusReadData ;                // Modbus data available (single read and polling read)
-      timer clock 50;                                     // This value is arbitrary since UART must be configured prior to code running
+      pub modbusDataPub : ModbusReadData ;                // Modbus data available (single and polling commands)
     }
 
     // Example Component to show Modbus I/F usage
@@ -35,7 +33,7 @@ app RIAPSModbusUART {
     actor ModbusExampleActor() {
       local ModbusRequest,ModbusResponse,ModbusReadData; // Local message types
       {
-        modbus : ModbusUartDevice(slaveaddress=10,port='UART2',baudrate=57600,serialTimeout=3);  // Slave Address is in decimal
+        modbus : ModbusUartPollDevice(slaveaddress=10,port='UART2',baudrate=57600,serialTimeout=3);  // Slave Address is in decimal
         commInitiator : ComputationalComponent();
       }
     }
