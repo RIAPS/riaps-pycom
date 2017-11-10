@@ -109,13 +109,14 @@ through the command inside port, along with the polling frequency desired (in Hz
 will continue until a stop polling is received. 
 '''
 class ModbusUartPollThread(threading.Thread):
-    def __init__(self, component, data):
+    def __init__(self, component, cmds, data):
         threading.Thread.__init__(self)
         self.terminated = threading.Event()
         self.active = threading.Event()
         
         self.component = component
         self.data = data
+        self.cmds = cmds
         self.pid = os.getpid()
         
         self.modbusReady = False
@@ -137,7 +138,7 @@ class ModbusUartPollThread(threading.Thread):
             return
         
         if not self.modbusReady:
-            self.enableModbus()
+            #self.enableModbus()
                         
         while True:
             self.active.wait(None)
@@ -387,7 +388,7 @@ class ModbusUartPollDevice(Component):
             self.logger.debug("on_clock()[%s]: functionStartTime=%f", str(self.pid), t0)
 
         if self.ModbusUartPollThread == None:
-            self.ModbusUartPollThread = ModbusUartPollThread(self, self.data)  # data is an inside port
+            self.ModbusUartPollThread = ModbusUartPollThread(self, self.cmds, self.data)  # data is an inside port
             self.ModbusUartPollThread.start()
             self.data.activate()
 
