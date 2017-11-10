@@ -50,7 +50,6 @@ class ComputationalComponent(Component):
         self.modbusPending = 0
         self.pollRequested = False
         self.pollFreq = 0
-        self.dataExpected = False
         self.noData = None
 
         self.logger.info("__init__[%s]: starting",str(self.pid))
@@ -117,12 +116,10 @@ class ComputationalComponent(Component):
             self.modbusPending -= 1
             # pydevd.settrace(host='192.168.1.102',port=5678)
             if msg=='ACK':
-                self.dataExpected = True
-                
-            if debugMode:
-                self.cmdAckRxTime = time.perf_counter()     
-                self.logger.debug("sendModbusRequest()[%s]: Received ACK from ModbusUartDevice at %f, time from cmd to get ACK back is %f ms",
-                                  str(self.pid),self.cmdAckRxTime,(self.cmdAckRxTime-self.cmdSendStartTime)*1000)
+                if debugMode:
+                    self.cmdAckRxTime = time.perf_counter()
+                    self.logger.debug("sendModbusRequest()[%s]: Received ACK from ModbusUartDevice at %f, time from cmd to get ACK back is %f ms",
+                                      str(self.pid),self.cmdAckRxTime,(self.cmdAckRxTime-self.cmdSendStartTime)*1000)
 
 
     def on_rx_modbusData(self):
@@ -135,25 +132,18 @@ class ComputationalComponent(Component):
             self.logger.debug("on_rx_modbusData()[%s]: Received Modbus data from ModbusUartDevice at %f, time from cmd to data is %f ms",
                               str(self.pid),self.cmdResultsRxTime,(self.cmdResultsRxTime-self.cmdSendStartTime)*1000)
 
-        if self.dataExpected == True:
-            if self.command.commandType == ModbusCommand.READ_INPUTREG or \
-                            self.command.commandType == ModbusCommand.READ_HOLDINGREG:
-                logMsg = "Register " + str(self.command.registerAddress) + " value is " + str(msg)
-            elif self.command.commandType == ModbusCommand.READMULTI_INPUTREGS or \
-                            self.command.commandType == ModbusCommand.READMULTI_HOLDINGREGS:
-                logMsg = "Register " + str(self.command.registerAddress) + " values are " + str(msg)
-            elif self.command.commandType == ModbusCommand.WRITE_HOLDINGREG:
-                logMsg = "Wrote Register " + str(self.command.registerAddress)
-            elif self.command.commandType == ModbusCommand.WRITEMULTI_HOLDINGREGS:
-                logMsg = "Wrote Registers " + str(self.command.registerAddress) + " to " + \
-                         str(self.command.registerAddress + self.command.numberOfRegs - 1)
+        if self.command.commandType == ModbusCommand.READ_INPUTREG or self.command.commandType == ModbusCommand.READ_HOLDINGREG:
+            logMsg = "Register " + str(self.command.registerAddress) + " value is " + str(msg)
+        elif self.command.commandType == ModbusCommand.READMULTI_INPUTREGS or self.command.commandType == ModbusCommand.READMULTI_HOLDINGREGS:
+            logMsg = "Register " + str(self.command.registerAddress) + " values are " + str(msg)
+        elif self.command.commandType == ModbusCommand.WRITE_HOLDINGREG:
+            logMsg = "Wrote Register " + str(self.command.registerAddress)
+        elif self.command.commandType == ModbusCommand.WRITEMULTI_HOLDINGREGS:
+            logMsg = "Wrote Registers " + str(self.command.registerAddress) + " to " + str(self.command.registerAddress + self.command.numberOfRegs - 1)
 
-            self.tx_modbusData.send_pyobj(logMsg)  # Send log data
-            self.logger.info("on_rx_modbusData()[%s]: Sent log message - %s",str(self.pid),repr(logMsg))
-            self.dataExpected = False  # reset for next modbus read
+        self.tx_modbusData.send_pyobj(logMsg)  # Send log data
+        self.logger.info("on_rx_modbusData()[%s]: Sent log message - %s",str(self.pid),repr(logMsg))
 
-        else:  # this should not happen, but capturing it to make sure
-            self.logger.info("on_rx_modbusData()[%s]: Stray message arrived - %s",str(self.pid),repr(msg))
 
     def __destroy__(self):
         self.logger.info("__destroy__[%s]",str(self.pid))

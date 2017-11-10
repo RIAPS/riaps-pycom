@@ -109,13 +109,12 @@ through the command inside port, along with the polling frequency desired (in Hz
 will continue until a stop polling is received. 
 '''
 class ModbusUartPollThread(threading.Thread):
-    def __init__(self, component, command, data):
+    def __init__(self, component, data):
         threading.Thread.__init__(self)
         self.terminated = threading.Event()
         self.active = threading.Event()
         
         self.component = component
-        self.command = command
         self.data = data
         self.pid = os.getpid()
         
@@ -195,7 +194,7 @@ class ModbusUartPollThread(threading.Thread):
                             self.component.logger.info("thread run()[%s]: Polling stopped at %f",
                                                        str(self.pid), repr(self.pollStopTime))
 
-                except self.queue.Empty:  # MM TODO:  is this correct?
+                except queue.Empty:
                     t_last_sample = time.time()
                     if debugMode:
                         self.pollPeriodStartTime = time.perf_counter()
@@ -388,7 +387,7 @@ class ModbusUartPollDevice(Component):
             self.logger.debug("on_clock()[%s]: functionStartTime=%f", str(self.pid), t0)
 
         if self.ModbusUartPollThread == None:
-            self.ModbusUartPollThread = ModbusUartPollThread(self, self.cmds, self.data)  # data is an inside port
+            self.ModbusUartPollThread = ModbusUartPollThread(self, self.data)  # data is an inside port
             self.ModbusUartPollThread.start()
             self.data.activate()
 
@@ -419,7 +418,7 @@ class ModbusUartPollDevice(Component):
             self.modbusReqRxTime = time.perf_counter()     
             self.logger.debug("on_modbusRepPort()[%s]: Request Received at %f",str(self.pid),self.modbusReqRxTime)
 
-        if self.ModbusUartThread == None:
+        if self.ModbusUartPollThread == None:
             self.logger.info("on_modbusRepPort()[%s]: ModbusUartThread not available yet, send ERROR msg",str(self.pid))
             msg = ('ERROR')
             self.modbusRepPort.send_pyobj(msg)
