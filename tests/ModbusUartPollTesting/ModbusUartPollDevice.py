@@ -234,39 +234,39 @@ class ModbusUartPollThread(threading.Thread):
     def sendModbusCommand(self):
         if debugMode:
             t0 = time.perf_counter()     
-            self.component.logger.debug("thread sendModbusCommand()[%s]: Sending command to Modbus library at %f",str(self.pid),t0)
+            #self.component.logger.debug("thread sendModbusCommand()[%s]: Sending command to Modbus library at %f",str(self.pid),t0)
 
         value = 999  # large invalid value
         
         if self.commandType == ModbusCommand.READ_INPUTREG:
             value = self.modbus.readInputRegValue(self.registerAddress, self.numberOfDecimals, self.signedValue)
-            self.component.logger.info("thread sendModbusCommand()[%s]: Sent command %s, register=%d, numOfDecimals=%d, signed=%s",
-                                       str(self.pid),ModbusCommand.READ_INPUTREG.name,self.registerAddress,
-                                       self.numberOfDecimals,str(self.signedValue))
+            #self.component.logger.info("thread sendModbusCommand()[%s]: Sent command %s, register=%d, numOfDecimals=%d, signed=%s",
+            #                           str(self.pid),ModbusCommand.READ_INPUTREG.name,self.registerAddress,
+            #                           self.numberOfDecimals,str(self.signedValue))
         elif self.commandType == ModbusCommand.READ_HOLDINGREG:
             value = self.modbus.readHoldingRegValue(self.registerAddress, self.numberOfDecimals, self.signedValue)
-            self.component.logger.info("thread sendModbusCommand()[%s]: Sent command %s, register=%d, numOfDecimals=%d, signed=%s",
-                                       str(self.pid),ModbusCommand.READ_HOLDINGREG.name,self.registerAddress,
-                                       self.numberOfDecimals,str(self.signedValue))
+            #self.component.logger.info("thread sendModbusCommand()[%s]: Sent command %s, register=%d, numOfDecimals=%d, signed=%s",
+            #                           str(self.pid),ModbusCommand.READ_HOLDINGREG.name,self.registerAddress,
+            #                           self.numberOfDecimals,str(self.signedValue))
         elif self.commandType == ModbusCommand.READMULTI_INPUTREGS:
             value = self.modbus.readMultiInputRegValues(self.registerAddress, self.numberOfRegs)
-            self.component.logger.info("thread sendModbusCommand()[%s]: Sent command %s, register=%d, numOfRegs=%d",
-                                       str(self.pid),ModbusCommand.READMULTI_INPUTREGS.name,self.registerAddress,
-                                       self.numberOfRegs)
+            #self.component.logger.info("thread sendModbusCommand()[%s]: Sent command %s, register=%d, numOfRegs=%d",
+            #                           str(self.pid),ModbusCommand.READMULTI_INPUTREGS.name,self.registerAddress,
+            #                           self.numberOfRegs)
         elif self.commandType == ModbusCommand.READMULTI_HOLDINGREGS:
             value = self.modbus.readMultiHoldingRegValues(self.registerAddress, self.numberOfRegs)
-            self.component.logger.info("thread sendModbusCommand()[%s]: Sent command %s, register=%d, numOfRegs=%d",
-                                       str(self.pid),ModbusCommand.READMULTI_HOLDINGREGS.name,self.registerAddress,self.numberOfRegs)
+            #self.component.logger.info("thread sendModbusCommand()[%s]: Sent command %s, register=%d, numOfRegs=%d",
+            #                           str(self.pid),ModbusCommand.READMULTI_HOLDINGREGS.name,self.registerAddress,self.numberOfRegs)
         elif self.commandType == ModbusCommand.WRITE_HOLDINGREG:
             self.modbus.writeHoldingRegister(self.registerAddress, self.values[0], self.numberOfDecimals, self.signedValue)
-            self.component.logger.info("thread sendModbusCommand()[%s]: Sent command %s, register=%d, value=%d, numberOfDecimals=%d, signed=%s",
-                                       str(self.pid),ModbusCommand.WRITE_HOLDINGREG.name,self.registerAddress,self.values[0],self.numberOfDecimals,str(self.signedValue))
+            #self.component.logger.info("thread sendModbusCommand()[%s]: Sent command %s, register=%d, value=%d, numberOfDecimals=%d, signed=%s",
+            #                           str(self.pid),ModbusCommand.WRITE_HOLDINGREG.name,self.registerAddress,self.values[0],self.numberOfDecimals,str(self.signedValue))
         elif self.commandType == ModbusCommand.WRITEMULTI_HOLDINGREGS:
             self.modbus.writeHoldingRegisters(self.registerAddress, self.values)
-            self.component.logger.info("thread sendModbusCommand()[%s]: Sent command %s, register=%d",
-                                       str(self.pid),ModbusCommand.WRITEMULTI_HOLDINGREGS.name,self.registerAddress)
-            self.component.logger.info("thread sendModbusCommand()[%s]: Values - %s",
-                                       str(self.pid),str(self.values).strip('[]'))
+            #self.component.logger.info("thread sendModbusCommand()[%s]: Sent command %s, register=%d",
+            #                           str(self.pid),ModbusCommand.WRITEMULTI_HOLDINGREGS.name,self.registerAddress)
+            #self.component.logger.info("thread sendModbusCommand()[%s]: Values - %s",
+            #                           str(self.pid),str(self.values).strip('[]'))
         else:
             self.component.logger.info("thread sendModbusCommand()[%s]: Invalid query command sent: command=%s",
                                        str(self.pid),self.commandtype.name)
