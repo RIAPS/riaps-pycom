@@ -97,10 +97,10 @@ CommandFormat = namedtuple('CommandFormat', ['commandType','registerAddress','nu
 
 '''
 This thread will be the interface between the minimalmodbus library communication with the 
-hardware and the RIAPS ModbusUartDevice component.  It will run handle incoming commands and 
+hardware and the RIAPS ModbusUartPollDevice component.  It will run handle incoming commands and 
 polling (if started).
 
-ModbusRequests will be passed from the ModbusUartDevice component to this thread using the command inside port.
+ModbusRequests will be passed from the ModbusUartPollDevice component to this thread using the command inside port.
 Queries will be executed by calling into the minimalmodbus library with a blocking call, 
 then data will be published out the data inside port.  
 
@@ -108,7 +108,7 @@ Polling is setup as indicated above.  Polling begins when a request to start pol
 through the command inside port, along with the polling frequency desired (in Hz).  Polling 
 will continue until a stop polling is received. 
 '''
-class ModbusUartThread(threading.Thread):
+class ModbusUartPollThread(threading.Thread):
     def __init__(self, component, command, data):
         threading.Thread.__init__(self)
         self.terminated = threading.Event()
@@ -344,7 +344,7 @@ class ModbusUartThread(threading.Thread):
         self.terminated.set()
 
     
-class ModbusUartDevice(Component):
+class ModbusUartPollDevice(Component):
     def __init__(self,slaveaddress=0,port="UART1",baudrate=19200,bytesize=serial.EIGHTBITS,parity=serial.PARITY_NONE,
                  stopbits=serial.STOPBITS_ONE,serialTimeout=0.05): # defaults for Modbus spec
         super().__init__()
@@ -377,16 +377,16 @@ class ModbusUartDevice(Component):
                          self.port_config.parity,self.port_config.stopbits)
 
         self.cmds = queue.Queue()
-        self.ModbusUartThread = ModbusUartThread(self,self.cmds,self.data)  # data is an inside port
-        self.ModbusUartThread.start()
+        self.ModbusUartPollThread = ModbusUartPollThread(self,self.cmds,self.data)  # data is an inside port
+        self.ModbusUartPollThread.start()
         self.data.activate()
 
                     
     def __destroy__(self):
         self.logger.info("__destroy__[%s]",str(self.pid))
-        if self.ModbusUartThread != None:
-            self.ModbusUartThread.deactivate()
-            self.ModbusUartThread.terminate()
+        if self.ModbusUartPollThread != None:
+            self.ModbusUartPollThread.deactivate()
+            self.ModbusUartPollThread.terminate()
 
 
     '''    
