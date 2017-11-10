@@ -377,6 +377,7 @@ class ModbusUartPollDevice(Component):
                          self.port_config.parity,self.port_config.stopbits)
 
         self.cmds = queue.Queue()
+        self.ModbusUartPollThread = None
 
     def on_clock(self):
         now = self.clock.recv_pyobj()  # Receive time (as float)
