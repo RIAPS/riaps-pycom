@@ -101,11 +101,11 @@ class ComputationalComponent(Component):
 
 
     def sendModbusRequest(self):
+        msg = self.requestCommand
         if debugMode:
             self.cmdSendStartTime = time.perf_counter()  
             self.logger.debug("sendModbusRequest()[%s]: Send command=%s to ModbusUartDevice at %f",str(self.pid),msg,self.cmdSendStartTime)
 
-        msg = self.requestCommand
         if self.modbusReqPort.send_pyobj(msg):
             self.modbusPending += 1
 
