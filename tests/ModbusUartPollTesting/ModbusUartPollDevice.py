@@ -240,7 +240,7 @@ class ModbusUartPollThread(threading.Thread):
             #self.component.logger.debug("thread sendModbusCommand()[%s]: Sending command to Modbus library at %f",str(self.pid),t0)
 
         value = 999  # large invalid value
-        
+
         if self.commandType == ModbusCommand.READ_INPUTREG:
             value = self.modbus.readInputRegValue(self.registerAddress, self.numberOfDecimals, self.signedValue)
             '''self.component.logger.info("thread sendModbusCommand()[%s]: Sent command %s, register=%d, numOfDecimals=%d, signed=%s",
@@ -431,6 +431,7 @@ class ModbusUartPollDevice(Component):
                                   commandRequest.requestType.name,t0)
      
             self.cmds.put(commandRequest)  # send using command queue to Modbus thread, results will come back on inside data plug
+            #time.sleep(0.5)  // needed to solve a race condition
 
             if debugMode:
                 self.sendAckTime = time.perf_counter()
