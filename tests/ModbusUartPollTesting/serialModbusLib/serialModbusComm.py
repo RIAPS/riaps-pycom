@@ -60,7 +60,7 @@ class SerialModbusComm(object):
             self.modbusInstrument = minimalmodbus.Instrument(self.port_config.portname,self.slaveAddress)  # defaults as RTU mode
             self.portOpen = True
             print("SerialModbusComm - open startModbus: " + self.port_config.portname + ", " + str(self.port_config.baudrate) + ", " + str(self.port_config.bytesize) + ", " + self.port_config.parity + ", " + str(self.port_config.stopbits) + ", " + str(self.port_config.serialTimeout))
-            self.modbusInstrument.debug = True
+            #self.modbusInstrument.debug = True
         except serial.SerialException:
             print("SerialModbusComm - unable to startModbus: " + self.port_config.portname + ", " + str(self.port_config.baudrate) + ", " + str(self.port_config.bytesize) + ", " + self.port_config.parity + ", " + str(self.port_config.stopbits) + ", " + str(self.port_config.serialTimeout))
             self.modbusInstrument.serial.close()           
@@ -72,7 +72,7 @@ class SerialModbusComm(object):
         self.modbusInstrument.serial.baudrate = self.port_config.baudrate
         self.modbusInstrument.serial.timeout = self.port_config.serialTimeout
         
-        print("SerialModbusComm - startModbus: " + self.port_config.portname + ", " + str(self.slaveAddress) + ", " + str(self.port_config.baudrate))      
+        #print("SerialModbusComm - startModbus: " + self.port_config.portname + ", " + str(self.slaveAddress) + ", " + str(self.port_config.baudrate))
         
     '''
     The user should stop the Modbus when their component ends (or wants to stop it).  This will also close the UART port.
