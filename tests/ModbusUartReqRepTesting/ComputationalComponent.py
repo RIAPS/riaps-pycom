@@ -53,8 +53,9 @@ class ComputationalComponent(Component):
 
 
     def on_clock(self):
-        now = self.clock.recv_pyobj() 
-        self.logger.info("on_clock()[%s]: %s",str(self.pid),str(now))
+        now = self.clock.recv_pyobj()
+        if debugMode:
+            self.logger.info("on_clock()[%s]: %s",str(self.pid),str(now))
 
         '''Request:  Commands to send over Modbus - one command used at a time'''
 
@@ -75,23 +76,22 @@ class ComputationalComponent(Component):
 
         if debugMode:
             self.cmdSendStartTime = time.perf_counter()
-            self.logger.debug("on_clock()[%s]: Send command to ModbusUartDevice at %f",str(self.pid),self.cmdSendStartTime)
+            #self.logger.debug("on_clock()[%s]: Send command to ModbusUartDevice at %f",str(self.pid),self.cmdSendStartTime)
 
         msg = self.command
-        self.logger.info('on_clock()[%d]: send req: %s' % (self.pid,msg))
+
         if self.modbusReqPort.send_pyobj(msg):
             self.ModbusPending += 1
 
         '''Receive Response'''
         if self.ModbusPending > 0:
             msg = self.modbusReqPort.recv_pyobj()
-            self.logger.info("on_modbusReqPort()[%s]: %s",str(self.pid),repr(msg))
             self.ModbusPending -= 1
 #           pydevd.settrace(host='192.168.1.102',port=5678)
 
             if debugMode:
                 self.cmdResultsRxTime = time.perf_counter()
-                self.logger.debug("on_clock()[%s]: Received Modbus data from ModbusUartDevice at %f, time from cmd to data is %f ms",str(self.pid),self.cmdResultsRxTime,(self.cmdResultsRxTime-self.cmdSendStartTime)*1000)
+                self.logger.debug("on_clock()[%s]: Received Modbus data=%s from ModbusUartDevice at %f, time from cmd to data is %f ms",str(self.pid),repr(msg),self.cmdResultsRxTime,(self.cmdResultsRxTime-self.cmdSendStartTime)*1000)
 
             if self.command.commandType == ModbusCommands.READ_INPUTREG or self.command.commandType == ModbusCommands.READ_HOLDINGREG:
                 logMsg = "Register " + str(self.command.registerAddress) + " value is " + str(msg)

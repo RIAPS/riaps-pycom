@@ -63,7 +63,8 @@ class ModbusUartReqRepDevice(Component):
         self.slaveAddressDecimal = slaveaddress
         self.modbus = SerialModbusComm(self,self.slaveAddressDecimal,self.port_config)
         self.modbusReady = False
-        self.logger.info("Modbus settings %d @%s:%d %d%s%d [%d]", self.slaveAddressDecimal,self.port_config.portname,self.port_config.baudrate,self.port_config.bytesize,self.port_config.parity,self.port_config.stopbits,self.pid)
+        if debugMode:
+            self.logger.info("Modbus settings %d @%s:%d %d%s%d [%d]", self.slaveAddressDecimal,self.port_config.portname,self.port_config.baudrate,self.port_config.bytesize,self.port_config.parity,self.port_config.stopbits,self.pid)
 
     def on_clock(self):
         now = self.clock.recv_pyobj()   # Receive time (as float)
@@ -96,11 +97,10 @@ class ModbusUartReqRepDevice(Component):
     def on_modbusRepPort(self):
         '''Request Received'''
         commandRequest = self.modbusRepPort.recv_pyobj()
-        self.logger.info("on_modbusRepPort()[%s]: %s",str(self.pid),commandRequest)
 
         if debugMode:
             self.modbusReqRxTime = time.perf_counter()
-            self.logger.debug("on_modbusRepPort()[%s]: Request Received at %f",str(self.pid),self.modbusReqRxTime)
+            #self.logger.debug("on_modbusRepPort()[%s]: Request=%s Received at %f",str(self.pid),commandRequest,self.modbusReqRxTime)
 
         self.unpackCommand(commandRequest)
         responseValue = -1  # invalid response
@@ -109,12 +109,11 @@ class ModbusUartReqRepDevice(Component):
 
             if debugMode:
                 t1 = time.perf_counter()
-                self.logger.debug("on_modbusRepPort()[%s]: Send command to Thread at %f",str(self.pid),t1)
+                self.logger.debug("on_modbusRepPort()[%s]: Send Modbus response=%s back to requester at %f",str(self.pid),responseValue,t1)
 
         '''Send Results'''
         self.modbusRepPort.send_pyobj(responseValue)
 #        pydevd.settrace(host='192.168.1.102',port=5678)
-        self.logger.info("on_modbusRepPort()[%s]: %s,",str(self.pid),responseValue)
 
 
     def unpackCommand(self,rxCommand):
@@ -131,27 +130,27 @@ class ModbusUartReqRepDevice(Component):
 
         if debugMode:
             t0 = time.perf_counter()
-            self.logger.debug("sendModbusCommand()[%s]: Sending command to Modbus library at %f",str(self.pid),t0)
+            #self.logger.debug("sendModbusCommand()[%s]: Sending command to Modbus library at %f",str(self.pid),t0)
 
         if self.commmandRequested == ModbusCommands.READ_INPUTREG:
             value = self.modbus.readInputRegValue(self.registerAddress, self.numberOfDecimals, self.signedValue)
-            self.logger.info("ModbusUartDevice: sent command %s, register=%d, numOfDecimals=%d, signed=%s", ModbusCommands.READ_INPUTREG.name,self.registerAddress,self.numberOfDecimals,str(self.signedValue))
+            #self.logger.info("ModbusUartDevice: sent command %s, register=%d, numOfDecimals=%d, signed=%s", ModbusCommands.READ_INPUTREG.name,self.registerAddress,self.numberOfDecimals,str(self.signedValue))
         elif self.commmandRequested == ModbusCommands.READ_HOLDINGREG:
             value = self.modbus.readHoldingRegValue(self.registerAddress, self.numberOfDecimals, self.signedValue)
-            self.logger.info("ModbusUartDevice: sent command %s, register=%d, numOfDecimals=%d, signed=%s", ModbusCommands.READ_HOLDINGREG.name,self.registerAddress,self.numberOfDecimals,str(self.signedValue))
+            #self.logger.info("ModbusUartDevice: sent command %s, register=%d, numOfDecimals=%d, signed=%s", ModbusCommands.READ_HOLDINGREG.name,self.registerAddress,self.numberOfDecimals,str(self.signedValue))
         elif self.commmandRequested == ModbusCommands.READMULTI_INPUTREGS:
             value = self.modbus.readMultiInputRegValues(self.registerAddress, self.numberOfRegs)
-            self.logger.info("ModbusUartDevice: sent command %s, register=%d, numOfRegs=%d", ModbusCommands.READMULTI_INPUTREGS.name,self.registerAddress,self.numberOfRegs)
+            #self.logger.info("ModbusUartDevice: sent command %s, register=%d, numOfRegs=%d", ModbusCommands.READMULTI_INPUTREGS.name,self.registerAddress,self.numberOfRegs)
         elif self.commmandRequested == ModbusCommands.READMULTI_HOLDINGREGS:
             value = self.modbus.readMultiHoldingRegValues(self.registerAddress, self.numberOfRegs)
-            self.logger.info("ModbusUartDevice: sent command %s, register=%d, numOfRegs=%d", ModbusCommands.READMULTI_HOLDINGREGS.name,self.registerAddress,self.numberOfRegs)
+            #self.logger.info("ModbusUartDevice: sent command %s, register=%d, numOfRegs=%d", ModbusCommands.READMULTI_HOLDINGREGS.name,self.registerAddress,self.numberOfRegs)
         elif self.commmandRequested == ModbusCommands.WRITE_HOLDINGREG:
             self.modbus.writeHoldingRegister(self.registerAddress, self.values[0], self.numberOfDecimals, self.signedValue)
-            self.logger.info("ModbusUartDevice: sent command %s, register=%d, value=%d, numberOfDecimals=%d, signed=%s",ModbusCommands.WRITE_HOLDINGREG.name,self.registerAddress,self.values[0],self.numberOfDecimals,str(self.signedValue))
+            #self.logger.info("ModbusUartDevice: sent command %s, register=%d, value=%d, numberOfDecimals=%d, signed=%s",ModbusCommands.WRITE_HOLDINGREG.name,self.registerAddress,self.values[0],self.numberOfDecimals,str(self.signedValue))
         elif self.commmandRequested == ModbusCommands.WRITEMULTI_HOLDINGREGS:
             self.modbus.writeHoldingRegisters(self.registerAddress, self.values)
-            self.logger.info("ModbusUartDevice: sent command %s, register=%d",ModbusCommands.WRITEMULTI_HOLDINGREGS.name,self.registerAddress)
-            self.logger.info("ModbusUartDevice: Values - %s", str(self.values).strip('[]'))
+            #self.logger.info("ModbusUartDevice: sent command %s, register=%d",ModbusCommands.WRITEMULTI_HOLDINGREGS.name,self.registerAddress)
+            #self.logger.info("ModbusUartDevice: Values - %s", str(self.values).strip('[]'))
 
         if debugMode:
             t1 = time.perf_counter()
