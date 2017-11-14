@@ -81,8 +81,34 @@ class ComputationalComponent(Component):
         msg = self.command
 
         '''Send Command'''
-        self.modbusReqPort.send_pyobj(msg):
+        self.modbusReqPort.send_pyobj(msg)
+        """Removed to test using the on_modbusReqPort, instead of blocking to receive
+	if self.modbusReqPort.send_pyobj(msg):
+            self.ModbusPending += 1
 
+        '''Receive Response'''
+        if self.ModbusPending > 0:
+            msg = self.modbusReqPort.recv_pyobj()
+
+            if debugMode:
+                self.cmdResultsRxTime = time.perf_counter()
+                self.logger.debug(
+                    "on_clock()[%s]: Received Modbus data=%s from ModbusUartDevice at %f, time from cmd to data is %f ms",
+                    str(self.pid), repr(msg), self.cmdResultsRxTime,
+                    (self.cmdResultsRxTime - self.cmdSendStartTime) * 1000)
+
+            if self.command.commandType == ModbusCommands.READ_INPUTREG or self.command.commandType == ModbusCommands.READ_HOLDINGREG:
+                logMsg = "Register " + str(self.command.registerAddress) + " value is " + str(msg)
+            elif self.command.commandType == ModbusCommands.READMULTI_INPUTREGS or self.command.commandType == ModbusCommands.READMULTI_HOLDINGREGS:
+                logMsg = "Register " + str(self.command.registerAddress) + " values are " + str(msg)
+            elif self.command.commandType == ModbusCommands.WRITE_HOLDINGREG:
+                logMsg = "Wrote Register " + str(self.command.registerAddress)
+            elif self.command.commandType == ModbusCommands.WRITEMULTI_HOLDINGREGS:
+                logMsg = "Wrote Registers " + str(self.command.registerAddress) + " to " + str(
+                    self.command.registerAddress + self.command.numberOfRegs - 1)
+
+            self.tx_modbusData.send_pyobj(logMsg)  # Send log data
+	"""
 
     def on_modbusReqPort(self):
         '''Receive Response'''
@@ -91,7 +117,7 @@ class ComputationalComponent(Component):
 
         if debugMode:
             self.cmdResultsRxTime = time.perf_counter()
-            self.logger.debug("on_clock()[%s]: Received Modbus data=%s from ModbusUartDevice at %f, time from cmd to data is %f ms",str(self.pid),repr(msg),self.cmdResultsRxTime,(self.cmdResultsRxTime-self.cmdSendStartTime)*1000)
+            self.logger.debug("on_modbusReqPort()[%s]: Received Modbus data=%s from ModbusUartDevice at %f, time from cmd to data is %f ms",str(self.pid),repr(msg),self.cmdResultsRxTime,(self.cmdResultsRxTime-self.cmdSendStartTime)*1000)
 
         if self.command.commandType == ModbusCommands.READ_INPUTREG or self.command.commandType == ModbusCommands.READ_HOLDINGREG:
             logMsg = "Register " + str(self.command.registerAddress) + " value is " + str(msg)
@@ -102,7 +128,7 @@ class ComputationalComponent(Component):
         elif self.command.commandType == ModbusCommands.WRITEMULTI_HOLDINGREGS:
             logMsg = "Wrote Registers " + str(self.command.registerAddress) + " to " + str(self.command.registerAddress + self.command.numberOfRegs - 1)
 
-        self.tx_modbusData.send_pyobj(logMsg)  # Send log data
+        self.tx_modbusData.send_pyobj(logMsg)  # Send log data"""
 
 
     def __destroy__(self):
