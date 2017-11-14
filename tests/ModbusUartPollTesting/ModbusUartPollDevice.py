@@ -160,8 +160,8 @@ class ModbusUartPollThread(threading.Thread):
                     cmd = self.cmds.get(timeout=t_wait)
                     if debugMode:
                         self.cmdRxByThreadTime = time.perf_counter()
-                        self.component.logger.debug("thread run()[%s]: Received requested Modbus command request=%s, data=%s, at %f",
-                                                    str(self.pid),cmd.requestType.name,cmd.requestData,self.cmdRxByThreadTime)
+                        '''self.component.logger.debug("thread run()[%s]: Received requested Modbus command request=%s, data=%s, at %f",
+                                                    str(self.pid),cmd.requestType.name,cmd.requestData,self.cmdRxByThreadTime)'''
 
                     if cmd.requestType == ModbusRequest.SINGLE_RW_CMD:
                         self.processModbusCommand(cmd.requestData)
@@ -208,20 +208,20 @@ class ModbusUartPollThread(threading.Thread):
 
     def processModbusCommand(self,rxCommandData):
         self.unpackRegisterCommand(rxCommandData)
-        if debugMode:
-            self.component.logger.info("thread run()[%s]: Sending single R/W command to Modbus", str(self.pid))
+        #if debugMode:
+            #self.component.logger.info("thread run()[%s]: Sending single R/W command to Modbus", str(self.pid))
         responseValue = self.sendModbusCommand()
 
-        if debugMode:
+        '''if debugMode:
             self.dataRxModbusTime = time.perf_counter()
             self.component.logger.debug("thread run()[%s]: Sending data back to ModbusUartDevice responseValue=%s at %f, time from cmd to data sent is %f ms",
                                         str(self.pid), responseValue, self.dataRxModbusTime,
-                                        (self.dataRxModbusTime - self.cmdRxByThreadTime) * 1000)
+                                        (self.dataRxModbusTime - self.cmdRxByThreadTime) * 1000)'''
 
         # Publish Modbus read results (999 sent if a write was performed - see sendModbusCommand return value)
         self.dataPlug.send_pyobj(responseValue)
-        if debugMode:
-            self.component.logger.info("thread run()[%s]: Sending data back to ModbusUartDevice",str(self.pid))
+        #if debugMode:
+            #self.component.logger.info("thread run()[%s]: Sending data back to ModbusUartDevice",str(self.pid))
             # pydevd.settrace(host='192.168.1.102',port=5678)
 
 
@@ -288,8 +288,8 @@ class ModbusUartPollThread(threading.Thread):
             else:
                 if debugMode:
                     self.cmdRxByThreadTime = time.perf_counter()
-                    self.component.logger.debug("thread run()[%s]: Send polling write Modbus command at %f",
-                                                str(self.pid), self.cmdRxByThreadTime)
+                    '''self.component.logger.debug("thread run()[%s]: Send polling write Modbus command at %f",
+                                                str(self.pid), self.cmdRxByThreadTime)'''
                 self.processModbusCommand(self.pollWriteCmd)
 
             if self.pollReadCmd.commandType == ModbusCommand.NONE:
@@ -297,15 +297,15 @@ class ModbusUartPollThread(threading.Thread):
             else:
                 if debugMode:
                     self.cmdRxByThreadTime = time.perf_counter()
-                    self.component.logger.debug("thread run()[%s]: Send polling read Modbus command at %f",
-                                                str(self.pid), self.cmdRxByThreadTime)
+                    '''self.component.logger.debug("thread run()[%s]: Send polling read Modbus command at %f",
+                                                str(self.pid), self.cmdRxByThreadTime)'''
                 self.processModbusCommand(self.pollReadCmd)
 
         
     def enableModbus(self):
         if debugMode:
             t0 = time.perf_counter()     
-            self.component.logger.debug("thread enableModbus()[%s]: Request Modbus start at %f",str(self.pid),t0)
+            #self.component.logger.debug("thread enableModbus()[%s]: Request Modbus start at %f",str(self.pid),t0)
 
         self.modbus.startModbus()
         # pydevd.settrace(host='192.168.1.102',port=5678)
@@ -321,7 +321,7 @@ class ModbusUartPollThread(threading.Thread):
     def disableModbus(self):
         if debugMode:
             t0 = time.perf_counter()     
-            self.component.logger.debug("thread disableModbus()[%s]: Request Modbus be disabled at %f",str(self.pid),t0)
+            #self.component.logger.debug("thread disableModbus()[%s]: Request Modbus be disabled at %f",str(self.pid),t0)
 
         self.modbus.stopModbus()
         self.modbusReady = False
@@ -384,9 +384,9 @@ class ModbusUartPollDevice(Component):
     def on_clock(self):
         now = self.clock.recv_pyobj()  # Receive time (as float)
         if debugMode:
-            self.logger.info("on_clock()[%s]: eventTime=%s", str(self.pid), now)
+            #self.logger.info("on_clock()[%s]: eventTime=%s", str(self.pid), now)
             t0 = time.perf_counter()
-            self.logger.debug("on_clock()[%s]: functionStartTime=%f", str(self.pid), t0)
+            #self.logger.debug("on_clock()[%s]: functionStartTime=%f", str(self.pid), t0)
 
         if self.ModbusUartPollThread == None:
             self.ModbusUartPollThread = ModbusUartPollThread(self, self.cmds, self.data)  # data is an inside port
@@ -418,7 +418,7 @@ class ModbusUartPollDevice(Component):
 
         if debugMode:
             self.modbusReqRxTime = time.perf_counter()     
-            self.logger.debug("on_modbusRepPort()[%s]: Request Received at %f",str(self.pid),self.modbusReqRxTime)
+            #self.logger.debug("on_modbusRepPort()[%s]: Request Received at %f",str(self.pid),self.modbusReqRxTime)
 
         if self.ModbusUartPollThread == None:
             self.logger.info("on_modbusRepPort()[%s]: ModbusUartThread not available yet, send ERROR msg",str(self.pid))
@@ -427,17 +427,17 @@ class ModbusUartPollDevice(Component):
         else:  
             if debugMode:
                 t0 = time.perf_counter()
-                self.logger.debug("on_modbusRepPort()[%s]: Send command request=%s to Thread at %f",str(self.pid),
-                                  commandRequest.requestType.name,t0)
+                '''self.logger.debug("on_modbusRepPort()[%s]: Send command request=%s to Thread at %f",str(self.pid),
+                                  commandRequest.requestType.name,t0)'''
      
             self.cmds.put(commandRequest)  # send using command queue to Modbus thread, results will come back on inside data plug
-            #time.sleep(0.5)  // needed to solve a race condition
+            time.sleep(0.02)  # needed to solve a race condition
 
-            if debugMode:
+            '''if debugMode:
                 self.sendAckTime = time.perf_counter()
                 self.logger.debug("on_modbusRepPort()[%s]: Send ACK back to requester at %f, time from request to ACK back is %f ms",
                                   str(self.pid), self.sendAckTime,
-                                  (self.sendAckTime - self.modbusReqRxTime) * 1000)
+                                  (self.sendAckTime - self.modbusReqRxTime) * 1000)'''
             msg = ('ACK')
             self.modbusRepPort.send_pyobj(msg)
 
@@ -447,8 +447,8 @@ class ModbusUartPollDevice(Component):
         
         if debugMode:
             self.dataRxFromThreadTime = time.perf_counter()     
-            self.logger.debug("on_data()[%s]: Data=%s received from internal device thread at %f",
-                              str(self.pid),msg,self.dataRxFromThreadTime)
+            self.logger.debug("on_data()[%s]: Data=%s received from internal device thread at %f, time from request to data back is %f ms",
+                              str(self.pid),msg,self.dataRxFromThreadTime,(self.dataRxFromThreadTime-self.modbusReqRxTime)*1000)
         
         self.modbusDataPub.send_pyobj(msg)  # publish results for calling component to subscribe
 

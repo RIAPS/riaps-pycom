@@ -16,7 +16,7 @@ app RIAPSModbusReqRepUART {
 
     // Example Component to show Modbus I/F usage
     component ComputationalComponent() {
-      timer clock 5000;
+      timer clock 40;
       pub tx_modbusData : ModbusData ;                    // When data is ready,
       req modbusReqPort : (ModbusCommand,ModbusResponse); // Port used to communicate with the ModbusUartDevice
     }

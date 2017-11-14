@@ -56,8 +56,8 @@ class ComputationalComponent(Component):
 
     def on_clock(self):
         now = self.clock.recv_pyobj()
-        if debugMode:
-            self.logger.info("on_clock()[%s]: %s",str(self.pid),str(now))
+        '''if debugMode:
+            self.logger.info("on_clock()[%s]: %s",str(self.pid),str(now))'''
         
         '''Request:  Query Commands to send over Modbus - one command used at a time, options to test below'''
 
@@ -104,7 +104,7 @@ class ComputationalComponent(Component):
         msg = self.requestCommand
         if debugMode:
             self.cmdSendStartTime = time.perf_counter()  
-            self.logger.debug("sendModbusRequest()[%s]: Send command=%s to ModbusUartDevice at %f",str(self.pid),msg,self.cmdSendStartTime)
+            #self.logger.debug("sendModbusRequest()[%s]: Send command=%s to ModbusUartDevice at %f",str(self.pid),msg,self.cmdSendStartTime)
 
         if self.modbusReqPort.send_pyobj(msg):
             self.modbusPending += 1
@@ -112,8 +112,8 @@ class ComputationalComponent(Component):
         '''Receive Response - ACK or ERROR'''
         if self.modbusPending > 0:
             msg = self.modbusReqPort.recv_pyobj()
-            if debugMode:
-                self.logger.info("sendModbusRequest()[%s] receive response: %s",str(self.pid),repr(msg))
+            '''if debugMode:
+                self.logger.info("sendModbusRequest()[%s] receive response: %s",str(self.pid),repr(msg))'''
             self.modbusPending -= 1
             # pydevd.settrace(host='192.168.1.102',port=5678)
             if msg=='ACK':
@@ -125,7 +125,6 @@ class ComputationalComponent(Component):
 
     def on_rx_modbusData(self):
         msg = self.rx_modbusData.recv_pyobj()
-        self.logger.info("on_rx_modbusData()[%s]: %s",str(self.pid),repr(msg))
         # pydevd.settrace(host='192.168.1.102',port=5678)
 
         if debugMode:
@@ -143,8 +142,8 @@ class ComputationalComponent(Component):
             logMsg = "Wrote Registers " + str(self.command.registerAddress) + " to " + str(self.command.registerAddress + self.command.numberOfRegs - 1)
 
         self.tx_modbusData.send_pyobj(logMsg)  # Send log data
-        if debugMode:
-            self.logger.info("on_rx_modbusData()[%s]: Sent log message - %s",str(self.pid),repr(logMsg))
+        '''if debugMode:
+            self.logger.info("on_rx_modbusData()[%s]: Sent log message - %s",str(self.pid),repr(logMsg))'''
 
 
     def __destroy__(self):

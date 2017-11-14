@@ -107,9 +107,9 @@ class ModbusUartReqRepDevice(Component):
         if self.modbusReady == True:
             responseValue = self.sendModbusCommand()
 
-            if debugMode:
+            '''if debugMode:
                 t1 = time.perf_counter()
-                self.logger.debug("on_modbusRepPort()[%s]: Send Modbus response=%s back to requester at %f",str(self.pid),responseValue,t1)
+                self.logger.debug("on_modbusRepPort()[%s]: Send Modbus response=%s back to requester at %f",str(self.pid),responseValue,t1)'''
 
         '''Send Results'''
         self.modbusRepPort.send_pyobj(responseValue)

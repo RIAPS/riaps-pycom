@@ -54,8 +54,8 @@ class ComputationalComponent(Component):
 
     def on_clock(self):
         now = self.clock.recv_pyobj()
-        if debugMode:
-            self.logger.info("on_clock()[%s]: %s",str(self.pid),str(now))
+        '''if debugMode:
+            self.logger.info("on_clock()[%s]: %s",str(self.pid),str(now))'''
 
         '''Request:  Commands to send over Modbus - one command used at a time'''
 
