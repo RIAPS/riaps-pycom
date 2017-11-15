@@ -201,6 +201,7 @@ class DiscoClient(object):
         appMessage.appName = self.appName
         appMessage.version = '0.0.0'
         appMessage.actorName = self.actor.name
+        appMessage.pid = os.getpid()
                   
         msgBytes = reqt.to_bytes()
         
