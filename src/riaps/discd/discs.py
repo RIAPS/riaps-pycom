@@ -311,15 +311,17 @@ class DiscoService(object):
             if self.hostAddress != actorHost:
                 continue
             clientSocket = self.clients[clientKeyBase]
-            updMsg = disco_capnp.DiscoUpd.new_message()     # Construct the notification message to be sent to the client actor
-            updMsgClient = updMsg.client
+
+            updMsg = disco_capnp.DiscoUpd.new_message() # Construct the notification message to be sent to the client actor
+            updMsgPortUpd = updMsg.portUpdate
+            updMsgClient = updMsgPortUpd.client
             updMsgClient.actorHost = actorHost
             updMsgClient.actorName = actorName
             updMsgClient.instanceName = instanceName
             updMsgClient.portName = portName
-            updMsg.scope = 'local' if macAddr != None else 'global'
-            updMsg.socket.host = host 
-            updMsg.socket.port = int(port)
+            updMsgPortUpd.scope = 'local' if macAddr != None else 'global'
+            updMsgPortUpd.socket.host = host 
+            updMsgPortUpd.socket.port = int(port)
             
             msgBytes = updMsg.to_bytes()
             self.logger.info("send update to actor %s.%s.%s:%s %s:%s" 

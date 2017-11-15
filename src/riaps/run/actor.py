@@ -324,22 +324,26 @@ class Actor(object):
         '''
         Handle a service update message from the discovery service
         '''
-        msg = disco_capnp.DiscoUpd.from_bytes(msgBytes)     # Parse the incoming message
-        client = msg.client
-        actorHost = client.actorHost
-        assert actorHost == self.globalHost                 # It has to be addressed to this actor
-        actorName = client.actorName
-        assert actorName == self.name
-        instanceName = client.instanceName
-        assert instanceName in self.components              # It has to be for a part of this actor
-        portName = client.portName
-        scope = msg.scope
-        socket = msg.socket
-        host = socket.host
-        port = socket.port 
-        if scope == "local":
-            assert host == self.localHost
-        self.updatePart(instanceName,portName,host,port)    # Update the selected part
+        msgUpd = disco_capnp.DiscoUpd.from_bytes(msgBytes)     # Parse the incoming message
+
+        which = msgUpd.which()
+        if which == 'portUpdate':
+            msg = msgUpd.portUpdate
+            client = msg.client
+            actorHost = client.actorHost
+            assert actorHost == self.globalHost                 # It has to be addressed to this actor
+            actorName = client.actorName
+            assert actorName == self.name
+            instanceName = client.instanceName
+            assert instanceName in self.components              # It has to be for a part of this actor
+            portName = client.portName
+            scope = msg.scope
+            socket = msg.socket
+            host = socket.host
+            port = socket.port 
+            if scope == "local":
+                assert host == self.localHost
+            self.updatePart(instanceName,portName,host,port)    # Update the selected part
     
     def updatePart(self,instanceName,portName,host,port):
         '''
