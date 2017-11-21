@@ -31,8 +31,17 @@ class ModbusCommands(Enum):
     WRITE_BIT = 6
     WRITE_HOLDINGREG = 7
     WRITEMULTI_HOLDINGREGS = 8
+    WRITEREAD_HOLDINGREGS = 9
 
-CommandFormat = namedtuple('CommandFormat', ['commandType','registerAddress','numberOfRegs','values','numberOfDecimals','signedValue'])
+'''
+CommandFormat for ModbusCommands 1-8 will setup commandType, registerAddress (read or write), 
+numberOfRegs and 'values' (for write commands).
+   
+For the WRITEREAD_HOLDINGREGS (Modbus Command - 9), two additional information is needed:  
+'wreadRegAddress' is the holding address to read and 'wreadNumOfRegs' is how many register to read.
+These values are unused for the other commands.
+'''
+CommandFormat = namedtuple('CommandFormat', ['commandType','registerAddress','numberOfRegs','values','wreadRegAddress','wreadNumOfRegs'])
 
 class ModbusUartReqRepDevice(Component):
     def __init__(self,slaveaddress=0,port="UART2",baudrate=19200,bytesize=serial.EIGHTBITS,parity=serial.PARITY_NONE,stopbits=serial.STOPBITS_ONE,serialTimeout=0.05): # defaults for Modbus spec

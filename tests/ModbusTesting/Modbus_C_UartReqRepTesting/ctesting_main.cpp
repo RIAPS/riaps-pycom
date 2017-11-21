@@ -35,7 +35,8 @@ int main ()
     modbus_t *ctx;
     int nb_holdingRegs = 3;
     int nb_inputRegs = 4;
-    const int n_loop = 100;
+    int nb_coilBits = 8;
+    const int n_loop = 10;
     uint16_t *holding_regs;
     uint16_t *input_regs;
     std::string udevice ("/dev/ttyO2");
@@ -70,12 +71,24 @@ int main ()
     // Start Modbus
     ctx = startRTUModbus(testPortConfig,slaveAddress,serialMode);
 
+    std::cout<<"main: modbus started"<<std::endl;
+
+    int j=0;
+    uint16_t newholding_regs[3]={12,23,34};
+
     if(isModbusReady()){
         for(int i=0;i<n_loop;i++)
         {
             clock_gettime(CLOCK_MONOTONIC,&preobservations[i]);
 
-            readHoldingRegs(ctx,0,nb_holdingRegs,holding_regs);
+            //readInputRegs(ctx,0,nb_inputRegs,input_regs);
+            //readHoldingRegs(ctx,1,nb_holdingRegs-1,holding_regs);
+            //std::cout<<"Holding Regs: "<<holding_regs[0]<<","<<holding_regs[1]<<","<<holding_regs[2]<<std::endl;
+            //writeHoldingReg(ctx,1,95+j++);
+            //writeHoldingRegs(ctx,0,3,newholding_regs);
+            //readHoldingRegs(ctx,0,nb_holdingRegs,holding_regs);
+            writeReadHoldingRegs(ctx,0,nb_holdingRegs,newholding_regs,0,nb_holdingRegs,holding_regs);
+            //std::cout<<"Holding Regs: "<<holding_regs[0]<<","<<holding_regs[1]<<","<<holding_regs[2]<<std::endl;
 
             clock_gettime(CLOCK_MONOTONIC,&postobservations[i]);
         }

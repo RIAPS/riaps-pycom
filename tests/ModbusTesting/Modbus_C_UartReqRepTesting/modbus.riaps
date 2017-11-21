@@ -1,15 +1,15 @@
 // RIAPS Modbus (UART) Device Testing
 
-app RIAPSModbusReqRepUART {
+app RIAPSModbusCReqRepUART {
     message ModbusCommand;     // send Modbus action Request
     message ModbusResponse;    // get response from Modbus action
-    message ModbusData;           // information for the logger to grab
+    message ModbusLogData;           // information for the logger to grab
 
     library serialModbusLib;
 
     // Modbus (UART) device interface - UART2
     //     considered the server for the request/response interaction
-    device ModbusUartReqRepDevice(slaveaddress=10,port='UART2',baudrate=57600,serialTimeout=1.0) {
+    device ModbusUartCReqRepDevice(slaveaddress=10,port='UART2',baudrate=57600) {
       rep modbusRepPort : (ModbusCommand,ModbusResponse);
       timer clock 1000;   
     }
@@ -22,14 +22,14 @@ app RIAPSModbusReqRepUART {
     }
 
     component Logger(db_host='127.0.0.1', db_port=8086, db_name='MOdbusIO', db_user='riaps', db_password='riaps') {
-      sub rx_modbusData : ModbusData;
+      sub rx_modbusData : ModbusLogData;
     }
 
     // Modbus Communication Example actor
     actor ModbusExampleActor() {
         local ModbusCommand,ModbusResponse;               // Local message types
         {
-            modbus : ModbusUartReqRepDevice(slaveaddress=10,port='UART2',baudrate=57600,serialTimeout=3);  // Slave Address is in decimal
+            modbus : ModbusUartCReqRepDevice(slaveaddress=10,port='UART2',baudrate=57600);  // Slave Address is in decimal
             commInitiator : ComputationalComponent();
         }
     }
