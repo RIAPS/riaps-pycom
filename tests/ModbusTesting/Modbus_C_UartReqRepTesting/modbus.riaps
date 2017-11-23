@@ -1,5 +1,4 @@
-﻿// RIAPS Modbus (UART) Device Testing
-package riapsModbusUART
+package riapsModbusUART  // RIAPS Modbus (UART) Device Testing
 
     struct CommandFormat {
     	commandType     : Int16;
@@ -39,12 +38,12 @@ device ModbusUART (){//(slaveaddress=10,port='UART2',baudrate=57600) {
 }
 
 app RIAPSModbusCReqRepUART {
-
+	 
     // Example Component to show Modbus I/F usage
     component ComputationalComponent() {
-    	uses {
-    		device ModbusUART
-    	}
+      uses {
+    	device ModbusUART
+      }
 
       timer clock 40;
       pub tx_modbusData : ModbusLogData ;                 // When data is ready,
