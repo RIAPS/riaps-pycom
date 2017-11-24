@@ -1,0 +1,42 @@
+/*
+ * riaps deployment dsl
+ * DSL for RIAPS deployment
+ */
+AppDeployment:
+  'app' name=ID '{'
+    actorDeployments += ActorDeployment
+ '}'
+;
+
+ActorDeployment:
+  'on' location=Location actors+=Actor[','] ';'
+;
+
+Actor:
+	name=ID ( '(' actuals*=Actual[','] ')' )? 
+;
+
+Location:
+	all='all' | ( '(' hosts+=Host[','] ')' )
+;
+
+Host:
+	name=/[\w\.-]+/
+;
+
+Actual:
+  argName=ID '=' argValue=ActualValue 
+;
+
+ActualValue: 
+	(value=STRING | value=Number | value=BOOL | value=ID)
+;
+
+Number:
+	(INT !FLOAT) | FLOAT
+;
+
+// Obligatory comment spec
+Comment:
+ /\/\/.*$/
+;

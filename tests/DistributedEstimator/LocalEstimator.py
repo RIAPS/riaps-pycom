@@ -21,8 +21,8 @@ class LocalEstimator(Component):
         while self.pending > 0:     # Handle the case when there is a pending request
             self.on_query()
         msg = "sensor_query"
-        if self.query.send_pyobj(msg):
-            self.pending += 1
+        self.query.send_pyobj(msg)
+        self.pending += 1 
     
     def on_query(self):
         msg = self.query.recv_pyobj()

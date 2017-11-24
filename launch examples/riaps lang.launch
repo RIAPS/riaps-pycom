@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<launchConfiguration type="org.eclipse.ui.externaltools.ProgramLaunchConfigurationType">
-<mapAttribute key="org.eclipse.debug.core.environmentVariables">
-<mapEntry key="RIAPSHOME" value="/usr/local/riaps"/>
-</mapAttribute>
-<stringAttribute key="org.eclipse.ui.externaltools.ATTR_LOCATION" value="/usr/local/bin/riaps_lang"/>
-<stringAttribute key="org.eclipse.ui.externaltools.ATTR_TOOL_ARGUMENTS" value="sample.riaps  -v"/>
-<stringAttribute key="org.eclipse.ui.externaltools.ATTR_WORKING_DIRECTORY" value="${env_var:HOME}/riaps_apps/DistributedEstimator"/>
-</launchConfiguration>
