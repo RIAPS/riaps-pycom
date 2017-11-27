@@ -34,6 +34,8 @@ namespace riapsmodbuscreqrepuart {
            virtual void OnModbusRepPort(const riapsModbusUART::CommandFormat::Reader &message, riaps::ports::PortBase *port);
 
            virtual void OnClock(riaps::ports::PortBase *port);
+
+           virtual void OnGroupMessage(const riaps::groups::GroupId&, capnp::FlatArrayMessageReader&, riaps::ports::PortBase*);
          
            virtual ~ModbusUART();
 

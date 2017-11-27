@@ -85,33 +85,34 @@ namespace riapsmodbuscreqrepuart {
             if (isModbusReady()) {
                 responseValue = sendModbusCommand(message);
 
-                capnp::MallocMessageBuilder messageBuilder;
-                riapsModbusUART::ResponseFormat::Builder msgModbusResponse = messageBuilder.initRoot<riapsModbusUART::ResponseFormat>();
+                capnp::MallocMessageBuilder messageRepBuilder;
+                riapsModbusUART::ResponseFormat::Builder msgModbusResponse = messageRepBuilder.initRoot<riapsModbusUART::ResponseFormat>();
                 msgModbusResponse.setCommandType(message.getCommandType());
                 msgModbusResponse.setRegisterAddress(message.getRegisterAddress());
-                msgModbusResponse.setNumberOfRegs(
-                        responseValue);  // for writes, this value is 1 if successful, -1 if failed
+                msgModbusResponse.setNumberOfRegs(responseValue);  // for writes, this value is 1 if successful, -1 if failed
 
-                if ((message.getCommandType() == (int16_t) ModbusCommands::READ_COILBITS) ||
-                    (message.getCommandType() == (int16_t) ModbusCommands::READ_INPUTREGS)) {
-                    uint16_t *retValues;
-                    retValues = (uint16_t *) malloc(nb_coilInputBits * sizeof(uint16_t));
-                    memset(retValues, 0, nb_coilInputBits * sizeof(uint16_t));
+                if(responseValue > 0) {
+                    auto values = msgModbusResponse.initValues(responseValue);
 
-                    for (int i = 0; i <= responseValue; i++) {
-                        retValues[i] = (uint16_t)coilinput_bits[i];
+                    if ((message.getCommandType() == (int16_t) ModbusCommands::READ_COILBITS) ||
+                        (message.getCommandType() == (int16_t) ModbusCommands::READ_INPUTBITS)) {
+                        for (int i = 0; i <= responseValue; i++) {
+                            values.set(i, (uint16_t) coilinput_bits[i]);
+                        }
+
+                    } else if (message.getCommandType() == (int16_t) ModbusCommands::READ_INPUTREGS) {
+                        for (int i = 0; i <= responseValue; i++) {
+                            values.set(i, input_regs[i]);
+                        }
+                    } else if ((message.getCommandType() == (int16_t) ModbusCommands::READ_HOLDINGREGS) ||
+                               (message.getCommandType() == (int16_t) ModbusCommands::WRITEREAD_HOLDINGREGS)) {
+                        for (int i = 0; i <= responseValue; i++) {
+                            values.set(i, holding_regs[i]);
+                        }
                     }
-
-                    msgModbusResponse.setValues(retValues);
-                    free(retValues);
-                } else if (message.getCommandType() == (int16_t) ModbusCommands::READ_INPUTREGS) {
-                    msgModbusResponse.setValues(input_regs);
-                } else if ((message.getCommandType() == (int16_t) ModbusCommands::READ_HOLDINGREGS) ||
-                           (message.getCommandType() == (int16_t) ModbusCommands::WRITEREAD_HOLDINGREGS)) {
-                    msgModbusResponse.setValues(holding_regs);
                 }
-
-                _logger->warn_if(!SendModbusRepPort(messageBuilder, msgModbusResponse),
+                // Send response back to requester
+                _logger->warn_if(!SendModbusRepPort(messageRepBuilder, msgModbusResponse),
                                  "{}: Couldn't send response message", PID);
             } else {
                 _logger->warn("{}: Modbus is not ready for commands", PID);
@@ -142,6 +143,8 @@ namespace riapsmodbuscreqrepuart {
 
             int16_t regAddress = message.getRegisterAddress();
             int16_t numRegs = message.getNumberOfRegs();
+            std::string valueLogMsg;
+
 
             switch (message.getCommandType()) {
                 case (int16_t) ModbusCommands::READ_COILBITS:
@@ -165,51 +168,60 @@ namespace riapsmodbuscreqrepuart {
                                    regAddress, numRegs);
                     break;
                 case (int16_t) ModbusCommands::WRITE_COILBIT:
-                    writeValue = reinterpret_cast<int>(message.getValues()[0]);
+
+                    writeValue = (int)message.getValues()[0];
                     value = writeCoilBit(ctx, regAddress, writeValue);
                     _logger->debug("{}: Sent command {}, register={}, value={}", PID, "WRITE_COILBIT", regAddress,
                                    writeValue);
                     break;
                 case (int16_t) ModbusCommands::WRITE_HOLDINGREG:
-                    writeValue = reinterpret_cast<int>(message.getValues()[0]);
+                    writeValue = (int)message.getValues()[0];
                     value = writeHoldingReg(ctx, regAddress, writeValue);
                     _logger->debug("{}: Sent command {}, register={}, value={}", PID, "WRITE_HOLDINGREG", regAddress,
                                    writeValue);
                     break;
                 case (int16_t) ModbusCommands::WRITE_COILBITS:
                     for (int i = 0; i <= numRegs; i++) {
-                        coilinput_bits[i] = reinterpret_cast<uint8_t>(message.getValues()[i]);
+                        coilinput_bits[i] = (uint8_t)message.getValues()[i];
+                        valueLogMsg.append(std::to_string(coilinput_bits[i]) + " ");
                     }
                     value = writeCoilBits(ctx, regAddress, numRegs, coilinput_bits);
                     _logger->debug("{}: Sent command {}, register={}, numberOfDecimals={}", PID, "WRITE_COILBITS",
                                    regAddress, numRegs);
-                    _logger->debug("{}: Values:{}", PID, coilinput_bits);
+                    _logger->debug("{}: Values:{}", PID, valueLogMsg);
                     break;
                 case (int16_t) ModbusCommands::WRITEMULTI_HOLDINGREGS:
                     for (int i = 0; i <= numRegs; i++) {
-                        holding_regs[i] = reinterpret_cast<uint16_t>(message.getValues()[i]);
+                        holding_regs[i] = (uint16_t)message.getValues()[i];
+                        valueLogMsg.append(std::to_string(holding_regs[i]) + " ");
                     }
                     value = writeHoldingRegs(ctx, regAddress, numRegs, holding_regs);
                     _logger->debug("{}: Sent command {}, register={}, numOfRegs={}", PID, "WRITEMULTI_HOLDINGREGS",
                                    regAddress, numRegs);
-                    _logger->debug("{}: Values:{}", PID, holding_regs);
+                    _logger->debug("{}: Values:{}", PID, valueLogMsg);
                     break;
                 case (int16_t) ModbusCommands::WRITEREAD_HOLDINGREGS:
                     for (int i = 0; i <= numRegs; i++) {
-                        holding_regs[i] = reinterpret_cast<uint16_t>(message.getValues()[i]);
+                        holding_regs[i] = (uint16_t)message.getValues()[i];
+                        valueLogMsg.append(std::to_string(holding_regs[i]) + " ");
                     }
                     value = writeReadHoldingRegs(ctx, regAddress, numRegs, holding_regs, message.getWreadRegAddress(),
                                                  message.getWreadNumOfRegs(), holding_regs);
                     _logger->debug("{}: Sent command {}, writeReg={}, numOfRegsWrite={}, readReg={}, numOfRegsRead={}",
                                    PID, "WRITEREAD_HOLDINGREGS", regAddress, numRegs, message.getWreadRegAddress(),
                                    message.getWreadNumOfRegs());
-                    _logger->debug("{}: Values:{}", PID, holding_regs);
+                    _logger->debug("{}: Values:{}", PID, valueLogMsg);
                     break;
                 default:
                     _logger->warn("{}: Invalid Command - {}", PID, message.getCommandType());
             }
 
             return value;
+        }
+
+        void ModbusUART::OnGroupMessage(const riaps::groups::GroupId &, capnp::FlatArrayMessageReader &,
+                                        riaps::ports::PortBase *) {
+
         }
 
         ModbusUART::~ModbusUART() {
