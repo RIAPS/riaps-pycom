@@ -127,8 +127,8 @@ Resulting shared libraries:
         - wreadRegAddress (Int16): used for WRITEREAD_HOLDINGREGS to specify the read holding address
         - wreadNumOfRegs (Int16): used for WRITEREAD_HOLDINGREGS to specify the number of registers to read
     - ResponseFormat
-        - commandType (Int16):
-        - registerAddress (Int16):
+        - commandType (Int16): ModbusCommands enum value for command used
+        - registerAddress (Int16): address of the remote device
         - numberOfRegs (Int16):
         - values (List(Int16)):
 
