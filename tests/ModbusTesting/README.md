@@ -1,6 +1,6 @@
-Welcome to the RIAPS Modbus Device Testings
+Welcome to the RIAPS Modbus Device Testing Page
 
-This current testing applications are:
+The current testing applications are:
 * ModbusUartReqRepTesting
     - Application makes a command request to the device application and 
       will block until a response is returned.
