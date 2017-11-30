@@ -18,11 +18,9 @@ if (${arch} STREQUAL "armhf")
 else()
     set(CMAKE_C_COMPILER gcc-5)
     set(CMAKE_CXX_COMPILER g++-5)
-    set (CMAKE_CXX_FLAGS "-std=c++11 -D_GLIBCXX_USE_CXX11_ABI=0")
+    set(CMAKE_CXX_FLAGS "-std=c++11 -D_GLIBCXX_USE_CXX11_ABI=0")
     set (CMAKE_C_FLAGS "-std=c99")
 endif()
-
-#set(pybind11_DIR ${CMAKE_HOME_DIRECTORY})
 
 set(CMAKE_INSTALL_PREFIX ${riaps_prefix}/${arch})
 
@@ -40,21 +38,33 @@ list(APPEND device_HEADERS
         include/base/ModbusUARTBase.h
         include/ModbusUART.h
         include/SerialModbusComm.h
-        messages/CommandFormat.capnp.h
-        messages/ResponseFormat.capnp.h
+        messages/modbusuart.capnp.h
         )
 
 list(APPEND device_SOURCE
         src/base/ModbusUARTBase.cc
         src/ModbusUART.cc
         src/SerialModbusComm.cpp
-        messages/CommandFormat.capnp.c++
-        messages/ResponseFormat.capnp.c++
+        messages/modbusuart.capnp.c++
         )
 
-add_library(serialmodbuscomm SHARED
+add_library(riapsmodbusuart SHARED
         ${device_HEADERS}
         ${device_SOURCE}
         )
 
-target_link_libraries(serialmodbuscomm modbus riaps)
+target_link_libraries(riapsmodbusuart modbus riaps)
+
+set(pybind11_DIR /usr/local/include/pybind11)
+find_package(pybind11 REQUIRED)
+include_directories(/usr/include/python3.5m)
+set(PYBIND11_CPP_STANDARD -std=c++11)
+
+pybind11_add_module(riapsmodbusuartpy SHARED
+        ${device_HEADERS}
+        ${device_SOURCE}
+        )
+
+target_link_libraries(riapsmodbusuartpy PUBLIC pybind11::module
+                                      PRIVATE modbus
+                                      PRIVATE riaps)

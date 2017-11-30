@@ -6,8 +6,8 @@
 #define RIAPS_CORE_MODBUSUART_H
 
 #include <componentmodel/r_componentbase.h>
-#include <ResponseFormat.capnp.h>
-#include <CommandFormat.capnp.h>
+#include <modbusuart.capnp.h>
+
 
 // Name of the ports from the model file
 #define PORT_REP_MODBUSREPPORT "modbusRepPort"

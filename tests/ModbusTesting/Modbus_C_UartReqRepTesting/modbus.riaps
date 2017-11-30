@@ -1,35 +1,36 @@
-package riapsModbusUART  // RIAPS Modbus (UART) Device Testing
+//package riapsModbusUART  // RIAPS Modbus (UART) Device Testing
 
-    struct CommandFormat {
-    	commandType     : Int16;
-    	registerAddress : Int16;
-    	numberOfRegs    : Int16;
-    	values          : Int16[];  // MM TODO how to do this???
-    	wreadRegAddress : Int16;
-    	wreadNumOfRegs  : Int16;
-    }
+struct CommandFormat
+{
+    commandType : Int16;
+    registerAddress : Int16;
+    numberOfRegs : Int16;
+    values : Int16[];
+    wreadRegAddress : Int16;
+    wreadNumOfRegs : Int16;
+}
 
-    struct ResponseFormat {
-    	commandType     : Int16;
-    	registerAddress : Int16;
-    	numberOfRegs    : Int16;
-    	values          : Int16[];  // MM TODO how to do this???
-    }
+struct ResponseFormat
+{
+    commandType : Int16;
+    registerAddress : Int16;
+    numberOfRegs : Int16;
+    values : Int16[];
+}
 
-    struct LogData {
-        logMsg : String;
-    }
+struct LogData{
+	msg: String;	
+}
 
-
-    message ModbusCommand  : CommandFormat;     // send Modbus action Request
-    message ModbusResponse : ResponseFormat;    // get response from Modbus action
-    message ModbusLogData     : LogData;
+message ModbusCommand : CommandFormat;     // send Modbus action Request
+message ModbusResponse : ResponseFormat;    // get response from Modbus action
+message ModbusLogData : LogData;
 
 // Modbus (UART) device interface - UART2
 //     considered the server for the request/response interaction
 device ModbusUART (){//(slaveaddress=10,port='UART2',baudrate=57600) {
 	uses {
- 	  	library libserialmodbuscomm.so;
+ 	  	library libriapsmodbusuart.so;
  	  	io "UART";
  	}
 

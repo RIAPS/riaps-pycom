@@ -6,21 +6,25 @@
 
 #include "base/ModbusUARTBase.h"
 #include "SerialModbusComm.h"
+#include <pybind11/pybind11.h>
+
+namespace py = pybind11;
 
 namespace riapsmodbuscreqrepuart {
-   namespace components {
 
-       enum class ModbusCommands {
-           READ_COILBITS = 1,
-           READ_INPUTBITS = 2,
-           READ_INPUTREGS = 3,
-           READ_HOLDINGREGS = 4,
-           WRITE_COILBIT = 5,
-           WRITE_HOLDINGREG = 6,
-           WRITE_COILBITS = 7,
-           WRITEMULTI_HOLDINGREGS = 8,
-           WRITEREAD_HOLDINGREGS = 9
-       };
+    enum class ModbusCommands {
+        READ_COILBITS = 1,
+        READ_INPUTBITS = 2,
+        READ_INPUTREGS = 3,
+        READ_HOLDINGREGS = 4,
+        WRITE_COILBIT = 5,
+        WRITE_HOLDINGREG = 6,
+        WRITE_COILBITS = 7,
+        WRITEMULTI_HOLDINGREGS = 8,
+        WRITEREAD_HOLDINGREGS = 9
+    };
+
+    namespace components {
 
        class ModbusUART : public ModbusUARTBase {
          
@@ -61,6 +65,5 @@ namespace riapsmodbuscreqrepuart {
 
 extern "C" riaps::ComponentBase* create_component(_component_conf&, riaps::Actor& actor);
 extern "C" void destroy_component(riaps::ComponentBase*);
-
 
 #endif //RIAPS_FW_MODBUSUART_H

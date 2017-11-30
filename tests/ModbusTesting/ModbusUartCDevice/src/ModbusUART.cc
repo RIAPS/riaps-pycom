@@ -47,12 +47,16 @@ namespace riapsmodbuscreqrepuart {
 
             auto ibaudrate = GetConfig().component_parameters.GetParam("baudrate");
             if (ibaudrate != nullptr) {
-                portConfig.baudrate = ibaudrate->GetValueAsInt();
+                // MM TODO:  GetValueAsInt is currently unavailable (riaps-core 0.6.1Test)
+                // portConfig.baudrate = ibaudrate->GetValueAsInt();
+                portConfig.baudrate = std::stoi(ibaudrate->GetValueAsString());
             }
 
             auto ibytesize = GetConfig().component_parameters.GetParam("bytesize");
             if (ibytesize != nullptr) {
-                portConfig.bytesize = ibytesize->GetValueAsInt();
+                // MM TODO:  GetValueAsInt is currently unavailable (riaps-core 0.6.1Test)
+                //portConfig.bytesize = ibytesize->GetValueAsInt();
+                portConfig.bytesize = std::stoi(ibytesize->GetValueAsString());
             }
 
             auto iparity = GetConfig().component_parameters.GetParam("parity");
@@ -62,12 +66,16 @@ namespace riapsmodbuscreqrepuart {
 
             auto istopbits = GetConfig().component_parameters.GetParam("stopbits");
             if (istopbits != nullptr) {
-                portConfig.stopbits = istopbits->GetValueAsInt();
+                // MM TODO:  GetValueAsInt is currently unavailable (riaps-core 0.6.1Test)
+                //portConfig.stopbits = istopbits->GetValueAsInt();
+                portConfig.stopbits = std::stoi(istopbits->GetValueAsString());
             }
 
             auto islaveaddress = GetConfig().component_parameters.GetParam("slaveaddress");
             if (islaveaddress != nullptr) {
-                portSlaveAddress = islaveaddress->GetValueAsInt();
+                // MM TODO:  GetValueAsInt is currently unavailable (riaps-core 0.6.1Test)
+                //portSlaveAddress = islaveaddress->GetValueAsInt();
+                portSlaveAddress = std::stoi(islaveaddress->GetValueAsString());
             }
 
             portSerialMode = MODBUS_RTU_RS232;
@@ -230,10 +238,29 @@ namespace riapsmodbuscreqrepuart {
             }
 
             free(holding_regs);
+            free(holding_regs);
             free(input_regs);
             free(coilinput_bits);
         }
     }
+
+    // Expose ModbusCommands to Python programs that need to interact with this device
+    PYBIND11_MODULE(riapsmodbusuartpy,m){
+        m.doc() = "pybind 11 RIAPS Modbus UART Interface Plugin";
+
+        py::enum_<ModbusCommands>(m, "ModbusCommands", py::arithmetic())
+                .value("READ_COILBITS", ModbusCommands::READ_COILBITS)
+                .value("READ_INPUTBITS", ModbusCommands::READ_INPUTBITS)
+                .value("READ_INPUTREGS", ModbusCommands::READ_INPUTREGS)
+                .value("READ_HOLDINGREGS", ModbusCommands::READ_HOLDINGREGS)
+                .value("WRITE_COILBIT", ModbusCommands::WRITE_COILBIT)
+                .value("WRITE_HOLDINGREG", ModbusCommands::WRITE_HOLDINGREG)
+                .value("WRITE_COILBITS", ModbusCommands::WRITE_COILBITS)
+                .value("WRITEMULTI_HOLDINGREGS", ModbusCommands::WRITEMULTI_HOLDINGREGS)
+                .value("WRITEREAD_HOLDINGREGS", ModbusCommands::WRITEREAD_HOLDINGREGS)
+                .export_values();
+        }
+
 }
 
 riaps::ComponentBase *create_component(_component_conf &config, riaps::Actor &actor) {

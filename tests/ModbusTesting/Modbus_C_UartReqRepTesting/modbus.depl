@@ -1,4 +1,4 @@
-package riapsModbusUART.depl
+//package riapsModbusUART.depl
 
 import riapsModbusUART.messages.*
 import riapsModbusUART.devices.*
@@ -16,6 +16,6 @@ host vmNode1 {
 }
 
 app RIAPSModbusCReqRepUART {
-	on dspNode1 RIAPSModbusCReqRepUART.ModbusExampleActor;
-	on vmNode1 RIAPSModbusCReqRepUART.ModbusLogger;
+	on dspNode1 ModbusExampleActor;
+	on vmNode1 ModbusLogger;
 }
