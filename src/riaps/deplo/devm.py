@@ -1,5 +1,5 @@
 '''
-Devmvery Service main class
+Device manager service main class
 Created on Oct 19, 2016
 
 @author: riaps
@@ -11,21 +11,24 @@ import sys
 import time
 from os.path import join
 import subprocess
-
+import threading
 from riaps.proto import devm_capnp
 from riaps.consts.defs import *
+from riaps.run.exc import BuildError
 from riaps.utils.ifaces import getNetworkInterfaces
 import logging
-
-class DevmService(object):
+import psutil
+  
+class DevmService(threading.Thread):
     '''
-    Devmvery service main class. 
-    '''
-    
-    def __init__(self):
+    Device manager service main class, implemented as a thread 
+    '''    
+    def __init__(self,parent):
+        threading.Thread.__init__(self)
         self.logger = logging.getLogger(__name__)
-        self.context = zmq.Context()
-        self.setupIfaces()
+        self.context = parent.context
+        self.hostAddress = parent.hostAddress
+        self.macAddress = parent.macAddress
         self.suffix = self.macAddress
         self.launchMap = { }            # Map of launched actors
         self.riapsApps = os.getenv('RIAPSAPPS', './')
@@ -36,52 +39,41 @@ class DevmService(object):
             self.riaps_device_file = riaps.riaps_device.__file__
         except:
             pass
-    
-    def setupIfaces(self):
-        '''
-        Find the IP addresses of the (host-)local and network(-global) interfaces
-        '''
-        (globalIPs,globalMACs,localIP) = getNetworkInterfaces()
-        try:
-            assert len(globalIPs) > 0 and len(globalMACs) > 0
-        except:
-            self.logger.error("Error: no active network interface")
-            raise
-        globalIP = globalIPs[0]
-        globalMAC = globalMACs[0]
-        self.hostAddress = globalIP
-        self.macAddress = globalMAC
         
-    def start(self):
-        self.logger.info("starting")
-        self.server = self.context.socket(zmq.REP)              # Create main server socket for client requests
-        endpoint = const.devmEndpoint + self.suffix
-        self.server.bind(endpoint)
+    def terminate(self):
+        self.terminated.set()
         
-        self.poller = zmq.Poller()                              # Set up initial poller (only on the main server socket)  
-        self.poller.register(self.server,zmq.POLLIN)
-        self.portMap = { }
-        self.clients = { }  
-        self.clientUpdates = []
-    
     def run(self):
         '''
         Main loop of the devm service
         '''
+        self.logger.info("starting")
+        # Socket and poller for comm
+        self.server = self.context.socket(zmq.REP)              # Create main server socket for client requests
+        endpoint = const.devmEndpoint + self.suffix
+        self.server.bind(endpoint)
+        self.poller = zmq.Poller()                              # Set up initial poller (only on the main server socket)  
+        self.poller.register(self.server,zmq.POLLIN)
+        # Map of clients
+        self.clients = { }  
+        # Event for termination
+        self.terminated = threading.Event()     # Event flag to signal termination
+        self.terminated.clear()
         self.logger.info("running")
-           
+        # 
         while 1:
-            self.clientUpdates = []
-            sockets = dict(self.poller.poll())       # Poll client messages
-            if self.server in sockets:               # If there is a server request, handle it 
+            if self.terminated.is_set(): break
+            sockets = dict(self.poller.poll(1000.0))            # Poll client messages, with timeout 1 sec
+            if len(sockets) == 0:                               # If no message but timeout expired, 
+                if self.terminated.is_set(): 
+                    break              # break out if terminated
+            elif self.server in sockets:               # If there is a server request, handle it 
                 msg = self.server.recv()
                 self.handle(msg)
                 del sockets[self.server]
             else:
                 pass
-            for note in self.clientUpdates:          # Handle all client updates (received from dcas)
-                pass
-
+        self.stop()
     
     def setupClient(self,appName,appVersion,appActorName):
         '''
@@ -126,11 +118,33 @@ class DevmService(object):
         '''
         Start a device actor of an application 
         '''
-        riaps_prog = 'riaps_device'
-        riaps_mod = self.riaps_device_file   #  File name for python script 'riaps_device.py'
+        riaps_py_prog = 'riaps_device'      # Python executor
+        riaps_cc_prog = 'start_actor'       # C++ executor
+        
+        riaps_prog = riaps_py_prog          # Use Python starter first
+        riaps_mod = self.riaps_device_file  # Module file name for script 
+        isPython = True
         
         appFolder = join(self.riapsApps,appName)
         appModelPath = join(appFolder,appModel)
+        
+        if not os.path.isdir(appFolder):
+            raise BuildError('App folder is missing: %s' % appFolder)
+        
+        componentType = actorName 
+        # Look up the Python version first
+        pyFilePath = join(appFolder, componentType + '.py')
+        if os.path.isfile(pyFilePath):
+            pass                # Use the Python implementation
+        else:                   # Find C++ implementation
+            isPython = False
+            ccFilePath = join(appFolder, 'lib' + componentType.lower() + '.so')
+            if not os.path.isfile(ccFilePath):
+                raise BuildError('Implementation of component %s is missing' % componentType)
+            riaps_prog = riaps_cc_prog
+        
+        # Problem: How do we add a device actor to the resource manager?
+        
         riaps_arg1 = appName 
         riaps_arg2 = appModelPath
         riaps_arg3 = actorName
@@ -140,14 +154,17 @@ class DevmService(object):
         self.logger.info("Launching %s " % str(command))
                 
         try:
-            proc = subprocess.Popen(command,cwd=appFolder)
+            proc = psutil.Popen(command,cwd=appFolder)
         except FileNotFoundError:
             try:
-                command = ['python3',riaps_mod] + command[1:]
-                proc = subprocess.Popen(command,cwd=appFolder)
+                if isPython: 
+                    command = ['python3',riaps_mod] + command[1:]
+                else:
+                    command = [riaps_prog] + command[1:]
+                proc = psutil.Popen(command,cwd=appFolder)
             except:
-                self.logger.error("Error while starting actor: %s" % sys.exc_info()[0])
-                raise
+                raise BuildError("Error while starting device: %s" % sys.exc_info()[0])
+        # Problem: How do we add a device actor to the resource manager?
         key = str(appName) + "." + str(actorName)
         # ADD HERE: build comm channel to the device for control purposes
         self.launchMap[key] = proc
@@ -158,11 +175,14 @@ class DevmService(object):
         '''
         
         key = str(appName) + "." + str(actorName)
-        proc = self.launchMap[key]
+        if key in self.launchMap:
+            proc = self.launchMap[key]
         
-        self.logger.info("Stopping device %s" % key)
-        proc.terminate()                             # Should check for errors
-        del self.launchMap[key]
+            self.logger.info("Stopping device %s" % key)
+            proc.terminate()                             # Should check for errors
+            del self.launchMap[key]
+        else:
+            raise BuildError("Device %s not found" % key)
     
     def handleDeviceReq(self,msg):
         '''
@@ -181,12 +201,17 @@ class DevmService(object):
             cmdArgs.append('--' + argName)
             cmdArgs.append(argValue)
         
-        self.startDevice(appName, modelName, typeName, cmdArgs)
+        ok = True
+        try:
+            self.startDevice(appName, modelName, typeName, cmdArgs)
+        except BuildError as buildError:
+            ok = False
+            self.logger.error(buildError.message)
 
         #      
         rsp = devm_capnp.DevmRep.new_message()
         rspMessage = rsp.init('deviceReg')
-        rspMessage.status = "ok"
+        rspMessage.status = "ok" if ok else "err"
         rspBytes = rsp.to_bytes()
         self.server.send(rspBytes)
 
@@ -200,8 +225,12 @@ class DevmService(object):
         typeName = devReg.typeName
         self.logger.info("handleDeviceUnreq: %s,%s" % (appName,typeName))
        
-        self.stopDevice(appName, modelName, typeName)
-
+        ok = True
+        try:
+            self.stopDevice(appName, modelName, typeName)
+        except BuildError as buildError:
+            ok = False
+            self.logger.error(buildError.message)
         #      
         rsp = devm_capnp.DevmRep.new_message()
         rspMessage = rsp.init('deviceUnreg')
@@ -224,17 +253,13 @@ class DevmService(object):
         else:
             pass
         
-    def terminate(self):
-        self.logger.info("terminating")
+    def stop(self):
+        self.logger.info("stopping")
         # Clean up everything
-        # Logout from service
         # Kill actors
         for proc in self.launchMap.values():
             proc.terminate()
-        time.sleep(1.0) # Allow actors terminate cleanly
-        # Kill devm
-        self.context.destroy()
-        time.sleep(1.0)
-        self.logger.info("terminated")
-        os._exit(0)
+        time.sleep(1.0)         # Allow actors terminate cleanly
+        self.logger.info("stopped")
+        
         

@@ -39,10 +39,12 @@ def main(debug=True):
     sys.path.append(os.getcwd())   # Ensure load_module works from current directory
     global conf
     conf = Config()
-    global theDepl
-    theDepl = DeploService(args.node,args.port)  # Assign the service to the singleton
     signal.signal(signal.SIGTERM,termHandler)
     signal.signal(signal.SIGINT,termHandler)
+    
+    global theDepl
+    theDepl = DeploService(args.node,args.port)  # Assign the service to the singleton
+
     theDepl.setup()
     theDepl.run()
 #     if debug:

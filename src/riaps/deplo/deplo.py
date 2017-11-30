@@ -12,15 +12,15 @@ from os.path import join
 import subprocess
 import zmq
 from riaps.consts.defs import *
-from riaps.run.exc import BuildError
+from riaps.run.exc import *
 from riaps.utils.ifaces import getNetworkInterfaces
-from riaps.run.exc import SetupError
 import logging
 from subprocess import TimeoutExpired
 from riaps.deplo.resm import ResourceManager
 import hashlib
 from collections import namedtuple
 import psutil
+from riaps.deplo.devm import *
 
 DeploAppRecord = namedtuple('DeploAppRecord', 'model hash file')
 
@@ -63,12 +63,12 @@ class DeploService(object):
         except:
             pass
         
-        self.riaps_devm_file = 'riaps_devm'       # Default name for the executable riaps devm 
-        try:
-            import riaps.riaps_devm         # We try to import the python riaps_devm first so that we know is correct file name
-            self.riaps_devm_file = riaps.riaps_devm.__file__
-        except:
-            pass
+#         self.riaps_devm_file = 'riaps_devm'       # Default name for the executable riaps devm 
+#         try:
+#             import riaps.riaps_devm         # We try to import the python riaps_devm first so that we know is correct file name
+#             self.riaps_devm_file = riaps.riaps_devm.__file__
+#         except:
+#             pass
 
     def setupIfaces(self):
         '''
@@ -144,20 +144,26 @@ class DeploService(object):
         '''
         Start the Device manager service process 
         '''
-        devm_prog = 'riaps_devm'
-        devm_mod = self.riaps_devm_file   # File name for python script riaps_devm.py
-
-#        devm_args = None
-        command = [devm_prog]
-        try: 
-            self.devm = subprocess.Popen(command)
-        except FileNotFoundError:
-            try:
-                command = ['python3',devm_mod] + command[1:]
-                self.devm = subprocess.Popen(command)
-            except:
-                self.logger.error("Error while starting devm: %s" % sys.exc_info()[0])
-                raise
+        self.devm = DevmService(self)
+        try:
+            self.devm.start()
+        except:
+            self.logger.error("Error while starting devm: %s" % sys.exc_info()[0])
+            raise
+        
+#         devm_prog = 'riaps_devm'
+#         devm_mod = self.riaps_devm_file   # File name for python script riaps_devm.py
+# 
+#         command = [devm_prog]
+#         try: 
+#             self.devm = subprocess.Popen(command)
+#         except FileNotFoundError:
+#             try:
+#                 command = ['python3',devm_mod] + command[1:]
+#                 self.devm = subprocess.Popen(command)
+#             except:
+#                 self.logger.error("Error while starting devm: %s" % sys.exc_info()[0])
+#                 raise
 
     def setupApp(self,appName,appModelName):
         appFolder = join(self.riapsApps, appName)
@@ -247,9 +253,8 @@ class DeploService(object):
             pyFilePath = join(appFolder, componentType + '.py')
             if not os.path.isfile(pyFilePath):
                 isPython = False
-        # Flaw: if the components are mixed, this code will always attempts to run the C++ implementation
-        # Correction should be: allow homogeneous actors only (otherwise it is an error)
-        # A better correction is to support loading C++ binaries into the Python framework. 
+        # We don't allow mixed mode actors (C++ and Python components in the same actor).
+        # A better correction is to support running C++ binaries into the Python framework. 
         if not isPython:
             for componentType in componentTypes:
                 # Look up the python version
@@ -284,7 +289,6 @@ class DeploService(object):
         key = str(appName) + "." + str(actorName)
         # ADD HERE: build comm channel to the actor for control purposes
         self.launchMap[key] = proc
-        self.resm.startActor(appName, actorName, proc)
 
     def getActorModel(self,appName,actorName):
         model = self.getAppModel(appName)
@@ -417,6 +421,7 @@ class DeploService(object):
         # Kill devm
         if self.devm != None:
             self.devm.terminate()
+            self.devm.join()
             self.devm = None
         # Kill disco
         if self.disco != None:
