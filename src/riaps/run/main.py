@@ -48,10 +48,10 @@ def main(debug=True):
         aName = args.actor
     except IOError as e:
         print ("I/O error({0}): {1}".format(e.errno, e.strerror))
-        raise
+        os._exit(1)
     except: 
         print ("Unexpected error:", sys.exc_info()[0])
-        raise
+        os._exit(1)
     sys.path.append(appFolder)   # Ensure load_module works from current directory
     
     # Setup the logger formatter 
@@ -66,11 +66,17 @@ def main(debug=True):
     theActor = Actor(model,args.model,aName,rest)   # Construct the Actor
     signal.signal(signal.SIGTERM,termHandler)       # Termination signal handler
     signal.signal(signal.SIGXCPU,sigXCPUHandler)    # CPU limit exceeded handler    
-    theActor.setup()                        # Setup the objects contained in the actor
-    theActor.activate()                     # Activate the components 
-    theActor.start()                        # Start the actor main loop
+    try:
+        theActor.setup()                        # Setup the objects contained in the actor
+        theActor.activate()                     # Activate the components 
+        theActor.start()                        # Start the actor main loop
+    except:
+        info = sys.exc_info()
+        print ("riaps_actor: Fatal error: %s" % (info[1],))
+        os._exit(1)
 #     if debug:
 #         interact()
 
 if __name__ == '__main__':
     main()
+    os._exit(0)

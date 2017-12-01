@@ -48,10 +48,10 @@ def main(debug=True):
         aName = args.device
     except IOError as e:
         print ("I/O error({0}): {1}".format(e.errno, e.strerror))
-        raise
+        os._exit(1)
     except: 
         print ("Unexpected error:", sys.exc_info()[0])
-        raise
+        os._exit(1)
     sys.path.append(appFolder)   # Ensure load_module works from current directory
     
     # Setup the logger formatter 
@@ -66,11 +66,17 @@ def main(debug=True):
     theDevice = Device(model,args.model,aName,rest) # Construct the Device
     signal.signal(signal.SIGTERM,termHandler)       # Termination signal handler
     signal.signal(signal.SIGXCPU,sigXCPUHandler)    # CPU limit exceeded handler   
-    theDevice.setup()                        # Setup the objects contained in the device
-    theDevice.activate()                     # Activate the components 
-    theDevice.start()                        # Start the device main loop
+    try:
+        theDevice.setup()                        # Setup the objects contained in the device
+        theDevice.activate()                     # Activate the components 
+        theDevice.start()                        # Start the device main loop
+    except:
+        info = sys.exc_info()
+        print ("riaps_device: Fatal error: %s" % (info[1],))
+        os._exit(1)
 #     if debug:
 #         interact()
 
 if __name__ == '__main__':
     main()
+    os._exit(0)

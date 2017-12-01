@@ -52,7 +52,8 @@ class ServiceClient(object):
         node. 
         ''' 
         if self.callback != None:
-            self.callback(('setupApp',appName,appNameJSON))
+            res = self.callback(('setupApp',appName,appNameJSON))
+            return res.value
             
     def cleanupApp(self,appName):
         '''
@@ -60,7 +61,8 @@ class ServiceClient(object):
         node. 
         ''' 
         if self.callback != None:
-            self.callback(('cleanupApp',appName))
+            res = self.callback(('cleanupApp',appName))
+            return res.value
     
     def cleanupApps(self):
         '''
@@ -68,7 +70,8 @@ class ServiceClient(object):
         node. 
         ''' 
         if self.callback != None:
-            self.callback(('cleanupApps',))
+            res = self.callback(('cleanupApps',))
+            return res.value
             
     def launch(self,appName,appNameJSON,actorName,actuals):
         '''
@@ -76,7 +79,8 @@ class ServiceClient(object):
         node. 
         ''' 
         if self.callback != None:
-            self.callback(('launch',appName,appNameJSON,actorName,actuals))
+            res = self.callback(('launch',appName,appNameJSON,actorName,actuals))
+            return res.value
     
     def halt(self,appName,actorName):
         '''
@@ -84,7 +88,8 @@ class ServiceClient(object):
         node. 
         ''' 
         if self.callback != None:
-            self.callback(('halt',appName,actorName))
+            res = self.callback(('halt',appName,actorName))
+            return res.value
     
 class ControllerService(rpyc.Service):
     '''

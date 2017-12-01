@@ -163,7 +163,10 @@ class DevmService(threading.Thread):
                     command = [riaps_prog] + command[1:]
                 proc = psutil.Popen(command,cwd=appFolder)
             except:
-                raise BuildError("Error while starting device: %s" % sys.exc_info()[0])
+                raise BuildError("Error while starting device: %s" % sys.exc_info()[1])
+        rc = proc.poll()
+        if rc != None:
+            raise BuildError("Device failed to start: %s " % (command,))
         # Problem: How do we add a device actor to the resource manager?
         key = str(appName) + "." + str(actorName)
         # ADD HERE: build comm channel to the device for control purposes
@@ -206,7 +209,7 @@ class DevmService(threading.Thread):
             self.startDevice(appName, modelName, typeName, cmdArgs)
         except BuildError as buildError:
             ok = False
-            self.logger.error(str(buildError.args()))
+            self.logger.error(str(buildError.args[0]))
 
         #      
         rsp = devm_capnp.DevmRep.new_message()
@@ -230,7 +233,7 @@ class DevmService(threading.Thread):
             self.stopDevice(appName, modelName, typeName)
         except BuildError as buildError:
             ok = False
-            self.logger.error(str(buildError.args))
+            self.logger.error(str(buildError.args[1]))
         #      
         rsp = devm_capnp.DevmRep.new_message()
         rspMessage = rsp.init('deviceUnreg')

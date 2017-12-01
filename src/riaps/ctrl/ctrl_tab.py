@@ -6,6 +6,7 @@ Created on Nov 10, 2016
 '''
 
 import os
+import sys
 from stat import *
 import time
 import hashlib
@@ -191,12 +192,12 @@ class Controller_Tab(object):
 
     def addKeyToAgent(self,agent_keys,rsa_private_key):
         if os.path.isfile(rsa_private_key):
-           try:
-              ki = paramiko.RSAKey.from_private_key_file(rsa_private_key)
-              agent_keys=agent_keys + (ki,)
-              self.logger.warning('added key %s'% rsa_private_key)
-           except Exception as e:
-              self.logger.error('Failed loading %s' % (rsa_private_key, e))
+            try:
+                ki = paramiko.RSAKey.from_private_key_file(rsa_private_key)
+                agent_keys=agent_keys + (ki,)
+                self.logger.warning('added key %s'% rsa_private_key)
+            except Exception as e:
+                self.logger.error('Failed loading %s' % (rsa_private_key, e))
         return agent_keys
 
     def authenticate(self,transport,username):
@@ -427,9 +428,13 @@ class Controller_Tab(object):
                             actorName = actor["name"]
                             actuals = actor["actuals"]
                             actualArgs = self.buildArgs(actuals)
-                            client.launch(appName,appNameJSON,actorName,actualArgs)
-                            self.launchList.append([client,appName,actorName])
-                            self.log("L %s %s %s %s" % (clientName,appName,actorName,str(actualArgs)))
+                            try:
+                                client.launch(appName,appNameJSON,actorName,actualArgs)
+                                self.launchList.append([client,appName,actorName])
+                                self.log("L %s %s %s %s" % (clientName,appName,actorName,str(actualArgs)))
+                            except Exception:
+                                info = sys.exc_info()[1].args[0]
+                                self.log("? %s" % info)
                 else:
                     for target in targets:
                         client = self.findClient(target)
@@ -439,9 +444,13 @@ class Controller_Tab(object):
                                 actorName = actor["name"]
                                 actuals = actor["actuals"]
                                 actualArgs = self.buildArgs(actuals)
-                                client.launch(appName,appNameJSON,actorName,actualArgs)
-                                self.launchList.append([client,appName,actorName])
-                                self.log("L %s %s %s %s" % (client.name,appName,actorName,str(actualArgs)))
+                                try:
+                                    client.launch(appName,appNameJSON,actorName,actualArgs)
+                                    self.launchList.append([client,appName,actorName])
+                                    self.log("L %s %s %s %s" % (client.name,appName,actorName,str(actualArgs)))
+                                except Exception:
+                                    info = sys.exc_info()[1].args[0]
+                                    self.log("? %s" % info)
                         else:
                             self.log('? %s ' % target)
         return True

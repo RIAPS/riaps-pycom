@@ -248,13 +248,15 @@ class DeploService(object):
         isPython = True
 
         componentTypes = self.getComponentTypes(appName, actorName)
+        if len(componentTypes) == 0:
+            raise BuildError('Actor has no components: %s.%s.' % (appName,actorName))
         for componentType in componentTypes:
             # Look up the Python version first
             pyFilePath = join(appFolder, componentType + '.py')
             if not os.path.isfile(pyFilePath):
                 isPython = False
         # We don't allow mixed mode actors (C++ and Python components in the same actor).
-        # A better correction is to support running C++ binaries into the Python framework. 
+        # A better solution is to support running C++ binaries into the Python framework. 
         if not isPython:
             for componentType in componentTypes:
                 # Look up the python version
@@ -283,8 +285,14 @@ class DeploService(object):
                     command = [riaps_prog] + command[1:]
                 proc = psutil.Popen(command,cwd=appFolder)
             except:
-                self.logger.error("Error while starting actor: %s" % sys.exc_info()[0])
+                self.logger.error("Error while starting actor: %s -- %s" % (command,sys.exc_info()[0]))
                 raise
+        try:
+            rc = proc.wait(1.0)
+        except:
+            rc = None
+        if rc != None:
+            raise BuildError("Actor failed to start: %s.%s " % (appName,actorName))
         self.resm.startActor(appName, actorName, proc)
         key = str(appName) + "." + str(actorName)
         # ADD HERE: build comm channel to the actor for control purposes
@@ -303,11 +311,16 @@ class DeploService(object):
         Collects all the component types of an actor.
         '''
         componentTypes = []
+        appModel = self.getAppModel(appName)
+        componentDefs = appModel["components"]
         actorModel = self.getActorModel(appName,actorName)
 
         for key in actorModel["instances"]:
             compType = actorModel["instances"][key]["type"]
-            componentTypes.append(compType)
+            if compType in componentDefs:           # Component
+                componentTypes.append(compType)
+            else:
+                pass                                # Device component
             
         return componentTypes
     
@@ -402,9 +415,12 @@ class DeploService(object):
                 self.cleanupApps()
             else:
                 pass                # Should flag an error
+        except BuildError as buildError:
+            self.logger.error(str(buildError.args))
+            raise
         except:
-            info = sys.exc.info()
-            self.logger.error("Error in callback %s:%s" % (cmd, info[0], info[1]))
+            info = sys.exc_info()
+            self.logger.error("Error in callback '%s': %s %s" % (cmd, info[0], info[1]))
             raise
         
             
