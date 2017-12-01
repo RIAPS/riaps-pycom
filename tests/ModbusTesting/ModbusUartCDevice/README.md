@@ -1,3 +1,5 @@
+***DevNote: PLAN TO REMOVE PYBIND AND UTILIZE CAPNP ENUM CAPABILITY INSTEAD - update to come (11/30/17)***
+
 # RIAPS Modbus UART Device Component Library 
 
 This library code will create two shared libraries:  
@@ -129,6 +131,6 @@ Resulting shared libraries:
     - ResponseFormat
         - commandType (Int16): ModbusCommands enum value for command used
         - registerAddress (Int16): address of the remote device
-        - numberOfRegs (Int16):
-        - values (List(Int16)):
+        - numberOfRegs (Int16): number of registers read or written
+        - values (List(Int16)): values read (not used in writes)
 
