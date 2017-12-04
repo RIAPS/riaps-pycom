@@ -119,7 +119,7 @@ class DevmService(threading.Thread):
         Start a device actor of an application 
         '''
         riaps_py_prog = 'riaps_device'      # Python executor
-        riaps_cc_prog = 'start_actor'       # C++ executor
+        riaps_cc_prog = 'start_device'      # C++ executor
         
         riaps_prog = riaps_py_prog          # Use Python starter first
         riaps_mod = self.riaps_device_file  # Module file name for script 
