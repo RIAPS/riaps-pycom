@@ -245,21 +245,21 @@ namespace riapsmodbuscreqrepuart {
     }
 
     // Expose ModbusCommands to Python programs that need to interact with this device
-    PYBIND11_MODULE(riapsmodbusuartpy,m){
-        m.doc() = "pybind 11 RIAPS Modbus UART Interface Plugin";
-
-        py::enum_<ModbusCommands>(m, "ModbusCommands", py::arithmetic())
-                .value("READ_COILBITS", ModbusCommands::READ_COILBITS)
-                .value("READ_INPUTBITS", ModbusCommands::READ_INPUTBITS)
-                .value("READ_INPUTREGS", ModbusCommands::READ_INPUTREGS)
-                .value("READ_HOLDINGREGS", ModbusCommands::READ_HOLDINGREGS)
-                .value("WRITE_COILBIT", ModbusCommands::WRITE_COILBIT)
-                .value("WRITE_HOLDINGREG", ModbusCommands::WRITE_HOLDINGREG)
-                .value("WRITE_COILBITS", ModbusCommands::WRITE_COILBITS)
-                .value("WRITEMULTI_HOLDINGREGS", ModbusCommands::WRITEMULTI_HOLDINGREGS)
-                .value("WRITEREAD_HOLDINGREGS", ModbusCommands::WRITEREAD_HOLDINGREGS)
-                .export_values();
-        }
+//    PYBIND11_MODULE(riapsmodbusuartpy,m){
+//        m.doc() = "pybind 11 RIAPS Modbus UART Interface Plugin";
+//
+//        py::enum_<ModbusCommands>(m, "ModbusCommands", py::arithmetic())
+//                .value("READ_COILBITS", ModbusCommands::READ_COILBITS)
+//                .value("READ_INPUTBITS", ModbusCommands::READ_INPUTBITS)
+//                .value("READ_INPUTREGS", ModbusCommands::READ_INPUTREGS)
+//                .value("READ_HOLDINGREGS", ModbusCommands::READ_HOLDINGREGS)
+//                .value("WRITE_COILBIT", ModbusCommands::WRITE_COILBIT)
+//                .value("WRITE_HOLDINGREG", ModbusCommands::WRITE_HOLDINGREG)
+//                .value("WRITE_COILBITS", ModbusCommands::WRITE_COILBITS)
+//                .value("WRITEMULTI_HOLDINGREGS", ModbusCommands::WRITEMULTI_HOLDINGREGS)
+//                .value("WRITEREAD_HOLDINGREGS", ModbusCommands::WRITEREAD_HOLDINGREGS)
+//                .export_values();
+//        }
 
 }
 

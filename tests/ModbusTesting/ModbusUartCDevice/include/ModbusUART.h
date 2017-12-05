@@ -6,9 +6,9 @@
 
 #include "base/ModbusUARTBase.h"
 #include "SerialModbusComm.h"
-#include <pybind11/pybind11.h>
+//#include <pybind11/pybind11.h>
 
-namespace py = pybind11;
+//namespace py = pybind11;
 
 namespace riapsmodbuscreqrepuart {
 

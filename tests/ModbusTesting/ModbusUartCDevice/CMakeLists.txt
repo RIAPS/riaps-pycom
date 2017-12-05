@@ -48,23 +48,23 @@ list(APPEND device_SOURCE
         messages/modbusuart.capnp.c++
         )
 
-add_library(riapsmodbusuart SHARED
+add_library(modbusuart SHARED
         ${device_HEADERS}
         ${device_SOURCE}
         )
 
-target_link_libraries(riapsmodbusuart modbus riaps)
+target_link_libraries(modbusuart modbus riaps)
 
-set(pybind11_DIR /usr/local/include/pybind11)
-find_package(pybind11 REQUIRED)
-include_directories(/usr/include/python3.5m)
-set(PYBIND11_CPP_STANDARD -std=c++11)
-
-pybind11_add_module(riapsmodbusuartpy SHARED
-        ${device_HEADERS}
-        ${device_SOURCE}
-        )
-
-target_link_libraries(riapsmodbusuartpy PUBLIC pybind11::module
-                                      PRIVATE modbus
-                                      PRIVATE riaps)
+#set(pybind11_DIR /usr/local/include/pybind11)
+#find_package(pybind11 REQUIRED)
+#include_directories(/usr/include/python3.5m)
+#set(PYBIND11_CPP_STANDARD -std=c++11)
+#
+#pybind11_add_module(riapsmodbusuartpy SHARED
+#        ${device_HEADERS}
+#        ${device_SOURCE}
+#        )
+#
+#target_link_libraries(riapsmodbusuartpy PUBLIC pybind11::module
+#                                      PRIVATE modbus
+#                                      PRIVATE riaps)
