@@ -102,18 +102,18 @@ namespace riapsmodbuscreqrepuart {
                 if(responseValue > 0) {
                     auto values = msgModbusResponse.initValues(responseValue);
 
-                    if ((message.getCommandType() == (int16_t) ModbusCommands::READ_COILBITS) ||
-                        (message.getCommandType() == (int16_t) ModbusCommands::READ_INPUTBITS)) {
+                    if ((message.getCommandType() == riapsModbusUART::ModbusCommands::READ_COIL_BITS) ||
+                        (message.getCommandType() == riapsModbusUART::ModbusCommands::READ_INPUT_BITS)) {
                         for (int i = 0; i <= responseValue; i++) {
                             values.set(i, (uint16_t) coilinput_bits[i]);
                         }
 
-                    } else if (message.getCommandType() == (int16_t) ModbusCommands::READ_INPUTREGS) {
+                    } else if (message.getCommandType() == riapsModbusUART::ModbusCommands::READ_INPUT_REGS) {
                         for (int i = 0; i <= responseValue; i++) {
                             values.set(i, input_regs[i]);
                         }
-                    } else if ((message.getCommandType() == (int16_t) ModbusCommands::READ_HOLDINGREGS) ||
-                               (message.getCommandType() == (int16_t) ModbusCommands::WRITEREAD_HOLDINGREGS)) {
+                    } else if ((message.getCommandType() == riapsModbusUART::ModbusCommands::READ_HOLDING_REGS) ||
+                               (message.getCommandType() == riapsModbusUART::ModbusCommands::WRITE_READ_HOLDING_REGS)) {
                         for (int i = 0; i <= responseValue; i++) {
                             values.set(i, holding_regs[i]);
                         }
@@ -155,40 +155,40 @@ namespace riapsmodbuscreqrepuart {
 
 
             switch (message.getCommandType()) {
-                case (int16_t) ModbusCommands::READ_COILBITS:
+                case riapsModbusUART::ModbusCommands::READ_COIL_BITS:
                     value = readCoilBits(ctx, regAddress, numRegs, coilinput_bits);
                     _logger->debug("{}: Sent command {}, register={}, numOfDecimals={}", PID, "READ_COILBITS",
                                    regAddress, numRegs);
                     break;
-                case (int16_t) ModbusCommands::READ_INPUTBITS:
+                case riapsModbusUART::ModbusCommands::READ_INPUT_BITS:
                     value = readInputBits(ctx, regAddress, numRegs, coilinput_bits);
                     _logger->debug("{}: Sent command {}, register={}, numOfDecimals={}", PID, "READ_INPUTBITS",
                                    regAddress, numRegs);
                     break;
-                case (int16_t) ModbusCommands::READ_INPUTREGS:
+                case riapsModbusUART::ModbusCommands::READ_INPUT_REGS:
                     value = readInputRegs(ctx, regAddress, numRegs, input_regs);
                     _logger->debug("{}: Sent command {}, register={}, numOfRegs={}", PID, "READ_INPUTREGS", regAddress,
                                    numRegs);
                     break;
-                case (int16_t) ModbusCommands::READ_HOLDINGREGS:
+                case riapsModbusUART::ModbusCommands::READ_HOLDING_REGS:
                     value = readHoldingRegs(ctx, regAddress, numRegs, holding_regs);
                     _logger->debug("{}: Sent command {}, register={}, numOfRegs={}", PID, "READ_HOLDINGREGS",
                                    regAddress, numRegs);
                     break;
-                case (int16_t) ModbusCommands::WRITE_COILBIT:
+                case riapsModbusUART::ModbusCommands::WRITE_COIL_BIT:
 
                     writeValue = (int)message.getValues()[0];
                     value = writeCoilBit(ctx, regAddress, writeValue);
                     _logger->debug("{}: Sent command {}, register={}, value={}", PID, "WRITE_COILBIT", regAddress,
                                    writeValue);
                     break;
-                case (int16_t) ModbusCommands::WRITE_HOLDINGREG:
+                case riapsModbusUART::ModbusCommands::WRITE_HOLDING_REG:
                     writeValue = (int)message.getValues()[0];
                     value = writeHoldingReg(ctx, regAddress, writeValue);
                     _logger->debug("{}: Sent command {}, register={}, value={}", PID, "WRITE_HOLDINGREG", regAddress,
                                    writeValue);
                     break;
-                case (int16_t) ModbusCommands::WRITE_COILBITS:
+                case riapsModbusUART::ModbusCommands::WRITE_COIL_BITS:
                     for (int i = 0; i <= numRegs; i++) {
                         coilinput_bits[i] = (uint8_t)message.getValues()[i];
                         valueLogMsg.append(std::to_string(coilinput_bits[i]) + " ");
@@ -198,7 +198,7 @@ namespace riapsmodbuscreqrepuart {
                                    regAddress, numRegs);
                     _logger->debug("{}: Values:{}", PID, valueLogMsg);
                     break;
-                case (int16_t) ModbusCommands::WRITEMULTI_HOLDINGREGS:
+                case riapsModbusUART::ModbusCommands::WRITE_MULTI_HOLDING_REGS:
                     for (int i = 0; i <= numRegs; i++) {
                         holding_regs[i] = (uint16_t)message.getValues()[i];
                         valueLogMsg.append(std::to_string(holding_regs[i]) + " ");
@@ -208,7 +208,7 @@ namespace riapsmodbuscreqrepuart {
                                    regAddress, numRegs);
                     _logger->debug("{}: Values:{}", PID, valueLogMsg);
                     break;
-                case (int16_t) ModbusCommands::WRITEREAD_HOLDINGREGS:
+                case riapsModbusUART::ModbusCommands::WRITE_READ_HOLDING_REGS:
                     for (int i = 0; i <= numRegs; i++) {
                         holding_regs[i] = (uint16_t)message.getValues()[i];
                         valueLogMsg.append(std::to_string(holding_regs[i]) + " ");
@@ -221,7 +221,7 @@ namespace riapsmodbuscreqrepuart {
                     _logger->debug("{}: Values:{}", PID, valueLogMsg);
                     break;
                 default:
-                    _logger->warn("{}: Invalid Command - {}", PID, message.getCommandType());
+                    _logger->warn("{}: Invalid Command - {}", PID, (int16_t) message.getCommandType());
             }
 
             return value;
