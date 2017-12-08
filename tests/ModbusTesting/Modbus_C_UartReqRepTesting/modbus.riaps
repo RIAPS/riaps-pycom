@@ -1,36 +1,79 @@
-// RIAPS Modbus (UART) Device Testing
+//package riapsModbusUART  // RIAPS Modbus (UART) Device Testing
 
-app RIAPSModbusReqRepUART {
-    message ModbusCommand;     // send Modbus action Request
-    message ModbusResponse;    // get response from Modbus action
-    message ModbusData;           // information for the logger to grab
+enumeration ModbusCommands {
+    noCmd,
+    readCoilBits,
+    readInputBits,
+    readInputRegs,
+    readHoldingRegs,
+    writeCoilBit,
+    writeHoldingReg,
+    writeCoilBits,
+    writeMultiHoldingRegs,
+    writeReadHoldingRegs
+}
 
-    library serialModbusLib;
+struct CommandFormat
+{
+    commandType : Int16;
+    registerAddress : Int16;
+    numberOfRegs : Int16;
+    values : Int16[];
+    wreadRegAddress : Int16;
+    wreadNumOfRegs : Int16;
+}
 
-    // Modbus (UART) device interface - UART2
-    //     considered the server for the request/response interaction
-    device ModbusUartReqRepDevice(slaveaddress=10,port='UART2',baudrate=57600,serialTimeout=1.0) {
-      rep modbusRepPort : (ModbusCommand,ModbusResponse);
-      timer clock 1000;   
-    }
+struct ResponseFormat
+{
+    commandType : Int16;
+    registerAddress : Int16;
+    numberOfRegs : Int16;
+    values : Int16[];
+}
 
+struct LogData{
+	msg: String;	
+}
+
+message ModbusCommand : CommandFormat;     // send Modbus action Request
+message ModbusResponse : ResponseFormat;    // get response from Modbus action
+message ModbusLogData : LogData;
+
+// Modbus (UART) device interface - UART2
+//     considered the server for the request/response interaction
+device ModbusUART (slaveaddress=10,port='UART2',baudrate=57600) from libmodbusuart.so {
+	uses {
+ 	  	library libmodbus.so;  // third party library used for the libmodbusuart.so
+ 	  	io "UART";
+ 	}
+
+    rep modbusRepPort : (ModbusCommand,ModbusResponse);
+    timer clock 1000;
+}
+
+app RIAPSModbusCReqRepUART {
+	 
     // Example Component to show Modbus I/F usage
     component ComputationalComponent() {
+      uses {
+    	device ModbusUART
+      }
+
       timer clock 40;
-      pub tx_modbusData : ModbusData ;                    // When data is ready,
+      pub tx_modbusData : ModbusLogData ;                 // When data is ready,
       req modbusReqPort : (ModbusCommand,ModbusResponse); // Port used to communicate with the ModbusUartDevice
     }
 
     component Logger(db_host='127.0.0.1', db_port=8086, db_name='MOdbusIO', db_user='riaps', db_password='riaps') {
-      sub rx_modbusData : ModbusData;
+      sub rx_modbusData : ModbusLogData;
     }
 
     // Modbus Communication Example actor
     actor ModbusExampleActor() {
         local ModbusCommand,ModbusResponse;               // Local message types
         {
-            modbus : ModbusUartReqRepDevice(slaveaddress=10,port='UART2',baudrate=57600,serialTimeout=3);  // Slave Address is in decimal
-            commInitiator : ComputationalComponent();
+            commInitiator : ComputationalComponent;
+            device modbusinstance : ModbusUART(slaveaddress=10, port='UART2', baudrate=115200)
         }
     }
 

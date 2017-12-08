@@ -1,0 +1,21 @@
+//package riapsModbusUART.depl
+
+import riapsModbusUART.messages.*
+import riapsModbusUART.devices.*
+import riapsModbusUART.*
+
+// fill in constraints later
+
+host dspNode1 {
+	device ModbusUART tag dspBBB1;
+	net etho0 address 192.168.1.104;
+}
+
+host vmNode1 {
+    net enp0s8 address 192.168.1.101;
+}
+
+app RIAPSModbusCReqRepUART {
+	on dspNode1 ModbusExampleActor;
+	on vmNode1 ModbusLogger;
+}
