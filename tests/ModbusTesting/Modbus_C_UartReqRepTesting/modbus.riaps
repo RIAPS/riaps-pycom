@@ -1,5 +1,18 @@
 //package riapsModbusUART  // RIAPS Modbus (UART) Device Testing
 
+enumeration ModbusCommands {
+    noCmd,
+    readCoilBits,
+    readInputBits,
+    readInputRegs,
+    readHoldingRegs,
+    writeCoilBit,
+    writeHoldingReg,
+    writeCoilBits,
+    writeMultiHoldingRegs,
+    writeReadHoldingRegs
+}
+
 struct CommandFormat
 {
     commandType : Int16;
@@ -28,9 +41,9 @@ message ModbusLogData : LogData;
 
 // Modbus (UART) device interface - UART2
 //     considered the server for the request/response interaction
-device ModbusUART (){//(slaveaddress=10,port='UART2',baudrate=57600) {
+device ModbusUART (slaveaddress=10,port='UART2',baudrate=57600) from libmodbusuart.so {
 	uses {
- 	  	library libriapsmodbusuart.so;
+ 	  	library libmodbus.so;  // third party library used for the libmodbusuart.so
  	  	io "UART";
  	}
 
@@ -60,6 +73,7 @@ app RIAPSModbusCReqRepUART {
         local ModbusCommand,ModbusResponse;               // Local message types
         {
             commInitiator : ComputationalComponent;
+            device modbusinstance : ModbusUART(slaveaddress=10, port='UART2', baudrate=115200)
         }
     }
 

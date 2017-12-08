@@ -44,7 +44,7 @@ list(APPEND device_HEADERS
 list(APPEND device_SOURCE
         src/base/ModbusUARTBase.cc
         src/ModbusUART.cc
-        src/SerialModbusComm.cpp
+        src/SerialModbusComm.cc
         messages/modbusuart.capnp.c++
         )
 
