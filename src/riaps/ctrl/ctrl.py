@@ -19,10 +19,12 @@ from riaps.consts.defs import *
 from riaps.utils.ifaces import getNetworkInterfaces
 from riaps.utils.config import Config 
 from riaps.ctrl.ctrlsrv import ServiceThread, ServiceClient
-from .ctrlgui import ControlGUIClient
+from riaps.ctrl.ctrlgui import ControlGUIClient
+from riaps.ctrl.ctrlcli import ControlCLIClient
 from threading import RLock
 from riaps.lang.lang import compileModel
 from riaps.lang.depl import DeploymentModel
+import code
 
 import gi
 gi.require_version('Gtk', '3.0')
@@ -57,7 +59,7 @@ class Controller(object):
     '''
     Main class of controller - manages everything and maintains global controller state
     '''
-    def __init__(self,port):
+    def __init__(self,port,script):
         '''
         Initialize controller object, uses port for accepting connections 
         from clients: deployment services running on RIAPS nodes.
@@ -67,15 +69,18 @@ class Controller(object):
         self.dbase = None
         self.setupIfaces()
         self.port = port
+        self.script = script
         self.gui = None
         self.clientMap = { }        # Maps hostIP -> ServiceClient 
-        self.riaps_Folder = os.getenv('RIAPSHOME', './')
-        self.riaps_appFolder = None # App folder 
+        self.riaps_Folder = os.getenv('RIAPSHOME', './')        
         self.riaps_appName = None   # App name
         self.riaps_model = None     # App model to be launched
         self.riaps_depl = None      # App deployment model to be launched
         self.launchList = []        # List of launch operations
         self.setupHostKeys()
+
+        # (DY) 2-18-2017:
+        self.riaps_appInfoDict = dict()     # appName: {appFolder, model, depl}
         
     def setupIfaces(self):
         '''
@@ -116,11 +121,14 @@ class Controller(object):
             self.logger.error("Error when starting database: %s", sys.exc_info()[0])
             raise
         
-    def startGUI(self):
+    def startUI(self):
         '''
         Start the GUI (which runs in 
         '''
-        self.gui = ControlGUIClient(self.port,self)
+        if self.script == None:
+            self.gui = ControlGUIClient(self.port,self)
+        else:
+            self.gui = ControlCLIClient(self.port,self,self.script)
         
     def start(self):
         '''
@@ -128,19 +136,22 @@ class Controller(object):
         '''
         self.startService()
         self.startDbase()
-        self.startGUI()
+        self.startUI()
         
     def run(self):
         '''
         Yield control to the main GUI loop. When the loop terminates this operation will return
         '''
-        Gtk.main()
-    
+        self.gui.run()
+            
     def log(self,msg):
         '''
         Log a message on the GUI
         '''
-        self.gui.on_serverMessage(msg)
+        if self.gui:
+            self.gui.on_serverMessage(msg)
+        else:
+            print(msg)
         
     def stop(self):
         '''
@@ -193,7 +204,7 @@ class Controller(object):
             try:
                 ki = paramiko.RSAKey.from_private_key_file(rsa_private_key)
                 agent_keys=agent_keys + (ki,)
-                self.logger.warning('added key %s'% rsa_private_key)
+                self.logger.info('added key %s'% rsa_private_key)
             except Exception as e:
                 self.logger.error('Failed loading %s' % (rsa_private_key, e))
         return agent_keys
@@ -213,7 +224,7 @@ class Controller(object):
             self.logger.error('no suitable key found.')
             return
         for key in agent_keys:
-            self.logger.warning ('Trying user %s ssh-agent key %s' % (username,key.get_fingerprint().hex()))
+            self.logger.info('trying user %s ssh-agent key %s' % (username,key.get_fingerprint().hex()))
             try:
                 transport.auth_publickey(username, key)
                 self.logger.info ('... success!')
@@ -221,21 +232,23 @@ class Controller(object):
             except paramiko.SSHException as e:
                 self.logger.info ('... failed! - %s' % str(e))
 
-    def downloadAppToClient(self,files,libraries,client):
+    def downloadAppToClient(self,files,libraries,client,appName):
         hostName = client.name
         hostKey = None
         hostKeyType = None
         if hostName in self.hostKeys:
             hostKeyType = self.hostKeys[hostName].keys()[0]
             hostKey= self.hostKeys[hostName][hostKeyType]
-            self.logger.info ('Using host key of type %s' % hostKeyType)
+            self.logger.info('Using host key of type %s' % hostKeyType)
+
+        appFolder = self.riaps_appInfoDict[appName]['riaps_appFolder']
         try:
             port = const.ctrlSSHPort
-            logging.info ('Establishing SSH connection to: %s:%s' % (str(hostName),str(port)))
+            self.logger.info ('Establishing SSH connection to: %s:%s' % (str(hostName),str(port)))
             t = paramiko.Transport((hostName, port))
             t.start_client()
             self.authenticate(t,Config.TARGET_USER)
-
+            self.logger.info('out of authenticate')
             if not t.is_authenticated():
                 self.logger.warning ('RSA key auth failed!') 
                 # t.connect(username=username, password=password, hostkey=hostkey)
@@ -243,14 +256,15 @@ class Controller(object):
 
             sftpSession = t.open_session()
             sftpClient = RSFTPClient.from_transport(t)
-            
-            dirRemote = os.path.join(client.appFolder,self.riaps_appName)
-          
+
+            dirRemote = os.path.join(client.appFolder,appName)
+
             sftpClient.mkdir(dirRemote,ignore_existing=True)
-            
+
             for fileName in files:
                 isUptodate = False
-                localFile = os.path.join(self.riaps_appFolder,fileName)
+                #localFile = os.path.join(self.riaps_appFolder,fileName)
+                localFile = os.path.join(appFolder, fileName)
                 remoteFile = dirRemote + '/' + os.path.basename(fileName)
 
                 #if remote file exists
@@ -271,31 +285,32 @@ class Controller(object):
                 if not isUptodate:
                     self.logger.info ('Copying' + str(localFile) + ' to ' + str(remoteFile))
                     sftpClient.put(localFile, remoteFile)
-            
+
             for libraryName in libraries:
                 localDir = os.path.join(self.riaps_appFolder,libraryName)
                 remoteDir = os.path.join(dirRemote,libraryName)
                 sftpClient.mkdir(remoteDir,ignore_existing=True)
                 self.logger.info ('Copying' + str(localDir) + ' to ' + str(remoteDir))
                 sftpClient.put_dir(localDir,remoteDir)
-                
+
             t.close()
             return True
         except Exception as e:
             self.logger.warning('Caught exception: %s: %s' % (e.__class__, e))
+
             try:
                 t.close()
                 return False
             except:
                 return False
 
-    def downloadApp(self,files,libraries,clients):
+    def downloadApp(self,files,libraries,clients,appName):
         with ctrlLock:
             for client in clients:
                 if client.stale:
                     self.log('S %s',client.name)    # Stale client, we don't deploy
                 else:
-                    ok = self.downloadAppToClient(files,libraries,client)
+                    ok = self.downloadAppToClient(files,libraries,client,appName)
                     if not ok:
                         return False
         return True
@@ -327,19 +342,21 @@ class Controller(object):
             res.append(argValue)
         return res
     
-    def buildDownload(self):
+
+    def buildDownload(self, appName):
         download = []
-        appName = self.riaps_depl.getAppName()
-        self.riaps_appName = appName
+        if appName not in self.riaps_appInfoDict:
+            return
+        appInfoDict = self.riaps_appInfoDict[appName]
         appNameJSON = appName + ".json"
-        self.riaps_appNameJSON = appNameJSON
-        if appName not in self.riaps_model:
+
+        if appName not in appInfoDict['riaps_model']:
             self.log("Error: App '%s' not found in model" % appName)
             return
         else:
             download.append(appNameJSON)
-        appObj = self.riaps_model[appName]
-        depls = self.riaps_depl.getDeployments()
+        appObj = appInfoDict['riaps_model'][appName]
+        depls = appInfoDict['riaps_depl'].getDeployments()
         # Check the all actors are present in the model
         for depl in depls:
             actors = depl['actors']
@@ -348,18 +365,14 @@ class Controller(object):
                 if actorName not in appObj['actors']:
                     self.log("Error: Actor '%s' not found in model" % actorName)
                     return
-        # Collect all app components
+        # Collect all app components (python and c++)
         for component in appObj["components"]:
-            componentFile = str(component) + ".py"
-            download.append(componentFile)
-        for device in appObj["devices"]:
-            deviceFile = str(device) + ".py"
-            download.append(deviceFile)
-        # Collect libraries
-        libraries = []
-        for library in appObj["libraries"]:
-            libraryName = library["name"]
-            libraries.append(libraryName)
+            pyComponentFile = str(component) + ".py"
+            ccComponentFile = "lib" + str(component).lower() + ".so"
+            if os.path.isfile(pyComponentFile):
+                download.append(pyComponentFile)
+            if os.path.isfile(ccComponentFile):
+                download.append(ccComponentFile)
 
         # Get capnp files
         entries = os.scandir(self.riaps_appFolder)
@@ -367,8 +380,21 @@ class Controller(object):
             if entry.is_file() and os.path.splitext(entry.name)[1] == '.capnp':
                 download.append(entry.name)
 
+        for device in appObj["devices"]:
+            pyDeviceFile = str(device) + ".py"
+            ccDeviceFile = "lib" + str(device).lower() + ".so"
+            if os.path.isfile(pyDeviceFile):
+                download.append(pyDeviceFile)
+            if os.path.isfile(ccDeviceFile):
+                download.append(ccDeviceFile)
+
+        # Collect libraries
+        libraries = []
+        for library in appObj["libraries"]:
+            libraryName = library["name"]
+            libraries.append(libraryName)
         # Process the deployment and download app
-        clients = set() 
+        clients = set()
         for depl in depls:
             targets = depl['target']
             actors = depl['actors']
@@ -377,7 +403,7 @@ class Controller(object):
                     for clientName in self.clientMap:
                         client = self.clientMap[clientName]
                         clients.add(client)
-                else:           
+                else:
                     for target in targets:
                         client = self.findClient(target)    # Use DNS resolver if needed
                         if client != None:
@@ -385,19 +411,20 @@ class Controller(object):
                         else:
                             self.log('? %s ' % target)
         return (download,libraries,clients,depls)
-    
-    def launch(self): 
+
+    def launchByName(self, appName):
         '''
-        Launch an app. The model of the app is in self.riaps_model, and the corresponding deployment 
-        is in self.riaps_depl. 
+        Launch an app. The model of the app is in self.riaps_model, and the corresponding deployment
+        is in self.riaps_depl.
         '''
-        download,libraries,clients,depls = self.buildDownload()
-        # 
-        ok = self.downloadApp(download,libraries,clients)
+        download,libraries,clients,depls = self.buildDownload(appName)
+        #
+        ok = self.downloadApp(download,libraries,clients,appName)
         if not ok:
             self.log("* App download fault")
             return False
-        # Process the deployment and launch all actors. 
+        # Process the deployment and launch all actors.
+        appNameJSON = appName + ".json"
         for depl in depls:
             targets = depl['target']
             actors = depl['actors']
@@ -405,42 +432,52 @@ class Controller(object):
                 if targets == []:
                     for clientName in self.clientMap:
                         client = self.clientMap[clientName]
-                        client.setupApp(self.riaps_AppName,self.riaps_appNameJSON)
+                        client.setupApp(appName,appNameJSON)
                         for actor in actors:
                             actorName = actor["name"]
                             actuals = actor["actuals"]
                             actualArgs = self.buildArgs(actuals)
-                            client.launch(self.riaps_appName,self.riaps_appNameJSON,actorName,actualArgs)
-                            self.launchList.append([client,self.riaps_appName,actorName])
-                            self.log("L %s %s %s %s" % (clientName,self.riaps_appName,actorName,str(actualArgs)))
-                else:           
+                            try:
+                                client.launch(appName,appNameJSON,actorName,actualArgs)
+                                self.launchList.append([client,appName,actorName])
+                                self.log("L %s %s %s %s" % (clientName,appName,actorName,str(actualArgs)))
+                            except Exception:
+                                info = sys.exc_info()[1].args[0]
+                                self.log("? %s" % info)
+                else:
                     for target in targets:
                         client = self.findClient(target)
                         if client != None:
-                            client.setupApp(self.riaps_appName,self.riaps_appNameJSON)
+                            client.setupApp(appName,appNameJSON)
                             for actor in actors:
                                 actorName = actor["name"]
                                 actuals = actor["actuals"]
                                 actualArgs = self.buildArgs(actuals)
-                                client.launch(self.riaps_appName,self.riaps_appNameJSON,actorName,actualArgs)
-                                self.launchList.append([client,self.riaps_appName,actorName])
-                                self.log("L %s %s %s %s" % (target,self.riaps_appName,actorName,str(actualArgs)))
+                                try:
+                                    client.launch(appName,appNameJSON,actorName,actualArgs)
+                                    self.launchList.append([client,appName,actorName])
+                                    self.log("L %s %s %s %s" % (client.name,appName,actorName,str(actualArgs)))
+                                except Exception:
+                                    info = sys.exc_info()[1].args[0]
+                                    self.log("? %s" % info)
                         else:
                             self.log('? %s ' % target)
         return True
-                            
-                    
-    def halt(self):
+
+    def haltByName(self, appNameToHalt):
         '''
-        Halt (terminate) all launched actors 
+        Halt (terminate) all launched actors
         '''
+        newLaunchList = []
         for elt in self.launchList:
             client,appName,actorName = elt[0], elt[1], elt[2]
-            client.halt(appName,actorName)
-            self.log("H %s %s %s" % (client.name,appName,actorName))
-        self.launchList = []
+            if appName == appNameToHalt:
+                client.halt(appName,actorName)
+                self.log("H %s %s %s" % (client.name,appName,actorName))
+            else:
+                newLaunchList.append(elt)
+        self.launchList = newLaunchList
 
-    
     def isdir(self,sftp,path):
         try:
             return S_ISDIR(sftp.stat(path).st_mode)
@@ -458,7 +495,7 @@ class Controller(object):
                 self.rm(sftp,filepath)
         sftp.rmdir(path)
 
-    def removeAppFromClient(self,files,libraries,client):
+    def removeAppFromClient(self,files,libraries,client,appName):
         hostName = client.name
         hostKey = None
         hostKeyType = None
@@ -468,7 +505,7 @@ class Controller(object):
             self.logger.info ('Using host key of type %s' % hostKeyType)
         try:
             port = const.ctrlSSHPort
-            logging.info ('Establishing SSH connection to: %s:%s' % (str(hostName),str(port)))
+            self.logger.info ('Establishing SSH connection to: %s:%s' % (str(hostName),str(port)))
             t = paramiko.Transport((hostName, port))
             t.start_client()
             self.authenticate(t,Config.TARGET_USER)
@@ -481,10 +518,9 @@ class Controller(object):
             sftpSession = t.open_session()
             sftpClient = paramiko.SFTPClient.from_transport(t)
             
-            dirRemote = os.path.join(client.appFolder,self.riaps_appName)
+            dirRemote = os.path.join(client.appFolder, appName)
             
             self.rm(sftpClient,dirRemote)
-            
         except Exception as e:
                 self.logger.warning('Caught exception: %s: %s' % (e.__class__, e))
         try:
@@ -492,52 +528,75 @@ class Controller(object):
             return True
         except:
             return False
-            
-    def removeApp(self):
-        files,libraries,clients,depls = self.buildDownload()
+
+
+    def removeApp(self, appName):
+        files, libraries, clients, depls = self.buildDownload(appName)
         with ctrlLock:
             for client in clients:
                 if client.stale:
-                    self.log('? %s',client.name)    # Stale client, we don't remove
+                    self.log('? %s', client.name)  # Stale client, we don't remove
                 else:
-                    client.cleanupApps()
-                    ok = self.removeAppFromClient(files,libraries,client)
+                    client.cleanupApp(appName)
+                    ok = self.removeAppFromClient(files, libraries, client, appName)
                     if not ok:
                         return False
         return True
-        
-    
-    def remove(self):
-        ok = self.removeApp()
-        if ok: 
-            self.log("R %s " % self.riaps_appName)
+
+    def removeAppByName(self, appName):
+        ok = self.removeApp(appName)
+        if ok:
+            self.log("R %s " % appName)
         else:
-            self.log("? %s " % self.riaps_appName)
+            self.log("? %s " % appName)
+        del self.riaps_appInfoDict[appName]     # remove app info
 
     def setAppFolder(self,appFolderPath):
         self.riaps_appFolder = appFolderPath
         os.chdir(appFolderPath)
         
-    def compileApplication(self,appName):
+    def compileApplication(self,appName,appFolder):
         '''
         Compile an application model (create both the JSON file and the data structure)
         '''
         self.log("Compiling app: %s" % appName)
         try:
-            self.riaps_model = compileModel(appName)
-        except Exception  as e:
-            self.log("Error in compiling app %s:\n%s" % (appName,e.args[0]))
+            appInfo = compileModel(appName)
+            if len(appInfo) < 1:        # empty
+                return None
+            appNameKey = list(appInfo.keys())[0]
+            if appNameKey not in self.riaps_appInfoDict:
+                self.riaps_appInfoDict[appNameKey] = dict()
+            self.riaps_appInfoDict[appNameKey]['riaps_model'] = appInfo
+            self.riaps_appInfoDict[appNameKey]['riaps_appFolder'] = appFolder
+            return appNameKey
+        except Exception as e:
+            self.log("Error while compiling '%s':\n%s" % (appName,e.args[0]))
             self.gui.clearApplication()
-    
+            return None
+
     def compileDeployment(self,depName):
         '''
         Compile a deployment model (create both the JSON file and the data structure)
         '''
         self.log("Compiling deployment: %s" % depName)
         try:
-            self.riaps_depl = DeploymentModel(depName)
+            depInfo = DeploymentModel(depName)
+
+            if depInfo is None:
+                return None
+
+            appNameKey = depInfo.appName
+            if appNameKey not in self.riaps_appInfoDict:
+                self.riaps_appInfoDict[appNameKey] = dict()
+            self.riaps_appInfoDict[appNameKey]['riaps_depl'] = depInfo
+            #print(self.riaps_appInfoDict)
+            return appNameKey
         except Exception as e:
-            self.log("Error in compiling depl %s:\n%s" % (depName,e.args[0]))
-            self.gui.clearDepoyment()
+            self.log("Error in compiling depl '%s':\n%s" % (depName,e.args[0]))
+            self.gui.clearDeployment()
+            return None
+
+
 
 

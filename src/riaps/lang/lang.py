@@ -375,19 +375,19 @@ def compileModel(modelFileName,verbose=False,debug=False):
         example_riaps_model = riaps_meta.model_from_file(join(this_folder,modelFileName))
     except IOError as e:
         errMsg = "I/O error({0}): {1}".format(e.errno, e.strerror)
-        print (errMsg)
+        if verbose: print (errMsg)
         raise LangError(errMsg)
     except TextXSyntaxError as e:
         errMsg = "Syntax error: %s" % e.args
-        print (errMsg)
+        if verbose: print (errMsg)
         raise LangError(errMsg)
     except TextXSemanticError as e:
         errMsg = "Semantic error: %s" % e.args
-        print (errMsg)
+        if verbose: print (errMsg)
         raise LangError(errMsg)
     except Exception as e: 
         errMsg = "Unexpected error %s:%s" % (sys.exc_info()[0],e.args())
-        print (errMsg)
+        if verbose: print (errMsg)
         raise LangError(errMsg)
     
     # Optionally export model to dot

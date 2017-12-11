@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Generated with glade 3.20.0 -->
+<!-- Generated with glade 3.18.3 -->
 <interface>
   <requires lib="gtk+" version="3.12"/>
   <object class="GtkEntryBuffer" id="consoleEntryBuffer"/>
@@ -7,21 +7,6 @@
     <property name="visible">True</property>
     <property name="can_focus">False</property>
     <property name="stock">gtk-open</property>
-  </object>
-  <object class="GtkImage" id="image2">
-    <property name="visible">True</property>
-    <property name="can_focus">False</property>
-    <property name="stock">gtk-media-play</property>
-  </object>
-  <object class="GtkImage" id="image3">
-    <property name="visible">True</property>
-    <property name="can_focus">False</property>
-    <property name="stock">gtk-media-stop</property>
-  </object>
-  <object class="GtkImage" id="image4">
-    <property name="visible">True</property>
-    <property name="can_focus">False</property>
-    <property name="stock">gtk-remove</property>
   </object>
   <object class="GtkImage" id="image5">
     <property name="visible">True</property>
@@ -32,7 +17,7 @@
   <object class="GtkWindow" id="window1">
     <property name="can_focus">False</property>
     <property name="title" translatable="yes">RIAPS Control</property>
-    <property name="default_width">400</property>
+    <property name="default_width">600</property>
     <signal name="delete-event" handler="onDeleteWindow" swapped="no"/>
     <child>
       <object class="GtkBox" id="box1">
@@ -186,15 +171,16 @@
             <property name="can_focus">False</property>
             <child>
               <object class="GtkButton" id="button2">
-                <property name="label" translatable="yes">App</property>
+                <property name="label" translatable="yes">Model</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
+                <property name="relief">half</property>
                 <signal name="clicked" handler="onSelectApplication" swapped="no"/>
               </object>
               <packing>
-                <property name="expand">True</property>
-                <property name="fill">False</property>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
                 <property name="position">0</property>
               </packing>
             </child>
@@ -205,14 +191,14 @@
                 <property name="editable">False</property>
               </object>
               <packing>
-                <property name="expand">False</property>
+                <property name="expand">True</property>
                 <property name="fill">True</property>
                 <property name="position">1</property>
               </packing>
             </child>
             <child>
               <object class="GtkButton" id="button3">
-                <property name="label" translatable="yes">Deployment</property>
+                <property name="label" translatable="yes">Depl</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
@@ -230,72 +216,23 @@
                 <property name="can_focus">True</property>
               </object>
               <packing>
-                <property name="expand">False</property>
+                <property name="expand">True</property>
                 <property name="fill">True</property>
                 <property name="position">3</property>
               </packing>
             </child>
             <child>
-              <object class="GtkMenuBar" id="menubar1">
+              <object class="GtkButton" id="button1">
+                <property name="label" translatable="yes">Deploy</property>
                 <property name="visible">True</property>
-                <property name="can_focus">False</property>
-                <child>
-                  <object class="GtkMenuItem" id="menuitem1">
-                    <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">_Control</property>
-                    <property name="use_underline">True</property>
-                    <child type="submenu">
-                      <object class="GtkMenu" id="menu1">
-                        <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <child>
-                          <object class="GtkImageMenuItem" id="launchButton">
-                            <property name="label">Launch</property>
-                            <property name="visible">True</property>
-                            <property name="can_focus">False</property>
-                            <property name="opacity">0.99000000022351742</property>
-                            <property name="resize_mode">queue</property>
-                            <property name="image">image2</property>
-                            <property name="use_stock">False</property>
-                            <signal name="activate" handler="onLaunch" swapped="no"/>
-                          </object>
-                        </child>
-                        <child>
-                          <object class="GtkImageMenuItem" id="stopButton">
-                            <property name="label">Stop</property>
-                            <property name="visible">True</property>
-                            <property name="can_focus">False</property>
-                            <property name="image">image3</property>
-                            <property name="use_stock">False</property>
-                            <signal name="activate" handler="onStop" swapped="no"/>
-                          </object>
-                        </child>
-                        <child>
-                          <object class="GtkSeparatorMenuItem" id="menuitem2">
-                            <property name="visible">True</property>
-                            <property name="can_focus">False</property>
-                          </object>
-                        </child>
-                        <child>
-                          <object class="GtkImageMenuItem" id="removeButton">
-                            <property name="label">Remove</property>
-                            <property name="visible">True</property>
-                            <property name="can_focus">False</property>
-                            <property name="image">image4</property>
-                            <property name="use_stock">False</property>
-                            <signal name="activate" handler="onRemove" swapped="no"/>
-                          </object>
-                        </child>
-                      </object>
-                    </child>
-                  </object>
-                </child>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <signal name="clicked" handler="onLoadApplication" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">False</property>
                 <property name="fill">True</property>
-                <property name="position">5</property>
+                <property name="position">4</property>
               </packing>
             </child>
           </object>
@@ -306,11 +243,41 @@
           </packing>
         </child>
         <child>
+          <object class="GtkBox" id="box20">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="orientation">vertical</property>
+            <child>
+              <object class="GtkScrolledWindow" id="scrolledwindow2">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="shadow_type">in</property>
+                <property name="min_content_height">300</property>
+                <child>
+                  <placeholder/>
+                </child>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="pack_type">end</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">3</property>
+          </packing>
+        </child>
+        <child>
           <object class="GtkScrolledWindow" id="scrolledwindow1">
             <property name="visible">True</property>
             <property name="can_focus">True</property>
+            <property name="hscrollbar_policy">never</property>
             <property name="shadow_type">etched-out</property>
-            <property name="min_content_height">200</property>
+            <property name="min_content_height">150</property>
             <child>
               <object class="GtkTextView" id="messageTextView">
                 <property name="visible">True</property>
@@ -323,9 +290,9 @@
             </child>
           </object>
           <packing>
-            <property name="expand">False</property>
+            <property name="expand">True</property>
             <property name="fill">True</property>
-            <property name="position">3</property>
+            <property name="position">4</property>
           </packing>
         </child>
         <child>
@@ -336,9 +303,9 @@
             <signal name="activate" handler="onConsoleEntryActivate" swapped="no"/>
           </object>
           <packing>
-            <property name="expand">False</property>
+            <property name="expand">True</property>
             <property name="fill">True</property>
-            <property name="position">4</property>
+            <property name="position">5</property>
           </packing>
         </child>
       </object>
