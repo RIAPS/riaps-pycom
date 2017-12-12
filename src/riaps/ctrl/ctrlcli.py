@@ -79,7 +79,7 @@ class ControlCLIClient(object):
             '''Select deployment model: d app.depl '''
             self.parent.cmdSelectDepl(arg)
             
-        def do_g(self,arg):
+        def do_l(self,arg):
             '''Launch app: g app'''
             self.parent.cmdLaunchApp(arg)
             
@@ -134,15 +134,19 @@ class ControlCLIClient(object):
     
     def cmd_line(self,line,fnames=[]):
         if self.echo: print('(cmd) %s' % line)
+        if not len(line): return
         first = line[0]
         if first == '#':
             pass                # Comment
         elif first == '@':
             line = line.lstrip('@ ')
             if line in fnames:
-                pass                    # Error
+                pass                            # Error
             else:
+                echo = self.echo
+                self.echo = True
                 self.cmd_script(line,fnames)    # Load the script
+                self.echo = echo
         else:
 
             self.shell.onecmd(line)

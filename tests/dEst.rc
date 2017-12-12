@@ -4,7 +4,7 @@ w 3
 f /home/riaps/workspace/RIAPS/tests/DistributedEstimator
 m sample.riaps
 d sample.depl
-g DistributedEstimator
+l DistributedEstimator
 w 30
 h DistributedEstimator
 q
