@@ -11,6 +11,7 @@ import argparse
 import json
 import logging
 from riaps.utils.config import Config
+from riaps.utils.trace import riaps_trace
 
 from .device import Device
 
@@ -38,7 +39,14 @@ def main(debug=True):
     parser.add_argument("app", help="app name")             # App name
     parser.add_argument("model", help="model file name")    # Model file argument
     parser.add_argument("device", help="device name")         # Device name argument
+    parser.add_argument("-t","--trace",help="debug server on host:port")
     (args,rest) = parser.parse_known_args()
+
+    # Read configuration    
+    global theConfig
+    theConfig = Config()
+    traced = riaps_trace(args.trace,'DEVICE_DEBUG_SERVER')
+       
     appFolder = os.getenv('RIAPSAPPS', './')
     appFolder = join(appFolder,args.app)
     modelFileName = join(appFolder,args.model) 
@@ -58,10 +66,6 @@ def main(debug=True):
     logging.Formatter.default_time_format = '%H:%M:%S'
     logging.Formatter.default_msec_format = '%s,%03d'
 
-    # Read configuration    
-    global theConfig
-    theConfig = Config()
-    
     global theDevice
     theDevice = Device(model,args.model,aName,rest) # Construct the Device
     signal.signal(signal.SIGTERM,termHandler)       # Termination signal handler

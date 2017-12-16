@@ -38,4 +38,19 @@ If the controller program crashes then the original DNS resolver configuration m
  sudo mv /etc/resolv.conf.org /etc/resolv.conf
 
 If the controller terminates correctly, the script will automatically restores this.
-  
+
+Debugging with mininet
+
+The mininet configuration setup by the bin/riaps.mn script sets up interfaces on both the outer host VM as well 
+on the internal emulated network that can be used for debugging Python code. The pydevd debugger can be used as follows.
+1. On the host VM start Eclipse,  select the Debug view, start the PydevD Debug server (optionally set the port).
+2. Start up the emulated virtual network as shown above.This will create a new virtual network interface on the host;
+   usually called root-eth0, usually with the IP address 10.123.123.1. We can verify that this interface is functional
+   by checking 'ifconfig' on the host VM, and pinging the IP address from an emulated host (e.g. h1) on the 
+   virtual network. 
+3. Start a Python program on a mininet host - the program should contain the following lines
+     import pydevd
+     pydevd.settrace('10.123.123.1')  # Connect to the debug server on host
+   When the 'settrace' line is reached, the program will attempt to connect to the debug server on the host.
+   It will proceed only after the debugger allows it to do so. 
+   

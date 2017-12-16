@@ -14,6 +14,7 @@ import traceback
 from riaps.ctrl.ctrl import Controller
 from riaps.consts.defs import *
 from riaps.utils.config import Config 
+from riaps.utils.trace import riaps_trace
 
 conf = None
 theController = None
@@ -34,15 +35,16 @@ def termHandler(signal,frame):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-p","--port", type=int, 
-                        default=const.ctrlPort, 
+    parser.add_argument("-p","--port", type=int,default=const.ctrlPort, 
                         help="server port number")
+    parser.add_argument("-t","--trace",help="debug server on host:port")
     parser.add_argument('script',nargs='?',help='script name, or - for stdin')
     args = parser.parse_args()
     sys.path.append(os.getcwd())   # Ensure load_module works from current directory
 #   logging.basicConfig(level=logging.INFO)
     global conf
     conf = Config()
+    traced = riaps_trace(args.trace,'CTRL_DEBUG_SERVER')
     global theController
     theController = None
     signal.signal(signal.SIGTERM,termHandler)

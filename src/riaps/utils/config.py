@@ -18,6 +18,11 @@ class Config(object):
     TARGET_USER = 'riaps-user'
     SEND_TIMEOUT = -1
     NIC_NAME = None
+    CTRL_DEBUG_SERVER = ''
+    DEPLO_DEBUG_SERVER = ''
+    DISCO_DEBUG_SERVER = ''
+    ACTOR_DEBUG_SERVER = ''
+    DEVICE_DEBUG_SERVER = ''
     
     def __init__(self):
         '''
