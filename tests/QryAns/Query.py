@@ -14,6 +14,8 @@ class Query(Component):
         msg = "clt_qry: %d" % self.pid
         self.logger.info('[%d] send qry: %s' % (self.pid,msg))
         self.cltQryPort.send_pyobj(msg)
+    
+    def on_cltQryPort(self):
         rep = self.cltQryPort.recv_pyobj()
         self.logger.info('[%d] recv rep: %s' % (self.pid,rep))
 

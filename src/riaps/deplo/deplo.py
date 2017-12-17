@@ -15,7 +15,6 @@ from riaps.consts.defs import *
 from riaps.run.exc import *
 from riaps.utils.ifaces import getNetworkInterfaces
 import logging
-from subprocess import TimeoutExpired
 from riaps.deplo.resm import ResourceManager
 import hashlib
 from collections import namedtuple
@@ -338,7 +337,7 @@ class DeploService(object):
                 try:
                     proc.wait(3.0)
                     break
-                except TimeoutExpired:
+                except psutil.TimeoutExpired:
                     self.logger.info("%s did not terminate" % key)
             self.logger.info("halted %s" % key)
             del self.launchMap[key]

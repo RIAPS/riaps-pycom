@@ -186,7 +186,8 @@ class DiscoService(object):
         '''
         Construct a key used to lookup a service. Construct also a string that identifies the client of the lookup 
         '''
-        kindMap = { "sub" : "pub" , "clt" : "srv", "req" : "rep", "rep" : "req"} # Map the requestor's kind into the provider's kind
+        # Map the requestor's kind into the provider's kind
+        kindMap = { "sub" : "pub" , "clt" : "srv", "req" : "rep", "rep" : "req", "qry" : "ans"} 
         key = '/' + appName + '/' + msgType + '/' + kindMap[kind]
         if scope == "local":                        # If the request is host-local, add the mac address to the end. Used to 
             key = key + ":" + str(self.macAddress)  # distinguish node-specific local requests. (The database is shared!)

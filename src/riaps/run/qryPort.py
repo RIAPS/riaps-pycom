@@ -1,5 +1,5 @@
 '''
-Client port class
+Query port class
 Created on Oct 10, 2016
 
 @author: riaps
@@ -11,17 +11,17 @@ from zmq.error import ZMQError
 #from .part import Part
 #from .actor import Actor
 
-class CltPort(Port):
+class QryPort(Port):
     '''
-    Client port is to access a server. Has a request and a response message type, and uses a REQ socket.
+    Query port is to access a server. Has a request and a response message type, and uses a REQ socket.
     '''
 
 
     def __init__(self, parentComponent, portName, portSpec):
         '''
-        Initialize the client port object.
+        Initialize the query port object.
         '''
-        super(CltPort,self).__init__(parentComponent,portName)
+        super(QryPort,self).__init__(parentComponent,portName)
         
         self.req_type = portSpec["req_type"]
         self.rep_type = portSpec["rep_type"]
@@ -45,7 +45,8 @@ class CltPort(Port):
         '''
         Set up the socket of the port. Return a tuple suitable for querying the discovery service for the publishers
         '''
-        self.socket = self.context.socket(zmq.REQ)
+        self.socket = self.context.socket(zmq.DEALER)
+        self.socket.setsockopt_string(zmq.IDENTITY, str(id(self)), 'utf-8')  # FIXME: identity is not unique across nodes
         self.socket.setsockopt(zmq.SNDTIMEO,self.sendTimeout) 
         self.host = ''
         if not self.isLocalPort:
@@ -56,7 +57,7 @@ class CltPort(Port):
             localHost = self.getLocalIface()
             self.portNum = -1 
             self.host = localHost
-        return ('clt',self.isLocalPort,self.name,str(self.req_type) + '#' + str(self.rep_type),self.host)
+        return ('qry',self.isLocalPort,self.name,str(self.req_type) + '#' + str(self.rep_type),self.host)
     
     def getSocket(self):
         '''
@@ -66,13 +67,13 @@ class CltPort(Port):
     
     def inSocket(self):
         '''
-        Return False because the socket is not used as direct input (client has to recv explicitly)
+        Return True because the socket is used of input
         '''
-        return False
+        return True
     
     def update(self,host,port):
         '''
-        Update the client -- connect its socket to a server
+        Update the query -- connect its socket to a server
         '''
         srvPort = "tcp://" + str(host) + ":" + str(port)
         self.serverHost = host
@@ -83,12 +84,16 @@ class CltPort(Port):
         '''
         Receive an object through this port
         '''
+        if self.serverHost == None or self.serverPort == None:
+            return None
         return self.socket.recv_pyobj()
     
     def send_pyobj(self,msg):
         '''
         Send an object through this port
         '''
+        if self.serverHost == None or self.serverPort == None:
+            return False
         try:
             self.socket.send_pyobj(msg)
         except ZMQError as e:
@@ -97,7 +102,7 @@ class CltPort(Port):
             else:
                 raise
         return True
-
+    
     def recv_capnp(self):
         return self.socket.recv()
     
@@ -115,5 +120,5 @@ class CltPort(Port):
         '''
         Retrieve relevant information about this port
         '''
-        return ("clt",self.name,(self.req_type,self.rep_type),self.host,self.portNum,self.serverHost,self.serverPort)
+        return ("qry",self.name,(self.req_type,self.rep_type),self.host,self.portNum,self.serverHost,self.serverPort)
     

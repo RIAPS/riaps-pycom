@@ -161,7 +161,7 @@ class RiapsModel2JSON(object):
                  "clts" : clts , "srvs" : srvs,
                  "reqs" : reqs,  "reps" : reps,
                  "tims" : tims,  "inss" : inss,
-                 "qrys" : reqs,  "anss" : anss
+                 "qrys" : qrys,  "anss" : anss
                  }
     def getActors(self,actors):
         res = {}

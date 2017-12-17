@@ -175,15 +175,17 @@ class DiscoClient(object):
         # (srv,local,name,(req,rep),host,port)
         # (req,local,name,(req,rep),host)
         # (rep,local,name,(req,rep),host,port)
+        # (qry,local,name,(req,rep),host)
+        # (ans,local,name,(req,rep),host,port)
         kind = bundle[2]
         #(partName,partType,kind,isLocal,portName,portType) = bundle[0:6]
         # All interactions below go via the REQ/REP socket ; the channel is for server pushes
         result = []
         # Update component means: add command to component's message queue
-        if kind == 'pub' or kind == 'srv' or kind == 'rep':
+        if kind == 'pub' or kind == 'srv' or kind == 'rep' or kind == 'ans':
             # Registe publisher or server port
             self.handleRegReq(bundle)
-        elif kind == 'sub' or kind == 'clt' or kind == 'req':
+        elif kind == 'sub' or kind == 'clt' or kind == 'req' or kind == 'qry':
             # Request pub(s) or srv(s);  update component
             result = self.handleLookupReq(bundle)
         else:

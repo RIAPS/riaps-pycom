@@ -113,6 +113,8 @@ class Device(Actor):
         self.getPortMessageTypes(ports,"reps",["req_type","rep_type"],res)
         self.getPortMessageTypes(ports,"clts",["req_type","rep_type"],res)
         self.getPortMessageTypes(ports,"srvs",["req_type","rep_type"],res)
+        self.getPortMessageTypes(ports,"qrys",["req_type","rep_type"],res)
+        self.getPortMessageTypes(ports,"anss",["req_type","rep_type"],res)
         return res
         
     def getParameterValueType(self,param,defaultType):

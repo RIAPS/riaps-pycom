@@ -5,7 +5,7 @@ import os
 
 class Answer(Component):
     def __init__(self):
-        super(Server, self).__init__()
+        super(Answer, self).__init__()
         self.pid = os.getpid()
 
     def on_srvAnsPort(self):
