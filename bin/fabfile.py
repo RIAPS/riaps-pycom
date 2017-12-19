@@ -19,6 +19,9 @@ env.shell = "/bin/bash -l -i -c"
 env.localPath = '/home/riaps/riaps/'    # Path local host
 env.nodePath = '/home/riaps/'           # Path on target
 
+env.riapsHome = '/usr/local/riaps'
+env.riapsApps = '/home/riaps/riaps_apps'
+
 # System Utilities
 #--------------------
 def getFile(fileName,localPrefix=''):
@@ -79,7 +82,8 @@ def check():
 def start():
     """start deplo on hosts"""
     hostname = env.host_string
-    run('riaps_deplo >~/riaps-' + hostname + '.log &')
+    command = ('RIAPSAPPS=%s RIAPSHOME=%s riaps_deplo >~/riaps-' + hostname + '.log 2>&1 &') % (env.riapsApps,env.riapsHome)
+    run(command)
 
 # Stop anything related to riaps on the hosts
 @parallel
