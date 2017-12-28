@@ -26,16 +26,22 @@ class Config(object):
     
     def __init__(self):
         '''
-        Constructor
+        Construct the configuration object that configures the logger and various system parameters. 
+        The logger and system configuration are set according to the content of the files $RIAPSHOME/etc/riaps-log.conf
+        and $RIAPSHOME/etc/riaps.conf 
         '''
-        riaps_folder = os.getenv('RIAPSHOME', './')
+        riaps_folder = os.getenv('RIAPSHOME')
+        
+        if riaps_folder == None:
+            print("RIAPS Configuration - RIAPSHOME is not set, using ./")
+            riaps_folder = './'
         
         riaps_logconf = join(riaps_folder,'etc/riaps-log.conf')
         
         try:
             logging.config.fileConfig(riaps_logconf)
         except Exception as e:
-            logging.warning(' Log configuration file %s problem: %s.' % (riaps_logconf, str(e)))
+            logging.warning(' Log configuration file %s has a problem: %s.' % (riaps_logconf, str(e)))
             pass
 
         
@@ -46,12 +52,12 @@ class Config(object):
     
         try:
             files = c_parse.read(riaps_conf)
-        except:
-            logger.warning(' Configuration file %s not found.' % (riaps_conf))
+        except Exception as e:
+            logger.warning(' System configuration file %s has a problem: %s.' % (riaps_conf, str(e)))
             return 
         
         if files == [] or not c_parse.has_section('RIAPS'):
-            logger.warning(' Configuration file %s not found or invalid file.' % (riaps_conf))
+            logger.warning(' System configuration file %s not found or invalid file.' % (riaps_conf))
             return 
         
         try: 

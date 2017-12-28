@@ -28,4 +28,6 @@ class CPULimit(Component):
         self.logger.info('handleCPULimit()')
         self.limit = self.limit - 3000      # Throttle back
         
-
+    def handleMemLimit(self):
+        self.logger.info('handleMemLimit()')
+        # self.limit = self.limit - 3000      # Throttle back

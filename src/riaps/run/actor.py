@@ -360,6 +360,14 @@ class Actor(object):
         ''' 
         for component in self.components.values():
             component.handleCPULimit()
+            
+    def handleMemLimit(self):
+        '''
+        Handle the case when the memory limit is exceeded: notify each component.
+        If the component has defined a handler, it will be called.   
+        ''' 
+        for component in self.components.values():
+            component.handleMemLimit()
     
     def terminate(self):
         self.logger.info("terminating")

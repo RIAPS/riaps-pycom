@@ -20,6 +20,7 @@ import hashlib
 from collections import namedtuple
 import psutil
 from riaps.deplo.devm import *
+import traceback
 
 DeploAppRecord = namedtuple('DeploAppRecord', 'model hash file')
 
@@ -420,6 +421,7 @@ class DeploService(object):
         except:
             info = sys.exc_info()
             self.logger.error("Error in callback '%s': %s %s" % (cmd, info[0], info[1]))
+            traceback.print_exc()
             raise
         
             
@@ -428,8 +430,9 @@ class DeploService(object):
         # Clean up everything
         # Logout from service
         # Kill actors
-        for proc in self.launchMap.values():
-            proc.terminate()
+        for key in self.launchMap.keys():
+            appName,actorName = key.split('.')
+            self.haltActor(appName, actorName)
         time.sleep(1.0) # Allow actors terminate cleanly
         # Cleanup resm 
         self.resm.cleanupApps()

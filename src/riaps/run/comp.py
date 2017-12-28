@@ -81,6 +81,10 @@ class ComponentThread(threading.Thread):
                 self.logger.info("limitCPU")
                 self.instance.handleCPULimit()
                 self.control.send_pyobj("ok")
+            elif cmd == "limitMem":
+                self.logger.info("limitMem")
+                self.instance.handleMemLimit()
+                self.control.send_pyobj("ok")
             else:
                 self.logger.info("unknown command %s" % cmd)
                 pass            # Should report an error
@@ -181,8 +185,11 @@ class Component(object):
         '''
         pass
     
-    
-    
+    def handleMemLimit(self):
+        ''' 
+        Default handler for memory limit exceed
+        '''
+        pass
     
     
 
