@@ -344,15 +344,20 @@ class Controller(object):
     
 
     def buildDownload(self, appName):
+        noresult = ([],[],[],[])
         download = []
         if appName not in self.riaps_appInfoDict:
-            return
+            return noresult
         appInfoDict = self.riaps_appInfoDict[appName]
         appNameJSON = appName + ".json"
-
+        
+        if ('riaps_model' not in appInfoDict) or ('riaps_depl' not in appInfoDict):
+            self.log("Error: Mismatched model or deployment for app '%s'" % appName)
+            return noresult
+        
         if appName not in appInfoDict['riaps_model']:
             self.log("Error: App '%s' not found in model" % appName)
-            return
+            return noresult
         else:
             download.append(appNameJSON)
         appObj = appInfoDict['riaps_model'][appName]
@@ -364,7 +369,7 @@ class Controller(object):
                 actorName = actor["name"]
                 if actorName not in appObj['actors']:
                     self.log("Error: Actor '%s' not found in model" % actorName)
-                    return
+                    return noresult
         # Collect all app components (python and c++)
         for component in appObj["components"]:
             pyComponentFile = str(component) + ".py"
@@ -419,6 +424,9 @@ class Controller(object):
         '''
         download,libraries,clients,depls = self.buildDownload(appName)
         #
+        if download == []:
+            self.log("* Nothing to download")
+            return False
         ok = self.downloadApp(download,libraries,clients,appName)
         if not ok:
             self.log("* App download fault")
