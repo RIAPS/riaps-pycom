@@ -1,0 +1,25 @@
+//
+// RIAPS modeling language tests
+// 
+
+app LangTest {
+	message Message;
+	
+	component Component {
+		timer Timer 1000;
+	}
+	
+	actor Actor {
+		uses {
+			cpu max 10 % over 1;	
+			mem 200 MB;
+			space 1 GB;
+			net max 100 kB over 10 sec;
+		}
+		{
+			component : Component;
+		}
+	}
+}
+
+

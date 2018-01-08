@@ -39,7 +39,8 @@ class ComponentThread(threading.Thread):
                 continue
             elif res[0] == 'pub' or res[0] == 'sub' or \
                     res[0] == 'clt' or res[0] == 'srv' or \
-                    res[0] == 'req' or res[0] == 'rep':
+                    res[0] == 'req' or res[0] == 'rep' or \
+                    res[0] == 'qry' or res[0] == 'ans' :
                 self.control.send_pyobj(res)
             else:
                 raise BuildError
@@ -75,6 +76,14 @@ class ComponentThread(threading.Thread):
                 (_,portName,host,port) = msg
                 portObj = self.parent.ports[portName]
                 res = portObj.update(host,port)
+                self.control.send_pyobj("ok")
+            elif cmd == "limitCPU":
+                self.logger.info("limitCPU")
+                self.instance.handleCPULimit()
+                self.control.send_pyobj("ok")
+            elif cmd == "limitMem":
+                self.logger.info("limitMem")
+                self.instance.handleMemLimit()
                 self.control.send_pyobj("ok")
             else:
                 self.logger.info("unknown command %s" % cmd)
@@ -170,7 +179,17 @@ class Component(object):
         '''
         return self.owner.getActorID()
     
+    def handleCPULimit(self):
+        ''' 
+        Default handler for CPU limit exceed
+        '''
+        pass
     
+    def handleMemLimit(self):
+        ''' 
+        Default handler for memory limit exceed
+        '''
+        pass
     
     
 

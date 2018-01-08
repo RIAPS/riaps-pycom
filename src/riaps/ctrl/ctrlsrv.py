@@ -46,13 +46,41 @@ class ServiceClient(object):
         if guiClient != None:
             guiClient.callback(text)
     
+    def setupApp(self,appName,appNameJSON):
+        '''
+        Sets up an app on the client: it calls the Deployment service's callback running on the
+        node. 
+        ''' 
+        if self.callback != None:
+            res = self.callback(('setupApp',appName,appNameJSON))
+            return res.value
+            
+    def cleanupApp(self,appName):
+        '''
+        Removes an app from the client: it calls the Deployment service's callback running on the
+        node. 
+        ''' 
+        if self.callback != None:
+            res = self.callback(('cleanupApp',appName))
+            return res.value
+    
+    def cleanupApps(self):
+        '''
+        Removes all apps from the client: it calls the Deployment service's callback running on the
+        node. 
+        ''' 
+        if self.callback != None:
+            res = self.callback(('cleanupApps',))
+            return res.value
+            
     def launch(self,appName,appNameJSON,actorName,actuals):
         '''
         Launches an app actor on the client: it calls the Deployment service's callback running on the
         node. 
         ''' 
         if self.callback != None:
-            self.callback(('launch',appName,appNameJSON,actorName,actuals))
+            res = self.callback(('launch',appName,appNameJSON,actorName,actuals))
+            return res.value
     
     def halt(self,appName,actorName):
         '''
@@ -60,7 +88,8 @@ class ServiceClient(object):
         node. 
         ''' 
         if self.callback != None:
-            self.callback(('halt',appName,actorName))
+            res = self.callback(('halt',appName,actorName))
+            return res.value
     
 class ControllerService(rpyc.Service):
     '''

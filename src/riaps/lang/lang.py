@@ -107,6 +107,8 @@ class RiapsModel2JSON(object):
         reps = {}
         tims = {}
         inss = {}
+        qrys = {}
+        anss = {}
         portNames = []
         for port in ports:
             portObj = { }
@@ -144,13 +146,23 @@ class RiapsModel2JSON(object):
             elif (portClass == 'InsPort'):
                 inss[port.name] = portObj
                 portObj['spec'] = port.spec
+            elif (portClass == 'QryPort'):
+                portObj['req_type'] = port.req_type.name
+                portObj['rep_type'] = port.rep_type.name
+                qrys[port.name] = portObj
+            elif (portClass == 'AnsPort'):
+                portObj['req_type'] = port.req_type.name
+                portObj['rep_type'] = port.rep_type.name
+                anss[port.name] = portObj
             else:
                 raise TextXSemanticError('Unknown type for port "%s"' %
                                          port.name)
         return { "subs" : subs , "pubs" : pubs,
                  "clts" : clts , "srvs" : srvs,
                  "reqs" : reqs,  "reps" : reps,
-                 "tims" : tims,  "inss" : inss}
+                 "tims" : tims,  "inss" : inss,
+                 "qrys" : qrys,  "anss" : anss
+                 }
     def getActors(self,actors):
         res = {}
         for act in actors:
@@ -161,6 +173,7 @@ class RiapsModel2JSON(object):
             actObj["formals"] = self.getFormals(act.formals)
             actObj["locals"] = self.getLocals(act.locals)
             actObj["internals"] = self.getInternals(act.internals)
+            actObj["usage"] = self.getUsage(act.usage)
             actObj["instances"] = self.getInstances(act.instances)
             actObj["wires"] = self.getWires(act.wires)
             res[act.name] = actObj
@@ -197,6 +210,52 @@ class RiapsModel2JSON(object):
                 actualObj["value"] = actual.argValue.value
             res.append(actualObj)
         return res
+    def convertTime(self,value,unit):
+        ''' Convert all time values to msec'''
+        if unit == 'msec':
+            return value 
+        elif unit == 'sec':
+            return value * 1000
+        elif unit == 'min':
+            return value * 60 * 1000
+    def convertMem(self,value,unit):
+        ''' Convert all memory size values to kB'''
+        if unit == 'MB':
+            return value * 1024 
+        elif unit == 'kB':
+            return value
+        elif unit == 'GB':
+            return value * 1024 * 1024
+    def getUsage(self,usage):
+        cpuUsage = { }
+        memUsage = { }
+        spcUsage = { }
+        netUsage = { }
+        for use in usage:
+            useClass = use.__class__.__name__
+            if (useClass == 'CPUUsage'):
+                cpuUsage['use'] = use.usage
+                cpuUsage['max'] = use.max
+                unit = 'sec' if use.unit == None else use.unit 
+                cpuUsage['interval'] = self.convertTime(use.interval,unit)
+            elif (useClass == 'MemUsage'):
+                unit = 'MB' if use.unit == None else use.unit
+                memUsage['use'] = self.convertMem(use.usage,unit)
+            elif (useClass == 'SpaceUsage'):
+                unit = 'MB' if use.unit == None else use.unit
+                spcUsage['use'] = self.convertMem(use.usage,unit)
+            elif (useClass == 'NetUsage'):
+                memUnit = 'MB' if use.memUnit == None else use.memUnit
+                netUsage['use'] = self.convertMem(use.usage,memUnit)
+                netUsage['max'] = use.max
+                timeUnit = 'MB' if use.timeUnit == None else use.timeUnit
+                netUsage['interval'] = self.convertTime(use.interval,timeUnit)
+            else:
+                raise TextXSemanticError('Unknown usage for port "%s"' %
+                                         (str(use)))
+        return { "cpu" : cpuUsage , "mem" : memUsage, 
+                "spc" : spcUsage , "net" : netUsage
+                }
     def getInstances(self,instances):
         res = { } 
         for inst in instances:
@@ -316,19 +375,19 @@ def compileModel(modelFileName,verbose=False,debug=False):
         example_riaps_model = riaps_meta.model_from_file(join(this_folder,modelFileName))
     except IOError as e:
         errMsg = "I/O error({0}): {1}".format(e.errno, e.strerror)
-        print (errMsg)
+        if verbose: print (errMsg)
         raise LangError(errMsg)
     except TextXSyntaxError as e:
         errMsg = "Syntax error: %s" % e.args
-        print (errMsg)
+        if verbose: print (errMsg)
         raise LangError(errMsg)
     except TextXSemanticError as e:
         errMsg = "Semantic error: %s" % e.args
-        print (errMsg)
+        if verbose: print (errMsg)
         raise LangError(errMsg)
     except Exception as e: 
         errMsg = "Unexpected error %s:%s" % (sys.exc_info()[0],e.args())
-        print (errMsg)
+        if verbose: print (errMsg)
         raise LangError(errMsg)
     
     # Optionally export model to dot

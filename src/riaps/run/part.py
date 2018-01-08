@@ -17,6 +17,8 @@ from .cltPort import CltPort
 from .srvPort import SrvPort
 from .reqPort import ReqPort
 from .repPort import RepPort
+from .qryPort import QryPort
+from .ansPort import AnsPort
 from .timPort import TimPort
 from .insPort import InsPort
 from .exc import StateError
@@ -121,6 +123,8 @@ class Part(object):
         self.buildPorts(self.ports,'srvs',portSpecs,SrvPort)
         self.buildPorts(self.ports,'reqs',portSpecs,ReqPort)
         self.buildPorts(self.ports,'reps',portSpecs,RepPort)
+        self.buildPorts(self.ports,'qrys',portSpecs,QryPort)
+        self.buildPorts(self.ports,'anss',portSpecs,AnsPort)
         self.buildPorts(self.ports,'tims',portSpecs,TimPort)
         self.buildPorts(self.ports,'inss',portSpecs,InsPort)
         for portName in self.ports:
@@ -168,7 +172,8 @@ class Part(object):
             res = msg                               # Otherwise append the response to the queue
             if res[0] == 'pub' or res[0] == 'sub' or \
                     res[0] == 'clt' or res[0] == 'srv' or \
-                    res[0] == 'req' or res[0] == 'rep':
+                    res[0] == 'req' or res[0] == 'rep' or \
+                    res[0] == 'qry' or res[0] == 'ans' :
                 queue.append(prefix + res)
             else:
                 raise BuildError("invalid response from ComponentThread %s" % msg)
@@ -243,6 +248,28 @@ class Part(object):
             raise StateError("Invalid state %s in destroy()" % self.state)
         # Destroy thread
     
+    def handleCPULimit(self):
+        self.logger.info("handleCPULimit - %s:%s" % (self.name,self.typeName))
+        msg = ("limitCPU",)
+        # print(msg)
+        self.control.send_pyobj(msg)        # Relay message to component thread
+        rep = self.control.recv_pyobj()     # Wait for an OK response
+        if rep == "ok" :
+            pass
+        else:
+            pass
+        
+    def handleMemLimit(self):
+        self.logger.info("handleMemLimit - %s:%s" % (self.name,self.typeName))
+        msg = ("limitMem",)
+        # print(msg)
+        self.control.send_pyobj(msg)        # Relay message to component thread
+        rep = self.control.recv_pyobj()     # Wait for an OK response
+        if rep == "ok" :
+            pass
+        else:
+            pass
+        
     def terminate(self):
         self.logger.info("terminating")
         self.sendControl("kill",-1)         # Send message to the thread to kill itself

@@ -60,9 +60,6 @@ class ReqPort(Port):
         
     def recv_pyobj(self):
         return self.socket.recv_pyobj()
-
-    def recv_capnp(self):
-        return self.socket.recv()
     
     def send_pyobj(self,msg):
         try:
@@ -74,8 +71,11 @@ class ReqPort(Port):
                 return False
             else:
                 raise
-        return True
-
+        return True               
+    
+    def recv_capnp(self):
+        return self.socket.recv()
+    
     def send_capnp(self, msg):
         try:
             self.socket.send(msg)

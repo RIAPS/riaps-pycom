@@ -55,7 +55,8 @@ Port:
    ReqPort  | RepPort | // send Req(msg_req) -> recv Rep(msg_req) ...
                         // ... send Rep(msg_rep) -> recv Req(msg_rep)
    TimPort	|			// timer
-   InsPort				// inside
+   InsPort	|			// inside
+   QryPort	| AnsPort	// send Qry(msg_qry) * -> recv Ans(msg_ans) * 
    ) ';'
 ;
 
@@ -95,6 +96,20 @@ RepPort:
   'rep' name=ID ':' '(' req_type=[Message]? ',' rep_type=[Message]? ')'
 ;
 
+// Qry port (request and reply message types) - owned by an Query client
+// Querying client's operation is expected to send one or more queries 
+// The arrival of the answer triggers the answer operation on the client   
+QryPort:
+  'qry' name=ID ':' '(' req_type=[Message]? ',' rep_type=[Message]? ')'
+;
+
+// Ans port (request and reply message types) - owned by an Query server
+// Server's operation is triggered by the query message. 
+// The operation is expected to send a answer on the port.   
+AnsPort:
+  'ans' name=ID ':' '(' req_type=[Message]? ',' rep_type=[Message]? ')'
+;
+
 // Timer port. Optional argument is periodicity in msec
 TimPort:
   'timer' name=ID (spec=INT)?
@@ -120,9 +135,48 @@ Actor:
   '{'
     ( 'local' locals*=[Message][','] ';' )? 		// Optional: local messages (stay within the host)
     ( 'internal' internals*=[Message][','] ';' )? 	// Optional: internal messages (stay within the actor)
-      '{' instances+=Instance '}'
-      wires*=Wire
+    ( 'uses' '{' usage*=Usage '}' )?				// Optional: resource usage 
+    '{' instances+=Instance '}'
+    wires*=Wire
   '}'
+;
+
+// Usage:
+Usage: 
+ 	( CPUUsage |
+ 	  MemUsage |
+ 	  SpaceUsage | 
+ 	  NetUsage 
+ 	)
+ 	 ';'
+ ;
+
+CPUUsage:
+	'cpu' (max?='max')? usage=INT '%' ( 'over' interval=INT (unit=TimeUnit)? )? 
+;
+
+TimeUnit:
+	'sec' | 'min' | 'msec'
+;
+
+MemUsage:
+	'mem' usage=INT ( unit=MemUnit )?
+;
+
+MemUnit:
+	'MB' | 'kB' | 'GB'
+;
+
+SpaceUsage:
+	'space' usage=INT ( unit=SpaceUnit )?
+;
+
+SpaceUnit:
+	'MB' | 'GB'
+;
+
+NetUsage:
+	'net' (max?='max')? usage=INT (memUnit=MemUnit)? ( 'over' interval=INT (timeUnit=TimeUnit)? )? 
 ;
 
 // Wiring of clients to servers (both SMI and AMI)

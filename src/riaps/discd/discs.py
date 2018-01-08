@@ -135,7 +135,7 @@ class DiscoService(object):
         appVersion = actReg.version   
         appActorName = actReg.actorName
          
-        self.logger.info("handleActorReg: %s %s" % (appName, appActorName))
+        self.logger.info("handleActorReg: %s,%s,%s" % (appName, appVersion, appActorName))
         
         clientPort = self.setupClient(appName,appVersion,appActorName)
         
@@ -157,7 +157,7 @@ class DiscoService(object):
         appVersion = actReg.version   
         appActorName = actReg.actorName
          
-        self.logger.info("handleActorUnreg: %s %s" % (appName, appActorName))
+        self.logger.info("handleActorUnreg: %s,%s,%s" % (appName, appVersion, appActorName))
         
         clientPort = self.unsetupClient(appName,appVersion,appActorName)
         
@@ -186,7 +186,8 @@ class DiscoService(object):
         '''
         Construct a key used to lookup a service. Construct also a string that identifies the client of the lookup 
         '''
-        kindMap = { "sub" : "pub" , "clt" : "srv", "req" : "rep", "rep" : "req"} # Map the requestor's kind into the provider's kind
+        # Map the requestor's kind into the provider's kind
+        kindMap = { "sub" : "pub" , "clt" : "srv", "req" : "rep", "rep" : "req", "qry" : "ans"} 
         key = '/' + appName + '/' + msgType + '/' + kindMap[kind]
         if scope == "local":                        # If the request is host-local, add the mac address to the end. Used to 
             key = key + ":" + str(self.macAddress)  # distinguish node-specific local requests. (The database is shared!)
@@ -212,7 +213,7 @@ class DiscoService(object):
         host = socket.host
         port = socket.port
         
-        self.logger.info("handleServiceReg: %s,%s,%s,%s,%s,%s" % (appName,msgType,kind,scope,host,port))
+        self.logger.info("handleServiceReg: %s,%s,%s,%s,%s,%s,%s" % (appName,appActorName,msgType,kind,scope,host,port))
         (key,value) = self.buildInsertKeyValuePair(appName, msgType, kind, scope,host, port)
         clients = self.dbase.insert(key,value)
         
@@ -244,8 +245,8 @@ class DiscoService(object):
         clientPortName = client.portName
         client = (appName,clientActorHost,clientActorName,clientInstanceName,clientPortName)
 
-        self.logger.info("handleServiceLookup:%s,%s,%s,%s,%s" 
-                            % (appName,msgType,kind,scope,clientInstanceName))
+        self.logger.info("handleServiceLookup:%s,%s,%s,%s,%s,%s" 
+                            % (appName,str(client),msgType,kind,scope,clientInstanceName))
         (key,client) = self.buildLookupKey(appName, msgType, kind, scope,
                                            clientActorHost, clientActorName, 
                                            clientInstanceName,clientPortName)

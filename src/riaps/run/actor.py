@@ -352,6 +352,22 @@ class Actor(object):
         self.logger.info("updatePart %s" % str((instanceName,portName,host,port)))
         part = self.components[instanceName]
         part.handlePortUpdate(portName,host,port)
+        
+    def handleCPULimit(self):
+        '''
+        Handle the case when the CPU limit is exceeded: notify each component.
+        If the component has defined a handler, it will be called.   
+        ''' 
+        for component in self.components.values():
+            component.handleCPULimit()
+            
+    def handleMemLimit(self):
+        '''
+        Handle the case when the memory limit is exceeded: notify each component.
+        If the component has defined a handler, it will be called.   
+        ''' 
+        for component in self.components.values():
+            component.handleMemLimit()
     
     def terminate(self):
         self.logger.info("terminating")

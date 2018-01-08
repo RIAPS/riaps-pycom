@@ -10,6 +10,7 @@ import argparse
 from .deplo import DeploService
 from riaps.consts.defs import *
 from riaps.utils.config import Config 
+from riaps.utils.trace import riaps_trace
 
 # Singleton Deployment Service object 
 theDepl = None
@@ -30,6 +31,7 @@ def main(debug=True):
     parser = argparse.ArgumentParser()
     parser.add_argument("-p","--port", type=int,  default=const.ctrlPort, help="controller port number")
     parser.add_argument("-n","--node", default=const.ctrlNode, help="controller node")
+    parser.add_argument("-t","--trace",help="debug server on host:port")
     args = parser.parse_args()
     try:
         pass
@@ -39,10 +41,12 @@ def main(debug=True):
     sys.path.append(os.getcwd())   # Ensure load_module works from current directory
     global conf
     conf = Config()
-    global theDepl
-    theDepl = DeploService(args.node,args.port)  # Assign the service to the singleton
     signal.signal(signal.SIGTERM,termHandler)
     signal.signal(signal.SIGINT,termHandler)
+    traced = riaps_trace(args.trace,'DEPLO_DEBUG_SERVER')
+    global theDepl
+    theDepl = DeploService(args.node,args.port)  # Assign the service to the singleton
+
     theDepl.setup()
     theDepl.run()
 #     if debug:

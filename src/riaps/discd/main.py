@@ -8,6 +8,7 @@ import os,signal
 import argparse
 from .discs import DiscoService
 from riaps.utils.config import Config
+from riaps.utils.trace import riaps_trace
 
 # Singleton DiscoService object 
 theDisco = None
@@ -28,6 +29,7 @@ def interact():
 def main(debug=True):
     parser = argparse.ArgumentParser()
     parser.add_argument("-d","--database", help="database location")
+    parser.add_argument("-t","--trace",help="debug server on host:port")
     args = parser.parse_args()
     try:
         pass
@@ -39,7 +41,7 @@ def main(debug=True):
     # Read configuration
     global conf
     conf = Config()
-    
+    traced = riaps_trace(args.trace,'DISCO_DEBUG_SERVER')
     # Create singleton 
     global theDisco
     theDisco = DiscoService(args.database)  # Assign the service to the singleton

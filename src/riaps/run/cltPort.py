@@ -66,7 +66,7 @@ class CltPort(Port):
     
     def inSocket(self):
         '''
-        Return True because the socket is used of input
+        Return False because the socket is not used as direct input (client has to recv explicitly)
         '''
         return False
     
@@ -97,7 +97,20 @@ class CltPort(Port):
             else:
                 raise
         return True
-        
+
+    def recv_capnp(self):
+        return self.socket.recv()
+    
+    def send_capnp(self, msg):
+        try:
+            self.socket.send(msg)
+        except ZMQError as e:
+            if e.errno == zmq.EAGAIN:
+                return False
+            else:
+                raise
+        return True
+    
     def getInfo(self):
         '''
         Retrieve relevant information about this port

@@ -99,3 +99,15 @@ class Port(object):
         '''
         return None
     
+    def send_capnp(self,msg):
+        '''
+        Send an object (if possible) out through the port
+        '''
+        pass
+    
+    def recv_capnp(self):
+        '''
+        Receive an object (if possible) through the port
+        '''
+        return None
+    
