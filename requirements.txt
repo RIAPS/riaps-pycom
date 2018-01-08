@@ -8,3 +8,5 @@ paramiko >= 2.0.2
 cryptography >= 1.5.3
 cgroupspy >= 0.1.6
 psutil >= 5.4.2
+cgroups >= 0.1.0
+butter >= 0.12.6
