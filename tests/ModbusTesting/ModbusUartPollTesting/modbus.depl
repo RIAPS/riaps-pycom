@@ -1,4 +1,0 @@
-app RIAPSModbusPollUART {
-	on (192.168.1.104) ModbusExampleActor;
-	on (192.168.1.101) ModbusLogger;
-}

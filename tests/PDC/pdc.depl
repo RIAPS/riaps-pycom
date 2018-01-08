@@ -1,3 +1,0 @@
-app PDCApp {
-	on all PDCActor;
-}
