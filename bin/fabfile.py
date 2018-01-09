@@ -5,13 +5,8 @@
 from fabric.api import *
 from fabric.contrib.files import exists, append
 
-
-# ---- START OF EDIT HERE ----
-# List of bbb hosts
-# BBBs can be addressed by their IP address or the hostname.local (found at the command prompt on the BBB)
-env.hosts = ['192.168.0.101', 'bbb-ff98.local']
-# ----  END OF EDIT HERE  ----
-
+# List of bbb hosts -- EDIT HERE --
+import riaps_hosts      # This file must set env.hosts to a list of host names
 
 # Standard riaps setup
 env.password = 'riaps'
@@ -20,66 +15,97 @@ env.sudo_password = 'riaps'
 # Shell
 env.shell = "/bin/bash -l -i -c"
 
+# Transfer directories 
+env.localPath = '/home/riaps/riaps/'    # Path local host
+env.nodePath = '/home/riaps/'           # Path on target
 
-# Functions
-# Note: localFilePath, nodeGetPath, nodePutPath, localFilename, nodeFilename, and filename should be configurable
+env.riapsHome = '/usr/local/riaps'
+env.riapsApps = '/home/riaps/riaps_apps'
 
-# Setup Utilities
-#-----------------
-# Good utility to make sure all BBBs are communicating
-def hello_hosts():
-    """test that hosts are communicating"""
-    run('echo HELLO')
+# System Utilities
+#--------------------
+def getFile(fileName,localPrefix=''):
+    """Transfer file from hosts (BBBs) to control host"""
+    get(env.nodePath + fileName, env.localPath+localPrefix)
 
-# RIAPS Platform Update
-# First download the latest riaps-release.tar.gz from https://github.com/RIAPS/riaps-integration/releases
-def update_riaps():
-    """update RIAPS platform on hosts"""
+# If transferring to a RIAPS account directory, use_sudo=False. 
+# If transferring to a system location, use_sudo=True
+def putFile(fileName, localPrefix='', use_sudo=False):
+    """Transfer file to hosts (BBBs) from control host"""
+    put(env.localPath + localPrefix + fileName, env.nodePath + fileName, use_sudo)
     
+# RIAPS packages
+packages = [ 
+#            'riaps-externals-armhf', 
+#            'riaps-core-armhf', 
+            'riaps-pycom-armhf', 
+#            'riaps-systemd-armhf',
+#            'riaps-timesync-armhf',  
+            ]
+
+# RIAPS update (from release)
+@parallel
+def update():
+    """ Update RIAPS packages on target from official release"""
     sudo('apt-get update')
-    sudo('apt-get install riaps-externals-armhf -y')
-    run('echo "installed externals"')
-    sudo('apt-get install riaps-core-armhf -y')
-    run('echo "installed core"')
-    sudo('apt-get install riaps-pycom-armhf -y')
-    run('echo "installed pycom"')
-    sudo('apt-get install riaps-systemd-armhf -y') 
-    run('echo "installed services"')
-    sudo('apt-get install riaps-timesync-armhf -y') 
-    run('echo "installed timesync"')
+    global packages
+    for pack in packages:
+        sudo('apt-get install ' + pack + ' -y')
+        run('echo "updated %s"' % (pack))
+
+# RIAPS install (from local host) 
+@parallel
+def install():
+    """Install RIAPS packages on target from development host"""
+    global packages
+    hostname = env.host_string
+    for pack in packages:
+        package = pack + '.deb'
+        putFile(package)
+        sudo('apt install ./'+ package + ' > riaps-install-' + hostname + '.log')
+        run('echo "installed %s"' % (package))
+        sudo('rm -f %s' %(package))
+        getFile('riaps-install-' + hostname + '.log', 'logs/')
     
 
 # Control RIAPS operation (manual control)
 #------------------------------------------
+
+# Check that all BBBs are communicating
+# @parallel
+def check():
+    """test that hosts are communicating"""
+    run('hostname && uname -a')
+
 # Start the deplo on all hosts
-# Note: this will block the host's terminal (unless started in the background)
-# Indicate the host IP address where 'riaps_ctrl' is running
 @parallel
-def deplo():
+def start():
     """start deplo on hosts"""
-    run('riaps_deplo >~/riaps.log')
+    hostname = env.host_string
+    command = ('RIAPSAPPS=%s RIAPSHOME=%s riaps_deplo >~/riaps-' + hostname + '.log 2>&1 &') % (env.riapsApps,env.riapsHome)
+    run(command)
 
 # Stop anything related to riaps on the hosts
 @parallel
 def stop():
     """stop RIAPS functions on hosts"""
-    run('pkill -SIGKILL riaps')
+    sudo('pkill -SIGKILL riaps')
 
 # Halt the hosts
 # Note: must be used prior to powering down the hosts
 @parallel
 def halt():
     """halt the hosts"""
-    sudo('halt')
+    sudo('halt &')
 
 # Reboot the hosts
 @parallel
 def reboot():
     """reboot the hosts"""
-    sudo('reboot')
+    sudo('reboot &')
 
-# Launch the riaps controller on the control host
-# Note: starts and stops the rpyc registry as well
+# Launch the RIAPS controller on the control host
+# Note: (1) RIAPS must be installed, (2) starts and stops the rpyc registry as well
 @hosts('localhost')
 def riaps():
     """launch RIAPS controller"""
@@ -89,12 +115,19 @@ def riaps():
 # the riaps_ctrl may bind itself to the wrong one -- this is an rpyc_registry issue.
 # Workaround: disable all unused network interfaces on the control host.
 
-
+@parallel
+def getLogs():
+    """ Get the main RIAPS log """
+    hostname = env.host_string
+    getFile('riaps-' + hostname + '.log','logs/')
+    
 # Time Synchronization
 #----------------------
-def timeStamp():
+def getTime():
     """Compare clocks on hosts"""
-    run('date +%H.%M.%S.%N > timestamp.txt')
+    hostname = env.host_string
+    run('date +%H.%M.%S.%N > riaps-time-' + hostname + '.log')
+    getFile('riaps-time-' + hostname + '.log','logs/')
 
 @hosts('localhost')
 def checkPTP():
@@ -129,46 +162,42 @@ def stopDeplo():
 # If using riaps-deplo.service, the log data is being recorded in a system journal.
 # This function pulls that data from the system journal and places them in a log file
 @parallel
-def createDeployLogs():
+def getDeploLogs():
     """create deployment log"""
-    host_ID = env.host_string
-    sudo('journalctl -u riaps-deplo.service --since today > /home/riaps/deploy_' + host_ID + '.log')
+    hostname = env.host_string
+    sudo('journalctl -u riaps-deplo.service --since today > riaps-deplo-' + hostname + '.log')
+    getFile('riaps-deplo-' + hostname + '.log','logs/')
 
 # The system journal run continuously with no regard to login session. So to isolate testing data, the system journal can be cleared.
 @parallel
-def clear_journal_log():
+def clearJournalLog():
     """clear system journal"""
     sudo('rm -rf  /run/log/journal/*')
     sudo('systemctl restart systemd-journald')
 
-
-# System Utilities
-#--------------------
-def fileTransferFrom():
-    """Transfer files from hosts (BBBs) to control host"""
-    localFilePath = '/home/riaps/Downloads/'
-    nodeGetPath = '/home/riaps/'
-    filename = 'hostfile'
-
-    get(nodeGetPath + filename, localFilePath)
-
-# If transferring to a riaps account directory, use_sudo=False. If transferring to a system location, use_sudo=True
-def fileTransferTo():
-    """Transfer files to hosts (BBBs) from control host"""
-    localFilePath = '/home/riaps/Downloads/'
-    nodePutPath = '/home/riaps/'
-    localFilename = 'controlhost_filename'
-    nodeFilename = 'host_filename'
-
-    put(localFilePath + localFilename, nodePutPath + nodeFilename, use_sudo=False)
+# Find IP address of primary network interface
+import socket
+def get_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        # doesn't even have to be reachable
+        s.connect(('10.255.255.255', 1))
+        IP = s.getsockname()[0]
+    except:
+        IP = '127.0.0.1'
+    finally:
+        s.close()
+    return IP
 
 # Setup hosts routing, if needed.  Configure to your system's setup
-def config_routing():
+def configRouting():
     """Configure routing"""
     env.warn_only = True
     # ---- EDIT HERE ----
+    hostIP = get_ip()
     # Provide appropriate IP address
-    sudo('route add default gw 10.1.1.249 dev eth0')
+    sudo('route add default gw ' + hostIP + 'dev eth0')
+
 
 
 

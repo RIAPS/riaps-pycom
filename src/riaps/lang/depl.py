@@ -22,7 +22,7 @@ class DeploymentModel(object):
     '''
     Deployment model loader/parser
     '''
-    def __init__(self,fileName,debug=False):
+    def __init__(self,fileName,debug=False,verbose=False):
         riaps_folder = os.getenv('RIAPSHOME', './') # RIAPSHOME points to the folder containing the grammar
         this_folder = os.getcwd()  
         # Get meta-model from language grammar
@@ -38,11 +38,12 @@ class DeploymentModel(object):
             # Instantiate the model object structure from the model file 
             depl_model = depl_meta.model_from_file(join(this_folder, fileName))
         except IOError as e:
-            print ("I/O error({0}): {1}".format(e.errno, e.strerror))
-            raise
+            errMsg = "I/O error({0}): {1}".format(e.errno, e.strerror)
+            if verbose: print(errMsg)
+            raise e
         except: 
             print ("Unexpected error:", sys.exc_info()[0])
-            raise
+            raise e
         # Optionally export model to dot
         # model_export(depl_model, join(this_folder, 'sample.dot'))
         
@@ -64,6 +65,7 @@ class DeploymentModel(object):
                 actors.append(actObj)
             self.deployments.append({"target" : target,
                                      "actors" : actors})
+        
             
     def getActuals(self,actuals):
         res = []
@@ -83,15 +85,16 @@ class DeploymentModel(object):
 def main(debug=False):
     parser = argparse.ArgumentParser()
     parser.add_argument("model", help="model file name")       # Model file argument
+    parser.add_argument("-v","--verbose", help="print JSON on console", action="store_true")
     args = parser.parse_args()
     try:
-        deplo = DeploymentModel(args.model)
+        deplo = DeploymentModel(args.model,args.verbose)
     except Exception as e: 
         errMsg = "Unexpected error %s: %s" % (sys.exc_info()[0],e.args())
         print (errMsg)
         raise DeplError(errMsg)
-    print (deplo.deployments)
-
+    if args.verbose:
+        print (deplo.deployments)
 
 if __name__ == '__main__':
     m = main()

@@ -76,6 +76,9 @@ class PubPort(Port):
     def recv_pyobj(self):
         raise OperationError("attempt to receive through a publish port")
     
+    def recv_capnp(self):
+        raise OperationError("attempt to receive through a publish port")
+    
     def getInfo(self):
         return ("pub",self.name,self.type,self.host,self.portNum)
     

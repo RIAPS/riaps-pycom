@@ -116,6 +116,12 @@ class Peripheral(object):
             raise StateError("Invalid state %s in destroy()" % self.state)
         # Destroy thread
     
+    def handleCPULimit(self):
+        # Peripheral devices are just placeholders 
+        # for the device components that live inside
+        # device actors. 
+        pass 
+    
     def terminate(self):
         self.logger.info("terminating")
         msg = (self.typeName,)

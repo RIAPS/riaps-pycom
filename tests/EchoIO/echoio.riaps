@@ -5,7 +5,7 @@ app EchoIO {
     message EchoRep;
      
 	// IODevice
-    device IODevice(port) {
+    device IODevice(port=4321) {
       inside trigger /* default */; 	// Inside port for triggering message coming from an internal thread.
       timer clock 1000;					// Timer, used only once for initialization
       req echo : (EchoReq, EchoRep);	// Request port to ask the echo server
@@ -18,10 +18,10 @@ app EchoIO {
     }
 
     // EchoIO actor
-    actor EchoIO() {
+    actor EchoIO(port=5678) {
        local EchoReq,EchoRep;			// Local message types
        {
-       	  ioDevice : IODevice(port=5556);	// Port number must match port numer for console script
+       	  ioDevice : IODevice(port=port);	// Port number must match port numer for console script
           echo : Echo(); 		
        }
     }

@@ -12,11 +12,17 @@ from os.path import join
 import subprocess
 import zmq
 from riaps.consts.defs import *
-from riaps.run.exc import BuildError
+from riaps.run.exc import *
 from riaps.utils.ifaces import getNetworkInterfaces
-from riaps.run.exc import SetupError
 import logging
-from subprocess import TimeoutExpired
+from riaps.deplo.resm import ResourceManager
+import hashlib
+from collections import namedtuple
+import psutil
+from riaps.deplo.devm import *
+import traceback
+
+DeploAppRecord = namedtuple('DeploAppRecord', 'model hash file')
 
 class DeploService(object):
     '''
@@ -40,6 +46,8 @@ class DeploService(object):
         self.logger.info("Starting with apps in %s" % self.riapsApps)
         self.disco = None
         self.devm = None
+        self.resm = ResourceManager()
+        self.appModels = { }    # App models loaded
         
         self.riaps_actor_file = 'riaps_actor'       # Default name for the executable riaps actor shell
         try:
@@ -55,12 +63,12 @@ class DeploService(object):
         except:
             pass
         
-        self.riaps_devm_file = 'riaps_devm'       # Default name for the executable riaps devm 
-        try:
-            import riaps.riaps_devm         # We try to import the python riaps_devm first so that we know is correct file name
-            self.riaps_devm_file = riaps.riaps_devm.__file__
-        except:
-            pass
+#         self.riaps_devm_file = 'riaps_devm'       # Default name for the executable riaps devm 
+#         try:
+#             import riaps.riaps_devm         # We try to import the python riaps_devm first so that we know is correct file name
+#             self.riaps_devm_file = riaps.riaps_devm.__file__
+#         except:
+#             pass
 
     def setupIfaces(self):
         '''
@@ -136,21 +144,89 @@ class DeploService(object):
         '''
         Start the Device manager service process 
         '''
-        devm_prog = 'riaps_devm'
-        devm_mod = self.riaps_devm_file   # File name for python script riaps_devm.py
+        self.devm = DevmService(self)
+        try:
+            self.devm.start()
+        except:
+            self.logger.error("Error while starting devm: %s" % sys.exc_info()[0])
+            raise
+        
+#         devm_prog = 'riaps_devm'
+#         devm_mod = self.riaps_devm_file   # File name for python script riaps_devm.py
+# 
+#         command = [devm_prog]
+#         try: 
+#             self.devm = subprocess.Popen(command)
+#         except FileNotFoundError:
+#             try:
+#                 command = ['python3',devm_mod] + command[1:]
+#                 self.devm = subprocess.Popen(command)
+#             except:
+#                 self.logger.error("Error while starting devm: %s" % sys.exc_info()[0])
+#                 raise
 
-#        devm_args = None
-        command = [devm_prog]
-        try: 
-            self.devm = subprocess.Popen(command)
-        except FileNotFoundError:
-            try:
-                command = ['python3',devm_mod] + command[1:]
-                self.devm = subprocess.Popen(command)
-            except:
-                self.logger.error("Error while starting devm: %s" % sys.exc_info()[0])
-                raise
+    def setupApp(self,appName,appModelName):
+        appFolder = join(self.riapsApps, appName)
+        appModelPath = join(appFolder, appModelName)
+        
+        if not os.path.isdir(appFolder):
+            raise BuildError('App folder is missing: %s' % appFolder)
+        
+        # Load the app model
+        self.loadModel(appName,appModelPath)
+        self.resm.startApp(appName)
+        
+    def cleanupApp(self,appName):
+        del self.appModels[appName]
+        self.resm.cleanupApp(appName)
     
+    def cleanupApps(self):
+        for k in self.appModels.keys():
+            del self.appModels[k]
+        self.resm.cleanupApps()
+
+    def loadModel(self,appName,modelFileName):
+        try:
+            fp = open(modelFileName, 'rb')  
+        except IOError as e:
+            self.logger.error("I/O error({0}): {1}".format(e.errno, e.strerror))
+            raise
+        except:
+            self.logger.error("Unexpected error:", sys.exc_info()[0])
+            raise
+        # Check if the app model is already loaded
+        fileHash = 0
+        fileData = fp.read()
+        fileHash = hashlib.md5(fileData).digest()
+        fp.close()
+        if appName in self.appModels:   # There is an app with this name
+            appRecord = self.appModels[appName]
+            appHash = appRecord.hash
+            if fileHash == appHash:     # Hash is the same, we have the model loaded
+                return
+        else:
+            pass 
+        # Not loaded yet (or new)
+        fp = open(modelFileName, 'r')  
+        try:
+            model = json.load(fp)
+        except IOError as e:
+            self.logger.error("I/O error({0}): {1}".format(e.errno, e.strerror))
+            raise
+        except:
+            self.logger.error("Unexpected error:", sys.exc_info()[0])
+            raise
+        self.appModels[appName] = DeploAppRecord(hash=fileHash, model=model, file=modelFileName)
+        fp.close()
+    
+    def getAppRecord(self,appName):
+        if appName not in self.appModels:
+            raise BuildError('App "%s" unknown' % appName)
+        return self.appModels[appName]
+    
+    def getAppModel(self,appName):
+        return self.getAppRecord(appName).model
+        
     def startActor(self,appName,appModel,actorName,actorArgs):
         '''
         Start an actor of an application 
@@ -160,24 +236,27 @@ class DeploService(object):
         riaps_py_prog = 'riaps_actor'
         riaps_cc_prog = 'start_actor'
 
-
-
         appFolder = join(self.riapsApps, appName)
         appModelPath = join(appFolder, appModel)
-
+         
         if not os.path.isdir(appFolder):
             raise BuildError('App folder is missing: %s' % appFolder)
 
+        
         # Use Python starter by default
         riaps_prog = riaps_py_prog
         isPython = True
-        componentTypes = self.getComponentTypes(appModelPath, actorName)
+
+        componentTypes = self.getComponentTypes(appName, actorName)
+        if len(componentTypes) == 0:
+            raise BuildError('Actor has no components: %s.%s.' % (appName,actorName))
         for componentType in componentTypes:
-            # Look up the python version
+            # Look up the Python version first
             pyFilePath = join(appFolder, componentType + '.py')
             if not os.path.isfile(pyFilePath):
                 isPython = False
-
+        # We don't allow mixed mode actors (C++ and Python components in the same actor).
+        # A better solution is to support running C++ binaries into the Python framework. 
         if not isPython:
             for componentType in componentTypes:
                 # Look up the python version
@@ -186,6 +265,7 @@ class DeploService(object):
                     raise BuildError('Implementation of component %s is missing' % componentType)
             riaps_prog = riaps_cc_prog
 
+        self.resm.addActor(appName, actorName, self.getActorModel(appName, actorName))
         riaps_mod = self.riaps_actor_file   #  File name for python script 'riaps_actor.py'
         
         riaps_arg1 = appName
@@ -196,46 +276,52 @@ class DeploService(object):
             command.append(arg)
         self.logger.info("Launching %s " % str(command))
         try:
-            proc = subprocess.Popen(command,cwd=appFolder)
+            proc = psutil.Popen(command,cwd=appFolder)
         except FileNotFoundError:
             try:
                 if isPython:
                     command = ['python3',riaps_mod] + command[1:]
                 else:
                     command = [riaps_prog] + command[1:]
-                proc = subprocess.Popen(command,cwd=appFolder)
+                proc = psutil.Popen(command,cwd=appFolder)
             except:
-                self.logger.error("Error while starting actor: %s" % sys.exc_info()[0])
+                self.logger.error("Error while starting actor: %s -- %s" % (command,sys.exc_info()[0]))
                 raise
+        try:
+            rc = proc.wait(1.0)
+        except:
+            rc = None
+        if rc != None:
+            raise BuildError("Actor failed to start: %s.%s " % (appName,actorName))
+        self.resm.startActor(appName, actorName, proc)
         key = str(appName) + "." + str(actorName)
         # ADD HERE: build comm channel to the actor for control purposes
         self.launchMap[key] = proc
 
-    def getComponentTypes(self, modelFileName, actorName):
-        '''
-        Collects all the component types of an actor.
-        '''
-
-        componentTypes = []
-
-        try:
-            fp = open(modelFileName, 'r')  # Load model file
-            model = json.load(fp)
-        except IOError as e:
-            print ("I/O error({0}): {1}".format(e.errno, e.strerror))
-            raise
-        except:
-            print ("Unexpected error:", sys.exc_info()[0])
-            raise
-
+    def getActorModel(self,appName,actorName):
+        model = self.getAppModel(appName)
+        
         if actorName not in model["actors"]:
             raise BuildError('Actor "%s" unknown' % actorName)
         actorModel = model["actors"][actorName]
+        return actorModel
+    
+    def getComponentTypes(self,appName, actorName):
+        '''
+        Collects all the component types of an actor.
+        '''
+        componentTypes = []
+        appModel = self.getAppModel(appName)
+        componentDefs = appModel["components"]
+        actorModel = self.getActorModel(appName,actorName)
 
         for key in actorModel["instances"]:
             compType = actorModel["instances"][key]["type"]
-            componentTypes.append(compType)
-
+            if compType in componentDefs:           # Component
+                componentTypes.append(compType)
+            else:
+                pass                                # Device component
+            
         return componentTypes
     
     def haltActor(self,appName,actorName):
@@ -246,15 +332,17 @@ class DeploService(object):
         if key in self.launchMap:
             proc = self.launchMap[key]
             self.logger.info("halting %s" % key)
+            self.resm.stopActor(appName, actorName, proc)
             proc.terminate()                             # Should check for errors
             while True:
                 try:
                     proc.wait(3.0)
                     break
-                except TimeoutExpired:
+                except psutil.TimeoutExpired:
                     self.logger.info("%s did not terminate" % key)
             self.logger.info("halted %s" % key)
             del self.launchMap[key]
+
 
         
     def setup(self):
@@ -304,31 +392,54 @@ class DeploService(object):
         solution: push the command into a message queue that is read by the main thread.   
         '''
         assert type(msg) == tuple
-        cmd = msg[0]
-        if cmd == 'launch':             # Launch an actor
-            appName = msg[1]
-            appModelName = msg[2]
-            actorName = msg[3]
-            actorArgs = msg[4]
-            self.startActor(appName,appModelName,actorName,actorArgs)
-        elif cmd == "halt":
-            appName = msg[1]
-            actorName = msg[2]
-            self.haltActor(appName,actorName)
-        else:
-            pass                # Should flag an error
-
+        try: 
+            cmd = msg[0]
+            if cmd == 'launch':             # Launch an actor
+                appName = msg[1]
+                appModelName = msg[2]
+                actorName = msg[3]
+                actorArgs = msg[4]
+                self.startActor(appName,appModelName,actorName,actorArgs)
+            elif cmd == "halt":
+                appName = msg[1]
+                actorName = msg[2]
+                self.haltActor(appName,actorName)
+            elif cmd == "setupApp":
+                appName = msg[1]
+                appModelName = msg[2]
+                self.setupApp(appName,appModelName)
+            elif cmd == "cleanupApp":
+                appName = msg[1]
+                self.cleanupApp(appName)
+            elif cmd == "cleanupApps":
+                self.cleanupApps()
+            else:
+                pass                # Should flag an error
+        except BuildError as buildError:
+            self.logger.error(str(buildError.args))
+            raise
+        except:
+            info = sys.exc_info()
+            self.logger.error("Error in callback '%s': %s %s" % (cmd, info[0], info[1]))
+            traceback.print_exc()
+            raise
+        
+            
     def terminate(self):
         self.logger.info("terminating")
         # Clean up everything
         # Logout from service
         # Kill actors
-        for proc in self.launchMap.values():
-            proc.terminate()
+        for key in self.launchMap.keys():
+            appName,actorName = key.split('.')
+            self.haltActor(appName, actorName)
         time.sleep(1.0) # Allow actors terminate cleanly
+        # Cleanup resm 
+        self.resm.cleanupApps()
         # Kill devm
         if self.devm != None:
             self.devm.terminate()
+            self.devm.join()
             self.devm = None
         # Kill disco
         if self.disco != None:

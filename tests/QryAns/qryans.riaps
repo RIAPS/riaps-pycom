@@ -1,0 +1,30 @@
+// RIAPS Query Answer 
+
+app QryAns {
+    message QryReq; 
+    message AnsRep;
+     
+    // Query
+    component Query {
+    	qry cltQryPort : (QryReq,AnsRep); 
+    	timer clock 1000;
+    }
+    
+    // Answer
+    component Answer {
+    	ans srvAnsPort : (QryReq, AnsRep);
+    }
+    
+    actor QueryActor {
+    	{ 
+    		Client : Query;
+    	}
+    }
+    
+    actor AnswerActor {
+    	{
+    		Server : Answer;
+    	}
+    }
+    
+}

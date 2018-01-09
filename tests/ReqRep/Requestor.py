@@ -7,7 +7,7 @@ class Requestor(Component):
     def __init__(self):
         super(Requestor, self).__init__()
         self.pid = os.getpid()
-
+        
     def on_clock(self):
         now = self.clock.recv_pyobj()   # Receive time.time() as float
         self.logger.info('on_clock(): %s',str(now))
@@ -18,6 +18,7 @@ class Requestor(Component):
     def on_cltReqPort(self):
         rep = self.cltReqPort.recv_pyobj()
         self.logger.info('[%d] recv rep: %s' % (self.pid,rep))
-
+        
     def __destroy__(self):
         self.logger.info("[%d] destroyed" % self.pid)
+

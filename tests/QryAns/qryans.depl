@@ -1,0 +1,3 @@
+app QryAns {
+	on all QueryActor,AnswerActor;
+}
