@@ -7,17 +7,21 @@ class Requestor(Component):
     def __init__(self):
         super(Requestor, self).__init__()
         self.pid = os.getpid()
+        self.pending = 0
         
     def on_clock(self):
         now = self.clock.recv_pyobj()   # Receive time.time() as float
         self.logger.info('on_clock(): %s',str(now))
         msg = "clt_req: %d" % self.pid
-        self.logger.info('[%d] send req: %s' % (self.pid,msg))
-        self.cltReqPort.send_pyobj(msg)
+        if self.pending == 0:
+            self.logger.info('[%d] send req: %s' % (self.pid,msg))
+            if self.cltReqPort.send_pyobj(msg):
+               self.pending += 1
 
     def on_cltReqPort(self):
         rep = self.cltReqPort.recv_pyobj()
         self.logger.info('[%d] recv rep: %s' % (self.pid,rep))
+        self.pending -= 1
         
     def __destroy__(self):
         self.logger.info("[%d] destroyed" % self.pid)
