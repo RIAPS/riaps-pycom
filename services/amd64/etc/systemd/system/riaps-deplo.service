@@ -1,7 +1,5 @@
 [Unit] 
 Description=RIAPS Deployment Manager Service 
-BindsTo=riaps-disco.service 
-After=riaps-disco.service
   
 [Service] 
 Type=simple 
