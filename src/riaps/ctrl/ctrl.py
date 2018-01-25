@@ -29,6 +29,7 @@ import code
 import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
+import json
 
 ctrlLock = RLock()
 
@@ -78,6 +79,7 @@ class Controller(object):
         self.riaps_depl = None      # App deployment model to be launched
         self.launchList = []        # List of launch operations
         self.setupHostKeys()
+        self.dsml =False
 
         # (DY) 2-18-2017:
         self.riaps_appInfoDict = dict()     # appName: {appFolder, model, depl}
@@ -240,8 +242,15 @@ class Controller(object):
             hostKeyType = self.hostKeys[hostName].keys()[0]
             hostKey= self.hostKeys[hostName][hostKeyType]
             self.logger.info('Using host key of type %s' % hostKeyType)
+            
+        print("self.dsml %s" %self.dsml)
+        if self.dsml is True:
+            appFolder = self.riaps_appInfoDict[appName]['riaps_appFolder']+'/dp/'+appName
+        else:
+            appFolder = self.riaps_appInfoDict[appName]['riaps_appFolder']
 
-        appFolder = self.riaps_appInfoDict[appName]['riaps_appFolder']
+        
+        print('downloadAppToClient appFolder : %s' %appFolder)
         try:
             port = const.ctrlSSHPort
             self.logger.info ('Establishing SSH connection to: %s:%s' % (str(hostName),str(port)))
@@ -262,6 +271,7 @@ class Controller(object):
             sftpClient.mkdir(dirRemote,ignore_existing=True)
 
             for fileName in files:
+                print('downloadAppToClient fileName : %s' %fileName)
                 isUptodate = False
                 #localFile = os.path.join(self.riaps_appFolder,fileName)
                 localFile = os.path.join(appFolder, fileName)
@@ -346,10 +356,12 @@ class Controller(object):
     def buildDownload(self, appName):
         noresult = ([],[],[],[])
         download = []
+        print("buildDownload")
         if appName not in self.riaps_appInfoDict:
             return noresult
         appInfoDict = self.riaps_appInfoDict[appName]
         appNameJSON = appName + ".json"
+        print("buildDownload appInfoDict %s" %appInfoDict)
         
         if ('riaps_model' not in appInfoDict) or ('riaps_depl' not in appInfoDict):
             self.log("Error: Mismatched model or deployment for app '%s'" % appName)
@@ -361,7 +373,16 @@ class Controller(object):
         else:
             download.append(appNameJSON)
         appObj = appInfoDict['riaps_model'][appName]
-        depls = appInfoDict['riaps_depl'].getDeployments()
+        print("buildDownload appObj %s" %appObj)
+        
+        if type(appInfoDict['riaps_depl']) is list:
+            depls = appInfoDict['riaps_depl']
+            self.prefix = 'dp/'+appName+'/'
+        else:
+            depls = appInfoDict['riaps_depl'].getDeployments()
+            self.prefix = ''
+            
+        print("buildDownload depls: %s" %depls)
         # Check the all actors are present in the model
         for depl in depls:
             actors = depl['actors']
@@ -374,7 +395,7 @@ class Controller(object):
         for component in appObj["components"]:
             pyComponentFile = str(component) + ".py"
             ccComponentFile = "lib" + str(component).lower() + ".so"
-            if os.path.isfile(pyComponentFile):
+            if os.path.isfile(self.prefix+pyComponentFile):
                 download.append(pyComponentFile)
             if os.path.isfile(ccComponentFile):
                 download.append(ccComponentFile)
@@ -422,6 +443,7 @@ class Controller(object):
         Launch an app. The model of the app is in self.riaps_model, and the corresponding deployment
         is in self.riaps_depl.
         '''
+        print("launchByName")
         download,libraries,clients,depls = self.buildDownload(appName)
         #
         if download == []:
@@ -436,17 +458,21 @@ class Controller(object):
         for depl in depls:
             targets = depl['target']
             actors = depl['actors']
+            print("launchByName targets: %s" %targets)
             with ctrlLock:
                 if targets == []:
                     for clientName in self.clientMap:
                         client = self.clientMap[clientName]
+                        print("launchByName client %s" %client)
                         client.setupApp(appName,appNameJSON)
                         for actor in actors:
                             actorName = actor["name"]
                             actuals = actor["actuals"]
                             actualArgs = self.buildArgs(actuals)
                             try:
+                                print("launchByName before client launch")
                                 client.launch(appName,appNameJSON,actorName,actualArgs)
+                                print("launchByName after client launch")
                                 self.launchList.append([client,appName,actorName])
                                 self.log("L %s %s %s %s" % (clientName,appName,actorName,str(actualArgs)))
                             except Exception:
@@ -563,6 +589,36 @@ class Controller(object):
         self.riaps_appFolder = appFolderPath
         os.chdir(appFolderPath)
         
+    def loadAppJSON(self,appName,appFolder):
+        appjson = appName+'_app.json'
+        with open(appFolder+'/json-gen/'+appjson) as f:
+            appInfo = {appName : json.load(f)}
+            appNameKey = list(appInfo.keys())[0] # Totally unnecessary. Can use appName directly. 
+            print("loadAppJSON appInfo: %s" %appInfo)
+            print("loadAppJSON appNameKey: %s" %appNameKey)
+            self.dsml = True
+            
+            
+        if appNameKey not in self.riaps_appInfoDict:
+            self.riaps_appInfoDict[appNameKey] = dict()
+        self.riaps_appInfoDict[appNameKey]['riaps_model'] = appInfo
+        self.riaps_appInfoDict[appNameKey]['riaps_appFolder'] = appFolder
+        print("loadAppJSON appInfoDict: %s" %self.riaps_appInfoDict)
+        return appjson
+            
+    def loadDeplJSON(self,appName,appFolder):
+        depljson = appName+'_depl.json'
+        with open(appFolder+'/json-gen/'+depljson) as f:
+            depInfo = json.load(f)
+        appNameKey=appName
+        print(depInfo)
+        if appNameKey not in self.riaps_appInfoDict:
+            self.riaps_appInfoDict[appNameKey] = dict()
+        self.riaps_appInfoDict[appNameKey]['riaps_depl'] = depInfo
+        print("loadDeplJSON appInfoDict: %s" %self.riaps_appInfoDict)        
+        return depljson
+
+        
     def compileApplication(self,appName,appFolder):
         '''
         Compile an application model (create both the JSON file and the data structure)
@@ -595,6 +651,7 @@ class Controller(object):
                 return None
 
             appNameKey = depInfo.appName
+            print(depInfo)
             if appNameKey not in self.riaps_appInfoDict:
                 self.riaps_appInfoDict[appNameKey] = dict()
             self.riaps_appInfoDict[appNameKey]['riaps_depl'] = depInfo

@@ -46,7 +46,7 @@ class DeploService(object):
         self.logger.info("Starting with apps in %s" % self.riapsApps)
         self.disco = None
         self.devm = None
-        self.resm = ResourceManager()
+        #self.resm = ResourceManager()
         self.appModels = { }    # App models loaded
         
         self.riaps_actor_file = 'riaps_actor'       # Default name for the executable riaps actor shell
@@ -174,16 +174,16 @@ class DeploService(object):
         
         # Load the app model
         self.loadModel(appName,appModelPath)
-        self.resm.startApp(appName)
+        #self.resm.startApp(appName)
         
     def cleanupApp(self,appName):
         del self.appModels[appName]
-        self.resm.cleanupApp(appName)
+        #self.resm.cleanupApp(appName)
     
     def cleanupApps(self):
         for k in self.appModels.keys():
             del self.appModels[k]
-        self.resm.cleanupApps()
+        #self.resm.cleanupApps()
 
     def loadModel(self,appName,modelFileName):
         try:
@@ -265,7 +265,8 @@ class DeploService(object):
                     raise BuildError('Implementation of component %s is missing' % componentType)
             riaps_prog = riaps_cc_prog
 
-        self.resm.addActor(appName, actorName, self.getActorModel(appName, actorName))
+        
+        #self.resm.addActor(appName, actorName, self.getActorModel(appName, actorName))
         riaps_mod = self.riaps_actor_file   #  File name for python script 'riaps_actor.py'
         
         riaps_arg1 = appName
@@ -293,7 +294,7 @@ class DeploService(object):
             rc = None
         if rc != None:
             raise BuildError("Actor failed to start: %s.%s " % (appName,actorName))
-        self.resm.startActor(appName, actorName, proc)
+        #self.resm.startActor(appName, actorName, proc)
         key = str(appName) + "." + str(actorName)
         # ADD HERE: build comm channel to the actor for control purposes
         self.launchMap[key] = proc
@@ -332,7 +333,7 @@ class DeploService(object):
         if key in self.launchMap:
             proc = self.launchMap[key]
             self.logger.info("halting %s" % key)
-            self.resm.stopActor(appName, actorName, proc)
+            #self.resm.stopActor(appName, actorName, proc)
             proc.terminate()                             # Should check for errors
             while True:
                 try:
@@ -435,7 +436,7 @@ class DeploService(object):
             self.haltActor(appName, actorName)
         time.sleep(1.0) # Allow actors terminate cleanly
         # Cleanup resm 
-        self.resm.cleanupApps()
+        #self.resm.cleanupApps()
         # Kill devm
         if self.devm != None:
             self.devm.terminate()

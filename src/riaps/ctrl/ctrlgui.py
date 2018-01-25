@@ -168,7 +168,7 @@ class ControlGUIClient(object):
         folderName = None
         if self.response == Gtk.ResponseType.OK:
             folderName = self.fcd.get_filename()
-        self.fcd.destroy()
+        self.fcd.destroy()        
         return folderName
 
     def isAppOK(self):
@@ -221,6 +221,16 @@ class ControlGUIClient(object):
         if folderName != None:
             self.folderEntry.set_text(folderName)
             self.controller.setAppFolder(folderName)
+        
+        if (os.path.exists(self.folderEntry.get_text()+"/json-gen")) :
+                appName = os.path.basename(folderName)
+                appFolder = self.folderEntry.get_text()
+                appjson = self.controller.loadAppJSON(appName, appFolder)
+                self.appNameEntry.set_text(appjson)
+                
+                self.appToLoad = appName
+                depljson = self.controller.loadDeplJSON(appName, appFolder)
+                self.deplNameEntry.set_text(depljson)
 
     def on_Quit(self, *args):
         '''
@@ -429,6 +439,7 @@ class ControlGUIClient(object):
         Load the selected application onto to the network
         '''
         # add a row in the table for the application
+        print("on_LoadApplication %s" %self.appToLoad)
         if self.appToLoad is None:
             return
 
