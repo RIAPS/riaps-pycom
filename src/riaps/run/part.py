@@ -269,6 +269,17 @@ class Part(object):
             pass
         else:
             pass
+    
+    def handleSpcLimit(self):
+        self.logger.info("handleSpcLimit - %s:%s" % (self.name,self.typeName))
+        msg = ("limitSpc",)
+        # print(msg)
+        self.control.send_pyobj(msg)        # Relay message to component thread
+        rep = self.control.recv_pyobj()     # Wait for an OK response
+        if rep == "ok" :
+            pass
+        else:
+            pass
         
     def terminate(self):
         self.logger.info("terminating")

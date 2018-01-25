@@ -358,6 +358,7 @@ class Actor(object):
         Handle the case when the CPU limit is exceeded: notify each component.
         If the component has defined a handler, it will be called.   
         ''' 
+        self.logger.info("handleCPULimit")
         for component in self.components.values():
             component.handleCPULimit()
             
@@ -366,9 +367,19 @@ class Actor(object):
         Handle the case when the memory limit is exceeded: notify each component.
         If the component has defined a handler, it will be called.   
         ''' 
+        self.logger.info("handleMemLimit")
         for component in self.components.values():
             component.handleMemLimit()
-    
+            
+    def handleSpcLimit(self):
+        '''
+        Handle the case when the file space limit is exceeded: notify each component.
+        If the component has defined a handler, it will be called.   
+        ''' 
+        self.logger.info("handleSpcLimit")
+        for component in self.components.values():
+            component.handleSpcLimit()
+            
     def terminate(self):
         self.logger.info("terminating")
         for component in self.components.values():

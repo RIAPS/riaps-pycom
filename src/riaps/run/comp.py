@@ -85,6 +85,10 @@ class ComponentThread(threading.Thread):
                 self.logger.info("limitMem")
                 self.instance.handleMemLimit()
                 self.control.send_pyobj("ok")
+            elif cmd == "limitSpc":
+                self.logger.info("limitSpc")
+                self.instance.handleSpcLimit()
+                self.control.send_pyobj("ok")
             else:
                 self.logger.info("unknown command %s" % cmd)
                 pass            # Should report an error
@@ -92,7 +96,7 @@ class ComponentThread(threading.Thread):
     
     def getInfo(self):
         info = []
-        for (portName,portObj) in self.parent.ports:
+        for (_portName,portObj) in self.parent.ports:
             res = portObj.getInfo()
             info.append(res)
         return info
@@ -191,6 +195,11 @@ class Component(object):
         '''
         pass
     
-    
+    def handleSpcLimit(self):
+        ''' 
+        Default handler for space limit exceed
+        '''
+        pass
+        
 
     
