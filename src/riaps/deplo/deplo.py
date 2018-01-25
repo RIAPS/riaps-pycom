@@ -20,9 +20,13 @@ import hashlib
 from collections import namedtuple
 import psutil
 from riaps.deplo.devm import *
+from riaps.utils.config import Config
+import pwd
+from pwd import getpwnam  
 import traceback
 
 DeploAppRecord = namedtuple('DeploAppRecord', 'model hash file')
+DeploUserRecord = namedtuple('DeploUserRecord', 'name home uid gid')
 
 class DeploService(object):
     '''
@@ -42,12 +46,17 @@ class DeploService(object):
         self.bgsrv = None
         self.context = zmq.Context()
         self.launchMap = { }            # Map of launched actors
+        if os.getuid() != 0:
+            self.logger.warning("running in unprivileged mode, some functions may fail")
         self.riapsApps = os.getenv('RIAPSAPPS', './')
         self.logger.info("Starting with apps in %s" % self.riapsApps)
         self.disco = None
         self.devm = None
         self.resm = ResourceManager()
         self.appModels = { }    # App models loaded
+        self.users = { }        # 
+        self.setupUser(Config.TARGET_USER)
+        self.appUser = { }
         
         self.riaps_actor_file = 'riaps_actor'       # Default name for the executable riaps actor shell
         try:
@@ -70,11 +79,34 @@ class DeploService(object):
 #         except:
 #             pass
 
+    def setupUser(self,user_name):
+        if user_name in self.users: return
+        pw_record = pwd.getpwnam(user_name)
+        user_record = DeploUserRecord(
+                    name = pw_record.pw_name, 
+                    home = pw_record.pw_dir, 
+                    uid = pw_record.pw_uid, 
+                    gid = pw_record.pw_gid)
+        self.users[user_name] = user_record
+        
+    def delUser(self,user_name):
+        if user_name not in self.users: return
+        del self.users[user_name]
+    
+    def makeUserEnv(self,user_name):
+        user_env = os.environ.copy()
+        user_record = self.users[user_name]
+        user_env[ 'HOME'     ]  = user_record.home
+        user_env[ 'LOGNAME'  ]  = user_record.name
+        user_env[ 'PWD'      ]  = os.getcwd()
+        user_env[ 'USER'     ]  = user_record.name
+        return user_env
+
     def setupIfaces(self):
         '''
         Find the IP addresses of the (host-)local and network(-global) interfaces
         '''
-        (globalIPs,globalMACs,localIP) = getNetworkInterfaces()
+        (globalIPs,globalMACs,_localIP) = getNetworkInterfaces()
         try:
             assert len(globalIPs) > 0 and len(globalMACs) > 0
         except:
@@ -119,6 +151,13 @@ class DeploService(object):
         else:
             pass    # Ignore any other response
             return False
+    
+    @staticmethod
+    def demote(user_uid,user_gid):
+        def result():
+            os.setgid(user_gid)
+            os.setuid(user_uid)
+        return result
         
     def startDisco(self):
         '''
@@ -129,13 +168,22 @@ class DeploService(object):
 
         disco_arg1 = '--database'
         disco_arg2 = '%s:%s' % (self.dbaseHost,self.dbasePort)
+        user_record = self.users[Config.TARGET_USER]
+        user_env = self.makeUserEnv(Config.TARGET_USER)
+        user_uid = user_record.uid
+        user_gid = user_record.gid
+        user_cwd = os.getcwd()
         command = [disco_prog,disco_arg1,disco_arg2]
         try: 
-            self.disco = subprocess.Popen(command)
+            self.disco = psutil.Popen(command,
+                                      preexec_fn=self.demote(user_uid, user_gid), 
+                                      cwd=user_cwd, env=user_env)
         except FileNotFoundError:
             try:
                 command = ['python3',disco_mod] + command[1:]
-                self.disco = subprocess.Popen(command)
+                self.disco = psutil.Popen(command,
+                                          preexec_fn=DeploService.demote(user_uid, user_gid), 
+                                          cwd=user_cwd, env=user_env)
             except:
                 self.logger.error("Error while starting disco: %s" % sys.exc_info()[0])
                 raise
@@ -174,11 +222,17 @@ class DeploService(object):
         
         # Load the app model
         self.loadModel(appName,appModelPath)
-        self.resm.startApp(appName)
+        userName = appName.lower()
+        self.appUser[appName] = userName
+        self.resm.setupApp(appName,appFolder,userName)  # Adds user 
+        self.setupUser(userName)
         
     def cleanupApp(self,appName):
         del self.appModels[appName]
         self.resm.cleanupApp(appName)
+        userName = self.appUser[appName]
+        del self.appUser[appName]
+        self.delUser(userName)
     
     def cleanupApps(self):
         for k in self.appModels.keys():
@@ -195,7 +249,7 @@ class DeploService(object):
             self.logger.error("Unexpected error:", sys.exc_info()[0])
             raise
         # Check if the app model is already loaded
-        fileHash = 0
+        _fileHash = 0
         fileData = fp.read()
         fileHash = hashlib.md5(fileData).digest()
         fp.close()
@@ -267,6 +321,13 @@ class DeploService(object):
 
         self.resm.addActor(appName, actorName, self.getActorModel(appName, actorName))
         riaps_mod = self.riaps_actor_file   #  File name for python script 'riaps_actor.py'
+    
+        userName = self.appUser[appName]
+        user_record = self.users[userName]
+        user_env = self.makeUserEnv(userName)
+        user_uid = user_record.uid
+        user_gid = user_record.gid
+        user_cwd = appFolder
         
         riaps_arg1 = appName
         riaps_arg2 = appModelPath
@@ -276,14 +337,18 @@ class DeploService(object):
             command.append(arg)
         self.logger.info("Launching %s " % str(command))
         try:
-            proc = psutil.Popen(command,cwd=appFolder)
-        except FileNotFoundError:
+            proc = psutil.Popen(command,
+                                preexec_fn=self.demote(user_uid, user_gid), 
+                                cwd=user_cwd, env=user_env)
+        except (FileNotFoundError,PermissionError):
             try:
                 if isPython:
                     command = ['python3',riaps_mod] + command[1:]
                 else:
                     command = [riaps_prog] + command[1:]
-                proc = psutil.Popen(command,cwd=appFolder)
+                proc = psutil.Popen(command,
+                                    preexec_fn=self.demote(user_uid, user_gid), 
+                                    cwd=user_cwd, env=user_env)
             except:
                 self.logger.error("Error while starting actor: %s -- %s" % (command,sys.exc_info()[0]))
                 raise

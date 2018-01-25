@@ -38,6 +38,7 @@ def main(debug=True):
     except: 
         print ("Unexpected error:", sys.exc_info()[0])
         raise
+
     sys.path.append(os.getcwd())   # Ensure load_module works from current directory
     global conf
     conf = Config()

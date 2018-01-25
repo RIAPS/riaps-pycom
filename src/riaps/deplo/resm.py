@@ -1,8 +1,11 @@
 '''
+Resource manager 
+
 Created on Nov 23, 2017
 
 @author: riaps
 '''
+
 from cgroupspy import trees
 import os
 import stat
@@ -11,120 +14,16 @@ import signal
 import subprocess
 import psutil
 import threading
+from threading import RLock
 import logging
 from riaps.run.exc import *
+from riaps.utils.sudo import riaps_sudo
+from riaps.utils.config import Config
 from butter.eventfd import Eventfd
 import traceback
+from pwd import getpwnam  
+from riaps.deplo.resmon import CPUMonitorThread,MemMonitorThread,SpcMonitorThread
 
-class CPUMonitorThread(threading.Thread):
-    '''
-    Thread for monitoring an actor and enforcing resource limits.
-    '''
-    def __init__(self,interval,usage):
-        threading.Thread.__init__(self)
-        self.logger = logging.getLogger(__name__)
-        self.interval = interval    # sec
-        self.usage = usage          # % INT
-        self.terminated = threading.Event() # Set when the monitor is to be terminated
-        self.terminated.clear()
-        self.running = threading.Event()    # Cleared when the monitor is not to run
-        self.running.set()
-        self.stopped = threading.Event()    # Set if the monitor is stoppped
-        self.stopped.clear()
-        self.alive = False
-    
-    def setup(self,proc):
-        self.proc = proc
-        self.mon = psutil.Process(proc.pid)
-    
-    def is_running(self):
-        return self.alive
-    
-    def restart(self):
-        self.stopped.clear()
-        self.running.set()
-
-    def run(self):
-        self.alive = True
-        current = self.mon.cpu_percent(self.interval)
-        time.sleep(0.001)
-        while True:
-            if not self.running.is_set():
-                self.stopped.set()
-                self.running.wait()                    
-            if self.terminated.is_set(): break
-            current = self.mon.cpu_percent(self.interval)
-            if self.terminated.is_set(): break
-            if current == 0: continue
-            self.logger.info("SIGXCPU to [%d]? %d > %d in %f" % (self.proc.pid,current,self.usage,self.interval))
-            if current > self.usage:
-                # print ("SIGXCPU sent")
-                self.proc.send_signal(signal.SIGXCPU)
-                time.sleep(1.0)
-                # self.mon = psutil.Process(self.proc.pid)
-                # current = self.mon.cpu_percent(self.interval)           
-        
-    def stop(self):
-        self.running.clear()
-        self.stopped.wait()
-        
-    def terminate(self):
-        self.terminated.set()
-    
-class MemMonitorThread(threading.Thread):
-    def __init__(self,efd,usage):
-        threading.Thread.__init__(self)
-        self.logger = logging.getLogger(__name__)
-        self.efd = efd
-        self.usage = usage
-        self.terminated = threading.Event() # Set when the monitor is to be terminated
-        self.terminated.clear()
-        self.running = threading.Event()    # Cleared when the monitor is not to run
-        self.running.set()
-        self.stopped = threading.Event()    # Set if the monitor is stoppped
-        self.stopped.clear()
-        self.alive = False
-    
-    def setup(self,proc):
-        self.proc = proc
-
-    def is_running(self):
-        return self.alive
-    
-    def restart(self):
-        self.stopped.clear()
-        self.running.set()
-
-    def run(self):
-        self.alive = True
-        self.logger.info("MemMonitor:%d at %d" % (self.proc.pid,self.efd.fileno()))
-        time.sleep(0.001)
-        try:
-            while True:
-                if not self.running.is_set():
-                    self.stopped.set()
-                    self.running.wait()
-                if self.terminated.is_set(): break
-                # current = os.read(self.efd.fileno(),8) # .read_event()
-                current = self.efd._read_events()
-                if not self.running.is_set(): continue
-                if self.terminated.is_set(): break
-                self.logger.info("MemMonitor[%d] mem limit %d exceeded - %s" % (self.proc.pid,self.usage,str(current)))
-                self.logger.info('SIGUSR1 to [%d]' % (self.proc.pid))
-                self.proc.send_signal(signal.SIGUSR1)
-                time.sleep(1.0)   
-        except:
-            traceback.print_exc()      
-        
-    def stop(self):
-        self.running.clear()
-        self.efd.increment()
-        self.stopped.wait()
-        
-    def terminate(self):
-        self.terminated.set() 
-        self.efd.increment()        
-        
 class ActorResourceManager(object):
     '''
     Resource manager for an actor
@@ -154,6 +53,9 @@ class ActorResourceManager(object):
         # Setup resource monitors
         self.hasCPU = self.setupCPU()
         self.hasMem = self.setupMem()
+        self.hasSpace = self.setupSpace()
+        if self.hasSpace:
+            self.parent.addQuota(self.spcUsage)
         # TODO: Add other resource monitors
         self.started = False
     
@@ -218,6 +120,17 @@ class ActorResourceManager(object):
         else:
             return False
 
+    def setupSpace(self):
+        if 'spc' not in self.settings: return False
+        self.spcSettings = self.settings['spc']
+        try:
+            self.spcUsage = self.spcSettings['use']
+            return True
+        except KeyError:
+            self.spcUsage = 0       # No space quota
+            return False
+        
+    
     def startActor(self,proc):
         # Setup CPU resource monitor
         if self.hasCPU:
@@ -240,7 +153,7 @@ class ActorResourceManager(object):
         self.started = True
 
     
-    def stopActor(self,proc):
+    def stopActor(self,_proc):
         # Stop CPU resource monitor
         if not self.started: return
         if self.hasCPU:
@@ -284,10 +197,12 @@ class AppResourceManager(object):
     '''
     Resource manager for an app
     '''
-    def __init__(self,parent,appName):
+    def __init__(self,parent,appName,appFolder,userName):
         self.logger = logging.getLogger(__name__)
         self.parent = parent
         self.appName = appName
+        self.userName = userName
+        self.appFolder = appFolder
         self.actors = { }
         self.cgroupTree = parent.cgroupTree
         self.cpuCGroup = None
@@ -304,7 +219,33 @@ class AppResourceManager(object):
             memNode = self.parent.cgroupTree.get_node_by_path(memPath)
             self.memCGroup = memNode if (memNode != None) else self.parent.riapsMem.create_cgroup(self.appName)
         # TODO: Add other cgroup types
-    
+        # Set up the data space for the actor
+        try:
+            _res = riaps_sudo('adduser --disabled-login --gecos GECOS --no-create-home %s' % self.userName)
+            self.uid = getpwnam(self.userName).pw_uid
+            _res = riaps_sudo('chown -R %s:%s %s' % (self.userName,self.userName,self.appFolder))
+            _res = riaps_sudo('chmod o-rwx %s' % self.appFolder)
+        except:
+            traceback.print_exc()
+            self.logger.warning('creating app user %s failed' % (self.userName))
+            self.uid = os.getuid()
+        self.spcUsage = 0
+        
+    def addQuota(self,usage):
+        self.spcUsage += usage
+        if self.spcUsage != 0:
+            # Assume here that the spcUsage value is in 1024 byte blocks
+            try:
+                softblock = int(0.9 * self.spcUsage)
+                hardblock = self.spcUsage
+                softinode = 100000
+                hardinode = 100000
+                command = 'setquota -u %s %d %d %d %d /' % (self.userName,softblock,hardblock,softinode,hardinode)
+                self.logger.info('exec: %s' % command)
+                _res = riaps_sudo(command)
+            except:
+                self.logger.warning('setting quota failed')
+        
     def addActor(self,actorName,actorDef):
         if actorName in self.actors:
             return
@@ -317,12 +258,14 @@ class AppResourceManager(object):
             raise SetupError("actor '%s' is unknown" % (actorName))
         else:
             self.actors[actorName].startActor(proc)
+            self.parent.spcMonitor.addProc(proc)
             
     def stopActor(self,actorName,proc):
         if actorName not in self.actors:
             raise SetupError("actor '%s' is unknown" % (actorName))
         else:
             self.actors[actorName].stopActor(proc)
+            self.parent.spcMonitor.delProc(proc)
     
     def cleanupApp(self):
         for actor in self.actors.values():
@@ -335,6 +278,13 @@ class AppResourceManager(object):
             self.memCGroup.delete_empty_children()
             self.parent.riapsMem.delete_cgroup(self.appName)
         # TODO: Delete other cgroup types
+        try:
+            _res = riaps_sudo('deluser %s' % self.userName)
+            riaps_user = Config.TARGET_USER
+            _res = riaps_sudo('chown -R %s:%s %s' % (riaps_user,riaps_user,self.appFolder))
+        except:
+            traceback.print_exc()
+            pass
             
 
 class ResourceManager(object):
@@ -343,24 +293,31 @@ class ResourceManager(object):
     '''
     def __init__(self):
         self.logger = logging.getLogger(__name__)
+        self.appID = 1      # App ID counter
         # Map of apps
         self.appMap = { } 
         # Cgroups
         self.cgroupTree = trees.Tree()
+        if self.cgroupTree.get_node_by_path('/cpu/riaps/') == None:
+            self.logger.info("attempting to create cgroup 'riaps'")
+            _res = riaps_sudo('user_cgroups %s' % (Config.TARGET_USER))
+            self.cgroupTree = trees.Tree()      
         self.riapsCPU = self.cgroupTree.get_node_by_path('/cpu/riaps/')     # CPU scheduling
         self.riapsMem = self.cgroupTree.get_node_by_path('/memory/riaps/')  # Memory usage
         # TODO: Add other cgroup types
         self.hasCGroup = (self.riapsCPU is not None) and (self.riapsMem is not None)
         if not self.hasCGroup:
-            self.logger.warning("cgroup 'riaps' missing - limited resource management. To fix: 'sudo user_cgroups riaps'")
-        #
-
-    def startApp(self,appName):
+            self.logger.warning("cgroup 'riaps' missing - limited resource management.")
+        # File space is handled through the quota system
+        self.spcMonitor = SpcMonitorThread()
+        self.spcMonitor.start()
+    
+    def setupApp(self,appName,appFolder,userName):
         '''
         Start an app: create an app resource manager for this app if it has not been created yet
         '''
         if appName not in self.appMap:
-            self.appMap[appName] = AppResourceManager(self,appName)
+            self.appMap[appName] = AppResourceManager(self,appName,appFolder,userName)
         else:
             pass
         # print(self.appMap)

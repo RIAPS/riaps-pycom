@@ -154,14 +154,14 @@ class DevmService(threading.Thread):
         self.logger.info("Launching %s " % str(command))
                 
         try:
-            proc = psutil.Popen(command,cwd=appFolder)
+            proc = subprocess.Popen(command,cwd=appFolder)
         except FileNotFoundError:
             try:
                 if isPython: 
                     command = ['python3',riaps_mod] + command[1:]
                 else:
                     command = [riaps_prog] + command[1:]
-                proc = psutil.Popen(command,cwd=appFolder)
+                proc = subprocess.Popen(command,cwd=appFolder)
             except:
                 raise BuildError("Error while starting device: %s" % sys.exc_info()[1])
         rc = proc.poll()
