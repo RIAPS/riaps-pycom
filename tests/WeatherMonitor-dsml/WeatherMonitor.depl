@@ -1,0 +1,10 @@
+// Deploy on all BBB
+nodeType BBB{
+	mem 16 MB
+	space 200 MB
+}
+
+app WeatherMonitor {
+	on all BBB WeatherIndicator
+	on all BBB WeatherReceiver
+}
