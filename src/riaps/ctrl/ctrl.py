@@ -243,14 +243,14 @@ class Controller(object):
             hostKey= self.hostKeys[hostName][hostKeyType]
             self.logger.info('Using host key of type %s' % hostKeyType)
             
-        print("self.dsml %s" %self.dsml)
+        self.logger.info("self.dsml %s" %self.dsml)
         if self.dsml is True:
-            appFolder = self.riaps_appInfoDict[appName]['riaps_appFolder']+'/dp/'+appName
+            appFolder = self.riaps_appInfoDict[appName]['riaps_appFolder']+'/'+appName
         else:
             appFolder = self.riaps_appInfoDict[appName]['riaps_appFolder']
 
         
-        print('downloadAppToClient appFolder : %s' %appFolder)
+        self.logger.info('appFolder : %s' %appFolder)
         try:
             port = const.ctrlSSHPort
             self.logger.info ('Establishing SSH connection to: %s:%s' % (str(hostName),str(port)))
@@ -271,7 +271,7 @@ class Controller(object):
             sftpClient.mkdir(dirRemote,ignore_existing=True)
 
             for fileName in files:
-                print('downloadAppToClient fileName : %s' %fileName)
+                self.logger.info('downloadAppToClient fileName : %s' %fileName)
                 isUptodate = False
                 #localFile = os.path.join(self.riaps_appFolder,fileName)
                 localFile = os.path.join(appFolder, fileName)
@@ -356,12 +356,11 @@ class Controller(object):
     def buildDownload(self, appName):
         noresult = ([],[],[],[])
         download = []
-        print("buildDownload")
         if appName not in self.riaps_appInfoDict:
             return noresult
         appInfoDict = self.riaps_appInfoDict[appName]
         appNameJSON = appName + ".json"
-        print("buildDownload appInfoDict %s" %appInfoDict)
+        self.logger.info("appInfoDict %s" %appInfoDict)
         
         if ('riaps_model' not in appInfoDict) or ('riaps_depl' not in appInfoDict):
             self.log("Error: Mismatched model or deployment for app '%s'" % appName)
@@ -373,7 +372,7 @@ class Controller(object):
         else:
             download.append(appNameJSON)
         appObj = appInfoDict['riaps_model'][appName]
-        print("buildDownload appObj %s" %appObj)
+        self.logger.info("appObj %s" %appObj)
         
         if type(appInfoDict['riaps_depl']) is list:
             depls = appInfoDict['riaps_depl']
@@ -382,7 +381,7 @@ class Controller(object):
             depls = appInfoDict['riaps_depl'].getDeployments()
             self.prefix = ''
             
-        print("buildDownload depls: %s" %depls)
+        self.logger.info("depls: %s" %depls)
         # Check the all actors are present in the model
         for depl in depls:
             actors = depl['actors']
@@ -443,7 +442,6 @@ class Controller(object):
         Launch an app. The model of the app is in self.riaps_model, and the corresponding deployment
         is in self.riaps_depl.
         '''
-        print("launchByName")
         download,libraries,clients,depls = self.buildDownload(appName)
         #
         if download == []:
@@ -458,21 +456,21 @@ class Controller(object):
         for depl in depls:
             targets = depl['target']
             actors = depl['actors']
-            print("launchByName targets: %s" %targets)
+            self.logger.info("targets: %s" %targets)
             with ctrlLock:
                 if targets == []:
                     for clientName in self.clientMap:
                         client = self.clientMap[clientName]
-                        print("launchByName client %s" %client)
+                        self.logger.info("client %s" %client)
                         client.setupApp(appName,appNameJSON)
                         for actor in actors:
                             actorName = actor["name"]
                             actuals = actor["actuals"]
                             actualArgs = self.buildArgs(actuals)
                             try:
-                                print("launchByName before client launch")
+                                self.logger.info("before client launch")
                                 client.launch(appName,appNameJSON,actorName,actualArgs)
-                                print("launchByName after client launch")
+                                self.logger.info("after client launch")
                                 self.launchList.append([client,appName,actorName])
                                 self.log("L %s %s %s %s" % (clientName,appName,actorName,str(actualArgs)))
                             except Exception:
@@ -590,12 +588,12 @@ class Controller(object):
         os.chdir(appFolderPath)
         
     def loadAppJSON(self,appName,appFolder):
-        appjson = appName+'_app.json'
-        with open(appFolder+'/json-gen/'+appjson) as f:
+        appjson = appName+'.json'
+        with open(appFolder+'/'+appName+'/'+appjson) as f:
             appInfo = {appName : json.load(f)}
             appNameKey = list(appInfo.keys())[0] # Totally unnecessary. Can use appName directly. 
-            print("loadAppJSON appInfo: %s" %appInfo)
-            print("loadAppJSON appNameKey: %s" %appNameKey)
+            self.logger.info("appInfo: %s" %appInfo)
+            self.logger.info("appNameKey: %s" %appNameKey)
             self.dsml = True
             
             
@@ -603,19 +601,19 @@ class Controller(object):
             self.riaps_appInfoDict[appNameKey] = dict()
         self.riaps_appInfoDict[appNameKey]['riaps_model'] = appInfo
         self.riaps_appInfoDict[appNameKey]['riaps_appFolder'] = appFolder
-        print("loadAppJSON appInfoDict: %s" %self.riaps_appInfoDict)
+        self.logger.info("appInfoDict: %s" %self.riaps_appInfoDict)
         return appjson
             
     def loadDeplJSON(self,appName,appFolder):
         depljson = appName+'_depl.json'
-        with open(appFolder+'/json-gen/'+depljson) as f:
+        with open(appFolder+'/'+appName+'/'+depljson) as f:
             depInfo = json.load(f)
         appNameKey=appName
-        print(depInfo)
+        self.logger.info(depInfo)
         if appNameKey not in self.riaps_appInfoDict:
             self.riaps_appInfoDict[appNameKey] = dict()
         self.riaps_appInfoDict[appNameKey]['riaps_depl'] = depInfo
-        print("loadDeplJSON appInfoDict: %s" %self.riaps_appInfoDict)        
+        self.logger.info("appInfoDict: %s" %self.riaps_appInfoDict)        
         return depljson
 
         
@@ -651,11 +649,10 @@ class Controller(object):
                 return None
 
             appNameKey = depInfo.appName
-            print(depInfo)
+            self.logger.info(depInfo)
             if appNameKey not in self.riaps_appInfoDict:
                 self.riaps_appInfoDict[appNameKey] = dict()
             self.riaps_appInfoDict[appNameKey]['riaps_depl'] = depInfo
-            #print(self.riaps_appInfoDict)
             return appNameKey
         except Exception as e:
             self.log("Error in compiling depl '%s':\n%s" % (depName,e.args[0]))
