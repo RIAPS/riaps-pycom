@@ -98,13 +98,17 @@ class DeploService(object):
         '''
         while True:
             try:
+                self.logger.info("try to login with rpyc service registry %s" %const.ctrlServiceName)
                 self.conn = rpyc.connect_by_service(const.ctrlServiceName)
                 break
             except:
+                self.logger.warning(" failed to login with rpyc service registry %s" %const.ctrlServiceName)
                 try:  
+                    self.logger.info("try to connect to rpyc with hostname/port %s/%s" %(self.ctrlrHost, self.ctrlrPort))
                     self.conn = rpyc.connect(self.ctrlrHost,self.ctrlrPort)
                     break
                 except:
+                    self.logger.warning("Failed to connect to rpyc with hostname/port %s/%s" %(self.ctrlrHost, self.ctrlrPort))                
                     if retry == False:
                         return False
                     time.sleep(5)
@@ -281,7 +285,13 @@ class DeploService(object):
             command.append(arg)
         self.logger.info("Launching %s " % str(command))
         try:
-            proc = psutil.Popen(command,cwd=appFolder)
+            self.logger.warning("appFolder %s" %str(appFolder))
+            self.logger.warning("cwd %s" %os.getcwd())
+            os.makedirs(os.path.dirname(appFolder+"/logs/"), exist_ok=True)
+            with open(appFolder+"/logs/"+actorName+".txt","w") as out:
+                out.write('some text, as header of the file\n')
+                out.flush()  # <-- here's something not to forget!
+                proc = psutil.Popen(command,cwd=appFolder, stdout=out,stderr=out, universal_newlines = True)
         except FileNotFoundError:
             try:
                 if isPython:

@@ -376,10 +376,8 @@ class Controller(object):
         
         if type(appInfoDict['riaps_depl']) is list:
             depls = appInfoDict['riaps_depl']
-            self.prefix = 'dp/'+appName+'/'
         else:
             depls = appInfoDict['riaps_depl'].getDeployments()
-            self.prefix = ''
             
         self.logger.info("depls: %s" %depls)
         # Check the all actors are present in the model
@@ -394,7 +392,8 @@ class Controller(object):
         for component in appObj["components"]:
             pyComponentFile = str(component) + ".py"
             ccComponentFile = "lib" + str(component).lower() + ".so"
-            if os.path.isfile(self.prefix+pyComponentFile):
+            self.logger.warning("path %s" %os.getcwd())
+            if os.path.isfile(pyComponentFile):
                 download.append(pyComponentFile)
             if os.path.isfile(ccComponentFile):
                 download.append(ccComponentFile)
