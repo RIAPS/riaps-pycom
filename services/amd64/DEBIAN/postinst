@@ -1,4 +1,3 @@
 systemctl daemon-reload
-systemctl disable riaps-disco.service 
 systemctl disable riaps-deplo.service 
 
