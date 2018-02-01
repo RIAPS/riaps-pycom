@@ -288,7 +288,7 @@ class DeploService(object):
             self.logger.warning("appFolder %s" %str(appFolder))
             self.logger.warning("cwd %s" %os.getcwd())
             os.makedirs(os.path.dirname(appFolder+"/logs/"), exist_ok=True)
-            with open(appFolder+"/logs/"+actorName+".txt","w") as out:
+            with open(appFolder+"/logs/"+actorName+".txt","wa") as out:
                 out.write('some text, as header of the file\n')
                 out.flush()  # <-- here's something not to forget!
                 proc = psutil.Popen(command,cwd=appFolder, stdout=out,stderr=out, universal_newlines = True)
@@ -353,7 +353,12 @@ class DeploService(object):
         if key in self.launchMap:
             proc = self.launchMap[key]
             self.logger.info("halting %s" % key)
-            self.resm.stopActor(appName, actorName, proc)
+            try:
+                self.resm.stopActor(appName, actorName, proc)
+            except AttributeError as e:
+                self.logger.error(e)
+                self.logger.error("Resource manager failed to launch. JSON needs updating")
+            
             proc.terminate()                             # Should check for errors
             while True:
                 try:
@@ -424,13 +429,7 @@ class DeploService(object):
             elif cmd == "halt":
                 appName = msg[1]
                 actorName = msg[2]
-                try:
-                    self.haltActor(appName,actorName)
-                except AttributeError as e:
-                    self.logger.error(e)         
-                    self.logger.error("Resource manager failed to launch. JSON needs updating")
-                    
-                    
+                self.haltActor(appName,actorName)                   
                     
             elif cmd == "setupApp":
                 appName = msg[1]
