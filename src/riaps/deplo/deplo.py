@@ -178,15 +178,14 @@ class DeploService(object):
         
         # Load the app model
         self.loadModel(appName,appModelPath)
+        
+        #The startApp and cleanupApp do not depend on the json 
         self.resm.startApp(appName)
         
     def cleanupApp(self,appName):
         del self.appModels[appName]
-        try:
-            self.resm.cleanupApp(appName)
-        except AttributeError as e:
-            self.logger.error(e)
-            self.logger.error("cleanupApp failed.")
+        #The startApp and cleanupApp do not depend on the json 
+        self.resm.cleanupApp(appName)
     
     def cleanupApps(self):
         for k in self.appModels.keys():
@@ -273,9 +272,22 @@ class DeploService(object):
                     raise BuildError('Implementation of component %s is missing' % componentType)
             riaps_prog = riaps_cc_prog
 
+
+        #This around resm.addActor is a measure to handle the fact that the 
+        # dsml generated json does not have the "usage" key. 
+        # self.RM is used to either enable or disable the resource manager commands. 
+        ActorModel = self.getActorModel(appName, actorName)
+        if "usage" in ActorModel:
+            print("can create resource manager")
+            self.RM = True
+        else:
+            print("don't create resource manager")
+            self.RM = False
         
-        self.resm.addActor(appName, actorName, self.getActorModel(appName, actorName))
+        if self.RM:
+            self.resm.addActor(appName, actorName, self.getActorModel(appName, actorName))
         riaps_mod = self.riaps_actor_file   #  File name for python script 'riaps_actor.py'
+        #---------------------------------------------------------------------------------
         
         riaps_arg1 = appName
         riaps_arg2 = appModelPath
@@ -288,7 +300,7 @@ class DeploService(object):
             self.logger.warning("appFolder %s" %str(appFolder))
             self.logger.warning("cwd %s" %os.getcwd())
             os.makedirs(os.path.dirname(appFolder+"/logs/"), exist_ok=True)
-            with open(appFolder+"/logs/"+actorName+".txt","wa") as out:
+            with open(appFolder+"/logs/"+actorName+".txt","w") as out:
                 out.write('some text, as header of the file\n')
                 out.flush()  # <-- here's something not to forget!
                 proc = psutil.Popen(command,cwd=appFolder, stdout=out,stderr=out, universal_newlines = True)
@@ -309,11 +321,9 @@ class DeploService(object):
         if rc != None:
             raise BuildError("Actor failed to start: %s.%s " % (appName,actorName))
         
-        try:
+        if self.RM:
             self.resm.startActor(appName, actorName, proc)
-        except AttributeError as e:
-            self.logger.error(e)            
-            self.logger.error("Resource manager failed to launch. JSON needs updating")
+        
         
         key = str(appName) + "." + str(actorName)
         # ADD HERE: build comm channel to the actor for control purposes
@@ -353,11 +363,8 @@ class DeploService(object):
         if key in self.launchMap:
             proc = self.launchMap[key]
             self.logger.info("halting %s" % key)
-            try:
+            if self.RM:
                 self.resm.stopActor(appName, actorName, proc)
-            except AttributeError as e:
-                self.logger.error(e)
-                self.logger.error("Resource manager failed to launch. JSON needs updating")
             
             proc.terminate()                             # Should check for errors
             while True:
@@ -462,7 +469,8 @@ class DeploService(object):
             self.haltActor(appName, actorName)
         time.sleep(1.0) # Allow actors terminate cleanly
         # Cleanup resm 
-        self.resm.cleanupApps()
+        if self.RM:
+            self.resm.cleanupApps()
         # Kill devm
         if self.devm != None:
             self.devm.terminate()
