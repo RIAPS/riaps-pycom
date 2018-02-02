@@ -194,7 +194,8 @@ class ControlGUIClient(object):
                 tar = tarfile.open(fileName)
                 tar.extractall(path=appFolder)
                 #appName = os.path.basename(fileName) # with .tar.gz
-                appName = (tar.getnames()[0]).split('/')[1]
+                self.logger.warning("tar.getnames : %s" %tar.getnames()[0])
+                appName = (tar.getnames()[0])
                 self.appNameEntry.set_text(appName)
                 self.logger.warning("appName : %s" %appName)
                 self.dsml = True   
