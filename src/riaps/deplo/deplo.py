@@ -300,7 +300,7 @@ class DeploService(object):
             self.logger.warning("appFolder %s" %str(appFolder))
             self.logger.warning("cwd %s" %os.getcwd())
             os.makedirs(os.path.dirname(appFolder+"/logs/"), exist_ok=True)
-            with open(appFolder+"/logs/"+actorName+".txt","w") as out:
+            with open(appFolder+"/logs/"+actorName+".txt","a") as out:
                 out.write('some text, as header of the file\n')
                 out.flush()  # <-- here's something not to forget!
                 proc = psutil.Popen(command,cwd=appFolder, stdout=out,stderr=out, universal_newlines = True)
