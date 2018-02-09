@@ -48,6 +48,7 @@ class DeploService(object):
         self.devm = None
         self.resm = ResourceManager()
         self.appModels = { }    # App models loaded
+        self.RM = False
         
         self.riaps_actor_file = 'riaps_actor'       # Default name for the executable riaps actor shell
         try:
