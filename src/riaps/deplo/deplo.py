@@ -48,6 +48,7 @@ class DeploService(object):
         self.devm = None
         self.resm = ResourceManager()
         self.appModels = { }    # App models loaded
+        self.RM = False
         
         self.riaps_actor_file = 'riaps_actor'       # Default name for the executable riaps actor shell
         try:
@@ -92,19 +93,23 @@ class DeploService(object):
            
     def login(self,retry = True):
         '''
-        Log in to the controller. First try to reach the controller via the standard service registry, 
+        Log in to the controller. First  to reach the controller via the standard service registry, 
         if that fails try to access it via the supplied hostname/port arguments. If that fails, sleep a
         little and try again. 
         '''
         while True:
             try:
+                self.logger.info("try to login with rpyc service registry %s" %const.ctrlServiceName)
                 self.conn = rpyc.connect_by_service(const.ctrlServiceName)
                 break
             except:
+                self.logger.warning(" failed to login with rpyc service registry %s" %const.ctrlServiceName)
                 try:  
+                    self.logger.info("try to connect to rpyc with hostname/port %s/%s" %(self.ctrlrHost, self.ctrlrPort))
                     self.conn = rpyc.connect(self.ctrlrHost,self.ctrlrPort)
                     break
                 except:
+                    self.logger.warning("Failed to connect to rpyc with hostname/port %s/%s" %(self.ctrlrHost, self.ctrlrPort))                
                     if retry == False:
                         return False
                     time.sleep(5)
@@ -174,10 +179,13 @@ class DeploService(object):
         
         # Load the app model
         self.loadModel(appName,appModelPath)
+        
+        #The startApp and cleanupApp do not depend on the json 
         self.resm.startApp(appName)
         
     def cleanupApp(self,appName):
         del self.appModels[appName]
+        #The startApp and cleanupApp do not depend on the json 
         self.resm.cleanupApp(appName)
     
     def cleanupApps(self):
@@ -265,8 +273,22 @@ class DeploService(object):
                     raise BuildError('Implementation of component %s is missing' % componentType)
             riaps_prog = riaps_cc_prog
 
-        self.resm.addActor(appName, actorName, self.getActorModel(appName, actorName))
+
+        #This around resm.addActor is a measure to handle the fact that the 
+        # dsml generated json does not have the "usage" key. 
+        # self.RM is used to either enable or disable the resource manager commands. 
+        ActorModel = self.getActorModel(appName, actorName)
+        if "usage" in ActorModel:
+            print("can create resource manager")
+            self.RM = True
+        else:
+            print("don't create resource manager")
+            self.RM = False
+        
+        if self.RM:
+            self.resm.addActor(appName, actorName, self.getActorModel(appName, actorName))
         riaps_mod = self.riaps_actor_file   #  File name for python script 'riaps_actor.py'
+        #---------------------------------------------------------------------------------
         
         riaps_arg1 = appName
         riaps_arg2 = appModelPath
@@ -276,7 +298,13 @@ class DeploService(object):
             command.append(arg)
         self.logger.info("Launching %s " % str(command))
         try:
-            proc = psutil.Popen(command,cwd=appFolder)
+            self.logger.warning("appFolder %s" %str(appFolder))
+            self.logger.warning("cwd %s" %os.getcwd())
+            os.makedirs(os.path.dirname(appFolder+"/logs/"), exist_ok=True)
+            with open(appFolder+"/logs/"+actorName+".txt","a") as out:
+                out.write('some text, as header of the file\n')
+                out.flush()  # <-- here's something not to forget!
+                proc = psutil.Popen(command,cwd=appFolder, stdout=out,stderr=out, universal_newlines = True)
         except FileNotFoundError:
             try:
                 if isPython:
@@ -293,7 +321,11 @@ class DeploService(object):
             rc = None
         if rc != None:
             raise BuildError("Actor failed to start: %s.%s " % (appName,actorName))
-        self.resm.startActor(appName, actorName, proc)
+        
+        if self.RM:
+            self.resm.startActor(appName, actorName, proc)
+        
+        
         key = str(appName) + "." + str(actorName)
         # ADD HERE: build comm channel to the actor for control purposes
         self.launchMap[key] = proc
@@ -332,7 +364,9 @@ class DeploService(object):
         if key in self.launchMap:
             proc = self.launchMap[key]
             self.logger.info("halting %s" % key)
-            self.resm.stopActor(appName, actorName, proc)
+            if self.RM:
+                self.resm.stopActor(appName, actorName, proc)
+            
             proc.terminate()                             # Should check for errors
             while True:
                 try:
@@ -403,7 +437,8 @@ class DeploService(object):
             elif cmd == "halt":
                 appName = msg[1]
                 actorName = msg[2]
-                self.haltActor(appName,actorName)
+                self.haltActor(appName,actorName)                   
+                    
             elif cmd == "setupApp":
                 appName = msg[1]
                 appModelName = msg[2]
@@ -435,7 +470,8 @@ class DeploService(object):
             self.haltActor(appName, actorName)
         time.sleep(1.0) # Allow actors terminate cleanly
         # Cleanup resm 
-        self.resm.cleanupApps()
+        if self.RM:
+            self.resm.cleanupApps()
         # Kill devm
         if self.devm != None:
             self.devm.terminate()

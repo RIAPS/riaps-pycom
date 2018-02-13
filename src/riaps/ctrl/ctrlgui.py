@@ -13,6 +13,7 @@ from os.path import join
 from _collections import OrderedDict
 import re
 import logging
+import tarfile
 
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, GLib, Gdk
@@ -90,6 +91,7 @@ class ControlGUIClient(object):
         self.init_GridTable()
 
         self.mainWindow.show_all()
+        self.dsml = False
 
     def run(self):
         Gtk.main()
@@ -124,7 +126,7 @@ class ControlGUIClient(object):
         source = self.consoleIn.get_text()
         pass
 
-    def selectFile(self, title, pattern):
+    def selectFile(self, title, pattern, pattern2=None):
         '''
         File selection dialog
         '''
@@ -136,15 +138,17 @@ class ControlGUIClient(object):
         filterR = Gtk.FileFilter()
         filterR.set_name("%s" % pattern)
         filterR.add_pattern(pattern)
+        if (pattern2 is not None):
+            filterR.add_pattern(pattern2)
         self.fcd.add_filter(filterR)
-
+         
         filterA = Gtk.FileFilter()
         filterA.set_name("All files")
         filterA.add_pattern("*")
         self.fcd.add_filter(filterA)
-
+ 
         self.fcd.set_transient_for(self.mainWindow)
-
+ 
         self.response = self.fcd.run()
         fileName = None
         if self.response == Gtk.ResponseType.OK:
@@ -168,7 +172,7 @@ class ControlGUIClient(object):
         folderName = None
         if self.response == Gtk.ResponseType.OK:
             folderName = self.fcd.get_filename()
-        self.fcd.destroy()
+        self.fcd.destroy()        
         return folderName
 
     def isAppOK(self):
@@ -180,13 +184,41 @@ class ControlGUIClient(object):
         '''
         App selection. Sets the app entry and calls the controller to compile the app model.
         '''
-        fileName = self.selectFile("application", "*.riaps")
+        fileName = self.selectFile("application", "*.riaps", "*.gz")
         if fileName != None:
-            self.appNameEntry.set_text(os.path.basename(fileName))
-            self.controller.compileApplication(fileName, self.folderEntry.get_text())
+                        
+            if ('tar' in fileName) :
+                self.logger.warning("tarball present")
+                appFolder = self.folderEntry.get_text()+'/tar'
+                self.logger.warning("appFolder : %s"  %appFolder)
+                tar = tarfile.open(fileName)
+                tar.extractall(path=appFolder)
+                appName = os.path.basename(fileName).split('.')[0] # with .tar.gz
+                self.logger.warning("tar.getnames : %s" %tar.getnames()[0])
+                #appName = (tar.getnames()[0])
+                self.appNameEntry.set_text(appName)
+                self.logger.warning("appName : %s" %appName)
+                self.dsml = True   
+                self.appToLoad = appName # used by deploy button
+                appjson = self.controller.loadAppJSON(appName, appFolder)
+                depljson = self.controller.loadDeplJSON(appName, appFolder)
+                # WeatherMonitor.depl or WeatherMonitor_depl.json
+                self.deplNameEntry.set_text(depljson.split('.')[0])
+                #self.deplNameEntry.set_text(depljson)
+                self.logger.warning("depljson %s" %depljson)
+                self.controller.setAppFolder(appFolder+'/'+appName)
+                
+            else:
+                self.controller.compileApplication(fileName, self.folderEntry.get_text())
+                self.appNameEntry.set_text(os.path.basename(fileName))
             #if self.isAppOK():
             #    self.launchButton.set_sensitive(True)
-            #    self.removeButton.set_sensitive(True)
+            #    self.removeButton.set_sensitive(True)#        
+          
+         
+         
+          
+
 
     def clearApplication(self):
         '''
@@ -199,10 +231,21 @@ class ControlGUIClient(object):
         Deployment selection. Sets the deployment entry and calls the controller
         to compile the deployment model.
         '''
-        fileName = self.selectFile("application", "*.depl")
+        if self.folderEntry.get_text() is "":
+            self.logger.error("Please Select root directory")
+            return
+        fileName = self.selectFile("application", pattern="*depl*")
         if fileName != None:
-            self.deplNameEntry.set_text(os.path.basename(fileName))
-            self.appToLoad = self.controller.compileDeployment(fileName)
+            if 'json' in fileName:
+                appFolder = self.folderEntry.get_text()+'/tar'
+                self.logger.warning("appFolder : %s"  %appFolder)
+                appName = os.path.basename(fileName).split("_depl")[0]
+                depljson = self.controller.loadDeplJSON(appName, appFolder)
+                #self.deplNameEntry.set_text(depljson)
+                self.deplNameEntry.set_text(depljson.split('.')[0])
+            else:
+                self.deplNameEntry.set_text(os.path.basename(fileName))
+                self.appToLoad = self.controller.compileDeployment(fileName)
             #if self.isAppOK():
             #    self.launchButton.set_sensitive(True)
             #    self.removeButton.set_sensitive(True)
@@ -429,6 +472,7 @@ class ControlGUIClient(object):
         Load the selected application onto to the network
         '''
         # add a row in the table for the application
+        self.logger.warning("on_LoadApplication %s" %self.appToLoad)
         if self.appToLoad is None:
             return
 
