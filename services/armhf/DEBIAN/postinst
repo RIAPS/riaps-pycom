@@ -1,6 +1,7 @@
 systemctl daemon-reload
 systemctl enable riaps-deplo.service 
 systemctl start riaps-deplo.service
+ldconfig
 
 
 
