@@ -15,9 +15,11 @@ class Config(object):
     Configuration database for RIAPS tools
     Including logging configuration
     '''
-    TARGET_USER = 'riaps-user'
+    TARGET_USER = 'riaps'
     SEND_TIMEOUT = -1
     NIC_NAME = None
+    NIC_RATE = '118kbps'   # 90% of 1 gigabits per sec
+    NIC_CEIL = '131kbps'   # 1 gigabits per sec
     CTRL_DEBUG_SERVER = ''
     DEPLO_DEBUG_SERVER = ''
     DISCO_DEBUG_SERVER = ''

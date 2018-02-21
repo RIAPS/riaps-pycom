@@ -33,7 +33,7 @@ class DiscoClient(object):
         self.socket = self.context.socket(zmq.REQ)
         self.socket.setsockopt(zmq.RCVTIMEO,const.discoEndpointRecvTimeout)
         self.socket.setsockopt(zmq.SNDTIMEO,const.discoEndpointSendTimeout)
-        endpoint = const.discoEndpoint + self.suffix
+        endpoint = const.discoEndpoint
         self.socket.connect(endpoint)    
         self.channel = self.context.socket(zmq.PAIR)
 

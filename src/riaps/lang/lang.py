@@ -219,13 +219,21 @@ class RiapsModel2JSON(object):
         elif unit == 'min':
             return value * 60 * 1000
     def convertMem(self,value,unit):
-        ''' Convert all memory size values to kB'''
-        if unit == 'MB':
+        ''' Convert all memory size values to kilobytes'''
+        if unit == 'mb':
             return value * 1024 
-        elif unit == 'kB':
+        elif unit == 'kb':
             return value
-        elif unit == 'GB':
+        elif unit == 'gb':
             return value * 1024 * 1024
+    def convertRate(self,value,unit):
+        ''' Convert all rate values to bytes/sec'''
+        if unit == 'kbps':
+            return int(value * 1024)
+        elif unit == 'mbps':
+            return int(value * 1024 * 1024)
+        else:
+            return None;
     def getUsage(self,usage):
         cpuUsage = { }
         memUsage = { }
@@ -245,11 +253,9 @@ class RiapsModel2JSON(object):
                 unit = 'MB' if use.unit == None else use.unit
                 spcUsage['use'] = self.convertMem(use.usage,unit)
             elif (useClass == 'NetUsage'):
-                memUnit = 'MB' if use.memUnit == None else use.memUnit
-                netUsage['use'] = self.convertMem(use.usage,memUnit)
-                netUsage['max'] = use.max
-                timeUnit = 'MB' if use.timeUnit == None else use.timeUnit
-                netUsage['interval'] = self.convertTime(use.interval,timeUnit)
+                netUsage['rate'] = self.convertRate(use.rate,use.rateUnit)
+                netUsage['ceil'] = 0 if use.ceil == None else self.convertRate(use.ceil,use.ceilUnit)
+                netUsage['burst'] = 0 if use.burst == None else int(use.burst * 1024)
             else:
                 raise TextXSemanticError('Unknown usage for port "%s"' %
                                          (str(use)))

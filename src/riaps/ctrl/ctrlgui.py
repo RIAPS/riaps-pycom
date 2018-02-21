@@ -51,6 +51,8 @@ class ControlGUIClient(object):
                                       "onSelectApplication": self.on_SelectApplication,
                                       "onSelectDeployment": self.on_SelectDeployment,
                                       "onFolderEntryActivate": self.on_folderEntryActivate,
+                                      "onKill": self.on_Kill,
+                                      "onClean": self.on_Clean,
                                       "onQuit": self.on_Quit,
                                       "onLoadApplication": self.on_LoadApplication
                                       })
@@ -78,8 +80,8 @@ class ControlGUIClient(object):
         Status Table Additions
         '''
         self.cellTextPlaceHolder = '                '
-        self.column_cur_size = 8
-        self.row_cur_size = 32
+        self.column_cur_size = 12
+        self.row_cur_size = 16
         self.appToLoad = None
         self.appSelected = None
         self.gridScrollWindow = self.builder.get_object('scrolledwindow2')
@@ -221,6 +223,18 @@ class ControlGUIClient(object):
         if folderName != None:
             self.folderEntry.set_text(folderName)
             self.controller.setAppFolder(folderName)
+
+    def on_Kill(self, *args):
+        '''
+        Kill all connected deplos
+        '''
+        self.controller.killAll()
+        
+    def on_Clean(self, *args):
+        '''
+        Clean all connected deplos
+        '''
+        self.controller.cleanAll()
 
     def on_Quit(self, *args):
         '''

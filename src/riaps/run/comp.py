@@ -89,6 +89,10 @@ class ComponentThread(threading.Thread):
                 self.logger.info("limitSpc")
                 self.instance.handleSpcLimit()
                 self.control.send_pyobj("ok")
+            elif cmd == "limitNet":
+                self.logger.info("limitNet")
+                self.instance.handleNetLimit()
+                self.control.send_pyobj("ok")
             else:
                 self.logger.info("unknown command %s" % cmd)
                 pass            # Should report an error
@@ -123,7 +127,6 @@ class ComponentThread(threading.Thread):
         self.logger.info("stopped")
 
                    
-
 class Component(object):
     '''
     Base class for RIAPS application components
@@ -201,5 +204,9 @@ class Component(object):
         '''
         pass
         
-
+    def handleNetLimit(self):
+        ''' 
+        Default handler for space limit exceed
+        '''
+        pass
     

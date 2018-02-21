@@ -10,9 +10,10 @@ from .peripheral import Peripheral
 from .exc import BuildError
 import zmq
 import time
-from .disco import DiscoClient
-from .devc import DevmClient
+from riaps.run.disco import DiscoClient
+from riaps.run.deplc import DeplClient
 from riaps.proto import disco_capnp
+from riaps.proto import deplo_capnp
 from riaps.utils.ifaces import getNetworkInterfaces
 import getopt
 import logging
@@ -124,7 +125,7 @@ class Actor(object):
             self.params[key] = default
             optList.append("%s=" % key) 
         try:
-            opts,args = getopt.getopt(sysArgv, '', optList)
+            opts,_args = getopt.getopt(sysArgv, '', optList)
         except:
             self.logger.info("Error parsing actor options %s" % str(sysArgv))
             return
@@ -212,7 +213,7 @@ class Actor(object):
         '''
         Find the IP addresses of the (host-)local and network(-global) interfaces
         '''
-        (globalIPs,globalMACs,localIP) = getNetworkInterfaces()
+        (globalIPs,globalMACs,_globalNames,localIP) = getNetworkInterfaces()
         try:
             assert len(globalIPs) > 0 and len(globalMACs) > 0
         except:
@@ -233,9 +234,11 @@ class Actor(object):
         self.disco = DiscoClient(self,self.suffix)
         self.disco.start()                  # Start the discovery service client
         self.disco.registerApp()            # Register this actor with the discovery service
-        self.devc = DevmClient(self,self.suffix)
-        self.devc.start()
-        self.devc.registerApp()
+        self.logger.info("actor registered with disco")
+        self.deplc = DeplClient(self,self.suffix)
+        self.deplc.start()
+        ok = self.deplc.registerApp()
+        self.logger.info("actor %s registered with depl" % ("is" if ok else "is not"))
         for inst in self.components:
             self.components[inst].setup()
     
@@ -243,6 +246,7 @@ class Actor(object):
         '''
         Relay the endpoint registration message to the discovery service client 
         '''
+        self.logger.info("registerEndpoint")
         result = self.disco.registerEndpoint(bundle)
         for res in result:
             (partName,portName,host,port) = res
@@ -254,7 +258,7 @@ class Actor(object):
         '''
         typeName,args = bundle
         msg = (self.appName,self.modelName,typeName,args)
-        result = self.devc.registerDevice(msg)
+        result = self.deplc.registerDevice(msg)
         return result
 
     def unregisterDevice(self,bundle):
@@ -263,7 +267,7 @@ class Actor(object):
         '''
         typeName, = bundle
         msg = (self.appName,self.modelName,typeName)
-        result = self.devc.unregisterDevice(msg)
+        result = self.deplc.unregisterDevice(msg)
         return result
     
     def activate(self):
@@ -298,10 +302,10 @@ class Actor(object):
         '''
         self.logger.info("starting")
         self.discoChannel = self.disco.channel              # Private channel to the discovery service
-        self.devcChannel = self.devc.channel
+        self.deplChannel = self.deplc.channel
        
         self.poller = zmq.Poller()                          # Set up the poller
-        self.poller.register(self.devcChannel,zmq.POLLIN)
+        self.poller.register(self.deplChannel,zmq.POLLIN)
         self.poller.register(self.discoChannel,zmq.POLLIN)
         
         while 1:
@@ -311,12 +315,11 @@ class Actor(object):
                 for msg in msgs:
                     self.handleServiceUpdate(msg)               # Handle message from disco service
                 del sockets[self.discoChannel]    
-            elif self.devcChannel in sockets:
-                msgs = self.recvChannelMessages(self.devcChannel)
+            elif self.deplChannel in sockets:
+                msgs = self.recvChannelMessages(self.deplChannel)
                 for msg in msgs:
-                    msg = self.devcChannel.recv()
-                    pass                                        # Handle message from devm service
-                del sockets[self.devcChannel]
+                    self.handleDeplMessage(msg)                 # Handle message from depl service
+                del sockets[self.deplChannel]
             else:
                 pass
             
@@ -353,6 +356,24 @@ class Actor(object):
         part = self.components[instanceName]
         part.handlePortUpdate(portName,host,port)
         
+    def handleDeplMessage(self,msgBytes):
+        '''
+        Handle a message from the deployment service
+        '''
+        msgUpd = deplo_capnp.ResMsg.from_bytes(msgBytes)     # Parse the incoming message
+
+        which = msgUpd.which()
+        if which == 'resCPUX':
+            self.handleCPULimit()
+        elif which == 'resMemX':
+            self.handleMemLimit()
+        elif which == 'resSpcX':
+            self.handleSpcLimit()
+        elif which == 'resNetX':
+            self.handleNetLimit()
+        else:
+            pass
+           
     def handleCPULimit(self):
         '''
         Handle the case when the CPU limit is exceeded: notify each component.
@@ -380,11 +401,20 @@ class Actor(object):
         for component in self.components.values():
             component.handleSpcLimit()
             
+    def handleNetLimit(self):
+        '''
+        Handle the case when the net usage limit is exceeded: notify each component.
+        If the component has defined a handler, it will be called.   
+        ''' 
+        self.logger.info("handleNetLimit")
+        for component in self.components.values():
+            component.handleNetLimit()
+            
     def terminate(self):
         self.logger.info("terminating")
         for component in self.components.values():
             component.terminate()
-        self.devc.terminate()
+        self.deplc.terminate()
         self.disco.terminate()
         # Clean up everything
         # self.context.destroy()

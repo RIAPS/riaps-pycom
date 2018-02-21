@@ -63,7 +63,7 @@ def main(debug=True):
         model = json.load(fp)
         aName = args.actor
     except IOError as e:
-        print ("I/O error({0}): {1}".format(e.errno, e.strerror))
+        print ("I/O error({0}): {1} {2}".format(e.errno, e.strerror, e.filename))
         os._exit(1)
     except: 
         print ("Unexpected error:", sys.exc_info()[0])

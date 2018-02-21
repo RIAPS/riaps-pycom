@@ -11,6 +11,7 @@ from .deplo import DeploService
 from riaps.consts.defs import *
 from riaps.utils.config import Config 
 from riaps.utils.trace import riaps_trace
+import traceback
 
 # Singleton Deployment Service object 
 theDepl = None
@@ -45,11 +46,16 @@ def main(debug=True):
     signal.signal(signal.SIGTERM,termHandler)
     signal.signal(signal.SIGINT,termHandler)
     traced = riaps_trace(args.trace,'DEPLO_DEBUG_SERVER')
-    global theDepl
-    theDepl = DeploService(args.node,args.port)  # Assign the service to the singleton
-
-    theDepl.setup()
-    theDepl.run()
+    try:
+        global theDepl
+        theDepl = DeploService(args.node,args.port)  # Assign the service to the singleton
+        theDepl.setup()
+        theDepl.run()
+    except:
+        traceback.print_exc()
+        info = sys.exc_info()
+        print ("riaps_deplo: Fatal error: %s" % (info[1],))
+        os._exit(1)
 #     if debug:
 #         interact()
 

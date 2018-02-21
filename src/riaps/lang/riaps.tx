@@ -164,7 +164,7 @@ MemUsage:
 ;
 
 MemUnit:
-	'MB' | 'kB' | 'GB'
+	'mb' | 'kb' | 'gb'
 ;
 
 SpaceUsage:
@@ -172,11 +172,23 @@ SpaceUsage:
 ;
 
 SpaceUnit:
-	'MB' | 'GB'
+	'mb' | 'gb'
+;
+
+RateUnit:
+	'kbps' | 'mbps' 
+;
+
+
+BurstUnit:
+	'k' | 'kb'
 ;
 
 NetUsage:
-	'net' (max?='max')? usage=INT (memUnit=MemUnit)? ( 'over' interval=INT (timeUnit=TimeUnit)? )? 
+//	'net' (max?='max')? usage=INT (memUnit=MemUnit)? ( 'over' interval=INT (timeUnit=TimeUnit)? )? 
+	'net' 'rate' rate=Number rateUnit=RateUnit 
+			( 'ceil' ceil=Number ceilUnit=RateUnit )? 
+			( 'burst' burst=Number burstUnit=BurstUnit )?
 ;
 
 // Wiring of clients to servers (both SMI and AMI)

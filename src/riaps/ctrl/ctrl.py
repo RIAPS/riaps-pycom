@@ -86,7 +86,7 @@ class Controller(object):
         '''
         Find the IP addresses of the (host-)local and network(-global) interfaces
         '''
-        (globalIPs,globalMACs,localIP) = getNetworkInterfaces()
+        (globalIPs,globalMACs,_globalNames,_localIP) = getNetworkInterfaces()
         try:
             assert len(globalIPs) > 0 and len(globalMACs) > 0
         except:
@@ -187,6 +187,14 @@ class Controller(object):
             res = clientName in self.clientMap
         return res
 
+    def killAll(self):
+        for client in self.clientMap.values():
+            client.kill()
+    
+    def cleanAll(self):
+        for client in self.clientMap.values():
+            self.removeAppFromClient(client, appName='')
+                
     def setupHostKeys(self):
         # get host key, if we know one
         self.hostKeys = {}
@@ -231,8 +239,8 @@ class Controller(object):
                 return
             except paramiko.SSHException as e:
                 self.logger.info ('... failed! - %s' % str(e))
-
-    def downloadAppToClient(self,files,libraries,client,appName):
+                
+    def startClientSession(self,client):
         hostName = client.name
         hostKey = None
         hostKeyType = None
@@ -240,8 +248,6 @@ class Controller(object):
             hostKeyType = self.hostKeys[hostName].keys()[0]
             hostKey= self.hostKeys[hostName][hostKeyType]
             self.logger.info('Using host key of type %s' % hostKeyType)
-
-        appFolder = self.riaps_appInfoDict[appName]['riaps_appFolder']
         try:
             port = const.ctrlSSHPort
             self.logger.info ('Establishing SSH connection to: %s:%s' % (str(hostName),str(port)))
@@ -252,11 +258,25 @@ class Controller(object):
             if not t.is_authenticated():
                 self.logger.warning ('RSA key auth failed!') 
                 # t.connect(username=username, password=password, hostkey=hostkey)
-                return False
-
-            sftpSession = t.open_session()
-            sftpClient = RSFTPClient.from_transport(t)
-
+                return None
+            return t
+        except Exception as e:
+            self.logger.warning('Caught exception: %s: %s' % (e.__class__, e))
+            try:
+                t.close()
+                return None
+            except:
+                return None
+            
+    def downloadAppToClient(self,files,libraries,client,appName):
+        transport = self.startClientSession(client)
+        if transport == None:
+            return False
+        try:
+            sftpSession = transport.open_session()
+            sftpClient = RSFTPClient.from_transport(transport)
+            
+            appFolder = self.riaps_appInfoDict[appName]['riaps_appFolder']
             dirRemote = os.path.join(client.appFolder,appName)
 
             sftpClient.mkdir(dirRemote,ignore_existing=True)
@@ -293,16 +313,16 @@ class Controller(object):
                 self.logger.info ('Copying' + str(localDir) + ' to ' + str(remoteDir))
                 sftpClient.put_dir(localDir,remoteDir)
 
-            t.close()
+            transport.close()
             return True
+        
         except Exception as e:
             self.logger.warning('Caught exception: %s: %s' % (e.__class__, e))
-
             try:
-                t.close()
-                return False
+                transport.close()
             except:
-                return False
+                pass
+            return False
 
     def downloadApp(self,files,libraries,clients,appName):
         with ctrlLock:
@@ -342,7 +362,6 @@ class Controller(object):
             res.append(argValue)
         return res
     
-
     def buildDownload(self, appName):
         noresult = ([],[],[],[])
         download = []
@@ -492,7 +511,7 @@ class Controller(object):
         except IOError:
             return False
 
-    def rm(self,sftp,path):
+    def rm(self,sftp,path,top=True):
         files = sftp.listdir(path)
 
         for f in files:
@@ -501,40 +520,28 @@ class Controller(object):
                 sftp.remove(filepath)
             except IOError:
                 self.rm(sftp,filepath)
-        sftp.rmdir(path)
-
-    def removeAppFromClient(self,files,libraries,client,appName):
-        hostName = client.name
-        hostKey = None
-        hostKeyType = None
-        if hostName in self.hostKeys:
-            hostKeyType = self.hostKeys[hostName].keys()[0]
-            hostKey= self.hostKeys[hostName][hostKeyType]
-            self.logger.info ('Using host key of type %s' % hostKeyType)
+        if top == True:                 # Remove top dir?
+            sftp.rmdir(path)
+    
+    def removeAppFromClient(self,client,appName,files=[],libraries=[]):
+        transport = self.startClientSession(client)
+        if transport == None:
+            return False
         try:
-            port = const.ctrlSSHPort
-            self.logger.info ('Establishing SSH connection to: %s:%s' % (str(hostName),str(port)))
-            t = paramiko.Transport((hostName, port))
-            t.start_client()
-            self.authenticate(t,Config.TARGET_USER)
-
-            if not t.is_authenticated():
-                self.logger.warning ('RSA key auth failed!') 
-                # t.connect(username=username, password=password, hostkey=hostkey)
-                return False
-
-            sftpSession = t.open_session()
-            sftpClient = paramiko.SFTPClient.from_transport(t)
+            sftpSession = transport.open_session()
+            sftpClient = paramiko.SFTPClient.from_transport(transport)
             
             dirRemote = os.path.join(client.appFolder, appName)
+            self.rm(sftpClient,dirRemote,appName != '')
             
-            self.rm(sftpClient,dirRemote)
-        except Exception as e:
-                self.logger.warning('Caught exception: %s: %s' % (e.__class__, e))
-        try:
-            t.close()
+            transport.close()
             return True
-        except:
+        except Exception as e:
+            self.logger.warning('Caught exception: %s: %s' % (e.__class__, e))
+            try:
+                transport.close()
+            except:
+                pass
             return False
 
 
@@ -546,7 +553,7 @@ class Controller(object):
                     self.log('? %s', client.name)  # Stale client, we don't remove
                 else:
                     client.cleanupApp(appName)
-                    ok = self.removeAppFromClient(files, libraries, client, appName)
+                    ok = self.removeAppFromClient(client,appName,files,libraries)
                     if not ok:
                         return False
         return True

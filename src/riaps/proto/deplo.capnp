@@ -1,6 +1,6 @@
-@0xa9b61477210cf813;
+@0xb487bf324bf367d9;
 
-# RIAPS devm messages
+# RIAPS depl messages
 
 enum Status { ok @0; err @1; }
 
@@ -42,7 +42,7 @@ struct DeviceUnregRep {
   status @0 : Status;
 }
 
-struct DevmReq {
+struct DeplReq {
    union {
       actorReg @0 : ActorRegReq;
       deviceReg @1 : DeviceRegReq;
@@ -50,7 +50,7 @@ struct DevmReq {
    }
 }
 
-struct DevmRep {
+struct DeplRep {
    union {
       actorReg @0 : ActorRegRep;
       deviceReg @1 : DeviceRegRep;
@@ -58,3 +58,27 @@ struct DevmRep {
    }
 }
 
+struct ResCPUX {
+	msg @0 : Text;
+}
+
+struct ResMemX {
+	msg @0 : Text;
+}
+
+struct ResSpcX {
+	msg @0 : Text;
+}
+
+struct ResNetX {
+	msg @0 : Text;
+}
+
+struct ResMsg {
+	union {
+		resCPUX @0 : ResCPUX;
+		resMemX @1 : ResMemX;
+		resSpcX @2 : ResSpcX;
+		resNetX @3 : ResNetX;
+	}
+}

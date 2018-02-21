@@ -8,6 +8,8 @@ import rpyc
 import time
 from rpyc import async
 from rpyc.utils.server import ThreadedServer
+rpyc.core.protocol.DEFAULT_CONFIG['allow_pickle'] = True
+
 from riaps.consts.defs import *
 import threading
 import logging
@@ -90,6 +92,23 @@ class ServiceClient(object):
         if self.callback != None:
             res = self.callback(('halt',appName,actorName))
             return res.value
+        
+    def clean(self):
+        '''
+        Clean the riaps_deplo app folder
+        '''
+        if self.callback != None:
+            res = self.callback(('clean',))
+            return res.value
+        
+    def kill(self):
+        '''
+        Kill the riaps_deplo 
+        '''
+        if self.callback != None:
+            res = self.callback(('kill',))
+            return res.value
+        
     
 class ControllerService(rpyc.Service):
     '''

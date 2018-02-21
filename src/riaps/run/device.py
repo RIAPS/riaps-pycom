@@ -227,7 +227,7 @@ class Device(Actor):
 #         '''
 #         Find the IP addresses of the (host-)local and network(-global) interfaces
 #         '''
-#         (globalIPs,globalMACs,localIP) = getNetworkInterfaces()
+#         (globalIPs,globalMACs,globalNames,localIP) = getNetworkInterfaces()
 #         assert len(globalIPs) > 0 and len(globalMACs) > 0
 #         globalIP = globalIPs[0]
 #         globalMAC = globalMACs[0]

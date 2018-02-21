@@ -39,7 +39,8 @@ class TimerThread(threading.Thread):
             self.active.wait(None)                  # Wait for activation
             if self.terminated.is_set(): break      # If terminated, we exit
             if self.periodic:                       # Periodic timer
-                self.started.wait(None)              
+                self.started.wait(None)  
+                if self.terminated.is_set(): break        
                 self.waiting.wait(self.period)      # Wait for period
                 if self.terminated.is_set(): break  
                 if self.waiting.is_set():           # Period was cancelled
@@ -51,6 +52,7 @@ class TimerThread(threading.Thread):
             else:                                   # One shot timer
                 while 1:
                     self.started.wait(None)         # Wait for start
+                    if self.terminated.is_set(): break
                     assert self.delay != None and self.delay > 0.0
                     self.waiting.wait(self.delay)   # Wait for the delay
                     if self.terminated.is_set() : break  
@@ -61,6 +63,7 @@ class TimerThread(threading.Thread):
                     if self.active.is_set():        # Send tick (if active)
                         value = time.time()
                         self.socket.send_pyobj(value)
+        pass
             
     def activate(self):
         '''
@@ -81,6 +84,7 @@ class TimerThread(threading.Thread):
         '''
         Terminate the timer 
         '''
+        self.started.set()          # Get out of wait if we are not started
         self.terminated.set()
     
     def getPeriod(self):
@@ -180,7 +184,7 @@ class TimPort(Port):
         '''
         if self.thread != None:
             self.logger.info("terminating")
-            self.thread.halt()
+            # self.thread.halt()
             self.thread.terminate()
             self.thread.join()
             self.logger.info("terminated")

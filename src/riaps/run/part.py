@@ -281,10 +281,21 @@ class Part(object):
         else:
             pass
         
+    def handleNetLimit(self):
+        self.logger.info("handleNetLimit - %s:%s" % (self.name,self.typeName))
+        msg = ("limitNet",)
+        # print(msg)
+        self.control.send_pyobj(msg)        # Relay message to component thread
+        rep = self.control.recv_pyobj()     # Wait for an OK response
+        if rep == "ok" :
+            pass
+        else:
+            pass
+        
     def terminate(self):
         self.logger.info("terminating")
         self.sendControl("kill",-1)         # Send message to the thread to kill itself
-        time.sleep(0.001)
+        time.sleep(0.1)
         if self.thread != None:
             self.thread.join()
         for portObj in self.ports.values():

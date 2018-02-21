@@ -6,7 +6,7 @@ app DistributedAverager {
      
 	// Sensor component
     component Sensor(value=1.0) {
-      timer clock 5000; 							
+      timer clock 10000; 							
       pub sensorReady : SensorData ;	// Publish port for SensorData messages 
     }
     

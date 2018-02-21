@@ -12,14 +12,13 @@ import time
 from os.path import join
 import subprocess
 import threading
-from riaps.proto import devm_capnp
+from riaps.proto import deplo_capnp
 from riaps.consts.defs import *
 from riaps.run.exc import BuildError
-from riaps.utils.ifaces import getNetworkInterfaces
 import logging
 import psutil
   
-class DevmService(threading.Thread):
+class DeviceManager(threading.Thread):
     '''
     Device manager service main class, implemented as a thread 
     '''    
@@ -31,88 +30,81 @@ class DevmService(threading.Thread):
         self.macAddress = parent.macAddress
         self.suffix = self.macAddress
         self.launchMap = { }            # Map of launched actors
-        self.riapsApps = os.getenv('RIAPSAPPS', './')
-        self.logger.info("Starting with apps in %s" % self.riapsApps)
+        self.riapsApps = parent.riapsApps
+        
         self.riaps_device_file = 'riaps_device'       # Default name for the executable riaps device shell
         try:
             import riaps.riaps_device          # We try to import the python riaps_device first so that we know is correct file name
             self.riaps_device_file = riaps.riaps_device.__file__
         except:
             pass
+        self.devmCommandEndpoint = parent.devmCommandEndpoint
+        self.started = False
         
     def terminate(self):
-        self.terminated.set()
+        if self.started:
+            self.terminated.set()
         
     def run(self):
         '''
-        Main loop of the devm service
+        Main loop of the depl service
         '''
         self.logger.info("starting")
-        # Socket and poller for comm
-        self.server = self.context.socket(zmq.REP)              # Create main server socket for client requests
-        endpoint = const.devmEndpoint + self.suffix
-        self.server.bind(endpoint)
-        self.poller = zmq.Poller()                              # Set up initial poller (only on the main server socket)  
-        self.poller.register(self.server,zmq.POLLIN)
-        # Map of clients
-        self.clients = { }  
-        # Event for termination
-        self.terminated = threading.Event()     # Event flag to signal termination
-        self.terminated.clear()
-        self.logger.info("running")
+        try:
+            # Create main server socket for client requests
+            self.server = self.context.socket(zmq.REP)              
+            endpoint = const.devmEndpoint
+            self.server.bind(endpoint)
+            # Socket for commands from deplo
+            self.ctrl = self.context.socket(zmq.PAIR)            
+            self.ctrl.bind(self.devmCommandEndpoint)
+            # Initial poller (on server and command sockets) 
+            self.poller = zmq.Poller()                               
+            self.poller.register(self.server,zmq.POLLIN)
+            self.poller.register(self.ctrl,zmq.POLLIN)
+            # Map of clients
+            self.clients = { }  
+            # Event for termination
+            self.terminated = threading.Event()     # Event flag to signal termination
+            self.terminated.clear()
+            self.logger.info("running")
+            self.started = True
         # 
+        except:
+            self.logger.error("start failed")
+            self.stop()
         while 1:
             if self.terminated.is_set(): break
             sockets = dict(self.poller.poll(1000.0))            # Poll client messages, with timeout 1 sec
             if len(sockets) == 0:                               # If no message but timeout expired, 
                 if self.terminated.is_set(): 
                     break              # break out if terminated
-            elif self.server in sockets:               # If there is a server request, handle it 
+            if self.ctrl in sockets:
+                msg = self.ctrl.recv()
+                self.handleCommand(msg)
+                del sockets[self.ctrl]
+            if self.server in sockets:              # If there is a server request, handle it 
                 msg = self.server.recv()
-                self.handle(msg)
+                # self.handle(msg)
                 del sockets[self.server]
             else:
                 pass
         self.stop()
     
-    def setupClient(self,appName,appVersion,appActorName):
+    def handleCommand(self,msgBytes):
         '''
-        Set up a new client of the devm service. The client actors are to register with
-        the service using the 'server' (REQ/REP) socket. The service will then create a dedicated
-        (PAIR) socket for the client to connect to. This socket is used as a private communication
-        channel between a specific client actor and the service.   
+        Dispatch the request based on the message type
         '''
-        sock = self.context.socket(zmq.PAIR)
-        port = sock.bind_to_random_port('tcp://*')
-        clientKeyBase = "/" + appName + '/' + appActorName + "/"
-        self.clients[clientKeyBase] = sock
-        clientKeyLocal = clientKeyBase + self.macAddress
-        self.clients[clientKeyLocal] = port
-        clientKeyGlobal = clientKeyBase + self.hostAddress
-        self.clients[clientKeyGlobal] = port
-        return port
+        self.logger.info("handle req")
+        msg = deplo_capnp.DeplReq.from_bytes(msgBytes)
+        which = msg.which()
+        if which == 'deviceReg':
+            self.handleDeviceReq(msg)
+        elif which == 'deviceUnreg':
+            self.handleDeviceUnreq(msg)
+        else:
+            self.logger.warning('unknown commmand: %s' % which)
     
-    def handleActorReg(self,msg):
-        '''
-        Handle the registration of an application actor with the service. 
-        '''
-        actReg = msg.actorReg
-        appName = actReg.appName
-        appVersion = actReg.version   
-        appActorName = actReg.actorName
-         
-        self.logger.info("handleActorReg: %s %s" % (appName, appActorName))
-        
-        clientPort = self.setupClient(appName,appVersion,appActorName)
-        
-        # OptionL store in db host.app.vers.actr -> port? 
-        
-        rsp = devm_capnp.DevmRep.new_message()
-        rspMessage = rsp.init('actorReg')
-        rspMessage.status = "ok"
-        rspMessage.port = clientPort
-        rspBytes = rsp.to_bytes()
-        self.server.send(rspBytes)
     
     def startDevice(self,appName,appModel,actorName,actorArgs):
         '''
@@ -212,11 +204,11 @@ class DevmService(threading.Thread):
             self.logger.error(str(buildError.args[0]))
 
         #      
-        rsp = devm_capnp.DevmRep.new_message()
+        rsp = deplo_capnp.DeplRep.new_message()
         rspMessage = rsp.init('deviceReg')
         rspMessage.status = "ok" if ok else "err"
         rspBytes = rsp.to_bytes()
-        self.server.send(rspBytes)
+        self.ctrl.send(rspBytes)
 
     def handleDeviceUnreq(self,msg):
         '''
@@ -235,26 +227,11 @@ class DevmService(threading.Thread):
             ok = False
             self.logger.error(str(buildError.args[1]))
         #      
-        rsp = devm_capnp.DevmRep.new_message()
+        rsp = deplo_capnp.DeplRep.new_message()
         rspMessage = rsp.init('deviceUnreg')
         rspMessage.status = "ok"
         rspBytes = rsp.to_bytes()
-        self.server.send(rspBytes)
-        
-    def handle(self,msgBytes):
-        '''
-        Dispatch the request based on the message type
-        '''
-        msg = devm_capnp.DevmReq.from_bytes(msgBytes)
-        which = msg.which()
-        if which == 'actorReg':
-            self.handleActorReg(msg)
-        elif which == 'deviceReg':
-            self.handleDeviceReq(msg)
-        elif which == 'deviceUnreg':
-            self.handleDeviceUnreq(msg)
-        else:
-            pass
+        self.ctrl.send(rspBytes)
         
     def stop(self):
         self.logger.info("stopping")

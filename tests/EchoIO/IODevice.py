@@ -11,8 +11,9 @@ class IODeviceThread(threading.Thread):
     '''
     Inner IODevice thread
     '''
-    def __init__(self,trigger,port):
+    def __init__(self,trigger,port,logger):
         threading.Thread.__init__(self)
+        self.logger = logger
         self.active = threading.Event()
         self.active.clear()
         self.waiting = threading.Event()
@@ -23,9 +24,11 @@ class IODeviceThread(threading.Thread):
         self.context = zmq.Context()
         self.cons = self.context.socket(zmq.REP)    # Create zmq REP socket 
         self.cons.bind("tcp://*:%s" % self.port)
+        self.logger.info('IODeviceThread _init()_ed')
 
     
     def run(self):
+        self.logger.info('IODeviceThread starting')
         self.plug = self.trigger.setupPlug(self)    # Ask RIAPS port to make a plug (zmq socket) for this end
         self.poller = zmq.Poller()                  # Set up poller to wait for messages from either side
         self.poller.register(self.cons, zmq.POLLIN) # console socket (connects to console client)
@@ -34,22 +37,30 @@ class IODeviceThread(threading.Thread):
             self.active.wait(None)                  # Events to handle activation/termination
             if self.terminated.is_set(): break
             if self.active.is_set():                # If we are active
-                socks = dict(self.poller.poll())    # Run the poller (to wait for input from either side)
+                socks = dict(self.poller.poll(1000.0))  # Run the poller: wait input from either side, timeout if none
+                if len(socks) == 0:
+                    self.logger.info('IODeviceThread timeout')
+                if self.terminated.is_set(): break
                 if self.cons in socks and socks[self.cons] == zmq.POLLIN:   # Input from the console
                     message = self.cons.recv_pyobj()
                     self.plug.send_pyobj(message)                           # Send it to the plug
                 if self.plug in socks and socks[self.plug] == zmq.POLLIN:   # Input from the plug
                     message = self.plug.recv_pyobj()
                     self.cons.send_pyobj(message)                           # Send it to the console
+        self.logger.info('IODeviceThread ended')
+               
 
     def activate(self):
         self.active.set()
-    
+        self.logger.info('IODeviceThread activated')
+                    
     def deactivate(self):
         self.active.clear()
+        self.logger.info('IODeviceThread deactivated')
     
     def terminate(self):
         self.terminated.set()
+        self.logger.info('IODeviceThread terminating')
 
 class IODevice(Component):
     def __init__(self,port):
@@ -60,7 +71,7 @@ class IODevice(Component):
 
     def on_clock(self):
         if self.IODeviceThread == None: # First clock pulse
-            self.IODeviceThread = IODeviceThread(self.trigger,self.port) # Inside port, external zmq port
+            self.IODeviceThread = IODeviceThread(self.trigger,self.port,self.logger) # Inside port, external zmq port
             self.IODeviceThread.start() # Start thread
             self.trigger.activate()
         now = self.clock.recv_pyobj()   # Receive time (as float)
@@ -70,6 +81,8 @@ class IODevice(Component):
         self.logger.info("__destroy__")
         self.IODeviceThread.deactivate()
         self.IODeviceThread.terminate()
+        self.IODeviceThread.join()
+        self.logger.info("__destroy__ed")
         
     def on_trigger(self):                       # Internally triggered operation (
         msg = self.trigger.recv_pyobj()         # Receive message from internal thread

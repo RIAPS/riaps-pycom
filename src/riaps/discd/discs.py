@@ -35,7 +35,7 @@ class DiscoService(object):
         '''
         Find the IP addresses of the (host-)local and network(-global) interfaces
         '''
-        (globalIPs,globalMACs,localIP) = getNetworkInterfaces()
+        (globalIPs,globalMACs,_globalNames,_localIP) = getNetworkInterfaces()
         try:
             assert len(globalIPs) > 0 and len(globalMACs) > 0
         except:
@@ -49,7 +49,7 @@ class DiscoService(object):
     def start(self):
         self.logger.info("starting")
         self.server = self.context.socket(zmq.REP)              # Create main server socket for client requests
-        endpoint = const.discoEndpoint + self.suffix
+        endpoint = const.discoEndpoint
         self.server.bind(endpoint)
         
         self.dbase.start()                                      # Start database

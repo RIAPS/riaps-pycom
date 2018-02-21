@@ -12,9 +12,9 @@ app LangTest {
 	actor Actor {
 		uses {
 			cpu max 10 % over 1;	
-			mem 200 MB;
-			space 1 GB;
-			net max 100 kB over 10 sec;
+			mem 200 mb;
+			space 1 gb;
+			net rate 80 kbps ceil 100 kbps burst 1 k;
 		}
 		{
 			component : Component;
