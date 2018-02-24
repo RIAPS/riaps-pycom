@@ -30,17 +30,17 @@ def termHandler(signal,frame):
     global theActor
     theActor.terminate()
 
-def sigXCPUHandler(signal,frame):
-    global theActor
-    theActor.handleCPULimit()
-    
-def sigXMEMHandler(signal,frame):
-    global theActor
-    theActor.handleMemLimit()
-    
-def sigXSPCHandler(signal,frame):
-    global theActor
-    theActor.handleSpcLimit()
+# def sigXCPUHandler(signal,frame):
+#     global theActor
+#     theActor.handleCPULimit()
+#     
+# def sigXMEMHandler(signal,frame):
+#     global theActor
+#     theActor.handleMemLimit()
+#     
+# def sigXSPCHandler(signal,frame):
+#     global theActor
+#     theActor.handleSpcLimit()
     
 def main(debug=True):
     parser = argparse.ArgumentParser()
@@ -77,9 +77,9 @@ def main(debug=True):
     global theActor
     theActor = Actor(model,args.model,aName,rest)   # Construct the Actor
     signal.signal(signal.SIGTERM,termHandler)       # Termination signal handler
-    signal.signal(signal.SIGXCPU,sigXCPUHandler)    # CPU limit exceeded handler 
-    signal.signal(signal.SIGUSR1,sigXMEMHandler)    # Mem limit exceeded handler 
-    signal.signal(signal.SIGUSR2,sigXSPCHandler)    # Spc limit exceeded handler     
+#     signal.signal(signal.SIGXCPU,sigXCPUHandler)    # CPU limit exceeded handler 
+#     signal.signal(signal.SIGUSR1,sigXMEMHandler)    # Mem limit exceeded handler 
+#     signal.signal(signal.SIGUSR2,sigXSPCHandler)    # Spc limit exceeded handler     
     try:
         theActor.setup()                        # Setup the objects contained in the actor
         theActor.activate()                     # Activate the components 

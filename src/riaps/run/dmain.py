@@ -30,17 +30,17 @@ def termHandler(signal,frame):
     global theDevice
     theDevice.terminate()
 
-def sigXCPUHandler(signal,frame):
-    global theActor
-    theActor.handleCPULimit()
-    
-def sigXMEMHandler(signal,frame):
-    global theActor
-    theActor.handleMemLimit()
-
-def sigXSPCHandler(signal,frame):
-    global theActor
-    theActor.handleSpcLimit()
+# def sigXCPUHandler(signal,frame):
+#     global theActor
+#     theActor.handleCPULimit()
+#     
+# def sigXMEMHandler(signal,frame):
+#     global theActor
+#     theActor.handleMemLimit()
+# 
+# def sigXSPCHandler(signal,frame):
+#     global theActor
+#     theActor.handleSpcLimit()
     
 def main(debug=True):
     parser = argparse.ArgumentParser()
@@ -77,9 +77,9 @@ def main(debug=True):
     global theDevice
     theDevice = Device(model,args.model,aName,rest) # Construct the Device
     signal.signal(signal.SIGTERM,termHandler)       # Termination signal handler
-    signal.signal(signal.SIGXCPU,sigXCPUHandler)    # CPU limit exceeded handler
-    signal.signal(signal.SIGUSR1,sigXMEMHandler)    # Mem limit exceeded handler
-    signal.signal(signal.SIGUSR2,sigXSPCHandler)    # Spc limit exceeded handler     
+#     signal.signal(signal.SIGXCPU,sigXCPUHandler)    # CPU limit exceeded handler
+#     signal.signal(signal.SIGUSR1,sigXMEMHandler)    # Mem limit exceeded handler
+#     signal.signal(signal.SIGUSR2,sigXSPCHandler)    # Spc limit exceeded handler     
     try:
         theDevice.setup()                        # Setup the objects contained in the device
         theDevice.activate()                     # Activate the components 

@@ -347,6 +347,7 @@ class NetMonitorThread(threading.Thread):
                     )
                 if rc != NHLoopStatus.OK:
                     self.logger.info('nethogsmonitor_loop returned {}'.format(NHLoopStatus.MAP[rc]))
+                    break
                 else:
                     self.logger.info('exiting monitoring loop') 
                                      

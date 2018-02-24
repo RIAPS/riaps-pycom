@@ -95,7 +95,7 @@ class SpcMonitorThread(threading.Thread):
         while True:
             try:
                 self.ds = DQuotSocket()
-                self.ds.settimeout(10.0)     # Timeout on quota system netlink socket @ 10 sec
+                self.ds.settimeout(const.spcMonitorTimeout)     # Timeout on quota system netlink socket @ 10 sec
                 if not self.running.is_set():
                     self.stopped.set()
                     self.running.wait()
@@ -127,13 +127,16 @@ class SpcMonitorThread(threading.Thread):
                     self.ds.close()
                     self.ds = None
                     if self.terminated.is_set(): break
+                    continue
                 except:
+                    self.logger.error("SpcMonitorThread exception")
                     raise
                 if not self.running.is_set(): continue
                 if self.terminated.is_set(): break
             except:
                 self.logger.error("SpcMonitorThread failure")
-                # traceback.print_exc()  
+                # traceback.print_exc()
+                break
         if self.ds != None: 
             self.ds.close()
         self.ds = None
