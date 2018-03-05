@@ -414,6 +414,7 @@ class Actor(object):
         self.logger.info("terminating")
         for component in self.components.values():
             component.terminate()
+        time.sleep(1.0)
         self.deplc.terminate()
         self.disco.terminate()
         # Clean up everything

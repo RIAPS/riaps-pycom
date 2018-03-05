@@ -10,6 +10,8 @@ from os.path import join
 import argparse
 import json
 import logging
+import traceback 
+
 from riaps.utils.config import Config
 from riaps.utils.trace import riaps_trace
 
@@ -85,6 +87,7 @@ def main(debug=True):
         theDevice.activate()                     # Activate the components 
         theDevice.start()                        # Start the device main loop
     except:
+        traceback.print_exc()
         info = sys.exc_info()
         print ("riaps_device: Fatal error: %s" % (info[1],))
         os._exit(1)

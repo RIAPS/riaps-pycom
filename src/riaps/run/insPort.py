@@ -91,7 +91,7 @@ class InsPort(Port):
             self.thread.deactivate()
         
     def terminate(self):
-        if self.thread and hasattr(self.thread,'terminate'):
+        if self.thread and hasattr(self.thread,'terminate') and self.thread.is_alive():
             self.thread.terminate()
 
     def getSocket(self):

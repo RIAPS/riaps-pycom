@@ -77,6 +77,12 @@ class AnsPort(Port):
                 raise
         return True
     
+    def get_identity(self):
+        return self.identity
+    
+    def set_identity(self,identity):
+        self.identity = identity
+    
     def recv_capnp(self):
         multipart = self.socket.recv_multipart()    # Receive multipart (IDENTITY + payload) message
         self.identity = multipart[0]                # Separate identity, it is a Frame

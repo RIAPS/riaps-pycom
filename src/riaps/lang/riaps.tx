@@ -137,7 +137,6 @@ Actor:
     ( 'internal' internals*=[Message][','] ';' )? 	// Optional: internal messages (stay within the actor)
     ( 'uses' '{' usage*=Usage '}' )?				// Optional: resource usage 
     '{' instances+=Instance '}'
-    wires*=Wire
   '}'
 ;
 
@@ -189,11 +188,6 @@ NetUsage:
 	'net' 'rate' rate=Number rateUnit=RateUnit 
 			( 'ceil' ceil=Number ceilUnit=RateUnit )? 
 			( 'burst' burst=Number burstUnit=BurstUnit )?
-;
-
-// Wiring of clients to servers (both SMI and AMI)
-Wire:
-  lhsName=ID '.' lhsPortName=ID '=' rhsName=ID '.' rhsPortName=ID ';'
 ;
 
 // Instance of a component, used inside an actor

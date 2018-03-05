@@ -123,7 +123,8 @@ class Peripheral(object):
         pass 
     
     def terminate(self):
-        self.logger.info("terminating")
+        self.logger.info("terminating %s" % self.typeName)
         msg = (self.typeName,)
         resp = self.parent.unregisterDevice(msg)
+        self.logger.info("terminating %s" % self.typeName)
     

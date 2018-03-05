@@ -8,6 +8,7 @@ Created on Oct 15, 2016
 import threading
 import zmq
 import logging
+import traceback
 from .exc import BuildError
 
 class ComponentThread(threading.Thread):
@@ -119,7 +120,10 @@ class ComponentThread(threading.Thread):
             for socket in sockets:
                 portName = self.portMap[socket]
                 func_ = getattr(self.instance, 'on_' + portName)
-                func_()
+                try:
+                    func_()
+                except:
+                    traceback.print_exc()
         self.logger.info("stopping")
         if hasattr(self.instance,'__destroy__'):
             destroy_ = getattr(self.instance,'__destroy__')
@@ -145,7 +149,7 @@ class Component(object):
         self.logger.propagate=False
         ch = logging.StreamHandler()
         ch.setLevel(logging.INFO)
-        formatter = logging.Formatter('%(levelname)s:%(asctime)s:%(name)s:%(message)s')
+        formatter = logging.Formatter('%(levelname)s:%(asctime)s:[%(process)d]:%(name)s:%(message)s')
         ch.setFormatter(formatter)
         self.logger.addHandler(ch)
 #        print  ( "Component() : '%s'" % self )

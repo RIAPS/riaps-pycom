@@ -293,12 +293,12 @@ class Part(object):
             pass
         
     def terminate(self):
-        self.logger.info("terminating")
+        self.logger.info("terminating %s" % self.typeName)
         self.sendControl("kill",-1)         # Send message to the thread to kill itself
         time.sleep(0.1)
         if self.thread != None:
             self.thread.join()
         for portObj in self.ports.values():
             portObj.terminate()
-        self.logger.info("terminated")
+        self.logger.info("terminated %s" % self.typeName)
         

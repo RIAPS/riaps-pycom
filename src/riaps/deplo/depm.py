@@ -5,7 +5,7 @@ Created on Oct 19, 2016
 @author: riaps
 '''
 
-import os
+import os,signal
 import sys
 import time
 import json
@@ -18,6 +18,8 @@ import logging
 import traceback
 import psutil
 import pwd
+from concurrent.futures.thread import ThreadPoolExecutor
+from _thread import RLock
 
 import zmq
 from zmq import devices
@@ -45,17 +47,18 @@ class DeploymentManager(threading.Thread):
         self.suffix = self.macAddress
         self.riapsApps = parent.riapsApps
         self.launchMap = { }            # Map of launched actors
+        self.mapLock = RLock()
         self.disco = None
         self.dbaseHost = None 
         self.dbasePort = None
-        self.devm = devm
-        self.resm = resm
+        self.devm = devm        # Device manager
+        self.resm = resm        # Resource manager
         self.appModels = { }    # App models loaded
         self.users = { } 
         self.setupUser(Config.TARGET_USER)
         self.appUser = { }
         self.actors = { }       # Actors started
-        
+
         self.riaps_actor_file = 'riaps_actor'   # Default name for the executable riaps actor shell
         try:
             import riaps.riaps_actor            # Try to import the python riaps_actor first so that we know is correct file name
@@ -81,6 +84,7 @@ class DeploymentManager(threading.Thread):
         self.devmCommandEndpoint = parent.devmCommandEndpoint
         self.command = self.context.socket(zmq.PAIR)              # Socket to command inner thread
         self.command.bind(self.depmCommandEndpoint)
+        self.executor = ThreadPoolExecutor(max_workers=3)
         self.started = False
 
     def doCommand(self,cmd):
@@ -182,8 +186,12 @@ class DeploymentManager(threading.Thread):
         ''' Clean up everything related to an app'''
         assert type(msg) == tuple and len(msg) == 1
         (appName,) = msg
+        if appName not in self.appModels:
+            return
         del self.appModels[appName]
         self.resm.cleanupApp(appName)
+        if appName not in self.appUser:
+            return
         userName = self.appUser[appName]
         del self.appUser[appName]
         self.delUser(userName)
@@ -317,8 +325,9 @@ class DeploymentManager(threading.Thread):
             raise BuildError("Actor failed to start: %s.%s " % (appName,actorName))
         self.resm.startActor(appName, actorName, proc)
         key = str(appName) + "." + str(actorName)
-        self.launchMap[key] = proc
-        self.actors[key] = DeploActorRecord(app = appName, actor=actorName, device=None)
+        with self.mapLock:
+            self.launchMap[key] = proc
+            self.actors[key] = DeploActorRecord(app = appName, actor=actorName, device=None)
 
     def getActorModel(self,appName,actorName):
         model = self.getAppModel(appName)
@@ -346,28 +355,41 @@ class DeploymentManager(threading.Thread):
             
         return componentTypes
     
+    def stopActor(self,appName,actorName):
+        '''
+        Stop (terminate) the actor of an application  
+        '''
+        key = str(appName) + "." + str(actorName)
+        proc = None
+        with self.mapLock:
+            if key in self.launchMap:
+                proc = self.launchMap[key]
+                del self.launchMap[key]
+        if proc != None:
+            self.logger.info("Halting actor %s" % key)
+            self.resm.stopActor(appName, actorName, proc)
+            try:          
+                proc.terminate()        # Should check for errors
+                proc.wait(None)         # TODO (3.0)
+            except psutil.TimeoutExpired:
+                    self.logger.info("Actor %s did not terminate - killing it" % key)
+                    proc.send_signal(signal.SIGKILL)
+                    time.sleep(1.0)
+            self.logger.info("Halted %s" % key)
+
     def haltActor(self,msg):
         '''
         Halt (terminate) the actor of an application  
         '''
         assert type(msg) == tuple and len(msg) == 2
-        appName,actorName = msg
-        key = str(appName) + "." + str(actorName)
-        if key in self.launchMap:
-            proc = self.launchMap[key]
-            self.logger.info("halting %s" % key)
-            self.resm.stopActor(appName, actorName, proc)            
-            proc.terminate()                             # Should check for errors
-            while True:
-                try:
-                    proc.wait(3.0)
-                    break
-                except psutil.TimeoutExpired:
-                    self.logger.info("%s did not terminate" % key)
-            self.logger.info("halted %s" % key)
-            del self.launchMap[key]
-
-
+        appName,actorName = msg 
+        try:
+            # self.stopActor(appName, typeName)
+            self.executor.submit(self.stopActor,appName,actorName)
+        except BuildError as buildError:
+            self.logger.error(str(buildError.args[1]))
+            
+            
     def handleCommand(self,msg):
         self.logger.info("handleCommand: %s" % (str(msg)))
         try: 
@@ -445,7 +467,7 @@ class DeploymentManager(threading.Thread):
         '''
         Handle a message form a client 
         '''
-        self.logger.info("handle req")
+        self.logger.info("handleClient")
         try:
             msg = deplo_capnp.DeplReq.from_bytes(msgBytes)
             which = msg.which()

@@ -15,14 +15,14 @@ const.discoEndpointSendTimeout = -1
 # Name of endpoint for actor-depl communication
 const.deplEndpoint = 'tcp://127.0.0.1:9780'     # 'ipc:///tmp/riaps-depl'
 # Timeout for actor-depl communication (-1: wait forever)
-const.deplEndpointRecvTimeout = 3000
-const.deplEndpointSendTimeout = 3000
+const.deplEndpointRecvTimeout = 10000 
+const.deplEndpointSendTimeout = 10000  
 
 # Name of endpoint for actor-devm communication
 const.devmEndpoint = 'tcp://127.0.0.1:9790'     # 'ipc:///tmp/riaps-devm
 # Timeout for actor-depl communication (-1: wait forever)
-const.devmEndpointRecvTimeout = 3000
-const.devmEndpointSendTimeout = 3000
+const.devmEndpointRecvTimeout = 10000  
+const.devmEndpointSendTimeout = 10000  
 
 # Default host for disco redis host
 const.discoRedisHost = 'localhost'

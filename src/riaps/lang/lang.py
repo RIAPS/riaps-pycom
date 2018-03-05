@@ -175,7 +175,7 @@ class RiapsModel2JSON(object):
             actObj["internals"] = self.getInternals(act.internals)
             actObj["usage"] = self.getUsage(act.usage)
             actObj["instances"] = self.getInstances(act.instances)
-            actObj["wires"] = self.getWires(act.wires)
+#            actObj["wires"] = self.getWires(act.wires)
             res[act.name] = actObj
         return res
     def getLocals(self,locals_):
@@ -273,16 +273,16 @@ class RiapsModel2JSON(object):
             instObj["actuals"] = self.getActuals(inst.actuals)
             res[inst.name] = instObj
         return res
-    def getWires(self,wires):
-        res = []
-        for wire in wires:
-            wireObj = { "lhsName" : wire.lhsInst.name,
-                        "lhsPort" : wire.lhsPort.name,
-                        "rhsName" : wire.rhsInst.name,
-                        "rhsPort" : wire.rhsPort.name,
-                        }
-            res.append(wireObj)
-        return res
+#     def getWires(self,wires):
+#         res = []
+#         for wire in wires:
+#             wireObj = { "lhsName" : wire.lhsInst.name,
+#                         "lhsPort" : wire.lhsPort.name,
+#                         "rhsName" : wire.rhsInst.name,
+#                         "rhsPort" : wire.rhsPort.name,
+#                         }
+#             res.append(wireObj)
+#         return res
 
 # Object processor for timer ports: the 'spec' part is optional. If missing, it means period=0, i.e. a one-shot timer
 def timport_obj_processor(timport):
@@ -321,36 +321,36 @@ def instance_obj_processor(instance):
     else:
         pass
 
-# Object processor for wires: checks if the names used are correct. 
-# Wires are to connect ports of local instances.
-def wire_obj_processor(wire):
-#    print '(' + wire.lhsName + '.' + wire.lhsPortName + '=' + wire.rhsName + '.' + wire.rhsPortName + ')'
-    instances = wire.parent.instances
-    lhsInst = [inst for inst in instances if inst.name == wire.lhsName]
-    if not lhsInst:
-        raise TextXSemanticError('Wire LHS instance "%s" not found.' %
-                                 wire.lhsName)
-    else:
-        wire.lhsInst = lhsInst[0]
-    lhsPort = [port for port in wire.lhsInst.type.ports if port.name == wire.lhsPortName]
-    if not lhsPort:
-        raise TextXSemanticError('Wire LHS port "%s" in instance "%s" not found.' %
-                                 (wire.lhsPortName, wire.lhsName))
-    else:
-        wire.lhsPort=lhsPort[0]
-    rhsInst = [inst for inst in instances if inst.name == wire.rhsName]
-    if not rhsInst:
-        raise TextXSemanticError('Wire RHS instance "%s" not found.' %
-                                 wire.rhsName)
-    else:
-        wire.rhsInst=rhsInst[0]
-    rhsPort = [port for port in wire.rhsInst.type.ports if port.name == wire.rhsPortName]
-    if not rhsPort:
-        raise TextXSemanticError('Wire RHS port "%s" in instance "%s" not found.' %
-                                 (wire.rhsPortName, wire.rhsName))
-    else:
-        wire.rhsPort=rhsPort[0]
-#    print lhsInst, lhsPort, rhsInst, rhsPort
+# # Object processor for wires: checks if the names used are correct. 
+# # Wires are to connect ports of local instances.
+# def wire_obj_processor(wire):
+# #    print '(' + wire.lhsName + '.' + wire.lhsPortName + '=' + wire.rhsName + '.' + wire.rhsPortName + ')'
+#     instances = wire.parent.instances
+#     lhsInst = [inst for inst in instances if inst.name == wire.lhsName]
+#     if not lhsInst:
+#         raise TextXSemanticError('Wire LHS instance "%s" not found.' %
+#                                  wire.lhsName)
+#     else:
+#         wire.lhsInst = lhsInst[0]
+#     lhsPort = [port for port in wire.lhsInst.type.ports if port.name == wire.lhsPortName]
+#     if not lhsPort:
+#         raise TextXSemanticError('Wire LHS port "%s" in instance "%s" not found.' %
+#                                  (wire.lhsPortName, wire.lhsName))
+#     else:
+#         wire.lhsPort=lhsPort[0]
+#     rhsInst = [inst for inst in instances if inst.name == wire.rhsName]
+#     if not rhsInst:
+#         raise TextXSemanticError('Wire RHS instance "%s" not found.' %
+#                                  wire.rhsName)
+#     else:
+#         wire.rhsInst=rhsInst[0]
+#     rhsPort = [port for port in wire.rhsInst.type.ports if port.name == wire.rhsPortName]
+#     if not rhsPort:
+#         raise TextXSemanticError('Wire RHS port "%s" in instance "%s" not found.' %
+#                                  (wire.rhsPortName, wire.rhsName))
+#     else:
+#         wire.rhsPort=rhsPort[0]
+# #    print lhsInst, lhsPort, rhsInst, rhsPort
            
 def compileModel(modelFileName,verbose=False,debug=False):
     riaps_folder = os.getenv('RIAPSHOME', './') # RIAPSHOME points to the folder containing the grammar
@@ -362,7 +362,7 @@ def compileModel(modelFileName,verbose=False,debug=False):
     
     # Register object processors for wires and timer ports
     obj_processors = {
-        'Wire': wire_obj_processor,
+#         'Wire': wire_obj_processor,
         'TimPort': timport_obj_processor,
         'InsPort': insport_obj_processor,
         'Instance': instance_obj_processor,

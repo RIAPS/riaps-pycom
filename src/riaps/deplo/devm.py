@@ -6,17 +6,24 @@ Created on Oct 19, 2016
 '''
 import zmq
 import capnp
-import os
+import os,signal
 import sys
 import time
 from os.path import join
 import subprocess
 import threading
+import logging
+import traceback
+import concurrent.futures
+
+import psutil
+from psutil import TimeoutExpired
+
 from riaps.proto import deplo_capnp
 from riaps.consts.defs import *
 from riaps.run.exc import BuildError
-import logging
-import psutil
+from concurrent.futures.thread import ThreadPoolExecutor
+from _thread import RLock
   
 class DeviceManager(threading.Thread):
     '''
@@ -30,8 +37,8 @@ class DeviceManager(threading.Thread):
         self.macAddress = parent.macAddress
         self.suffix = self.macAddress
         self.launchMap = { }            # Map of launched actors
+        self.mapLock = RLock()
         self.riapsApps = parent.riapsApps
-        
         self.riaps_device_file = 'riaps_device'       # Default name for the executable riaps device shell
         try:
             import riaps.riaps_device          # We try to import the python riaps_device first so that we know is correct file name
@@ -39,6 +46,7 @@ class DeviceManager(threading.Thread):
         except:
             pass
         self.devmCommandEndpoint = parent.devmCommandEndpoint
+        self.executor = ThreadPoolExecutor(max_workers=3)
         self.started = False
         
     def terminate(self):
@@ -51,16 +59,12 @@ class DeviceManager(threading.Thread):
         '''
         self.logger.info("starting")
         try:
-            # Create main server socket for client requests
-            self.server = self.context.socket(zmq.REP)              
-            endpoint = const.devmEndpoint
-            self.server.bind(endpoint)
             # Socket for commands from deplo
             self.ctrl = self.context.socket(zmq.PAIR)            
             self.ctrl.bind(self.devmCommandEndpoint)
             # Initial poller (on server and command sockets) 
             self.poller = zmq.Poller()                               
-            self.poller.register(self.server,zmq.POLLIN)
+#             self.poller.register(self.server,zmq.POLLIN)
             self.poller.register(self.ctrl,zmq.POLLIN)
             # Map of clients
             self.clients = { }  
@@ -73,29 +77,28 @@ class DeviceManager(threading.Thread):
         except:
             self.logger.error("start failed")
             self.stop()
-        while 1:
+        while True:
             if self.terminated.is_set(): break
             sockets = dict(self.poller.poll(1000.0))            # Poll client messages, with timeout 1 sec
             if len(sockets) == 0:                               # If no message but timeout expired, 
+                # self.logger.info("poller timeout")
                 if self.terminated.is_set(): 
                     break              # break out if terminated
             if self.ctrl in sockets:
                 msg = self.ctrl.recv()
                 self.handleCommand(msg)
                 del sockets[self.ctrl]
-            if self.server in sockets:              # If there is a server request, handle it 
-                msg = self.server.recv()
-                # self.handle(msg)
-                del sockets[self.server]
-            else:
-                pass
+#             if self.server in sockets:              # If there is a server request, handle it 
+#                 msg = self.server.recv()
+#                 # self.handle(msg)
+#                 del sockets[self.server]
         self.stop()
     
     def handleCommand(self,msgBytes):
         '''
         Dispatch the request based on the message type
         '''
-        self.logger.info("handle req")
+        self.logger.info("handleCommand")
         msg = deplo_capnp.DeplReq.from_bytes(msgBytes)
         which = msg.which()
         if which == 'deviceReg':
@@ -103,7 +106,7 @@ class DeviceManager(threading.Thread):
         elif which == 'deviceUnreg':
             self.handleDeviceUnreq(msg)
         else:
-            self.logger.warning('unknown commmand: %s' % which)
+            self.logger.warning('unknown command: %s' % which)
     
     
     def startDevice(self,appName,appModel,actorName,actorArgs):
@@ -156,28 +159,40 @@ class DeviceManager(threading.Thread):
                 proc = subprocess.Popen(command,cwd=appFolder)
             except:
                 raise BuildError("Error while starting device: %s" % sys.exc_info()[1])
-        rc = proc.poll()
+        try:
+            rc = proc.wait(1.0)
+        except:
+            rc = None
         if rc != None:
             raise BuildError("Device failed to start: %s " % (command,))
         # Problem: How do we add a device actor to the resource manager?
         key = str(appName) + "." + str(actorName)
         # ADD HERE: build comm channel to the device for control purposes
-        self.launchMap[key] = proc
+        with self.mapLock:
+            self.launchMap[key] = proc
 
-    def stopDevice(self,appName,appModel,actorName):
+    def stopDevice(self,appName,actorName):
         '''
         Stop a device actor of an application 
-        '''
-        
+        '''        
         key = str(appName) + "." + str(actorName)
-        if key in self.launchMap:
-            proc = self.launchMap[key]
-        
+        proc = None
+        with self.mapLock:
+            if key in self.launchMap:
+                proc = self.launchMap[key]
+                del self.launchMap[key]
+        if proc != None:
             self.logger.info("Stopping device %s" % key)
-            proc.terminate()                             # Should check for errors
-            del self.launchMap[key]
-        else:
-            raise BuildError("Device %s not found" % key)
+            try: 
+                proc.terminate()            # Should check for errors
+                proc.wait(None)             # TODO: (3.0)
+            except psutil.TimeoutExpired:
+                self.logger.info("Device %s did not stop - killing it" % key)
+                proc.send_signal(signal.SIGKILL)
+                time.sleep(1.0)
+            except:
+                traceback.print_exc()
+            self.logger.info("Stopped %s" % key)
     
     def handleDeviceReq(self,msg):
         '''
@@ -209,6 +224,7 @@ class DeviceManager(threading.Thread):
         rspMessage.status = "ok" if ok else "err"
         rspBytes = rsp.to_bytes()
         self.ctrl.send(rspBytes)
+        self.logger.info("handleDeviceReq: done")
 
     def handleDeviceUnreq(self,msg):
         '''
@@ -216,29 +232,33 @@ class DeviceManager(threading.Thread):
         '''
         devReg = msg.deviceUnreg
         appName = devReg.appName 
-        modelName = devReg.modelName
+        _modelName = devReg.modelName
         typeName = devReg.typeName
         self.logger.info("handleDeviceUnreq: %s,%s" % (appName,typeName))
        
         ok = True
         try:
-            self.stopDevice(appName, modelName, typeName)
+            # self.stopDevice(appName, typeName)
+            self.executor.submit(self.stopDevice,appName,typeName)
         except BuildError as buildError:
             ok = False
             self.logger.error(str(buildError.args[1]))
         #      
         rsp = deplo_capnp.DeplRep.new_message()
         rspMessage = rsp.init('deviceUnreg')
-        rspMessage.status = "ok"
+        rspMessage.status = "ok" if ok else "err"
         rspBytes = rsp.to_bytes()
         self.ctrl.send(rspBytes)
+        self.logger.info("handleDeviceUnreq: done")
         
     def stop(self):
         self.logger.info("stopping")
         # Clean up everything
         # Kill actors
-        for proc in self.launchMap.values():
-            proc.terminate()
+        for key in self.launchMap.keys():
+            appName,actorName = key.split('.')
+            #self.stopDevice(appName, actorName)
+            self.executor.submit(self.stopDevice,appName,actorName)
         time.sleep(1.0)         # Allow actors terminate cleanly
         self.logger.info("stopped")
         
