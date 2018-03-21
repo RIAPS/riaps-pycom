@@ -352,7 +352,7 @@ def instance_obj_processor(instance):
 #         wire.rhsPort=rhsPort[0]
 # #    print lhsInst, lhsPort, rhsInst, rhsPort
            
-def compileModel(modelFileName,verbose=False,debug=False):
+def compileModel(modelFileName,verbose=False,debug=False,generate=True):
     riaps_folder = os.getenv('RIAPSHOME', './') # RIAPSHOME points to the folder containing the grammar
     this_folder = os.getcwd()  
     
@@ -374,7 +374,6 @@ def compileModel(modelFileName,verbose=False,debug=False):
     
     # Optionally export meta-model to dot (for debugging only)
     # metamodel_export(riaps_meta, join(this_folder, 'riaps_meta.dot'))
-    
     
     try:
         # Instantiate the model object structure from the model file 
@@ -410,11 +409,12 @@ def compileModel(modelFileName,verbose=False,debug=False):
         print(riaps_model_json)
     
     # Generated JSON files for each app    
-    for appName in riaps_model.apps:
-        fp = open(appName + '.json','w')
-        appObj = riaps_model.apps[appName]
-        json.dump(appObj,fp,indent=4,sort_keys=True,separators=(',', ':'))
-        fp.close()
+    if generate:
+        for appName in riaps_model.apps:
+            fp = open(appName + '.json','w')
+            appObj = riaps_model.apps[appName]
+            json.dump(appObj,fp,indent=4,sort_keys=True,separators=(',', ':'))
+            fp.close()
         
     return riaps_model.apps
     

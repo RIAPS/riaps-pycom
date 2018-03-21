@@ -13,6 +13,8 @@ from os.path import join
 from _collections import OrderedDict
 import re
 import logging
+import subprocess
+from riaps.lang.gviz import gviz
 
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, GLib, Gdk
@@ -54,7 +56,8 @@ class ControlGUIClient(object):
                                       "onKill": self.on_Kill,
                                       "onClean": self.on_Clean,
                                       "onQuit": self.on_Quit,
-                                      "onLoadApplication": self.on_LoadApplication
+                                      "onLoadApplication": self.on_LoadApplication,
+                                      "onViewApplication": self.on_ViewApplication
                                       })
 
         self.conn = rpyc.connect(self.controller.hostAddress, port)  # Local connection to the service
@@ -451,6 +454,19 @@ class ControlGUIClient(object):
         self.clearDeployment()
         self.appToLoad = ''
 
+    def on_ViewApplication(self, widget):
+        '''
+        View the selected application as to be deployed
+        '''
+        model = self.appNameEntry.get_text()
+        deplo = self.deplNameEntry.get_text()
+        try:
+            fileName = gviz(model,deplo) + '.dot'
+            subprocess.Popen(['xdot',fileName])
+        except:
+            pass
+        
+        
     ''' Event handlers for widgets(buttons etc) '''
     def on_show_app_ctrl_options(self, widget):
         # set selected app name

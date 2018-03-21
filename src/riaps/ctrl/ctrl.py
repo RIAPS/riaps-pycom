@@ -24,7 +24,6 @@ from riaps.ctrl.ctrlcli import ControlCLIClient
 from threading import RLock
 from riaps.lang.lang import compileModel
 from riaps.lang.depl import DeploymentModel
-import code
 
 import gi
 gi.require_version('Gtk', '3.0')

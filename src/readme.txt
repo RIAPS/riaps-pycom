@@ -32,6 +32,7 @@ python-magic >= 0.4.13
 cgroups >= 0.1.0
 cgroupspy >= 0.1.6
 psutil >= 3.4.2
+pydot >= 1.2.4
 
 use: apt install python3-pip python3-dev libhiredis-dev libcapnp-dev libssl-dev libffi-dev glade python3-gi
 
@@ -88,3 +89,6 @@ The files are as follows (the number after the name indicates the type):
 
 Type (1) launchers can be started from Eclipse run or debug menus, while type (2) 
 launchers must be started as an 'external tool' from Eclipse. 
+
+------------------------
+
