@@ -120,25 +120,31 @@ class RiapsModel2JSON(object):
             portClass = port.__class__.__name__
             if (portClass == 'PubPort'):
                 portObj['type'] = port.type.name
+                portObj['timed'] = port.timed
                 pubs[port.name] = portObj
             elif (portClass == 'SubPort'):
                 portObj['type'] = port.type.name
+                portObj['timed'] = port.timed
                 subs[port.name] = portObj
             elif (portClass == 'ClntPort'):
                 portObj['req_type'] = port.req_type.name
                 portObj['rep_type'] = port.rep_type.name
+                portObj['timed'] = port.timed
                 clts[port.name] = portObj
             elif (portClass == 'SrvPort'):
                 portObj['req_type'] = port.req_type.name
                 portObj['rep_type'] = port.rep_type.name
+                portObj['timed'] = port.timed
                 srvs[port.name] = portObj
             elif (portClass == 'ReqPort'):
                 portObj['req_type'] = port.req_type.name
                 portObj['rep_type'] = port.rep_type.name
+                portObj['timed'] = port.timed
                 reqs[port.name] = portObj
             elif(portClass == 'RepPort'):
                 portObj['req_type'] = port.req_type.name
                 portObj['rep_type'] = port.rep_type.name
+                portObj['timed'] = port.timed
                 reps[port.name] = portObj
             elif(portClass == 'TimPort'):
                 portObj['period'] = port.period
@@ -149,10 +155,12 @@ class RiapsModel2JSON(object):
             elif (portClass == 'QryPort'):
                 portObj['req_type'] = port.req_type.name
                 portObj['rep_type'] = port.rep_type.name
+                portObj['timed'] = port.timed
                 qrys[port.name] = portObj
             elif (portClass == 'AnsPort'):
                 portObj['req_type'] = port.req_type.name
                 portObj['rep_type'] = port.rep_type.name
+                portObj['timed'] = port.timed
                 anss[port.name] = portObj
             else:
                 raise TextXSemanticError('Unknown type for port "%s"' %
@@ -298,6 +306,13 @@ def insport_obj_processor(insport):
     else:
         insport.spec = None
 
+# Object processor for ports: the 'timed' part is optional. 
+def timed_port_obj_processor(port):
+    if port.timed == 'timed':
+        port.timed = True
+    else:
+        port.timed = False
+
 # Object processor for io component instances: messages must be local
 def instance_obj_processor(instance):
     component = instance.type
@@ -366,6 +381,14 @@ def compileModel(modelFileName,verbose=False,debug=False,generate=True):
         'TimPort': timport_obj_processor,
         'InsPort': insport_obj_processor,
         'Instance': instance_obj_processor,
+        'PubPort' : timed_port_obj_processor,
+        'SubPort' : timed_port_obj_processor,
+        'ClntPort' : timed_port_obj_processor,
+        'SrvPort' : timed_port_obj_processor,
+        'ReqPort' : timed_port_obj_processor,
+        'RepPort' : timed_port_obj_processor,
+        'QryPort' : timed_port_obj_processor,
+        'AnsPort' : timed_port_obj_processor,
         # We should also check for parameters: 
         #   (1) formal/actual lists should match, 
         #   (2) inherited parameters should appear in their parent 

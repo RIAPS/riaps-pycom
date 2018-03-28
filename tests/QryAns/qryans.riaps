@@ -6,13 +6,13 @@ app QryAns {
      
     // Query
     component Query {
-    	qry cltQryPort : (QryReq,AnsRep); 
+    	qry cltQryPort : (QryReq,AnsRep) timed; 
     	timer clock 1000;
     }
     
     // Answer
     component Answer {
-    	ans srvAnsPort : (QryReq, AnsRep);
+    	ans srvAnsPort : (QryReq, AnsRep) timed;
     }
     
     actor QueryActor {

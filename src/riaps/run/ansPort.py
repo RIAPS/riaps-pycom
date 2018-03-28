@@ -3,7 +3,9 @@ Created on Oct 10, 2016
 
 @author: riaps
 '''
+import time
 import zmq
+import struct
 from .port import Port
 from riaps.run.exc import OperationError
 from riaps.utils.config import Config
@@ -27,6 +29,7 @@ class AnsPort(Port):
         super(AnsPort,self).__init__(parentComponent,portName)
         self.req_type = portSpec["req_type"]
         self.rep_type = portSpec["rep_type"]
+        self.isTimed = portSpec["timed"]
         parentActor = parentComponent.parent
         self.isLocalPort = parentActor.isLocalMessage(self.req_type) and parentActor.isLocalMessage(self.rep_type)
         self.identity = None
@@ -56,52 +59,60 @@ class AnsPort(Port):
     
     def inSocket(self):
         return True
-                
-    def recv_pyobj(self):
-        multipart = self.socket.recv_multipart()    # Receive multipart (IDENTITY + payload) message
-        self.identity = multipart[0]                # Separate identity, it is a Frame
-        py_message = pickle.loads(multipart[1])     # Assuming pickle was used on qry
-        # return self.socket.recv_pyobj()
-        return py_message
-    
-    def send_pyobj(self,msg):      
-        try:
-            content = pickle.dumps(msg)             # Assuming pickle on the qry side
-            payload = zmq.Frame(content)
-            self.socket.send_multipart([self.identity,payload])
-            # self.socket.send_pyobj(msg)
-        except ZMQError as e:
-            if e.errno == zmq.EAGAIN:
-                return False
-            else:
-                raise
-        return True
     
     def get_identity(self):
         return self.identity
     
     def set_identity(self,identity):
         self.identity = identity
-    
-    def recv_capnp(self):
-        multipart = self.socket.recv_multipart()    # Receive multipart (IDENTITY + payload) message
-        self.identity = multipart[0]                # Separate identity, it is a Frame
-        message = pickle.loads(multipart[1])
-        return message
-        # return self.socket.recv()
-
-    def send_capnp(self, msg):
+        
+    def ans_port_recv(self,is_pyobj):
+        msgFrames = self.socket.recv_multipart()    # Receive multipart (IDENTITY + payload) message
+        if self.isTimed:
+            self.recvTime = time.time()
+        self.identity = msgFrames[0]                # Separate identity, it is a Frame
+        if is_pyobj:
+            result = pickle.loads(msgFrames[1])     # Separate payload (pyobj)
+        else:
+            result = msgFrames[1]                   # Separate payload (bytes)
+        if len(msgFrames) == 3:                     # If we have a send time stamp
+            rawMsg = msgFrames[2]
+            rawTuple = struct.unpack("d", rawMsg)
+            self.sendTime = rawTuple[0]
+        return result
+        
+    def ans_port_send(self,msg,is_pyobj):
         try:
-            content = msg             
-            payload = zmq.Frame(content)
-            self.socket.send_multipart([self.identity,payload])
-            # self.socket.send(msg)
+            sendMsg = [self.identity]                   # Identity is already a frame
+            if is_pyobj:
+                payload = zmq.Frame(pickle.dumps(msg))  # Pickle python payload
+            else:
+                payload = zmq.Frame(msg)                # Take bytearray                        
+            sendMsg += [payload]
+            if self.isTimed:
+                now = time.time()
+                now = struct.pack("d", now)
+                nowFrame = zmq.Frame(now)
+                sendMsg += [nowFrame]
+            self.socket.send_multipart(sendMsg)
         except ZMQError as e:
             if e.errno == zmq.EAGAIN:
                 return False
             else:
                 raise
         return True
+    
+    def recv_pyobj(self):
+        return self.ans_port_recv(True)
+
+    def send_pyobj(self,msg): 
+        return self.ans_port_send(msg,True)     
+    
+    def recv_capnp(self):
+        return self.ans_port_recv(False)
+
+    def send_capnp(self, msg):
+        return self.ans_port_send(False)
         
     def getInfo(self):
         return ("ans",self.Name,self.Type,self.host,self.portNum)

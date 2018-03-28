@@ -5,10 +5,19 @@ Created on Oct 9, 2016
 
 @author: riaps
 '''
+import zmq
+import time
+import struct
 from .exc import SetupError,OperationError
 from riaps.utils.config import Config
 import logging
-
+try:
+    import cPickle
+    pickle = cPickle
+except:
+    cPickle = None
+    import pickle
+    
 class Port(object):
     '''
     classdocs
@@ -25,6 +34,10 @@ class Port(object):
         self.localIface = None
         self.globalIface = None
         self.sendTimeout = Config.SEND_TIMEOUT
+        self.sendTime = 0.0
+        self.recvTime = 0.0
+        self.socket = None
+        self.isTimed = False
 
     def getLocalIface(self):
         if self.localIface != None:
@@ -111,3 +124,41 @@ class Port(object):
         '''
         return None
     
+    def port_send(self,msg,is_pyobj):
+        try:
+            if is_pyobj:
+                sendMsg = [zmq.Frame(pickle.dumps(msg))]
+            else:
+                sendMsg = msg
+            if self.isTimed:
+                now = time.time()
+                now = struct.pack("d", now)
+                nowFrame = zmq.Frame(now)
+                sendMsg += [nowFrame]
+            self.socket.send_multipart(sendMsg)
+        except ZMQError as e:
+            if e.errno == zmq.EAGAIN:
+                return False
+            else:
+                raise
+        return True
+    
+    def port_recv(self,is_pyobj):
+        msgFrames = self.socket.recv_multipart()
+        if self.isTimed:
+            self.recvTime = time.time()
+        if is_pyobj:
+            result = pickle.loads(msgFrames[0])
+        else:
+            result = msgFrames[0]
+        if len(msgFrames) == 2:
+            rawMsg = msgFrames[1]
+            rawTuple = struct.unpack("d", rawMsg)
+            self.sendTime = rawTuple[0]
+        return result
+        
+    def get_recvTime(self):
+        return self.recvTime
+    
+    def get_sendTime(self):
+        return self.sendTime

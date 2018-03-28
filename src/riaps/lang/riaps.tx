@@ -62,52 +62,52 @@ Port:
 
 // Publisher port (single type)
 PubPort:
-  'pub' name=ID ':' type=[Message] 
+  'pub' name=ID ':' type=[Message] (timed='timed')?
 ;
 
 // Subscriber port (single type)
 SubPort:
-  'sub' name=ID ':' type=[Message] 
+  'sub' name=ID ':' type=[Message] (timed='timed')?
 ;
 
 // Client port (request and reply message types) - Owned by an SMI client
 // Client operation is expected to send on the port and then receive on the same port
 ClntPort:
-  'clt' name=ID ':' '(' req_type=[Message]? ',' rep_type=[Message]? ')'
+  'clt' name=ID ':' '(' req_type=[Message]? ',' rep_type=[Message]? ')' (timed='timed')?
 ;
 
 // Server port (request and reply message types) - Owned by an SMI client
 // Server operation is triggered by the port and is expected to send a reply on the same port 
 SrvPort:
-  'srv' name=ID ':' '(' req_type=[Message]? ',' rep_type=[Message]? ')'
+  'srv' name=ID ':' '(' req_type=[Message]? ',' rep_type=[Message]? ')' (timed='timed')?
 ;
 
 // Req port (request and reply message types) - owned by an AMI client
 // Requesting client's operation is expected to send a request on the port and then terminate. 
 // The arrival of the reply triggers the reply operation on the client   
 ReqPort:
-  'req' name=ID ':' '(' req_type=[Message]? ',' rep_type=[Message]? ')'
+  'req' name=ID ':' '(' req_type=[Message]? ',' rep_type=[Message]? ')' (timed='timed')?
 ;
 
 // Rep port (request and reply message types) - owned by an AMI server
 // Server's operation is triggered by the request message.
 // The operation is expected to send a reply on the port.   
 RepPort:
-  'rep' name=ID ':' '(' req_type=[Message]? ',' rep_type=[Message]? ')'
+  'rep' name=ID ':' '(' req_type=[Message]? ',' rep_type=[Message]? ')' (timed='timed')?
 ;
 
 // Qry port (request and reply message types) - owned by an Query client
 // Querying client's operation is expected to send one or more queries 
 // The arrival of the answer triggers the answer operation on the client   
 QryPort:
-  'qry' name=ID ':' '(' req_type=[Message]? ',' rep_type=[Message]? ')'
+  'qry' name=ID ':' '(' req_type=[Message]? ',' rep_type=[Message]? ')' (timed='timed')?
 ;
 
 // Ans port (request and reply message types) - owned by an Query server
 // Server's operation is triggered by the query message. 
 // The operation is expected to send a answer on the port.   
 AnsPort:
-  'ans' name=ID ':' '(' req_type=[Message]? ',' rep_type=[Message]? ')'
+  'ans' name=ID ':' '(' req_type=[Message]? ',' rep_type=[Message]? ')' (timed='timed')?
 ;
 
 // Timer port. Optional argument is periodicity in msec

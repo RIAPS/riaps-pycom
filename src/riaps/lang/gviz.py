@@ -66,6 +66,7 @@ def findMsgNodePair(msgType,actorLocals,actorLocalMessageNodes,msgMap,
         else:
             msgNode = pydot.Node(unique(msgPair), label=msgLabel)
             msgNode.set('shape','Mrecord')
+            msgMap[msgPair] = msgNode
             globalMsgGraph.add_node(msgNode)
     return msgNode
 
