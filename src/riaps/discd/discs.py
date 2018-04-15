@@ -57,7 +57,6 @@ class DiscoService(object):
         
         self.poller = zmq.Poller()                              # Set up initial poller (only on the main server socket)  
         self.poller.register(self.server,zmq.POLLIN)
-        self.portMap = { }
         self.clients = { }  
         self.clientUpdates = []
     
@@ -111,19 +110,26 @@ class DiscoService(object):
         Remove a client   
         '''
         clientKeyBase = "/" + appName + '/' + appActorName + "/"
+        if clientKeyBase not in self.clients:
+            return -1                                   # Client has already been removed
         sock = self.clients[clientKeyBase]
         clientKeyLocal = clientKeyBase + self.macAddress
+        assert clientKeyLocal in self.clients
         port = self.clients[clientKeyLocal]
         clientKeyGlobal = clientKeyBase + self.hostAddress
-        # port = self.clients[clientKeyGlobal] # Must have the same value
+        assert clientKeyGlobal in self.clients
+        # port = self.clients[clientKeyGlobal]         # Must have the same value
         sock.unbind('tcp://127.0.0.1:' + str(port))
-        # TODO: remove all services registered by this client  
+        # Remove all services registered by this client  
         del self.clients[clientKeyBase]
         del self.clients[clientKeyLocal]
         del self.clients[clientKeyGlobal]
-        registration = self.registrations[self.appActorName(appName,appActorName)]
+        actorKey = self.appActorName(appName,appActorName)
+        assert actorKey in self.registrations
+        registration = self.registrations[actorKey]
         for (key,value) in registration:
             self.dbase.remove(key, value)
+        del self.registrations[actorKey]
         return port
     
     def handleActorReg(self,msg):
@@ -214,10 +220,14 @@ class DiscoService(object):
         port = socket.port
         
         self.logger.info("handleServiceReg: %s,%s,%s,%s,%s,%s,%s" % (appName,appActorName,msgType,kind,scope,host,port))
-        (key,value) = self.buildInsertKeyValuePair(appName, msgType, kind, scope,host, port)
-        clients = self.dbase.insert(key,value)
+
+        regKey = self.appActorName(appName, appActorName)
+        clients = []
         
-        self.registrations[self.appActorName(appName, appActorName)].append((key,value))
+        if regKey not in self.registrations:
+            (key,value) = self.buildInsertKeyValuePair(appName, msgType, kind, scope,host, port)
+            clients = self.dbase.insert(key,value)
+            self.registrations[regKey].append((key,value))
         
         rep = disco_capnp.DiscoRep.new_message()            # Construct response
         repMsg = rep.init('serviceReg')
@@ -288,14 +298,14 @@ class DiscoService(object):
         The notification triggers the notification of client actors about the new service provider
         '''
         self.logger.info("handleNote: %s",str(msg))
-        (key,value,clients) = msg                       # Parse notification message
+        (_key,value,clients) = msg                       # Parse notification message
         pair = re.split(':',value)
         host = pair[0]
         port = pair[1]
         for client in clients:                          # For each client:
             clientString = client.decode('utf-8')           # Parse the client string
             spl = re.split('/',clientString)
-            skip = spl[0]
+            _skip = spl[0]
             appName = spl[1]
             actorName = spl[2]
             actorHost = spl[3]

@@ -125,6 +125,7 @@ class RiapsModel2JSON(object):
             elif (portClass == 'SubPort'):
                 portObj['type'] = port.type.name
                 portObj['timed'] = port.timed
+                portObj['deadline'] = port.deadline
                 subs[port.name] = portObj
             elif (portClass == 'ClntPort'):
                 portObj['req_type'] = port.req_type.name
@@ -135,19 +136,23 @@ class RiapsModel2JSON(object):
                 portObj['req_type'] = port.req_type.name
                 portObj['rep_type'] = port.rep_type.name
                 portObj['timed'] = port.timed
+                portObj['deadline'] = port.deadline
                 srvs[port.name] = portObj
             elif (portClass == 'ReqPort'):
                 portObj['req_type'] = port.req_type.name
                 portObj['rep_type'] = port.rep_type.name
                 portObj['timed'] = port.timed
+                portObj['deadline'] = port.deadline
                 reqs[port.name] = portObj
             elif(portClass == 'RepPort'):
                 portObj['req_type'] = port.req_type.name
                 portObj['rep_type'] = port.rep_type.name
                 portObj['timed'] = port.timed
+                portObj['deadline'] = port.deadline
                 reps[port.name] = portObj
             elif(portClass == 'TimPort'):
                 portObj['period'] = port.period
+                portObj['deadline'] = port.deadline
                 tims[port.name] = portObj
             elif (portClass == 'InsPort'):
                 inss[port.name] = portObj
@@ -156,11 +161,13 @@ class RiapsModel2JSON(object):
                 portObj['req_type'] = port.req_type.name
                 portObj['rep_type'] = port.rep_type.name
                 portObj['timed'] = port.timed
+                portObj['deadline'] = port.deadline
                 qrys[port.name] = portObj
             elif (portClass == 'AnsPort'):
                 portObj['req_type'] = port.req_type.name
                 portObj['rep_type'] = port.rep_type.name
                 portObj['timed'] = port.timed
+                portObj['deadline'] = port.deadline
                 anss[port.name] = portObj
             else:
                 raise TextXSemanticError('Unknown type for port "%s"' %
@@ -218,7 +225,8 @@ class RiapsModel2JSON(object):
                 actualObj["value"] = actual.argValue.value
             res.append(actualObj)
         return res
-    def convertTime(self,value,unit):
+    @staticmethod
+    def convertTime(value,unit):
         ''' Convert all time values to msec'''
         if unit == 'msec':
             return value 
@@ -226,7 +234,8 @@ class RiapsModel2JSON(object):
             return value * 1000
         elif unit == 'min':
             return value * 60 * 1000
-    def convertMem(self,value,unit):
+    @staticmethod
+    def convertMem(value,unit):
         ''' Convert all memory size values to kilobytes'''
         if unit == 'mb':
             return value * 1024 
@@ -297,7 +306,13 @@ def timport_obj_processor(timport):
     if timport.spec == 0:
         timport.period = 0
     else:
-        timport.period = timport.spec
+        spec = timport.spec
+        unit = 'msec' if timport.periodUnit == None else timport.periodUnit 
+        timport.period = RiapsModel2JSON.convertTime(spec,unit)
+    if timport.deadline != 0:
+        spec = timport.deadline
+        unit = 'msec' if timport.unit == None else timport.unit
+        timport.deadline = RiapsModel2JSON.convertTime(spec,unit)
 
 # Object processor for inside  ports: the 'spec' part is optional. If missing it implies the default 1sec trigger
 def insport_obj_processor(insport):
@@ -306,12 +321,23 @@ def insport_obj_processor(insport):
     else:
         insport.spec = None
 
-# Object processor for ports: the 'timed' part is optional. 
+# Object processor for non-operation ports: the 'timed' flag is optional. 
 def timed_port_obj_processor(port):
     if port.timed == 'timed':
         port.timed = True
     else:
         port.timed = False
+
+# Object processor for operation ports: the 'timed' and deadline are optional. 
+def op_port_obj_processor(port):
+    if port.timed == 'timed':
+        port.timed = True
+    else:
+        port.timed = False
+    if port.deadline != 0:
+        spec = port.deadline
+        unit = 'msec' if port.unit == None else port.unit
+        port.deadline = RiapsModel2JSON.convertTime(spec,unit)
 
 # Object processor for io component instances: messages must be local
 def instance_obj_processor(instance):
@@ -379,16 +405,16 @@ def compileModel(modelFileName,verbose=False,debug=False,generate=True):
     obj_processors = {
 #         'Wire': wire_obj_processor,
         'TimPort': timport_obj_processor,
-        'InsPort': insport_obj_processor,
+         # 'InsPort': op_port_obj_processor, # Inside port cannot be timed / have deadline
         'Instance': instance_obj_processor,
         'PubPort' : timed_port_obj_processor,
-        'SubPort' : timed_port_obj_processor,
-        'ClntPort' : timed_port_obj_processor,
-        'SrvPort' : timed_port_obj_processor,
-        'ReqPort' : timed_port_obj_processor,
-        'RepPort' : timed_port_obj_processor,
-        'QryPort' : timed_port_obj_processor,
-        'AnsPort' : timed_port_obj_processor,
+        'SubPort' : op_port_obj_processor,
+        'ClntPort': timed_port_obj_processor,
+        'SrvPort' : op_port_obj_processor,
+        'ReqPort' : op_port_obj_processor,
+        'RepPort' : op_port_obj_processor,
+        'QryPort' : op_port_obj_processor,
+        'AnsPort' : op_port_obj_processor,
         # We should also check for parameters: 
         #   (1) formal/actual lists should match, 
         #   (2) inherited parameters should appear in their parent 

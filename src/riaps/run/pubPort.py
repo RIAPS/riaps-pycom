@@ -30,6 +30,7 @@ class PubPort(Port):
         self.isTimed = portSpec["timed"]
         parentActor = parentComponent.parent
         self.isLocalPort = parentActor.isLocalMessage(self.type)
+        self.info = None
     
     def setup(self):
         pass
@@ -47,7 +48,9 @@ class PubPort(Port):
             localHost = self.getLocalIface()
             self.portNum = self.socket.bind_to_random_port("tcp://" + localHost)
             self.host = localHost
-        return ('pub',self.isLocalPort,self.name,self.type,self.host,self.portNum)
+        self.info = ('pub',self.isLocalPort,self.name,self.type,self.host,self.portNum)
+        return self.info
+        
     
     def update(self, host, port):
         raise OperationError("Unsupported update() on PubPort")
@@ -71,5 +74,7 @@ class PubPort(Port):
         raise OperationError("attempt to receive through a publish port")
     
     def getInfo(self):
-        return ("pub",self.name,self.type,self.host,self.portNum)
+        return self.info
+    
+    
     

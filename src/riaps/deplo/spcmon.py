@@ -114,8 +114,9 @@ class SpcMonitorThread(threading.Thread):
                                         self.logger.error("Invalid pid %i w/o key" % (proc.pid))
                                         continue
                                     key = self.pid2Key[proc.pid]
-                                    msg = deplo_capnp.ResMsg.new_message()
-                                    msgMessage = msg.init('resSpcX')
+                                    msg = deplo_capnp.DeplCmd.new_message()
+                                    msgCmd = msg.init('resourceMsg')
+                                    msgMessage = msgCmd.init('resSpcX')
                                     msgMessage.msg = "X"
                                     msgBytes = msg.to_bytes()
                                     payload = zmq.Frame(msgBytes)

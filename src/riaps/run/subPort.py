@@ -26,11 +26,13 @@ class SubPort(Port):
         super(SubPort,self).__init__(parentComponent,portName)
         self.type = portSpec["type"]
         self.isTimed = portSpec["timed"]
+        self.deadline = portSpec["deadline"] * 0.001 # msec
         parentActor = parentComponent.parent
         self.isLocalPort = parentActor.isLocalMessage(self.type)
         self.pubs = []
         self.sendTime = 0.0
         self.recvTime = 0.0
+        self.info = None
     
     def setup(self):
         pass
@@ -47,7 +49,8 @@ class SubPort(Port):
             localHost = self.getLocalIface()
             self.portNum = -1 
             self.host = localHost
-        return ('sub',self.isLocalPort,self.name,self.type,self.host)
+        self.info = ('sub',self.isLocalPort,self.name,self.type,self.host)
+        return self.info
     
     def getSocket(self):
         return self.socket
@@ -73,4 +76,5 @@ class SubPort(Port):
         raise OperationError("attempt to send through a subscriber port")
 
     def getInfo(self):
-        return ("sub",self.name,self.type,self.host,self.portNum,self.pubs)
+        return self.info
+    

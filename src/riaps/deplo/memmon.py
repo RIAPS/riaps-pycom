@@ -88,8 +88,9 @@ class MemMonitorThread(threading.Thread):
                 self.logger.info("MemMonitor[%d] mem limit %d exceeded - %s" % (self.proc.pid,self.usage,str(current)))
                 with self.lock:
                     for key,_dev in self.devices.items():
-                        msg = deplo_capnp.ResMsg.new_message()
-                        msgMessage = msg.init('resMemX')
+                        msg = deplo_capnp.DeplCmd.new_message()
+                        msgCmd = msg.init('resourceMsg')
+                        msgMessage = msgCmd.init('resMemX')
                         msgMessage.msg = "X"
                         msgBytes = msg.to_bytes()
                         payload = zmq.Frame(msgBytes)

@@ -17,7 +17,7 @@ from riaps.consts.defs import *
 from riaps.utils.config import Config
 from riaps.run.exc import *
 from riaps.utils.ifaces import getNetworkInterfaces
-from riaps.deplo.devm import DeviceManager
+# from riaps.deplo.devm import DeviceManager
 from riaps.deplo.depm import DeploymentManager
 from riaps.deplo.resm import ResourceManager
 
@@ -48,10 +48,11 @@ class DeploService(object):
         self.setupIfaces()
         self.suffix = self.macAddress
         self.depmCommandEndpoint = 'inproc://depm-command'
-        self.devmCommandEndpoint = 'inproc://devm-command'
+        # self.devmCommandEndpoint = 'inproc://devm-command'
+        self.procMonEndpoint = 'inproc://procmon'
         self.resm = ResourceManager(self.context)
-        self.devm = DeviceManager(self)
-        self.depm = DeploymentManager(self,self.resm,self.devm)   
+        # self.devm = DeviceManager(self)
+        self.depm = DeploymentManager(self,self.resm) # ,self.devm)   
 
     def setupIfaces(self):
         '''
@@ -79,11 +80,11 @@ class DeploService(object):
         '''
         while True:
             try:
-                self.conn = rpyc.connect_by_service(const.ctrlServiceName)
+                self.conn = rpyc.connect_by_service(const.ctrlServiceName,config = {"allow_public_attrs" : True})
                 break
             except:
                 try:  
-                    self.conn = rpyc.connect(self.ctrlrHost,self.ctrlrPort)
+                    self.conn = rpyc.connect(self.ctrlrHost,self.ctrlrPort,config = {"allow_public_attrs" : True})
                     break
                 except:
                     if retry == False:
@@ -104,11 +105,11 @@ class DeploService(object):
         '''
         Start device and deployment managers
         '''
-        try:
-            self.devm.start()
-        except:
-            self.logger.error("Error while starting devm: %s" % sys.exc_info()[0])
-            raise    
+#         try:
+#             self.devm.start()
+#         except:
+#             self.logger.error("Error while starting devm: %s" % sys.exc_info()[0])
+#             raise    
         try:
             self.depm.start()
         except:
@@ -155,10 +156,13 @@ class DeploService(object):
         Callback from server - runs in the the background server thread  
         '''
         assert type(msg) == tuple
+        reply = None
         try: 
             cmd = msg[0]
             if cmd in ('launch','halt','setupApp','cleanupApp','cleanupApps'):
                 self.depm.doCommand(msg)
+            elif cmd in ('query'):
+                reply = self.depm.callCommand(msg)
             elif cmd == "kill":
                 self.killed = True
             else:
@@ -172,7 +176,7 @@ class DeploService(object):
             self.logger.error("Error in callback '%s': %s %s" % (cmd, info[0], info[1]))
             traceback.print_exc()
             raise
-        
+        return reply
 
     def terminate(self):
         self.logger.info("terminating")

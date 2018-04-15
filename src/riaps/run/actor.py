@@ -83,10 +83,14 @@ class Actor(object):
             instFormals = typeSpec['formals']
             instActuals = instSpec['actuals']
             instArgs = self.buildInstArgs(instName,instFormals,instActuals)
-            if not ioComp:
-                self.components[instName]= Part(self,typeSpec,instName, instType, instArgs)
-            else:
-                self.components[instName]= Peripheral(self,typeSpec,instName, instType, instArgs)
+            try:
+                if not ioComp:
+                    self.components[instName]= Part(self,typeSpec,instName, instType, instArgs)
+                else:
+                    self.components[instName]= Peripheral(self,typeSpec,instName, instType, instArgs)
+            except TypeError as e:
+                self.logger.error("Error while constructing part '%s.%s': %s" % (instType,instName,str(e)))
+                
            
     def getParameterValueType(self,param,defaultType):
         paramValue, paramType = None, None
@@ -251,7 +255,7 @@ class Actor(object):
         for res in result:
             (partName,portName,host,port) = res
             self.updatePart(partName,portName,host,port)
-
+    
     def registerDevice(self,bundle):
         '''
         Relay the device registration message to the device interface service client
@@ -360,20 +364,37 @@ class Actor(object):
         '''
         Handle a message from the deployment service
         '''
-        msgUpd = deplo_capnp.ResMsg.from_bytes(msgBytes)     # Parse the incoming message
+        msgUpd = deplo_capnp.DeplCmd.from_bytes(msgBytes)     # Parse the incoming message
 
         which = msgUpd.which()
-        if which == 'resCPUX':
-            self.handleCPULimit()
-        elif which == 'resMemX':
-            self.handleMemLimit()
-        elif which == 'resSpcX':
-            self.handleSpcLimit()
-        elif which == 'resNetX':
-            self.handleNetLimit()
+        if which == 'resourceMsg':
+            what = msgUpd.resourceMsg.which()
+            if what == 'resCPUX':
+                self.handleCPULimit()
+            elif what == 'resMemX':
+                self.handleMemLimit()
+            elif what == 'resSpcX':
+                self.handleSpcLimit()
+            elif what == 'resNetX':
+                self.handleNetLimit()
+            else:
+                self.logger.error("unknown resource msg from deplo: '%s'" % what)
+                pass
+        elif which == 'reinstateCmd':
+            self.handleReinstate()
         else:
+            self.logger.error("unknown msg from deplo: '%s'" % which)
             pass
            
+    def handleReinstate(self):
+        self.logger.info('handleReinstate')
+        self.poller.unregister(self.discoChannel)
+        self.disco.reconnect()
+        self.discoChannel = self.disco.channel
+        self.poller.register(self.discoChannel,zmq.POLLIN)
+        for inst in self.components:
+            self.components[inst].handleReinstate()
+    
     def handleCPULimit(self):
         '''
         Handle the case when the CPU limit is exceeded: notify each component.

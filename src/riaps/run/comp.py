@@ -7,9 +7,11 @@ Created on Oct 15, 2016
 
 import threading
 import zmq
+import time
 import logging
 import traceback
 from .exc import BuildError
+from email.errors import MultipartInvariantViolationDefect
 
 class ComponentThread(threading.Thread):
     '''
@@ -47,19 +49,22 @@ class ComponentThread(threading.Thread):
                 raise BuildError
         self.control.send_pyobj("done")
     
+
     def setupPoller(self):
         self.poller  = zmq.Poller()
-        self.portMap = {}
+        self.sock2NameMap = {}
+        self.sock2PortMap = {}
         self.poller.register(self.control,zmq.POLLIN)
-        self.portMap[self.control] = ""
+        self.sock2NameMap[self.control] = ""
         for portName in self.parent.ports:
             portObj = self.parent.ports[portName]
             portSocket = portObj.getSocket()
             portIsInput = portObj.inSocket()
             if portSocket != None:
+                self.sock2PortMap[portSocket] = portObj
                 if portIsInput:
                     self.poller.register(portSocket,zmq.POLLIN)
-                    self.portMap[portSocket] = portName
+                    self.sock2NameMap[portSocket] = portName
             
     def runCommand(self):
         res = False
@@ -74,7 +79,7 @@ class ComponentThread(threading.Thread):
             cmd = msg[0]
             if cmd == "portUpdate":
                 self.logger.info("portUpdate")
-                (_,portName,host,port) = msg
+                (_ignore,portName,host,port) = msg
                 portObj = self.parent.ports[portName]
                 res = portObj.update(host,port)
                 self.control.send_pyobj("ok")
@@ -118,10 +123,22 @@ class ComponentThread(threading.Thread):
                 del sockets[self.control]
             if toStop: break
             for socket in sockets:
-                portName = self.portMap[socket]
-                func_ = getattr(self.instance, 'on_' + portName)
+                portName = self.sock2NameMap[socket]
+                portObj = self.sock2PortMap[socket]
+                deadline = portObj.getDeadline()
                 try:
+                    funcName = 'on_' + portName
+                    func_ = getattr(self.instance, funcName)
+                    if deadline != 0:
+                        start = time.perf_counter()
                     func_()
+                    if deadline != 0:
+                        finish = time.perf_counter()
+                        spent = finish-start
+                        if spent > deadline:
+                            self.logger.error('Deadline violation in %s.%s()' 
+                                              % (self.name,funcName))
+                            self.instance.handleDeadline(funcName)
                 except:
                     traceback.print_exc()
         self.logger.info("stopping")
@@ -211,6 +228,12 @@ class Component(object):
     def handleNetLimit(self):
         ''' 
         Default handler for space limit exceed
+        '''
+        pass
+    
+    def handleDeadlline(self,_funcName):
+        '''
+        Default handler for deadline MultipartInvariantViolationDefect
         '''
         pass
     

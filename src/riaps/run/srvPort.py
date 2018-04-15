@@ -22,8 +22,10 @@ class SrvPort(Port):
         self.req_type = portSpec["req_type"]
         self.rep_type = portSpec["rep_type"]
         self.isTimed = portSpec["timed"]
+        self.deadline = portSpec["deadline"] * 0.001 # msec
         parentActor = parentComponent.parent
         self.isLocalPort = parentActor.isLocalMessage(self.req_type) and parentActor.isLocalMessage(self.rep_type)
+        self.info = None
 
     def setup(self):
         pass
@@ -40,7 +42,8 @@ class SrvPort(Port):
             localHost = self.getLocalIface()
             self.portNum = self.socket.bind_to_random_port("tcp://" + localHost)
             self.host = localHost
-        return ('srv',self.isLocalPort,self.name,str(self.req_type) + '#' + str(self.rep_type), self.host,self.portNum)
+        self.info = ('srv',self.isLocalPort,self.name,str(self.req_type) + '#' + str(self.rep_type), self.host,self.portNum)
+        return self.info
 
     def update(self, host, port):
         raise OperationError("Unsupported update() on SrvPort")
@@ -64,4 +67,6 @@ class SrvPort(Port):
         return self.port_send(msg,False) 
             
     def getInfo(self):
-        return ("srv",self.Name,self.Type,self.host,self.portNum)
+        return self.info
+    
+    

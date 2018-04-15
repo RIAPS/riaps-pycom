@@ -78,8 +78,17 @@ class DiscoClient(object):
                 raise SetupError("Error response from disco service at app registration")
         else:
             raise SetupError("Unexpected response from disco service at app registration")
-        return 
-
+        return
+     
+    def reconnect(self):
+        self.logger.info('reconnect')
+        endpoint = const.discoEndpoint
+        self.socket.disconnect(endpoint)
+        self.socket.connect(endpoint)
+        self.channel = self.context.socket(zmq.PAIR)
+        self.registerApp()
+        self.logger.info('reconnected')
+        
     def handleRegReq(self,bundle):
         self.logger.info("handleRegReq: %s" % str(bundle))
         if self.socket == None:
@@ -122,7 +131,7 @@ class DiscoClient(object):
         if self.socket == None:
             self.logger.info("No disco service - skipping lookup: %s", str(bundle))
             return []
-        (partName,partType,kind,isLocal,portName,portType) = bundle[0:6]
+        (partName,_partType,kind,isLocal,portName,portType) = bundle[0:6]
         # All interactions below go via the REQ/REP socket ; the channel is for server pushes
         req = disco_capnp.DiscoReq.new_message()
         reqMsg = req.init('serviceLookup')
@@ -183,7 +192,7 @@ class DiscoClient(object):
         result = []
         # Update component means: add command to component's message queue
         if kind == 'pub' or kind == 'srv' or kind == 'rep' or kind == 'ans':
-            # Registe publisher or server port
+            # Register publisher or server port
             self.handleRegReq(bundle)
         elif kind == 'sub' or kind == 'clt' or kind == 'req' or kind == 'qry':
             # Request pub(s) or srv(s);  update component
@@ -191,7 +200,7 @@ class DiscoClient(object):
         else:
             raise SetupError("Invalid registration message")
         return result
-    
+
     def terminate(self):
         self.logger.info("terminating")
         if self.socket == None:

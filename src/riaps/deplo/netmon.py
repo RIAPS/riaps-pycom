@@ -299,8 +299,9 @@ class NetMonitorThread(threading.Thread):
                 self.logger.info("checking [%d] %i > %i" % (_pid,_sent_kbs,rate))
                 if (rate != 0) and (_sent_kbs > rate):
                     self.logger.info("%s exceeded rate limit %i kbps" % (key,rate/10))
-                    msg = deplo_capnp.ResMsg.new_message()
-                    msgMessage = msg.init('resNetX')
+                    msg = deplo_capnp.DeplCmd.new_message()
+                    msgCmd = msg.init('resourceMsg')
+                    msgMessage = msgCmd.init('resNetX')
                     msgMessage.msg = "X"
                     msgBytes = msg.to_bytes()
                     payload = zmq.Frame(msgBytes)
@@ -356,6 +357,7 @@ class NetMonitorThread(threading.Thread):
         except:
             self.logger.error("NetMonitorThread failure")
             # traceback.print_exc()      
+        self.logger.info("NetMonitorThread stopped")
         
     def stop(self):
         self.lib.nethogsmonitor_breakloop()

@@ -126,10 +126,10 @@ class ControlGUIClient(object):
         Called when the console entry receives an 'activate' event
         NOT USED
         '''
-        source = self.consoleIn.get_text()
+        _source = self.consoleIn.get_text()
         pass
 
-    def selectFile(self, title, pattern):
+    def selectFile(self, title, patterns):
         '''
         File selection dialog
         '''
@@ -138,10 +138,11 @@ class ControlGUIClient(object):
                                          Gtk.FileChooserAction.OPEN,
                                          (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
                                           Gtk.STOCK_OPEN, Gtk.ResponseType.OK))
-        filterR = Gtk.FileFilter()
-        filterR.set_name("%s" % pattern)
-        filterR.add_pattern(pattern)
-        self.fcd.add_filter(filterR)
+        for pattern in patterns:
+            filterR = Gtk.FileFilter()
+            filterR.set_name("%s" % pattern)
+            filterR.add_pattern(pattern)
+            self.fcd.add_filter(filterR)
 
         filterA = Gtk.FileFilter()
         filterA.set_name("All files")
@@ -185,7 +186,7 @@ class ControlGUIClient(object):
         '''
         App selection. Sets the app entry and calls the controller to compile the app model.
         '''
-        fileName = self.selectFile("application", "*.riaps")
+        fileName = self.selectFile("application", ["*.riaps","*.json"])
         if fileName != None:
             self.appNameEntry.set_text(os.path.basename(fileName))
             self.controller.compileApplication(fileName, self.folderEntry.get_text())
@@ -204,7 +205,7 @@ class ControlGUIClient(object):
         Deployment selection. Sets the deployment entry and calls the controller
         to compile the deployment model.
         '''
-        fileName = self.selectFile("application", "*.depl")
+        fileName = self.selectFile("application", ["*.depl","*.json"])
         if fileName != None:
             self.deplNameEntry.set_text(os.path.basename(fileName))
             self.appToLoad = self.controller.compileDeployment(fileName)
@@ -312,6 +313,13 @@ class ControlGUIClient(object):
         app = info[3]
         actor = info[4]
         self.launch_app(node, app, actor)
+        
+    def update_node_apps(self,clientName,value):
+        for appName in value.keys():
+            actors = value[appName]
+            for actorName in actors:
+                self.launch_app(clientName,appName,actorName)
+                self.controller.addToLaunchList(clientName,appName,actorName)
 
     """ Status grid gui update functions - these are the actual update functions """
         
@@ -350,8 +358,8 @@ class ControlGUIClient(object):
         c_cell = self.gridTable.get_child_at(col_idx, 0)
 
         if c_cell is not None:
-            # self.modify_text_cell_color(c_cell, 'black')
-            self.modify_text_cell_text(c_cell, 'black', 'gray')
+            self.modify_text_cell_color(c_cell, 'black', 'black')
+            self.modify_text_cell_text(c_cell, '')
 
             # modify data - reset the data at a particular (col_idx)
             for row_idx, key in enumerate(self.appStatusDict, 1):

@@ -34,7 +34,7 @@ class CltPort(Port):
         self.isLocalPort = parentActor.isLocalMessage(self.req_type) and parentActor.isLocalMessage(self.rep_type)
         self.serverHost = None
         self.serverPort = None
-
+        self.info = None
 
     def setup(self):
         '''
@@ -57,7 +57,8 @@ class CltPort(Port):
             localHost = self.getLocalIface()
             self.portNum = -1 
             self.host = localHost
-        return ('clt',self.isLocalPort,self.name,str(self.req_type) + '#' + str(self.rep_type),self.host)
+        self.info = ('clt',self.isLocalPort,self.name,str(self.req_type) + '#' + str(self.rep_type),self.host)
+        return self.info
     
     def getSocket(self):
         '''
@@ -96,5 +97,5 @@ class CltPort(Port):
         '''
         Retrieve relevant information about this port
         '''
-        return ("clt",self.name,(self.req_type,self.rep_type),self.host,self.portNum,self.serverHost,self.serverPort)
+        return self.info 
     

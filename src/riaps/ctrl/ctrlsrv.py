@@ -108,8 +108,16 @@ class ServiceClient(object):
         if self.callback != None:
             res = self.callback(('kill',))
             return res.value
-        
     
+    def query(self):
+        '''
+        Query client for running apps
+        '''
+        res = None
+        if self.callback != None:
+            res = self.callback(('query',))
+        return res
+            
 class ControllerService(rpyc.Service):
     '''
     Controller Service implementation (rpyc service)
@@ -179,7 +187,9 @@ class ServiceThread(threading.Thread):
         '''
         global theController
         host = theController.hostAddress
-        self.server = ThreadedServer(ControllerService,hostname=host, port=self.port,auto_register=True)
+        self.server = ThreadedServer(ControllerService,hostname=host, port=self.port,
+                                     auto_register=True,
+                                     protocol_config = {"allow_public_attrs" : True})
         self.server.start()
         time.sleep(0.010)
         

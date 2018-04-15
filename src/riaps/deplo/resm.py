@@ -17,7 +17,7 @@ import threading
 from threading import RLock
 import logging
 from riaps.run.exc import *
-from riaps.utils.sudo import riaps_sudo
+from riaps.utils.sudo import riaps_sudo,is_su
 from riaps.utils.config import Config
 from butter.eventfd import Eventfd
 import traceback
@@ -37,9 +37,12 @@ class ActorResourceManager(object):
         self.parent = parent
         self.context  = self.parent.context
         self.actorName = actorName
-        self.cpuCGroup = None
-        self.memCGroup = None
-        self.netCGroup = None
+        self.cpuCGroup = self.memCGroup = self.netCGroup = None
+        self.hasCPU = self.hasMem = self.hasSpace = self.hasNet = self.hasRate = False
+
+        self.cpuMonitor = self.memMonitor = None
+        self.spcMonitor = self.parent.spcMonitor
+        self.netMonitor = self.parent.netMonitor
         self.managed = 'usage' in actorDef 
         # If no usage spec, ignore
         if not self.managed: return
@@ -61,10 +64,6 @@ class ActorResourceManager(object):
             netNode = self.parent.cgroupTree.get_node_by_path(netPath)
             self.netCGroup = netNode if (netNode != None) else self.parent.netCGroup.create_cgroup(actorName)    
         # Setup resource monitors
-        self.cpuMonitor = None
-        self.memMonitor = None
-        self.spcMonitor = self.parent.spcMonitor
-        self.netMonitor = self.parent.netMonitor
         self.hasCPU = self.setupCPU()
         self.hasMem = self.setupMem()
         self.hasSpace = self.setupSpace()
@@ -197,7 +196,7 @@ class ActorResourceManager(object):
             self.memMonitor.addClientDevice(appName,actorName,device)
         if self.hasSpace and self.spcMonitor != None:
             self.spcMonitor.addClientDevice(appName,actorName,device,self.proc)
-        if self.netMonitor != None and (self.hasNet or self.hasRate):
+        if (self.hasNet or self.hasRate) and self.netMonitor != None:
             self.netMonitor.addClientDevice(appName,actorName,device,self.proc,self.netRate)
     
     def startActor(self,proc):
@@ -281,7 +280,7 @@ class ActorResourceManager(object):
             childID = str(self.actorID)
             try:
                 # tc class del dev enp0s3 parent 1002: classid 1002:2
-                cmd = ('tc class add dev %s parent %s: classid %s:%s ' \
+                cmd = ('tc class del dev %s parent %s: classid %s:%s' \
                         % (Config.NIC_NAME,parentID,parentID,childID))
                 _res = riaps_sudo(cmd)
 #                 # tc filter add dev enp0s3 parent 1002:1 protocol ip prio 10 handle 1: cgroup
@@ -327,8 +326,9 @@ class AppResourceManager(object):
             _res = riaps_sudo('chown -R %s:%s %s' % (self.userName,self.userName,self.appFolder))
             _res = riaps_sudo('chmod o-rwx %s' % self.appFolder)
         except:
-            traceback.print_exc()
+            # traceback.print_exc()
             self.logger.warning('creating app user %s failed' % (self.userName))
+            self.userName = Config.TARGET_USER          # Default user
             self.uid = os.getuid()
         self.spcUsage = 0
         self.spcMonitor = self.parent.spcMonitor
@@ -355,6 +355,9 @@ class AppResourceManager(object):
             pass
         self.netMonitor = self.parent.netMonitor
             
+    def getUserName(self):
+        return self.userName
+    
     def nextActorID(self):
         res = self.actorID
         self.actorID += 1 
@@ -460,7 +463,7 @@ class ResourceManager(object):
                             (self.riapsMem is not None) and \
                             (self.riapsNet is not None)
         if not self.hasCGroup:
-            self.logger.warning("cgroup 'riaps' missing - limited resource management.")
+            self.logger.warning("cgroup 'riaps' is incomplete - limited resource management.")
         # File space is handled through the quota system
         self.spcMonitor = SpcMonitorThread(self)
         self.spcMonitor.start()
@@ -491,6 +494,12 @@ class ResourceManager(object):
         else:
             pass
         # print(self.appMap)
+    
+    def getUserName(self,appName):
+        if appName in self.appMap:
+            return self.appMap[appName].getUserName()
+        else:
+            return Config.TARGET_USER
     
     def addActor(self,appName,actorName,actorDef):
         self.logger.info("addActor %s.%s" % (appName,actorName))

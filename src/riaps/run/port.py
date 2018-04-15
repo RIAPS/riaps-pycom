@@ -38,6 +38,11 @@ class Port(object):
         self.recvTime = 0.0
         self.socket = None
         self.isTimed = False
+        self.deadline = 0.0
+        self.info = None
+    
+    def getDeadline(self):
+        return self.deadline
 
     def getLocalIface(self):
         if self.localIface != None:
@@ -64,7 +69,7 @@ class Port(object):
         Create the socket(s) used by the port
         '''
         raise SetupError
-    
+            
     def getSocket(self):
         '''
         Retrieve the socket(s) used by the port
@@ -136,7 +141,7 @@ class Port(object):
                 nowFrame = zmq.Frame(now)
                 sendMsg += [nowFrame]
             self.socket.send_multipart(sendMsg)
-        except ZMQError as e:
+        except zmq.error.ZMQError as e:
             if e.errno == zmq.EAGAIN:
                 return False
             else:

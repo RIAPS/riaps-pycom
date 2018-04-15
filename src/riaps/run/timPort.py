@@ -151,7 +151,9 @@ class TimPort(Port):
         self.logger = logging.getLogger(__name__)
         self.instName = self.parent.name + '.' + self.name
         self.period = portSpec["period"]
+        self.deadline = portSpec["deadline"] * 0.001 # msec
         self.thread = None
+        self.info = None
 
     def setup(self):
         self.thread = TimerThread(self)
@@ -162,7 +164,8 @@ class TimPort(Port):
         self.socket = self.context.socket(zmq.PAIR) # SUB
         self.socket.connect('inproc://timer_' + self.instName)
         # self.socket.setsockopt_string(zmq.SUBSCRIBE, u'')
-        return ('tim',self.name)
+        self.info = ('tim',self.name)
+        return self.info
 
     def activate(self):
         '''
@@ -270,4 +273,6 @@ class TimPort(Port):
         raise OperationError("attempt to send through a timer port")
     
     def getInfo(self):
-        return ("tim",self.name,"*tick*")
+        return self.info
+    
+    

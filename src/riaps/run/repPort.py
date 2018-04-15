@@ -25,8 +25,10 @@ class RepPort(Port):
         self.req_type = portSpec["req_type"]
         self.rep_type = portSpec["rep_type"]
         self.isTimed = portSpec["timed"]
+        self.deadline = portSpec["deadline"] * 0.001 # msec
         parentActor = parentComponent.parent
         self.isLocalPort = parentActor.isLocalMessage(self.req_type) and parentActor.isLocalMessage(self.rep_type)
+        self.info = None
 
     def setup(self):
         pass
@@ -43,7 +45,8 @@ class RepPort(Port):
             localHost = self.getLocalIface()
             self.portNum = self.socket.bind_to_random_port("tcp://" + localHost)
             self.host = localHost
-        return ('rep',self.isLocalPort,self.name,str(self.req_type) + '#' + str(self.rep_type),self.host,self.portNum)
+        self.info = ('rep',self.isLocalPort,self.name,str(self.req_type) + '#' + str(self.rep_type),self.host,self.portNum)
+        return self.info
     
     def getSocket(self):
         return self.socket
@@ -67,5 +70,6 @@ class RepPort(Port):
         return self.port_send(msg,False) 
     
     def getInfo(self):
-        return ("rep",self.name,(self.req_type,self.rep_type), self.host, self.portNum)
+        return self.info
+    
     

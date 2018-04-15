@@ -30,9 +30,11 @@ class AnsPort(Port):
         self.req_type = portSpec["req_type"]
         self.rep_type = portSpec["rep_type"]
         self.isTimed = portSpec["timed"]
+        self.deadline = portSpec["deadline"] * 0.001 # msec
         parentActor = parentComponent.parent
         self.isLocalPort = parentActor.isLocalMessage(self.req_type) and parentActor.isLocalMessage(self.rep_type)
         self.identity = None
+        self.info = None
 
     def setup(self):
         pass
@@ -49,7 +51,8 @@ class AnsPort(Port):
             localHost = self.getLocalIface()
             self.portNum = self.socket.bind_to_random_port("tcp://" + localHost)
             self.host = localHost
-        return ('ans',self.isLocalPort,self.name,str(self.req_type) + '#' + str(self.rep_type), self.host,self.portNum)
+        self.info = ('ans',self.isLocalPort,self.name,str(self.req_type) + '#' + str(self.rep_type), self.host,self.portNum)
+        return self.info
 
     def update(self, host, port):
         raise OperationError("Unsupported update() on AnsPort")
@@ -115,4 +118,5 @@ class AnsPort(Port):
         return self.ans_port_send(False)
         
     def getInfo(self):
-        return ("ans",self.Name,self.Type,self.host,self.portNum)
+        return self.info
+    

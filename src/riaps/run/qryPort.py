@@ -26,6 +26,7 @@ class QryPort(Port):
         self.req_type = portSpec["req_type"]
         self.rep_type = portSpec["rep_type"]
         self.isTimed = portSpec["timed"]
+        self.deadline = portSpec["deadline"] * 0.001 # msec
         parentActor = parentComponent.parent
         # The request and reply message types must be of the same kind (global/local)
         assert parentActor.isInnerMessage(self.req_type) == parentActor.isInnerMessage(self.rep_type)
@@ -34,6 +35,7 @@ class QryPort(Port):
         self.isLocalPort = parentActor.isLocalMessage(self.req_type) and parentActor.isLocalMessage(self.rep_type)
         self.serverHost = None
         self.serverPort = None
+        self.info = None
 
 
     def setup(self):
@@ -58,7 +60,8 @@ class QryPort(Port):
             localHost = self.getLocalIface()
             self.portNum = -1 
             self.host = localHost
-        return ('qry',self.isLocalPort,self.name,str(self.req_type) + '#' + str(self.rep_type),self.host)
+        self.info = ('qry',self.isLocalPort,self.name,str(self.req_type) + '#' + str(self.rep_type),self.host)
+        return self.info
     
     def getSocket(self):
         '''
@@ -117,5 +120,6 @@ class QryPort(Port):
         '''
         Retrieve relevant information about this port
         '''
-        return ("qry",self.name,(self.req_type,self.rep_type),self.host,self.portNum,self.serverHost,self.serverPort)
+        return self.info
+    
     

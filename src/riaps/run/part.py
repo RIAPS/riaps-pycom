@@ -247,7 +247,21 @@ class Part(object):
         if self.state == Part.State.Destroyed:
             raise StateError("Invalid state %s in destroy()" % self.state)
         # Destroy thread
-    
+        
+    def handleReinstate(self):
+        '''
+        Reinstate providers with a restarted disco
+        '''
+        self.logger.info("handleReinstate - %s:%s" % (self.name,self.typeName))
+        prefix = (self.name,self.typeName)
+        for portName in self.ports:
+            port = self.ports[portName]
+            info = port.getInfo()
+            kind = info[0]
+            if kind == 'pub' or kind == 'srv' or kind == 'rep' or kind == 'ans':
+                endp = prefix + info
+                self.parent.registerEndpoint(endp) 
+        
     def handleCPULimit(self):
         self.logger.info("handleCPULimit - %s:%s" % (self.name,self.typeName))
         msg = ("limitCPU",)

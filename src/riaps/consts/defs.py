@@ -19,10 +19,14 @@ const.deplEndpointRecvTimeout = 10000
 const.deplEndpointSendTimeout = 10000  
 
 # Name of endpoint for actor-devm communication
-const.devmEndpoint = 'tcp://127.0.0.1:9790'     # 'ipc:///tmp/riaps-devm
-# Timeout for actor-depl communication (-1: wait forever)
-const.devmEndpointRecvTimeout = 10000  
-const.devmEndpointSendTimeout = 10000  
+# const.devmEndpoint = 'tcp://127.0.0.1:9790'     # 'ipc:///tmp/riaps-devm
+# # Timeout for actor-depl communication (-1: wait forever)
+# const.devmEndpointRecvTimeout = 10000  
+# const.devmEndpointSendTimeout = 10000
+  
+# Timeout for deplo internal communications
+const.depmRecvTimeout = 3000
+const.depmSendTimeout = 3000
 
 # Default host for disco redis host
 const.discoRedisHost = 'localhost'
@@ -40,10 +44,16 @@ const.ctrlServiceName = 'RIAPSControl'
 const.ctrlPrivateKey = 'id_rsa.key'
 # SSH port
 const.ctrlSSHPort = 22
+# Control/deplo delay (in msec) - time allowed for recovered apps to start
+const.ctrlDeploDelay = 5000
 
 # Nethog
 const.nethogLibrary = 'libnethogs.so.master'
 
 # Quota system scanning timeout
 const.spcMonitorTimeout = 10.0
+
+# App database
+const.appDb = 'riaps-apps.lmdb'     # Under RIAPSAPPS
+const.appDbSize = 16                # Mbytes 
 

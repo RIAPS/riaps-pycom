@@ -39,7 +39,7 @@ class DeplClient(object):
         self.channel = self.context.socket(zmq.PAIR)
         self.logger.info("started")
 
-    def registerApp(self):
+    def registerApp(self,isDevice=False):
         self.logger.info("registerApp")
         reqt = deplo_capnp.DeplReq.new_message()
         appMessage = reqt.init('actorReg')
@@ -47,6 +47,7 @@ class DeplClient(object):
         appMessage.version = '0.0.0'
         appMessage.actorName = self.actor.name
         appMessage.pid = os.getpid()
+        appMessage.isDevice = isDevice
                   
         msgBytes = reqt.to_bytes()
 
@@ -96,7 +97,7 @@ class DeplClient(object):
         appName,modelName,typeName,args = bundle
 
         reqt = deplo_capnp.DeplReq.new_message()
-        devMessage = reqt.init('deviceReg')
+        devMessage = reqt.init('deviceGet')
         devMessage.appName = appName
         devMessage.modelName = modelName
         devMessage.typeName = typeName
@@ -113,7 +114,7 @@ class DeplClient(object):
         try:
             self.socket.send(msgBytes)
         except Exception as e:
-            self.logger.error("registerDevice - failed to send: {1}".format(e.errno, e.strerror))
+            self.logger.error("registerDevice - failed to send: %s" % str(e.args))
             # self.socket.close()
             # self.socket = None
             return False
@@ -121,15 +122,15 @@ class DeplClient(object):
         try:
             respBytes = self.socket.recv()
         except Exception as e:
-            self.logger.error("registerDevice - no response: {1}".format(e.errno, e.strerror))
+            self.logger.error("registerDevice - no response: %s" % str(e.args))
             # self.socket.close()
             # self.socket = None
             return False
        
         resp = deplo_capnp.DeplRep.from_bytes(respBytes)
         which = resp.which()
-        if which == 'deviceReg':
-            respMessage = resp.deviceReg
+        if which == 'deviceGet':
+            respMessage = resp.deviceGet
             status = respMessage.status
             if status == 'ok':
                 return True
@@ -154,7 +155,7 @@ class DeplClient(object):
         appName,modelName,typeName = bundle
 
         reqt = deplo_capnp.DeplReq.new_message()
-        devMessage = reqt.init('deviceUnreg')
+        devMessage = reqt.init('deviceRel')
         devMessage.appName = appName
         devMessage.modelName = modelName
         devMessage.typeName = typeName
@@ -164,7 +165,7 @@ class DeplClient(object):
         try:
             self.socket.send(msgBytes)
         except Exception as e:
-            self.logger.error("unregisterDevice - failed to send: {1}".format(e.errno, e.strerror))
+            self.logger.error("unregisterDevice - failed to send: %s" % str(e.args))
 #             self.socket.close()
 #             self.socket = None
             return False
@@ -172,15 +173,15 @@ class DeplClient(object):
         try:
             respBytes = self.socket.recv()
         except Exception as e:
-            self.logger.error("unregisterDevice - no response: {1}".format(e.errno, e.strerror))
+            self.logger.error("unregisterDevice - no response: %s" % str(e.args))
 #             self.socket.close()
 #             self.socket = None
             return False
        
         resp = deplo_capnp.DeplRep.from_bytes(respBytes)
         which = resp.which()
-        if which == 'deviceUnreg':
-            respMessage = resp.deviceUnreg
+        if which == 'deviceRel':
+            respMessage = resp.deviceRel
             status = respMessage.status
             if status == 'ok':
                 return True

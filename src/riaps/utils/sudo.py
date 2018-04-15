@@ -32,8 +32,8 @@ env.hosts = [gethostname()]
 # THIS SHOULD BE IMPORTED FROM A SECURED SOURCE
 # Standard riaps setup
 env.user = 'riaps'
-env.password = 'PASSWD'
-env.sudo_password = 'PASSWD'
+env.password = 'riaps@isis'
+#env.sudo_password = 'riaps@isis'
 # END OF IMPORT
 # Shell
 env.shell = "/bin/bash -l -i -c"
@@ -67,10 +67,12 @@ def riaps_sudo(cmd,timeout=None):
             proc.wait(timeout)
             return proc.returncode
         else:
-            res = sudo(cmd)
+            # res = sudo(cmd)
+            print ('IGN: sudo ' + cmd)
+            res = False
             return res
     except:
-        traceback.print_exc()
-        print("sudo %s failed" % cmd)
+        # traceback.print_exc()
+        print("sudo '%s' failed" % cmd)
     return None
 

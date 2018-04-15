@@ -14,7 +14,10 @@ import paramiko
 import socket
 from os.path import join
 import subprocess
+from threading import Timer
+import functools
 import logging
+import json
 from riaps.consts.defs import *
 from riaps.utils.ifaces import getNetworkInterfaces
 from riaps.utils.config import Config 
@@ -161,6 +164,30 @@ class Controller(object):
         if self.service != None:
             self.service.stop()
 
+    def queryClient(self,clientName,client):
+        '''
+        Query the client for apps already running
+        '''
+        res = client.query()
+        if res.error:
+            self.log('? Query')
+            return
+        value = None
+        if res.ready:
+            value = res.value
+            if not value:
+                return
+            else:
+                self.gui.update_node_apps(clientName,value)
+        if value == None:
+            self.setupQueryClient(clientName,client)        # Schedule a query again if no response
+            return
+
+    def setupQueryClient(self,clientName,client):
+        exe = functools.partial(self.queryClient,clientName=clientName,client=client)
+        timeout = const.ctrlDeploDelay/1000.0
+        Timer(timeout, exe).start()
+        
     def addClient(self,clientName,client):
         '''
         Add a client object, representing a RIAPS node to the list. The operation is called
@@ -168,6 +195,7 @@ class Controller(object):
         '''
         with ctrlLock:
             self.clientMap[clientName] = client
+            self.setupQueryClient(clientName,client)
         
     def delClient(self,clientName):
         '''
@@ -504,6 +532,10 @@ class Controller(object):
                 newLaunchList.append(elt)
         self.launchList = newLaunchList
 
+    def addToLaunchList(self,clientName,appName,actorName):
+        client = self.clientMap[clientName]
+        self.launchList.append([client,appName,actorName])
+    
     def isdir(self,sftp,path):
         try:
             return S_ISDIR(sftp.stat(path).st_mode)
@@ -569,37 +601,55 @@ class Controller(object):
         self.riaps_appFolder = appFolderPath
         os.chdir(appFolderPath)
         
-    def compileApplication(self,appName,appFolder):
+    def compileApplication(self,appModelName,appFolder):
         '''
         Compile an application model (create both the JSON file and the data structure)
         '''
-        self.log("Compiling app: %s" % appName)
+        # .riaps -> compile
+        # .json -> load 
         try:
-            appInfo = compileModel(appName)
-            if len(appInfo) < 1:        # empty
+            if appModelName.endswith('.riaps'):
+                self.log("Compiling app: %s" % appModelName)
+                appInfo = compileModel(appModelName)
+                if len(appInfo) < 1:        # empty
+                    return None
+                appNameKey = list(appInfo.keys())[0]    # Load the first app only
+            elif appModelName.endswith('.json'):
+                self.log("Loading app model: %s" % appModelName)
+                # TODO: Validate that this is a correct RIAPS model file
+                fp = open(appModelName,'r')             # Load model file (one app)
+                jsonModel = json.load(fp)
+                appNameKey = jsonModel['name']
+                appInfo = {}
+                appInfo[appNameKey] = jsonModel
+            else:
+                self.log("Must be .riaps or .json: '%s'" % (appModelName))
+                self.gui.clearApplication()
                 return None
-            appNameKey = list(appInfo.keys())[0]
             if appNameKey not in self.riaps_appInfoDict:
                 self.riaps_appInfoDict[appNameKey] = dict()
             self.riaps_appInfoDict[appNameKey]['riaps_model'] = appInfo
             self.riaps_appInfoDict[appNameKey]['riaps_appFolder'] = appFolder
             return appNameKey
         except Exception as e:
-            self.log("Error while compiling '%s':\n%s" % (appName,e.args[0]))
+            self.log("Error while processing '%s':\n%s" % (appModelName,e.args[0]))
             self.gui.clearApplication()
             return None
 
-    def compileDeployment(self,depName):
+    def compileDeployment(self,depModelName):
         '''
         Compile a deployment model (create both the JSON file and the data structure)
         '''
-        self.log("Compiling deployment: %s" % depName)
+        # .riaps -> compile
+        # .json -> load 
+        if depModelName.endswith('.depl'):
+            self.log("Compiling deployment: %s" % depModelName)
+        else:
+            self.log("Loading deployment model: %s" % depModelName)
         try:
-            depInfo = DeploymentModel(depName)
-
+            depInfo = DeploymentModel(depModelName)
             if depInfo is None:
                 return None
-
             appNameKey = depInfo.appName
             if appNameKey not in self.riaps_appInfoDict:
                 self.riaps_appInfoDict[appNameKey] = dict()
@@ -607,7 +657,7 @@ class Controller(object):
             #print(self.riaps_appInfoDict)
             return appNameKey
         except Exception as e:
-            self.log("Error in compiling depl '%s':\n%s" % (depName,e.args[0]))
+            self.log("Error in compiling depl '%s':\n%s" % (depModelName,e.args[0]))
             self.gui.clearDeployment()
             return None
 

@@ -88,8 +88,9 @@ class CPUMonitorThread(threading.Thread):
                 # self.proc.send_signal(signal.SIGXCPU)
                 with self.lock:
                     for key,_dev in self.devices.items():
-                        msg = deplo_capnp.ResMsg.new_message()
-                        msgMessage = msg.init('resCPUX')
+                        msg = deplo_capnp.DeplCmd.new_message()
+                        msgCmd = msg.init('resourceMsg')
+                        msgMessage = msgCmd.init('resCPUX')
                         msgMessage.msg = "X"
                         msgBytes = msg.to_bytes()
                         payload = zmq.Frame(msgBytes)
