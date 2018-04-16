@@ -224,10 +224,10 @@ class DiscoService(object):
         regKey = self.appActorName(appName, appActorName)
         clients = []
         
-        if regKey not in self.registrations:
-            (key,value) = self.buildInsertKeyValuePair(appName, msgType, kind, scope,host, port)
-            clients = self.dbase.insert(key,value)
-            self.registrations[regKey].append((key,value))
+        # if regKey not in self.registrations:
+        (key,value) = self.buildInsertKeyValuePair(appName, msgType, kind, scope,host, port)
+        clients = self.dbase.insert(key,value)
+        self.registrations[regKey].append((key,value))
         
         rep = disco_capnp.DiscoRep.new_message()            # Construct response
         repMsg = rep.init('serviceReg')
