@@ -55,7 +55,7 @@ class ServiceClient(object):
         ''' 
         if self.callback != None:
             res = self.callback(('setupApp',appName,appNameJSON))
-            return res.value
+            return res
             
     def cleanupApp(self,appName):
         '''
@@ -64,7 +64,7 @@ class ServiceClient(object):
         ''' 
         if self.callback != None:
             res = self.callback(('cleanupApp',appName))
-            return res.value
+            return res
     
     def cleanupApps(self):
         '''
@@ -73,7 +73,7 @@ class ServiceClient(object):
         ''' 
         if self.callback != None:
             res = self.callback(('cleanupApps',))
-            return res.value
+            return res
             
     def launch(self,appName,appNameJSON,actorName,actuals):
         '''
@@ -82,7 +82,7 @@ class ServiceClient(object):
         ''' 
         if self.callback != None:
             res = self.callback(('launch',appName,appNameJSON,actorName,actuals))
-            return res.value
+            return res
     
     def halt(self,appName,actorName):
         '''
@@ -91,7 +91,7 @@ class ServiceClient(object):
         ''' 
         if self.callback != None:
             res = self.callback(('halt',appName,actorName))
-            return res.value
+            return res
         
     def clean(self):
         '''
@@ -99,7 +99,7 @@ class ServiceClient(object):
         '''
         if self.callback != None:
             res = self.callback(('clean',))
-            return res.value
+            return res
         
     def kill(self):
         '''
@@ -107,7 +107,7 @@ class ServiceClient(object):
         '''
         if self.callback != None:
             res = self.callback(('kill',))
-            return res.value
+            return res
     
     def query(self):
         '''

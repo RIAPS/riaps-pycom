@@ -583,7 +583,8 @@ class Controller(object):
                 if client.stale:
                     self.log('? %s', client.name)  # Stale client, we don't remove
                 else:
-                    client.cleanupApp(appName)
+                    res = client.cleanupApp(appName)
+                    while not res.ready: time.sleep(1.0)
                     ok = self.removeAppFromClient(client,appName,files,libraries)
                     if not ok:
                         return False
