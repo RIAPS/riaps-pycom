@@ -35,6 +35,7 @@ class AppDbase(object):
 
     RIAPSAPPS = 'RIAPSAPPS'
     RIAPSDISCO = 'RIAPSDISCO'
+    RIAPSDISCOCMD = 'RIAPSDISCOCMD'
     
     def __init__(self):
         '''
@@ -115,6 +116,15 @@ class AppDbase(object):
     
     def setDisco(self,disco):
         return self.putKeyValue(self.RIAPSDISCO,disco)
+            
+    def getDiscoCommand(self):
+        return self.getKeyValue(self.RIAPSDISCOCMD)
+    
+    def setDiscoCommand(self,discoCmd):
+        return self.putKeyValue(self.RIAPSDISCOCMD,discoCmd)
+    
+    def delDiscoCommand(self):
+        return self.delKey(self.RIAPSDISCOCMD)
             
     def getApps(self):
         if self.create:

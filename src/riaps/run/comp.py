@@ -27,7 +27,7 @@ class ComponentThread(threading.Thread):
     
     def setupControl(self):
         '''
-        Create the control socket and connect it to the socket in the parent part part
+        Create the control socket and connect it to the socket in the parent part
         '''
         self.control = self.context.socket(zmq.PAIR)
         self.control.connect('inproc://part_' + self.name + '_control')
@@ -48,7 +48,6 @@ class ComponentThread(threading.Thread):
             else:
                 raise BuildError
         self.control.send_pyobj("done")
-    
 
     def setupPoller(self):
         self.poller  = zmq.Poller()
@@ -74,7 +73,13 @@ class ComponentThread(threading.Thread):
             res = True
         elif msg == "activate":
             self.logger.info("activate")
-            pass                            
+            self.instance.handleActivate()  
+        elif msg == "deactivate":
+            self.logger.info("deactivate")
+            self.instance.handleDeactivate()     
+        elif msg == "passivate":
+            self.logger.info("passivate")
+            self.instance.handlePassivate()                
         else: 
             cmd = msg[0]
             if cmd == "portUpdate":
@@ -99,6 +104,16 @@ class ComponentThread(threading.Thread):
                 self.logger.info("limitNet")
                 self.instance.handleNetLimit()
                 self.control.send_pyobj("ok")
+            elif cmd == "nicState":
+                state = msg[1]
+                self.logger.info("nicState %s" % state)
+                self.instance.handleNICStateChange(state)
+                self.control.send_pyobj("ok")
+            elif cmd == "peerState":
+                state,uuid = msg[1], msg[2]
+                self.logger.info("peerState %s at %s" % (state,uuid))
+                self.instance.handlePeerStateChange(state,uuid)
+                self.control.send_pyobj("ok")
             else:
                 self.logger.info("unknown command %s" % cmd)
                 pass            # Should report an error
@@ -111,6 +126,9 @@ class ComponentThread(threading.Thread):
             info.append(res)
         return info
     
+    def logEvent(self,msg):
+        self.control.send_pyobj(msg)
+        
     def run(self):
         self.setupControl()
         self.setupSockets()
@@ -138,9 +156,13 @@ class ComponentThread(threading.Thread):
                         if spent > deadline:
                             self.logger.error('Deadline violation in %s.%s()' 
                                               % (self.name,funcName))
+                            msg = ('deadline',)
+                            self.control.send_pyobj(msg)
                             self.instance.handleDeadline(funcName)
                 except:
                     traceback.print_exc()
+                    msg = ('exception',)
+                    self.control.send_pyobj(msg)
         self.logger.info("stopping")
         if hasattr(self.instance,'__destroy__'):
             destroy_ = getattr(self.instance,'__destroy__')
@@ -152,8 +174,6 @@ class Component(object):
     '''
     Base class for RIAPS application components
     '''
-
-
     def __init__(self):
         '''
         Constructor
@@ -207,6 +227,30 @@ class Component(object):
         '''
         return self.owner.getActorID()
     
+    def getUUID(self):
+        '''
+        Return the network unique ID for the parent actor
+        '''
+        return self.owner.getUUID()
+    
+    def handleActivate(self):
+        '''
+        Default activation handler
+        '''
+        pass
+    
+    def handleDectivate(self):
+        '''
+        Default activation handler
+        '''
+        pass
+    
+    def handlePassivate(self):
+        '''
+        Default activation handler
+        '''
+        pass
+    
     def handleCPULimit(self):
         ''' 
         Default handler for CPU limit exceed
@@ -228,6 +272,18 @@ class Component(object):
     def handleNetLimit(self):
         ''' 
         Default handler for space limit exceed
+        '''
+        pass
+    
+    def handleNICStateChange(self,state):
+        ''' 
+        Default handler for NIC state change
+        '''
+        pass
+    
+    def handlePeerStateChange(self,state,uuid):
+        ''' 
+        Default handler for peer state change
         '''
         pass
     

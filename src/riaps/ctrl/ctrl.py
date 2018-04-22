@@ -469,7 +469,6 @@ class Controller(object):
         is in self.riaps_depl.
         '''
         download,libraries,clients,depls = self.buildDownload(appName)
-        #
         if download == []:
             self.log("* Nothing to download")
             return False
@@ -530,6 +529,10 @@ class Controller(object):
                 self.log("H %s %s %s" % (client.name,appName,actorName))
             else:
                 newLaunchList.append(elt)
+        res = client.reclaim(appName)
+        if res.error:
+            self.log('? Query')
+        while not res.ready: time.sleep(1.0)
         self.launchList = newLaunchList
 
     def addToLaunchList(self,clientName,appName,actorName):

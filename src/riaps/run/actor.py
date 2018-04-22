@@ -37,6 +37,7 @@ class Actor(object):
         self.modelName = gModelName
         self.name = aName
         self.pid = os.getpid()
+        self.uuid = None
         self.setupIfaces()
         # Assumption : pid is a 4 byte int
         self.actorID = ipaddress.IPv4Address(self.globalHost).packed + self.pid.to_bytes(4,'big')
@@ -133,7 +134,6 @@ class Actor(object):
         except:
             self.logger.info("Error parsing actor options %s" % str(sysArgv))
             return
-#        try:
         for opt in opts:
             optName2,optValue = opt 
             optName = optName2[2:] # Drop two leading dashes 
@@ -213,6 +213,12 @@ class Actor(object):
     def getActorID(self):
         return self.actorID
     
+    def setUUID(self,uuid):
+        self.uuid = uuid
+        
+    def getUUID(self):
+        return self.uuid
+        
     def setupIfaces(self):
         '''
         Find the IP addresses of the (host-)local and network(-global) interfaces
@@ -307,10 +313,20 @@ class Actor(object):
         self.logger.info("starting")
         self.discoChannel = self.disco.channel              # Private channel to the discovery service
         self.deplChannel = self.deplc.channel
+        
+        self.controls = { }
+        self.controlMap = { }
+        for inst in self.components:
+            control = self.components[inst].getControl()
+            if control != None: 
+                self.controls[inst] = control
+                self.controlMap[id(control)] = self.components[inst]
        
         self.poller = zmq.Poller()                          # Set up the poller
         self.poller.register(self.deplChannel,zmq.POLLIN)
         self.poller.register(self.discoChannel,zmq.POLLIN)
+        for control in self.controls:
+            self.poller.register(self.controls[control],zmq.POLLIN)
         
         while 1:
             sockets = dict(self.poller.poll())              
@@ -325,7 +341,16 @@ class Actor(object):
                     self.handleDeplMessage(msg)                 # Handle message from depl service
                 del sockets[self.deplChannel]
             else:
-                pass
+                toDelete = []
+                for s in sockets:
+                    if s in self.controls.values():
+                        part = self.controlMap[id(s)]
+                        msg = s.recv_pyobj()
+                        self.handleEventReport(part,msg)
+                    toDelete += [s]
+                for s in toDelete:
+                    del sockets[s]
+
             
     def handleServiceUpdate(self,msgBytes):
         '''
@@ -382,6 +407,15 @@ class Actor(object):
                 pass
         elif which == 'reinstateCmd':
             self.handleReinstate()
+        elif which == 'nicStateMsg' :
+            stateMsg = msgUpd.nicStateMsg
+            state = str(stateMsg.nicState)
+            self.handleNICStateChange(state)
+        elif which == 'peerInfoMsg':
+            peerMsg = msgUpd.peerInfoMsg
+            state = str(peerMsg.peerState)
+            uuid = peerMsg.uuid
+            self.handlePeerStateChange(state,uuid)
         else:
             self.logger.error("unknown msg from deplo: '%s'" % which)
             pass
@@ -394,6 +428,22 @@ class Actor(object):
         self.poller.register(self.discoChannel,zmq.POLLIN)
         for inst in self.components:
             self.components[inst].handleReinstate()
+    
+    def handleNICStateChange(self,state):
+        '''
+        Handle the NIC state change message: notify components   
+        ''' 
+        self.logger.info("handleNICStateChange")
+        for component in self.components.values():
+            component.handleNICStateChange(state)
+            
+    def handlePeerStateChange(self,state,uuid):
+        '''
+        Handle the peer state change message: notify components   
+        ''' 
+        self.logger.info("handlePeerStateChange")
+        for component in self.components.values():
+            component.handlePeerStateChange(state,uuid)
     
     def handleCPULimit(self):
         '''
@@ -430,6 +480,13 @@ class Actor(object):
         self.logger.info("handleNetLimit")
         for component in self.components.values():
             component.handleNetLimit()
+    
+    def handleEventReport(self,part,msg):
+        # call deplc to send a report
+        partName = part.getName()
+        typeName = part.getTypeName() 
+        bundle = (partName,typeName,) + msg
+        self.deplc.reportEvent(bundle)
             
     def terminate(self):
         self.logger.info("terminating")

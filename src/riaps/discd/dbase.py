@@ -105,7 +105,7 @@ class DiscoDbase(object):
         self.logger.info("insert %s -> %s" % (repr(key),repr(value)))
         try:
             clientsToNotify = []
-            if self.r.exists(key) and (value in self.r.smembers[key]):
+            if self.r.exists(key) and (value in self.r.smembers(key)):
                 return []
             self.r.sadd(key,value)
 #            self.updateSubs(key)

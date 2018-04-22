@@ -73,8 +73,10 @@ class DeplClient(object):
             respMessage = resp.actorReg
             status = respMessage.status
             port = respMessage.port
+            uuid = respMessage.uuid
             if status == 'ok':
                 self.channel.connect("tcp://127.0.0.1:" + str(port))
+                self.actor.setUUID(uuid)
                 return True
             else:
                 errMsg = "registerApp - can't connect to deplo channel"
@@ -195,6 +197,57 @@ class DeplClient(object):
             self.logger.error(errMsg)
             # raise SetupError(errMsg)
             return False
+    
+    def reportEvent(self,bundle):
+        self.logger.info("reportEvent %s" % str(bundle))
+        
+        if self.socket == None:
+            self.logger.info("No deplo service - skipping event reporting: %s", str(bundle))
+            return False
+        
+        reqt = deplo_capnp.DeplReq.new_message()
+        appMessage = reqt.init('reportEvent')
+        appMessage.appName = self.appName
+        appMessage.version = '0.0.0'
+        appMessage.actorName = self.actor.name
+        appMessage.msg = str(bundle)
+                  
+        msgBytes = reqt.to_bytes()
+
+        try:
+            self.socket.send(msgBytes)
+        except Exception as e:
+            self.logger.error("reportEvent - failed to send: {1}".format(e.errno, e.strerror))
+            # self.socket.close()
+            # self.socket = None
+            return False
+        
+        try:
+            respBytes = self.socket.recv()
+        except Exception as e:
+            self.logger.error("reportEvent - no response: {1}".format(e.errno, e.strerror))
+            # self.socket.close()
+            # self.socket = None
+            return False
+      
+        resp = deplo_capnp.DeplRep.from_bytes(respBytes)
+        which = resp.which()
+        if which == 'reportEvent':
+            respMessage = resp.reportEvent
+            status = respMessage.status
+            if status == 'ok':
+                return True
+            else:
+                errMsg = "reportEvent -  err status from deplo"
+                self.logger.error(errMsg)
+                # raise SetupError("reportEvent - can't connect to deplo channel")
+                return False
+        else:
+            errMsg = "reportEvent - unexpected response from deplo"
+            self.logger.error(errMsg)
+            # raise SetupError("reportEvent - unexpected response from deplo")
+            return False
+        
     
     def terminate(self):
         self.logger.info("terminating")

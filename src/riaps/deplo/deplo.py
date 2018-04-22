@@ -20,6 +20,7 @@ from riaps.utils.ifaces import getNetworkInterfaces
 # from riaps.deplo.devm import DeviceManager
 from riaps.deplo.depm import DeploymentManager
 from riaps.deplo.resm import ResourceManager
+from riaps.deplo.fm import FaultManager
 
 import traceback
 
@@ -51,8 +52,9 @@ class DeploService(object):
         # self.devmCommandEndpoint = 'inproc://devm-command'
         self.procMonEndpoint = 'inproc://procmon'
         self.resm = ResourceManager(self.context)
+        self.fm = FaultManager(self,self.context)
         # self.devm = DeviceManager(self)
-        self.depm = DeploymentManager(self,self.resm) # ,self.devm)   
+        self.depm = DeploymentManager(self,self.resm,self.fm)   
 
     def setupIfaces(self):
         '''
@@ -161,7 +163,7 @@ class DeploService(object):
             cmd = msg[0]
             if cmd in ('launch','halt','setupApp','cleanupApp','cleanupApps'):
                 self.depm.doCommand(msg)
-            elif cmd in ('query'):
+            elif cmd in ('query','reclaim'):
                 reply = self.depm.callCommand(msg)
             elif cmd == "kill":
                 self.killed = True
@@ -181,10 +183,11 @@ class DeploService(object):
     def terminate(self):
         self.logger.info("terminating")
         self.resm.terminate()   # Terminate resource manager
+        self.fm.terminate()     # Terminate fault manager
         self.depm.terminate()   # Terminate deployment manager
         self.depm.join() 
         self.context.destroy()
-        time.sleep(1.0)
+        time.sleep(0.1)
         self.logger.info("terminated")
         os._exit(0)
         

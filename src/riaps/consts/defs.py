@@ -28,6 +28,10 @@ const.deplEndpointSendTimeout = 10000
 const.depmRecvTimeout = 3000
 const.depmSendTimeout = 3000
 
+# Fault monitor endpoints
+const.fmNICMonitorEndpoint = 'inproc://fm-nic'
+const.fmMonitorEndpoint = 'inproc://fm-riaps'
+
 # Default host for disco redis host
 const.discoRedisHost = 'localhost'
 # Default port number for disco redis host
@@ -45,7 +49,7 @@ const.ctrlPrivateKey = 'id_rsa.key'
 # SSH port
 const.ctrlSSHPort = 22
 # Control/deplo delay (in msec) - time allowed for recovered apps to start
-const.ctrlDeploDelay = 5000
+const.ctrlDeploDelay = 1000
 
 # Nethog
 const.nethogLibrary = 'libnethogs.so.master'

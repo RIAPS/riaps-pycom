@@ -16,6 +16,7 @@ struct ActorRegReq {
 struct ActorRegRep {
   status @0 : Status;
   port @1 : Int32;
+  uuid @2 : Text; 
 }
 
 struct DeviceArg {
@@ -44,11 +45,23 @@ struct DeviceRelRep {
   status @0 : Status;
 }
 
+struct ActorReportReq {
+  appName @0 : Text;
+  version @1 : Text;
+  actorName @2 : Text;
+  msg @3 : Text;
+}
+
+struct ActorReportRep {
+  status @0 : Status;
+}
+
 struct DeplReq {
    union {
       actorReg @0 : ActorRegReq;
       deviceGet @1 : DeviceGetReq;
       deviceRel @2 : DeviceRelReq;
+      reportEvent @3 : ActorReportReq;
    }
 }
 
@@ -57,6 +70,7 @@ struct DeplRep {
       actorReg @0 : ActorRegRep;
       deviceGet @1 : DeviceGetRep;
       deviceRel @2 : DeviceRelRep;
+      reportEvent @3 : ActorReportRep;
    }
 }
 
@@ -89,9 +103,24 @@ struct ReinstateMsg {
 	msg @0 : Text;
 }
 
+enum NICState { up @0; down @1; }
+
+struct NICStateMsg {
+	nicState @0: NICState;	
+}
+
+enum PeerState { on @0; off @1; }
+
+struct PeerInfoMsg {
+	peerState @0 : PeerState;
+	uuid @1 : Text; 
+}
+
 struct DeplCmd {
 	union {
 		resourceMsg @0 : ResMsg;
 		reinstateCmd @1 : ReinstateMsg;
+		nicStateMsg @2 : NICStateMsg;
+		peerInfoMsg @3 : PeerInfoMsg;
 	}
 }

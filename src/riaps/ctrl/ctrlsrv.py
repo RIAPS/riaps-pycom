@@ -117,6 +117,15 @@ class ServiceClient(object):
         if self.callback != None:
             res = self.callback(('query',))
         return res
+    
+    def reclaim(self,appName):
+        '''
+        Reclaim app files 
+        '''
+        res = None
+        if self.callback != None:
+            res = self.callback(('reclaim',appName))
+        return res
             
 class ControllerService(rpyc.Service):
     '''

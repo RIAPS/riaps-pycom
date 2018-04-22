@@ -403,6 +403,22 @@ class AppResourceManager(object):
         else:
             self.actors[actorName].stopActor(proc)
     
+    def reclaimApp(self):
+        try:
+            riaps_user = Config.TARGET_USER
+            _res = riaps_sudo('chown -R %s:%s %s' % (riaps_user,riaps_user,self.appFolder))
+        except:
+            traceback.print_exc()
+            pass
+        
+    def claimApp(self):
+        try:
+            _res = riaps_sudo('chown -R %s:%s %s' % (self.userName,self.userName,self.appFolder))
+        except:
+            # traceback.print_exc()
+            self.logger.warning('claiming app for user %s failed' % (self.userName))
+            self.userName = Config.TARGET_USER          # Default user
+        
     def cleanupApp(self):
         for actor in self.actors.values():
             actor.cleanupActor()
@@ -492,7 +508,7 @@ class ResourceManager(object):
         if appName not in self.appMap:
             self.appMap[appName] = AppResourceManager(self,appName,appFolder,userName)
         else:
-            pass
+            self.appMap[appName].claimApp()
         # print(self.appMap)
     
     def getUserName(self,appName):
@@ -522,7 +538,13 @@ class ResourceManager(object):
     
     def stopActor(self,appName,actorName,proc):
         self.appMap[appName].stopActor(actorName,proc)
-        
+    
+    def reclaimApp(self,appName):
+        if appName not in self.appMap:
+            raise BuildError("appName '%s' is unknown" % (appName))
+        else:
+            self.appMap[appName].reclaimApp()
+            
     def cleanupApp(self,appName):
         if appName not in self.appMap:
             raise BuildError("appName '%s' is unknown" % (appName))
