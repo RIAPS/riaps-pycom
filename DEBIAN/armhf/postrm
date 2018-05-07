@@ -3,7 +3,12 @@ for i in `ls /usr/local/riaps/etc`; do rm -f /etc/riaps/$i ;done
 rmdir /etc/riaps || true
 
 pip3 uninstall -y riaps-pycom || true
-echo "the following python3 packages rpyc pydevd pyzmq redis hiredis pycapnp netifaces paramiko cryptography Adafruit_BBIO minimalmodbus pyserial python-magic were automatically installed and can now be removed."
-echo "You can run  sudo pip3 uninstall rpyc pydevd pyzmq redis hiredis pycapnp netifaces paramiko cryptography Adafruit_BBIO minimalmodbus pyserial python-magic"
+echo "the following python3 packages rpyc pydevd pyzmq redis hiredis pycapnp netifaces paramiko cryptography Adafruit_BBIO minimalmodbus pyserial python-magic cgroups cgroupspy psutil butter lmdb fabric3 pyroute2 czmq zyre were automatically installed and can now be removed."
+echo "You can run  sudo pip3 uninstall rpyc pydevd pyzmq redis hiredis pycapnp netifaces paramiko cryptography Adafruit_BBIO minimalmodbus pyserial python-magic cgroups cgroupspy psutil butter lmdb fabric3 pyroute2 czmq zyre"
 
 rm -f /usr/local/bin/riaps_disco_redis
+
+
+
+
+

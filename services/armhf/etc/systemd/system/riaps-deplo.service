@@ -1,21 +1,18 @@
 [Unit] 
 Description=RIAPS Deployment Manager Service 
-BindsTo=riaps-disco.service 
-After=riaps-disco.service
   
 [Service] 
 Type=simple 
-EnvironmentFile=/etc/riaps/env.conf 
-User=riaps 
-Group=riaps 
+EnvironmentFile=/etc/riaps/systemdenv.conf 
 StandardOutput=syslog 
 StandardError=inherit 
-SyslogIdentifier=deploy 
+SyslogIdentifier=RIAPS 
 SyslogLevel=info 
+ExecStartPre=/bin/sh -c "echo RIAPSHOME=$$RIAPSHOME"
+ExecStartPre=/bin/sh -c "echo RIAPSAPPS=$$RIAPSAPPS"
+ExecStartPre=/bin/sh -c "echo PATH=$$PATH"
+ExecStartPre=/bin/sh -c "echo LD_LIBRARY_PATH=$$LD_LIBRARY_PATH"
 ExecStart=/usr/local/bin/riaps_deplo 
-Restart=always
-RestartSec=10s
   
 [Install]
 WantedBy=multi-user.target
-

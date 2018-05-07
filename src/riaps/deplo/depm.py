@@ -397,9 +397,18 @@ class DeploymentManager(threading.Thread):
             command.append(arg)
         self.logger.info("Launching %s " % str(command))
         try:
-            proc = psutil.Popen(command,
-                                preexec_fn=self.demote(user_uid, user_gid,self.is_su), 
-                                cwd=user_cwd, env=user_env)
+            logDir = appFolder + "/logs/"
+            os.makedirs(os.path.dirname(logDir), exist_ok=True)
+            os.chown(os.path.dirname(logDir), user_uid, user_gid)
+            appLogfile = actorName + ".txt"
+            with open(logDir + appLogfile, "a") as out:
+                os.chown(logDir + appLogfile, user_uid, user_gid)
+                out.write('Application Log File\n')
+                out.flush()  # <-- here's something not to forget!
+                proc = psutil.Popen(command,
+                                    preexec_fn=self.demote(user_uid, user_gid, self.is_su),
+                                    cwd=user_cwd, env=user_env,
+                                    stdout=out, stderr=out, universal_newlines=True)
         except (FileNotFoundError,PermissionError):
             try:
                 if isPython:

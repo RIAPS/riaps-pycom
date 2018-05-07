@@ -1,4 +1,0 @@
-app TransEn {
-	on all GenPriceControl;
-	on all CustDemandControl;
-}
