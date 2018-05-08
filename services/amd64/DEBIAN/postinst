@@ -1,4 +1,7 @@
 systemctl daemon-reload
-systemctl disable riaps-deplo.service 
+systemctl enable riaps-rm-cgroups.service
+systemctl start riaps-rm-cgroups.service
+systemctl enable riaps-rm-quota.service
+systemctl start riaps-rm-quota.service
 systemctl enable riaps-rpyc-registry.service
 systemctl start riaps-rpyc-registry.service

@@ -1,18 +1,22 @@
-[Unit] 
-Description=RIAPS Deployment Manager Service 
-  
-[Service] 
-Type=simple 
-EnvironmentFile=/etc/riaps/systemdenv.conf 
-StandardOutput=syslog 
-StandardError=inherit 
-SyslogIdentifier=RIAPS 
-SyslogLevel=info 
+[Unit]
+Description=RIAPS Deployment Manager Service
+Requires=riaps-rm-cgroups.service riaps-rm-quota.service
+
+[Service]
+Type=simple
+RemainAfterExit=yes
+EnvironmentFile=/etc/riaps/systemdenv.conf
+StandardOutput=syslog
+StandardError=inherit
+SyslogIdentifier=RIAPS-DEPLO
+SyslogLevel=info
 ExecStartPre=/bin/sh -c "echo RIAPSHOME=$$RIAPSHOME"
 ExecStartPre=/bin/sh -c "echo RIAPSAPPS=$$RIAPSAPPS"
 ExecStartPre=/bin/sh -c "echo PATH=$$PATH"
 ExecStartPre=/bin/sh -c "echo LD_LIBRARY_PATH=$$LD_LIBRARY_PATH"
-ExecStart=/usr/local/bin/riaps_deplo 
-  
+ExecStart=/usr/local/bin/riaps_deplo
+
 [Install]
 WantedBy=multi-user.target
+
+
