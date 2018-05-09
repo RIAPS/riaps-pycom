@@ -14,7 +14,10 @@ import paramiko
 import socket
 from os.path import join
 import subprocess
+from threading import Timer
+import functools
 import logging
+import json
 from riaps.consts.defs import *
 from riaps.utils.ifaces import getNetworkInterfaces
 from riaps.utils.config import Config 
@@ -24,7 +27,6 @@ from riaps.ctrl.ctrlcli import ControlCLIClient
 from threading import RLock
 from riaps.lang.lang import compileModel
 from riaps.lang.depl import DeploymentModel
-import code
 
 import gi
 gi.require_version('Gtk', '3.0')
@@ -88,7 +90,7 @@ class Controller(object):
         '''
         Find the IP addresses of the (host-)local and network(-global) interfaces
         '''
-        (globalIPs,globalMACs,localIP) = getNetworkInterfaces()
+        (globalIPs,globalMACs,_globalNames,_localIP) = getNetworkInterfaces()
         try:
             assert len(globalIPs) > 0 and len(globalMACs) > 0
         except:
@@ -164,6 +166,30 @@ class Controller(object):
         if self.service != None:
             self.service.stop()
 
+    def queryClient(self,clientName,client):
+        '''
+        Query the client for apps already running
+        '''
+        res = client.query()
+        if res.error:
+            self.log('? Query')
+            return
+        value = None
+        if res.ready:
+            value = res.value
+            if not value:
+                return
+            else:
+                self.gui.update_node_apps(clientName,value)
+        if value == None:
+            self.setupQueryClient(clientName,client)        # Schedule a query again if no response
+            return
+
+    def setupQueryClient(self,clientName,client):
+        exe = functools.partial(self.queryClient,clientName=clientName,client=client)
+        timeout = const.ctrlDeploDelay/1000.0
+        Timer(timeout, exe).start()
+        
     def addClient(self,clientName,client):
         '''
         Add a client object, representing a RIAPS node to the list. The operation is called
@@ -171,6 +197,7 @@ class Controller(object):
         '''
         with ctrlLock:
             self.clientMap[clientName] = client
+            self.setupQueryClient(clientName,client)
         
     def delClient(self,clientName):
         '''
@@ -189,6 +216,14 @@ class Controller(object):
             res = clientName in self.clientMap
         return res
 
+    def killAll(self):
+        for client in self.clientMap.values():
+            client.kill()
+    
+    def cleanAll(self):
+        for client in self.clientMap.values():
+            self.removeAppFromClient(client, appName='')
+                
     def setupHostKeys(self):
         # get host key, if we know one
         self.hostKeys = {}
@@ -233,8 +268,8 @@ class Controller(object):
                 return
             except paramiko.SSHException as e:
                 self.logger.info ('... failed! - %s' % str(e))
-
-    def downloadAppToClient(self,files,libraries,client,appName):
+                
+    def startClientSession(self,client):
         hostName = client.name
         hostKey = None
         hostKeyType = None
@@ -242,15 +277,6 @@ class Controller(object):
             hostKeyType = self.hostKeys[hostName].keys()[0]
             hostKey= self.hostKeys[hostName][hostKeyType]
             self.logger.info('Using host key of type %s' % hostKeyType)
-            
-        self.logger.info("self.dsml %s" %self.dsml)
-        if self.dsml is True:
-            appFolder = self.riaps_appInfoDict[appName]['riaps_appFolder']+'/'+appName
-        else:
-            appFolder = self.riaps_appInfoDict[appName]['riaps_appFolder']
-
-        
-        self.logger.info('appFolder : %s' %appFolder)
         try:
             port = const.ctrlSSHPort
             self.logger.info ('Establishing SSH connection to: %s:%s' % (str(hostName),str(port)))
@@ -261,11 +287,25 @@ class Controller(object):
             if not t.is_authenticated():
                 self.logger.warning ('RSA key auth failed!') 
                 # t.connect(username=username, password=password, hostkey=hostkey)
-                return False
-
-            sftpSession = t.open_session()
-            sftpClient = RSFTPClient.from_transport(t)
-
+                return None
+            return t
+        except Exception as e:
+            self.logger.warning('Caught exception: %s: %s' % (e.__class__, e))
+            try:
+                t.close()
+                return None
+            except:
+                return None
+            
+    def downloadAppToClient(self,files,libraries,client,appName):
+        transport = self.startClientSession(client)
+        if transport == None:
+            return False
+        try:
+            sftpSession = transport.open_session()
+            sftpClient = RSFTPClient.from_transport(transport)
+            
+            appFolder = self.riaps_appInfoDict[appName]['riaps_appFolder']
             dirRemote = os.path.join(client.appFolder,appName)
 
             sftpClient.mkdir(dirRemote,ignore_existing=True)
@@ -303,16 +343,16 @@ class Controller(object):
                 self.logger.info ('Copying' + str(localDir) + ' to ' + str(remoteDir))
                 sftpClient.put_dir(localDir,remoteDir)
 
-            t.close()
+            transport.close()
             return True
+        
         except Exception as e:
             self.logger.warning('Caught exception: %s: %s' % (e.__class__, e))
-
             try:
-                t.close()
-                return False
+                transport.close()
             except:
-                return False
+                pass
+            return False
 
     def downloadApp(self,files,libraries,clients,appName):
         with ctrlLock:
@@ -352,7 +392,6 @@ class Controller(object):
             res.append(argValue)
         return res
     
-
     def buildDownload(self, appName):
         noresult = ([],[],[],[])
         download = []
@@ -442,7 +481,6 @@ class Controller(object):
         is in self.riaps_depl.
         '''
         download,libraries,clients,depls = self.buildDownload(appName)
-        #
         if download == []:
             self.log("* Nothing to download")
             return False
@@ -507,15 +545,23 @@ class Controller(object):
                 self.log("H %s %s %s" % (client.name,appName,actorName))
             else:
                 newLaunchList.append(elt)
+        res = client.reclaim(appName)
+        if res.error:
+            self.log('? Query')
+        while not res.ready: time.sleep(1.0)
         self.launchList = newLaunchList
 
+    def addToLaunchList(self,clientName,appName,actorName):
+        client = self.clientMap[clientName]
+        self.launchList.append([client,appName,actorName])
+    
     def isdir(self,sftp,path):
         try:
             return S_ISDIR(sftp.stat(path).st_mode)
         except IOError:
             return False
 
-    def rm(self,sftp,path):
+    def rm(self,sftp,path,top=True):
         files = sftp.listdir(path)
 
         for f in files:
@@ -524,40 +570,28 @@ class Controller(object):
                 sftp.remove(filepath)
             except IOError:
                 self.rm(sftp,filepath)
-        sftp.rmdir(path)
-
-    def removeAppFromClient(self,files,libraries,client,appName):
-        hostName = client.name
-        hostKey = None
-        hostKeyType = None
-        if hostName in self.hostKeys:
-            hostKeyType = self.hostKeys[hostName].keys()[0]
-            hostKey= self.hostKeys[hostName][hostKeyType]
-            self.logger.info ('Using host key of type %s' % hostKeyType)
+        if top == True:                 # Remove top dir?
+            sftp.rmdir(path)
+    
+    def removeAppFromClient(self,client,appName,files=[],libraries=[]):
+        transport = self.startClientSession(client)
+        if transport == None:
+            return False
         try:
-            port = const.ctrlSSHPort
-            self.logger.info ('Establishing SSH connection to: %s:%s' % (str(hostName),str(port)))
-            t = paramiko.Transport((hostName, port))
-            t.start_client()
-            self.authenticate(t,Config.TARGET_USER)
-
-            if not t.is_authenticated():
-                self.logger.warning ('RSA key auth failed!') 
-                # t.connect(username=username, password=password, hostkey=hostkey)
-                return False
-
-            sftpSession = t.open_session()
-            sftpClient = paramiko.SFTPClient.from_transport(t)
+            sftpSession = transport.open_session()
+            sftpClient = paramiko.SFTPClient.from_transport(transport)
             
             dirRemote = os.path.join(client.appFolder, appName)
+            self.rm(sftpClient,dirRemote,appName != '')
             
-            self.rm(sftpClient,dirRemote)
-        except Exception as e:
-                self.logger.warning('Caught exception: %s: %s' % (e.__class__, e))
-        try:
-            t.close()
+            transport.close()
             return True
-        except:
+        except Exception as e:
+            self.logger.warning('Caught exception: %s: %s' % (e.__class__, e))
+            try:
+                transport.close()
+            except:
+                pass
             return False
 
 
@@ -568,8 +602,9 @@ class Controller(object):
                 if client.stale:
                     self.log('? %s', client.name)  # Stale client, we don't remove
                 else:
-                    client.cleanupApp(appName)
-                    ok = self.removeAppFromClient(files, libraries, client, appName)
+                    res = client.cleanupApp(appName)
+                    while not res.ready: time.sleep(1.0)
+                    ok = self.removeAppFromClient(client,appName,files,libraries)
                     if not ok:
                         return False
         return True
@@ -586,67 +621,55 @@ class Controller(object):
         self.riaps_appFolder = appFolderPath
         os.chdir(appFolderPath)
         
-    def loadAppJSON(self,appName,appFolder):
-        appjson = appName+'.json'
-        with open(appFolder+'/'+appName+'/'+appjson) as f:
-            appInfo = {appName : json.load(f)}
-            appNameKey = list(appInfo.keys())[0] # Totally unnecessary. Can use appName directly. 
-            self.logger.info("appInfo: %s" %appInfo)
-            self.logger.info("appNameKey: %s" %appNameKey)
-            self.dsml = True
-            
-            
-        if appNameKey not in self.riaps_appInfoDict:
-            self.riaps_appInfoDict[appNameKey] = dict()
-        self.riaps_appInfoDict[appNameKey]['riaps_model'] = appInfo
-        self.riaps_appInfoDict[appNameKey]['riaps_appFolder'] = appFolder
-        self.logger.info("appInfoDict: %s" %self.riaps_appInfoDict)
-        return appjson
-            
-    def loadDeplJSON(self,appName,appFolder):
-        depljson = appName+'_depl.json'
-        with open(appFolder+'/'+appName+'/'+depljson) as f:
-            depInfo = json.load(f)
-        appNameKey=appName
-        self.logger.info(depInfo)
-        if appNameKey not in self.riaps_appInfoDict:
-            self.riaps_appInfoDict[appNameKey] = dict()
-        self.riaps_appInfoDict[appNameKey]['riaps_depl'] = depInfo
-        self.logger.info("appInfoDict: %s" %self.riaps_appInfoDict)        
-        return depljson
-
-        
-    def compileApplication(self,appName,appFolder):
+    def compileApplication(self,appModelName,appFolder):
         '''
         Compile an application model (create both the JSON file and the data structure)
         '''
-        self.log("Compiling app: %s" % appName)
+        # .riaps -> compile
+        # .json -> load 
         try:
-            appInfo = compileModel(appName)
-            if len(appInfo) < 1:        # empty
+            if appModelName.endswith('.riaps'):
+                self.log("Compiling app: %s" % appModelName)
+                appInfo = compileModel(appModelName)
+                if len(appInfo) < 1:        # empty
+                    return None
+                appNameKey = list(appInfo.keys())[0]    # Load the first app only
+            elif appModelName.endswith('.json'):
+                self.log("Loading app model: %s" % appModelName)
+                # TODO: Validate that this is a correct RIAPS model file
+                fp = open(appModelName,'r')             # Load model file (one app)
+                jsonModel = json.load(fp)
+                appNameKey = jsonModel['name']
+                appInfo = {}
+                appInfo[appNameKey] = jsonModel
+            else:
+                self.log("Must be .riaps or .json: '%s'" % (appModelName))
+                self.gui.clearApplication()
                 return None
-            appNameKey = list(appInfo.keys())[0]
             if appNameKey not in self.riaps_appInfoDict:
                 self.riaps_appInfoDict[appNameKey] = dict()
             self.riaps_appInfoDict[appNameKey]['riaps_model'] = appInfo
             self.riaps_appInfoDict[appNameKey]['riaps_appFolder'] = appFolder
             return appNameKey
         except Exception as e:
-            self.log("Error while compiling '%s':\n%s" % (appName,e.args[0]))
+            self.log("Error while processing '%s':\n%s" % (appModelName,e.args[0]))
             self.gui.clearApplication()
             return None
 
-    def compileDeployment(self,depName):
+    def compileDeployment(self,depModelName):
         '''
         Compile a deployment model (create both the JSON file and the data structure)
         '''
-        self.log("Compiling deployment: %s" % depName)
+        # .riaps -> compile
+        # .json -> load 
+        if depModelName.endswith('.depl'):
+            self.log("Compiling deployment: %s" % depModelName)
+        else:
+            self.log("Loading deployment model: %s" % depModelName)
         try:
-            depInfo = DeploymentModel(depName)
-
+            depInfo = DeploymentModel(depModelName)
             if depInfo is None:
                 return None
-
             appNameKey = depInfo.appName
             self.logger.info(depInfo)
             if appNameKey not in self.riaps_appInfoDict:
@@ -654,7 +677,7 @@ class Controller(object):
             self.riaps_appInfoDict[appNameKey]['riaps_depl'] = depInfo
             return appNameKey
         except Exception as e:
-            self.log("Error in compiling depl '%s':\n%s" % (depName,e.args[0]))
+            self.log("Error in compiling depl '%s':\n%s" % (depModelName,e.args[0]))
             self.gui.clearDeployment()
             return None
 

@@ -1,8 +1,11 @@
 '''
+Resource manager 
+
 Created on Nov 23, 2017
 
 @author: riaps
 '''
+
 from cgroupspy import trees
 import os
 import stat
@@ -11,120 +14,20 @@ import signal
 import subprocess
 import psutil
 import threading
+from threading import RLock
 import logging
 from riaps.run.exc import *
+from riaps.utils.sudo import riaps_sudo,is_su
+from riaps.utils.config import Config
 from butter.eventfd import Eventfd
 import traceback
+import pwd
+from pwd import getpwnam  
+from riaps.deplo.cpumon import CPUMonitorThread
+from riaps.deplo.memmon import MemMonitorThread
+from riaps.deplo.spcmon import SpcMonitorThread
+from riaps.deplo.netmon import NetMonitorThread
 
-class CPUMonitorThread(threading.Thread):
-    '''
-    Thread for monitoring an actor and enforcing resource limits.
-    '''
-    def __init__(self,interval,usage):
-        threading.Thread.__init__(self)
-        self.logger = logging.getLogger(__name__)
-        self.interval = interval    # sec
-        self.usage = usage          # % INT
-        self.terminated = threading.Event() # Set when the monitor is to be terminated
-        self.terminated.clear()
-        self.running = threading.Event()    # Cleared when the monitor is not to run
-        self.running.set()
-        self.stopped = threading.Event()    # Set if the monitor is stoppped
-        self.stopped.clear()
-        self.alive = False
-    
-    def setup(self,proc):
-        self.proc = proc
-        self.mon = psutil.Process(proc.pid)
-    
-    def is_running(self):
-        return self.alive
-    
-    def restart(self):
-        self.stopped.clear()
-        self.running.set()
-
-    def run(self):
-        self.alive = True
-        current = self.mon.cpu_percent(self.interval)
-        time.sleep(0.001)
-        while True:
-            if not self.running.is_set():
-                self.stopped.set()
-                self.running.wait()                    
-            if self.terminated.is_set(): break
-            current = self.mon.cpu_percent(self.interval)
-            if self.terminated.is_set(): break
-            if current == 0: continue
-            self.logger.info("SIGXCPU to [%d]? %d > %d in %f" % (self.proc.pid,current,self.usage,self.interval))
-            if current > self.usage:
-                # print ("SIGXCPU sent")
-                self.proc.send_signal(signal.SIGXCPU)
-                time.sleep(1.0)
-                # self.mon = psutil.Process(self.proc.pid)
-                # current = self.mon.cpu_percent(self.interval)           
-        
-    def stop(self):
-        self.running.clear()
-        self.stopped.wait()
-        
-    def terminate(self):
-        self.terminated.set()
-    
-class MemMonitorThread(threading.Thread):
-    def __init__(self,efd,usage):
-        threading.Thread.__init__(self)
-        self.logger = logging.getLogger(__name__)
-        self.efd = efd
-        self.usage = usage
-        self.terminated = threading.Event() # Set when the monitor is to be terminated
-        self.terminated.clear()
-        self.running = threading.Event()    # Cleared when the monitor is not to run
-        self.running.set()
-        self.stopped = threading.Event()    # Set if the monitor is stoppped
-        self.stopped.clear()
-        self.alive = False
-    
-    def setup(self,proc):
-        self.proc = proc
-
-    def is_running(self):
-        return self.alive
-    
-    def restart(self):
-        self.stopped.clear()
-        self.running.set()
-
-    def run(self):
-        self.alive = True
-        self.logger.info("MemMonitor:%d at %d" % (self.proc.pid,self.efd.fileno()))
-        time.sleep(0.001)
-        try:
-            while True:
-                if not self.running.is_set():
-                    self.stopped.set()
-                    self.running.wait()
-                if self.terminated.is_set(): break
-                # current = os.read(self.efd.fileno(),8) # .read_event()
-                current = self.efd._read_events()
-                if not self.running.is_set(): continue
-                if self.terminated.is_set(): break
-                self.logger.info("MemMonitor[%d] mem limit %d exceeded - %s" % (self.proc.pid,self.usage,str(current)))
-                self.logger.info('SIGUSR1 to [%d]' % (self.proc.pid))
-                self.proc.send_signal(signal.SIGUSR1)
-                time.sleep(1.0)   
-        except:
-            traceback.print_exc()      
-        
-    def stop(self):
-        self.running.clear()
-        self.efd.increment()
-        self.stopped.wait()
-        
-    def terminate(self):
-        self.terminated.set() 
-        self.efd.increment()        
-        
 class ActorResourceManager(object):
     '''
     Resource manager for an actor
@@ -132,9 +35,14 @@ class ActorResourceManager(object):
     def __init__(self,parent,actorName,actorDef):
         self.logger = logging.getLogger(__name__)
         self.parent = parent
+        self.context  = self.parent.context
         self.actorName = actorName
-        self.cpuCGroup = None
-        self.memCGroup = None
+        self.cpuCGroup = self.memCGroup = self.netCGroup = None
+        self.hasCPU = self.hasMem = self.hasSpace = self.hasNet = self.hasRate = False
+
+        self.cpuMonitor = self.memMonitor = None
+        self.spcMonitor = self.parent.spcMonitor
+        self.netMonitor = self.parent.netMonitor
         self.managed = 'usage' in actorDef 
         # If no usage spec, ignore
         if not self.managed: return
@@ -150,11 +58,19 @@ class ActorResourceManager(object):
             memPath = self.parent.memCGroup.path + ('/' + actorName).encode('utf-8')
             memNode = self.parent.cgroupTree.get_node_by_path(memPath)
             self.memCGroup = memNode if (memNode != None) else self.parent.memCGroup.create_cgroup(actorName)                
-            # TODO: add other cgroups
+        if self.parent.netCGroup:
+            # Net 
+            netPath = self.parent.netCGroup.path + ('/' + actorName).encode('utf-8')
+            netNode = self.parent.cgroupTree.get_node_by_path(netPath)
+            self.netCGroup = netNode if (netNode != None) else self.parent.netCGroup.create_cgroup(actorName)    
         # Setup resource monitors
         self.hasCPU = self.setupCPU()
         self.hasMem = self.setupMem()
-        # TODO: Add other resource monitors
+        self.hasSpace = self.setupSpace()
+        if self.hasSpace:
+            self.parent.addQuota(self.spcUsage)
+        self.hasNet = self.setupNet()
+        self.proc = None
         self.started = False
     
     def setupCPU(self):
@@ -168,7 +84,7 @@ class ActorResourceManager(object):
         except KeyError:
             return False
         if (self.cpuMax):
-            self.cpuMonitor = CPUMonitorThread(self.cpuInterval/1000.0,self.cpuUsage)
+            self.cpuMonitor = CPUMonitorThread(self,self.cpuInterval/1000.0,self.cpuUsage)
         else:
             if self.cpuCGroup:
                 self.cpuController = self.cpuCGroup.controller
@@ -213,11 +129,76 @@ class ActorResourceManager(object):
             except:
                 traceback.print_exc() 
                 return False
-            self.memMonitor = MemMonitorThread(efd,self.memUsage)
+            self.memMonitor = MemMonitorThread(self,efd,self.memUsage)
             return True
         else:
             return False
 
+    def setupSpace(self):
+        if 'spc' not in self.settings: return False
+        self.spcSettings = self.settings['spc']
+        try:
+            self.spcUsage = self.spcSettings['use']
+            return True
+        except KeyError:
+            self.spcUsage = 0       # No space quota
+            return False
+        
+    def setupNet(self):
+        self.hasRate = None
+        if 'net' not in self.settings:
+            self.logger.info("actor.setupNet: no 'net' setting") 
+            return False
+        self.netSettings = self.settings['net']
+        if 'rate' not in self.netSettings: 
+            self.logger.info("actor.setupNet: no 'rate' setting") 
+            return False
+        self.netRate = self.netSettings['rate'] 
+        self.netCeil = self.netSettings['ceil']
+        self.netBurst = self.netSettings['burst']
+        self.hasRate = True
+        if self.netCGroup:
+            self.netController = self.netCGroup.controller
+            major = self.parent.uid
+            parentID = str(major)
+            self.actorID = self.parent.nextActorID()
+            childID = str(self.actorID)
+            minor = self.actorID
+            classid = (major << 16) | minor
+            self.netController.class_id = classid
+            try:
+                # tc class add dev enp0s3 parent 1002: classid 1002:2 htb rate 100kbps ceil 110kbps
+                cmd = ('tc class add dev %s parent %s: classid %s:%s htb rate %sbps ' \
+                % (Config.NIC_NAME,parentID,parentID,childID,self.netRate)) + \
+                ("" if self.netCeil == 0 else "ceil %sbps " % (self.netCeil)) + \
+                ("" if self.netBurst == 0 else "burst %s" % (self.netBurst))
+                _res = riaps_sudo(cmd)
+                # tc filter add dev enp0s3 parent 1002:1 protocol ip prio 10 handle 1: cgroup
+                cmd = "tc filter add dev %s parent %s:%s protocol ip prio 10 handle %s: cgroup" \
+                        % (Config.NIC_NAME,parentID,childID,childID)
+                _res = riaps_sudo(cmd)
+            except:
+                self.logger.info("actor.setupNet: exception while setting'tc'")
+                return False
+            # Create net monitor here
+        else:
+            self.logger.info("actor.setupNet: no netCGroup")
+            return False
+        return True
+    
+    def addClientDevice(self,device):
+        appName = self.parent.appName
+        actorName = self.actorName
+        self.logger.info('actor.addClientDevice %s.%s' % (appName,actorName))
+        if self.hasCPU and self.cpuMonitor != None:
+            self.cpuMonitor.addClientDevice(appName,actorName,device)
+        if self.hasMem and self.memMonitor != None:
+            self.memMonitor.addClientDevice(appName,actorName,device)
+        if self.hasSpace and self.spcMonitor != None:
+            self.spcMonitor.addClientDevice(appName,actorName,device,self.proc)
+        if (self.hasNet or self.hasRate) and self.netMonitor != None:
+            self.netMonitor.addClientDevice(appName,actorName,device,self.proc,self.netRate)
+    
     def startActor(self,proc):
         # Setup CPU resource monitor
         if self.hasCPU:
@@ -237,6 +218,12 @@ class ActorResourceManager(object):
                 self.memMonitor.restart()
             else:
                 self.memMonitor.start()
+        if self.hasSpace:
+            self.parent.spcMonitor.addProc(proc)
+        if self.hasNet:
+            self.netController.tasks = proc.pid
+            self.parent.netMonitor.addProc(proc)
+        self.proc = proc
         self.started = True
 
     
@@ -251,13 +238,18 @@ class ActorResourceManager(object):
                     pass # 
         if self.hasMem:
             self.memMonitor.stop()
+        if self.hasSpace:
+            self.parent.spcMonitor.delProc(proc)
+        if self.hasNet or self.hasRate:
+            # self.netController.tasks = remove proc.pid
+            self.parent.netMonitor.delProc(proc) 
         self.started = False
     
     def cleanupActor(self):
         # Get rid of monitoring setup
         if self.hasCPU:
             if self.cpuMax:
-                if self.started:
+                if self.cpuMonitor.is_running():
                     self.cpuMonitor.terminate()
                     self.cpuMonitor.join()
                 self.cpuMonitor = None
@@ -268,7 +260,7 @@ class ActorResourceManager(object):
                     except:
                         pass
         if self.hasMem:
-            if self.started:
+            if self.memMonitor.is_running():
                 self.memMonitor.terminate()
                 self.memMonitor.join()
             self.memMonitor = None
@@ -277,21 +269,45 @@ class ActorResourceManager(object):
                     self.parent.memCGroup.delete_cgroup(self.actorName)
                 except:
                     pass
-        # TODO: delete other monitor types
+        if self.hasNet:
+            if self.parent.netCGroup:
+                try:
+                    self.parent.netCGroup.delete_cgroup(self.actorName)
+                except:
+                    pass
+            major = self.parent.uid
+            parentID = str(major)
+            childID = str(self.actorID)
+            try:
+                # tc class del dev enp0s3 parent 1002: classid 1002:2
+                cmd = ('tc class del dev %s parent %s: classid %s:%s' \
+                        % (Config.NIC_NAME,parentID,parentID,childID))
+                _res = riaps_sudo(cmd)
+#                 # tc filter add dev enp0s3 parent 1002:1 protocol ip prio 10 handle 1: cgroup
+#                 cmd = "tc filter add dev %s parent %s:%s protocol ip prio 10 handle %s: cgroup" \
+#                         % (Config.NIC_NAME,parentID,childID,childID)
+#                 _res = riaps_sudo(cmd)
+            except:
+                pass
                 
         
 class AppResourceManager(object):
     '''
     Resource manager for an app
     '''
-    def __init__(self,parent,appName):
+    def __init__(self,parent,appName,appFolder,userName):
         self.logger = logging.getLogger(__name__)
         self.parent = parent
+        self.context = self.parent.context
         self.appName = appName
+        self.userName = userName
+        self.appFolder = appFolder
         self.actors = { }
         self.cgroupTree = parent.cgroupTree
         self.cpuCGroup = None
         self.memCGroup = None
+        self.netCGroup = None
+        self.actorID = 1
         # Check if cgroup already exist, use it or create a new one. 
         if self.parent.riapsCPU:
             # CPU
@@ -303,14 +319,77 @@ class AppResourceManager(object):
             memPath = self.parent.riapsMem.path + ('/' + appName).encode('utf-8')
             memNode = self.parent.cgroupTree.get_node_by_path(memPath)
             self.memCGroup = memNode if (memNode != None) else self.parent.riapsMem.create_cgroup(self.appName)
-        # TODO: Add other cgroup types
+        # Set up the data space for the app
+        try:
+            _res = riaps_sudo('adduser --disabled-login --gecos GECOS --no-create-home %s' % self.userName)
+            self.uid = getpwnam(self.userName).pw_uid
+            _res = riaps_sudo('chown -R %s:%s %s' % (self.userName,self.userName,self.appFolder))
+            _res = riaps_sudo('chmod o-rwx %s' % self.appFolder)
+        except:
+            # traceback.print_exc()
+            self.logger.warning('creating app user %s failed' % (self.userName))
+            self.userName = Config.TARGET_USER          # Default user
+            self.uid = os.getuid()
+        self.spcUsage = 0
+        self.spcMonitor = self.parent.spcMonitor
+        # Set up the net limits for the app
+        riaps_uid = self.parent.riaps_uid
+        try:
+        # tc class add dev enp0s3 parent 1000:1000 classid 1000:1001 htb rate 1000kbps ceil 1100kbps
+            _res = riaps_sudo('tc class add dev %s parent %s:%s '
+                              'classid %s:%s htb rate %s ceil %s'
+                              % (Config.NIC_NAME,riaps_uid,riaps_uid,
+                                 riaps_uid,self.uid,
+                                 Config.NIC_RATE, Config.NIC_CEIL)) # Give the full bandwidth for the app
+            # tc qdisc add dev enp0s3 parent 1000:1001 handle 1001: htb
+            _res = riaps_sudo('tc qdisc add dev %s parent %s:%s handle %s: htb'
+                              % (Config.NIC_NAME,riaps_uid,self.uid,self.uid))
+        except:
+            pass
+        if self.parent.riapsNet:
+            # Net cls
+            netPath = self.parent.riapsNet.path + ('/' + appName).encode('utf-8')
+            netNode = self.parent.cgroupTree.get_node_by_path(netPath)
+            self.netCGroup = netNode if (netNode != None) else self.parent.riapsNet.create_cgroup(self.appName)
+        else:
+            pass
+        self.netMonitor = self.parent.netMonitor
+            
+    def getUserName(self):
+        return self.userName
     
+    def nextActorID(self):
+        res = self.actorID
+        self.actorID += 1 
+        return res
+    
+    def addQuota(self,usage):
+        self.spcUsage += usage
+        if self.spcUsage != 0:
+            # Assume here that the spcUsage value is in 1024 byte blocks
+            try:
+                softblock = int(0.9 * self.spcUsage)
+                hardblock = self.spcUsage
+                softinode = 100000
+                hardinode = 100000
+                command = 'setquota -u %s %d %d %d %d /' % (self.userName,softblock,hardblock,softinode,hardinode)
+                self.logger.info('exec: %s' % command)
+                _res = riaps_sudo(command)
+            except:
+                self.logger.warning('setting quota failed')
+        
     def addActor(self,actorName,actorDef):
         if actorName in self.actors:
             return
         else:
             actor = ActorResourceManager(self,actorName,actorDef)
             self.actors[actorName] = actor
+            
+    def addClientDevice(self,actorName,device):
+        if actorName not in self.actors:
+            raise SetupError("actor '%s' is unknown" % (actorName))
+        else:
+            self.actors[actorName].addClientDevice(device)
             
     def startActor(self,actorName,proc):
         if actorName not in self.actors:
@@ -324,60 +403,148 @@ class AppResourceManager(object):
         else:
             self.actors[actorName].stopActor(proc)
     
+    def reclaimApp(self):
+        try:
+            riaps_user = Config.TARGET_USER
+            _res = riaps_sudo('chown -R %s:%s %s' % (riaps_user,riaps_user,self.appFolder))
+        except:
+            traceback.print_exc()
+            pass
+        
+    def claimApp(self):
+        try:
+            _res = riaps_sudo('chown -R %s:%s %s' % (self.userName,self.userName,self.appFolder))
+        except:
+            # traceback.print_exc()
+            self.logger.warning('claiming app for user %s failed' % (self.userName))
+            self.userName = Config.TARGET_USER          # Default user
+        
     def cleanupApp(self):
         for actor in self.actors.values():
             actor.cleanupActor()
             # Delete app cgroups
-        if self.cpuCGroup is not None:
-            self.cpuCGroup.delete_empty_children()
-            self.parent.riapsCPU.delete_cgroup(self.appName)
-        if self.memCGroup is not None:
-            self.memCGroup.delete_empty_children()
-            self.parent.riapsMem.delete_cgroup(self.appName)
-        # TODO: Delete other cgroup types
+        try:
+            if self.cpuCGroup is not None:
+                self.cpuCGroup.delete_empty_children()
+                self.parent.riapsCPU.delete_cgroup(self.appName)
+            if self.memCGroup is not None:
+                self.memCGroup.delete_empty_children()
+                self.parent.riapsMem.delete_cgroup(self.appName)
+            if self.netCGroup is not None:
+                self.netCGroup.delete_empty_children()
+                self.parent.riapsNet.delete_cgroup(self.appName)
+        except: 
+            pass
+        riaps_uid = self.parent.riaps_uid
+        try:
+            # tc qdisc del dev enp0s3 parent 1000:1001 handle 1001:
+            _res = riaps_sudo('tc qdisc del dev %s parent %s:%s handle %s:'
+                                % (Config.NIC_NAME,riaps_uid,self.uid,self.uid))
+            # tc class del dev enp0s3 parent 1000:1000 classid 1000:1001
+            _res = riaps_sudo('tc class del dev %s parent %s:%s classid %s:%s'
+                              % (Config.NIC_NAME,riaps_uid,riaps_uid,
+                                riaps_uid,self.uid))
+        except:
+            pass
+        try:
+            _res = riaps_sudo('deluser %s' % self.userName)
+            riaps_user = Config.TARGET_USER
+            _res = riaps_sudo('chown -R %s:%s %s' % (riaps_user,riaps_user,self.appFolder))
+        except:
+            traceback.print_exc()
+            pass
             
 
 class ResourceManager(object):
     '''
     Resource manager 
     '''
-    def __init__(self):
+    def __init__(self,context):
         self.logger = logging.getLogger(__name__)
+        self.appID = 1      # App ID counter
         # Map of apps
         self.appMap = { } 
+        # Context
+        self.context = context
         # Cgroups
         self.cgroupTree = trees.Tree()
+        if self.cgroupTree.get_node_by_path('/cpu/riaps/') == None:
+            self.logger.info("attempting to create cgroup 'riaps'")
+            _res = riaps_sudo('user_cgroups %s' % (Config.TARGET_USER))
+            self.cgroupTree = trees.Tree()      
         self.riapsCPU = self.cgroupTree.get_node_by_path('/cpu/riaps/')     # CPU scheduling
         self.riapsMem = self.cgroupTree.get_node_by_path('/memory/riaps/')  # Memory usage
-        # TODO: Add other cgroup types
-        self.hasCGroup = (self.riapsCPU is not None) and (self.riapsMem is not None)
+        self.riapsNet = self.cgroupTree.get_node_by_path('/net_cls/riaps/') # Net usage
+        self.hasCGroup = (self.riapsCPU is not None) and \
+                            (self.riapsMem is not None) and \
+                            (self.riapsNet is not None)
         if not self.hasCGroup:
-            self.logger.warning("cgroup 'riaps' missing - limited resource management. To fix: 'sudo user_cgroups riaps'")
-        #
-
-    def startApp(self,appName):
+            self.logger.warning("cgroup 'riaps' is incomplete - limited resource management.")
+        # File space is handled through the quota system
+        self.spcMonitor = SpcMonitorThread(self)
+        self.spcMonitor.start()
+        # Network limits are handled through tc
+        self.cleanupNet()
+        riaps_user = Config.TARGET_USER
+        pw_record = pwd.getpwnam(riaps_user)
+        self.riaps_uid = str(pw_record.pw_uid)
+        _res = riaps_sudo('tc qdisc add dev %s root handle %s: htb'         # Root qdisc = htb
+                          % (Config.NIC_NAME,self.riaps_uid))
+        _res = riaps_sudo('tc class add dev %s parent %s: '                 # Root class
+                          'classid %s:%s htb rate %s ceil %s'
+                          % (Config.NIC_NAME,self.riaps_uid,
+                             self.riaps_uid,self.riaps_uid,
+                             Config.NIC_RATE, Config.NIC_CEIL))
+        self.netMonitor = NetMonitorThread(self)
+        self.netMonitor.start()
+        self.logger.info("__init__ed")
+        
+    
+    def setupApp(self,appName,appFolder,userName):
         '''
         Start an app: create an app resource manager for this app if it has not been created yet
         '''
+        self.logger.info("setupApp %s" % appName)
         if appName not in self.appMap:
-            self.appMap[appName] = AppResourceManager(self,appName)
+            self.appMap[appName] = AppResourceManager(self,appName,appFolder,userName)
         else:
-            pass
+            self.appMap[appName].claimApp()
         # print(self.appMap)
     
+    def getUserName(self,appName):
+        if appName in self.appMap:
+            return self.appMap[appName].getUserName()
+        else:
+            return Config.TARGET_USER
+    
     def addActor(self,appName,actorName,actorDef):
+        self.logger.info("addActor %s.%s" % (appName,actorName))
         if appName not in self.appMap:
             raise BuildError("appName '%s' is unknown" % (appName))
         else:
             appRM = self.appMap[appName]
             appRM.addActor(actorName,actorDef)
 
+    def addClientDevice(self,appName,actorName,device):
+        self.logger.info("addClientDevice %s.%s" % (appName,actorName))
+        if appName not in self.appMap:
+            raise BuildError("appName '%s' is unknown" % (appName))
+        else:
+            appRM = self.appMap[appName]
+            appRM.addClientDevice(actorName,device)
+        
     def startActor(self,appName,actorName,proc):
         self.appMap[appName].startActor(actorName,proc)
     
     def stopActor(self,appName,actorName,proc):
         self.appMap[appName].stopActor(actorName,proc)
-        
+    
+    def reclaimApp(self,appName):
+        if appName not in self.appMap:
+            raise BuildError("appName '%s' is unknown" % (appName))
+        else:
+            self.appMap[appName].reclaimApp()
+            
     def cleanupApp(self,appName):
         if appName not in self.appMap:
             raise BuildError("appName '%s' is unknown" % (appName))
@@ -386,7 +553,10 @@ class ResourceManager(object):
             del self.appMap[appName]
             # Flag an error
             pass
-    
+        
+    def cleanupNet(self):
+        _res = riaps_sudo('tc qdisc del dev %s root' % (Config.NIC_NAME))   # Cleanup
+        
     def cleanupApps(self):
         '''
         Cleanup all apps: remove the cgroup of the apps
@@ -394,4 +564,11 @@ class ResourceManager(object):
         for appName, _appValue in list(self.appMap.items()):
             self.cleanupApp(appName)
 
-            
+    def terminate(self):
+        self.logger.info("terminating")
+        self.cleanupNet()
+        self.spcMonitor.terminate()
+        self.spcMonitor.join()
+        self.netMonitor.terminate()
+        self.netMonitor.join()
+        self.logger.info("terminated")

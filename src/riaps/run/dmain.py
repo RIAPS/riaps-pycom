@@ -10,6 +10,8 @@ from os.path import join
 import argparse
 import json
 import logging
+import traceback 
+
 from riaps.utils.config import Config
 from riaps.utils.trace import riaps_trace
 
@@ -30,13 +32,17 @@ def termHandler(signal,frame):
     global theDevice
     theDevice.terminate()
 
-def sigXCPUHandler(signal,frame):
-    global theActor
-    theActor.handleCPULimit()
-    
-def sigXMEMHandler(signal,frame):
-    global theActor
-    theActor.handleMemLimit()
+# def sigXCPUHandler(signal,frame):
+#     global theActor
+#     theActor.handleCPULimit()
+#     
+# def sigXMEMHandler(signal,frame):
+#     global theActor
+#     theActor.handleMemLimit()
+# 
+# def sigXSPCHandler(signal,frame):
+#     global theActor
+#     theActor.handleSpcLimit()
     
 def main(debug=True):
     parser = argparse.ArgumentParser()
@@ -73,13 +79,15 @@ def main(debug=True):
     global theDevice
     theDevice = Device(model,args.model,aName,rest) # Construct the Device
     signal.signal(signal.SIGTERM,termHandler)       # Termination signal handler
-    signal.signal(signal.SIGXCPU,sigXCPUHandler)    # CPU limit exceeded handler
-    signal.signal(signal.SIGUSR1,sigXMEMHandler)    # Mem limit exceeded handler     
+#     signal.signal(signal.SIGXCPU,sigXCPUHandler)    # CPU limit exceeded handler
+#     signal.signal(signal.SIGUSR1,sigXMEMHandler)    # Mem limit exceeded handler
+#     signal.signal(signal.SIGUSR2,sigXSPCHandler)    # Spc limit exceeded handler     
     try:
         theDevice.setup()                        # Setup the objects contained in the device
         theDevice.activate()                     # Activate the components 
         theDevice.start()                        # Start the device main loop
     except:
+        traceback.print_exc()
         info = sys.exc_info()
         print ("riaps_device: Fatal error: %s" % (info[1],))
         os._exit(1)

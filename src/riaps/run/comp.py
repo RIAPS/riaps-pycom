@@ -7,8 +7,11 @@ Created on Oct 15, 2016
 
 import threading
 import zmq
+import time
 import logging
+import traceback
 from .exc import BuildError
+from email.errors import MultipartInvariantViolationDefect
 
 class ComponentThread(threading.Thread):
     '''
@@ -24,7 +27,7 @@ class ComponentThread(threading.Thread):
     
     def setupControl(self):
         '''
-        Create the control socket and connect it to the socket in the parent part part
+        Create the control socket and connect it to the socket in the parent part
         '''
         self.control = self.context.socket(zmq.PAIR)
         self.control.connect('inproc://part_' + self.name + '_control')
@@ -45,20 +48,22 @@ class ComponentThread(threading.Thread):
             else:
                 raise BuildError
         self.control.send_pyobj("done")
-    
+
     def setupPoller(self):
         self.poller  = zmq.Poller()
-        self.portMap = {}
+        self.sock2NameMap = {}
+        self.sock2PortMap = {}
         self.poller.register(self.control,zmq.POLLIN)
-        self.portMap[self.control] = ""
+        self.sock2NameMap[self.control] = ""
         for portName in self.parent.ports:
             portObj = self.parent.ports[portName]
             portSocket = portObj.getSocket()
             portIsInput = portObj.inSocket()
             if portSocket != None:
+                self.sock2PortMap[portSocket] = portObj
                 if portIsInput:
                     self.poller.register(portSocket,zmq.POLLIN)
-                    self.portMap[portSocket] = portName
+                    self.sock2NameMap[portSocket] = portName
             
     def runCommand(self):
         res = False
@@ -68,12 +73,18 @@ class ComponentThread(threading.Thread):
             res = True
         elif msg == "activate":
             self.logger.info("activate")
-            pass                            
+            self.instance.handleActivate()  
+        elif msg == "deactivate":
+            self.logger.info("deactivate")
+            self.instance.handleDeactivate()     
+        elif msg == "passivate":
+            self.logger.info("passivate")
+            self.instance.handlePassivate()                
         else: 
             cmd = msg[0]
             if cmd == "portUpdate":
                 self.logger.info("portUpdate")
-                (_,portName,host,port) = msg
+                (_ignore,portName,host,port) = msg
                 portObj = self.parent.ports[portName]
                 res = portObj.update(host,port)
                 self.control.send_pyobj("ok")
@@ -85,6 +96,24 @@ class ComponentThread(threading.Thread):
                 self.logger.info("limitMem")
                 self.instance.handleMemLimit()
                 self.control.send_pyobj("ok")
+            elif cmd == "limitSpc":
+                self.logger.info("limitSpc")
+                self.instance.handleSpcLimit()
+                self.control.send_pyobj("ok")
+            elif cmd == "limitNet":
+                self.logger.info("limitNet")
+                self.instance.handleNetLimit()
+                self.control.send_pyobj("ok")
+            elif cmd == "nicState":
+                state = msg[1]
+                self.logger.info("nicState %s" % state)
+                self.instance.handleNICStateChange(state)
+                self.control.send_pyobj("ok")
+            elif cmd == "peerState":
+                state,uuid = msg[1], msg[2]
+                self.logger.info("peerState %s at %s" % (state,uuid))
+                self.instance.handlePeerStateChange(state,uuid)
+                self.control.send_pyobj("ok")
             else:
                 self.logger.info("unknown command %s" % cmd)
                 pass            # Should report an error
@@ -92,11 +121,14 @@ class ComponentThread(threading.Thread):
     
     def getInfo(self):
         info = []
-        for (portName,portObj) in self.parent.ports:
+        for (_portName,portObj) in self.parent.ports:
             res = portObj.getInfo()
             info.append(res)
         return info
     
+    def logEvent(self,msg):
+        self.control.send_pyobj(msg)
+        
     def run(self):
         self.setupControl()
         self.setupSockets()
@@ -109,9 +141,28 @@ class ComponentThread(threading.Thread):
                 del sockets[self.control]
             if toStop: break
             for socket in sockets:
-                portName = self.portMap[socket]
-                func_ = getattr(self.instance, 'on_' + portName)
-                func_()
+                portName = self.sock2NameMap[socket]
+                portObj = self.sock2PortMap[socket]
+                deadline = portObj.getDeadline()
+                try:
+                    funcName = 'on_' + portName
+                    func_ = getattr(self.instance, funcName)
+                    if deadline != 0:
+                        start = time.perf_counter()
+                    func_()
+                    if deadline != 0:
+                        finish = time.perf_counter()
+                        spent = finish-start
+                        if spent > deadline:
+                            self.logger.error('Deadline violation in %s.%s()' 
+                                              % (self.name,funcName))
+                            msg = ('deadline',)
+                            self.control.send_pyobj(msg)
+                            self.instance.handleDeadline(funcName)
+                except:
+                    traceback.print_exc()
+                    msg = ('exception',)
+                    self.control.send_pyobj(msg)
         self.logger.info("stopping")
         if hasattr(self.instance,'__destroy__'):
             destroy_ = getattr(self.instance,'__destroy__')
@@ -119,13 +170,10 @@ class ComponentThread(threading.Thread):
         self.logger.info("stopped")
 
                    
-
 class Component(object):
     '''
     Base class for RIAPS application components
     '''
-
-
     def __init__(self):
         '''
         Constructor
@@ -138,7 +186,7 @@ class Component(object):
         self.logger.propagate=False
         ch = logging.StreamHandler()
         ch.setLevel(logging.INFO)
-        formatter = logging.Formatter('%(levelname)s:%(asctime)s:%(name)s:%(message)s')
+        formatter = logging.Formatter('%(levelname)s:%(asctime)s:[%(process)d]:%(name)s:%(message)s')
         ch.setFormatter(formatter)
         self.logger.addHandler(ch)
 #        print  ( "Component() : '%s'" % self )
@@ -179,6 +227,30 @@ class Component(object):
         '''
         return self.owner.getActorID()
     
+    def getUUID(self):
+        '''
+        Return the network unique ID for the parent actor
+        '''
+        return self.owner.getUUID()
+    
+    def handleActivate(self):
+        '''
+        Default activation handler
+        '''
+        pass
+    
+    def handleDectivate(self):
+        '''
+        Default activation handler
+        '''
+        pass
+    
+    def handlePassivate(self):
+        '''
+        Default activation handler
+        '''
+        pass
+    
     def handleCPULimit(self):
         ''' 
         Default handler for CPU limit exceed
@@ -191,6 +263,33 @@ class Component(object):
         '''
         pass
     
+    def handleSpcLimit(self):
+        ''' 
+        Default handler for space limit exceed
+        '''
+        pass
+        
+    def handleNetLimit(self):
+        ''' 
+        Default handler for space limit exceed
+        '''
+        pass
     
-
+    def handleNICStateChange(self,state):
+        ''' 
+        Default handler for NIC state change
+        '''
+        pass
+    
+    def handlePeerStateChange(self,state,uuid):
+        ''' 
+        Default handler for peer state change
+        '''
+        pass
+    
+    def handleDeadlline(self,_funcName):
+        '''
+        Default handler for deadline MultipartInvariantViolationDefect
+        '''
+        pass
     

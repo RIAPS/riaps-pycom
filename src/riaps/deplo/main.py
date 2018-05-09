@@ -7,6 +7,9 @@ Created on Nov 1, 2016
 import sys
 import os,signal
 import argparse
+import traceback
+import logging
+
 from .deplo import DeploService
 from riaps.consts.defs import *
 from riaps.utils.config import Config 
@@ -38,17 +41,27 @@ def main(debug=True):
     except: 
         print ("Unexpected error:", sys.exc_info()[0])
         raise
+
     sys.path.append(os.getcwd())   # Ensure load_module works from current directory
     global conf
     conf = Config()
+    # Setup the logger formatter 
+    logging.Formatter.default_time_format = '%H:%M:%S'
+    logging.Formatter.default_msec_format = '%s,%03d'
+    
     signal.signal(signal.SIGTERM,termHandler)
     signal.signal(signal.SIGINT,termHandler)
     traced = riaps_trace(args.trace,'DEPLO_DEBUG_SERVER')
-    global theDepl
-    theDepl = DeploService(args.node,args.port)  # Assign the service to the singleton
-
-    theDepl.setup()
-    theDepl.run()
+    try:
+        global theDepl
+        theDepl = DeploService(args.node,args.port)  # Assign the service to the singleton
+        theDepl.setup()
+        theDepl.run()
+    except:
+        traceback.print_exc()
+        info = sys.exc_info()
+        print ("riaps_deplo: Fatal error: %s" % (info[1],))
+        os._exit(1)
 #     if debug:
 #         interact()
 

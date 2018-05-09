@@ -10,6 +10,8 @@ from os.path import join
 import argparse
 import json
 import logging
+import traceback 
+
 from riaps.utils.config import Config
 from riaps.utils.trace import riaps_trace
 
@@ -30,13 +32,17 @@ def termHandler(signal,frame):
     global theActor
     theActor.terminate()
 
-def sigXCPUHandler(signal,frame):
-    global theActor
-    theActor.handleCPULimit()
-    
-def sigXMEMHandler(signal,frame):
-    global theActor
-    theActor.handleMemLimit()
+# def sigXCPUHandler(signal,frame):
+#     global theActor
+#     theActor.handleCPULimit()
+#     
+# def sigXMEMHandler(signal,frame):
+#     global theActor
+#     theActor.handleMemLimit()
+#     
+# def sigXSPCHandler(signal,frame):
+#     global theActor
+#     theActor.handleSpcLimit()
     
 def main(debug=True):
     parser = argparse.ArgumentParser()
@@ -59,7 +65,7 @@ def main(debug=True):
         model = json.load(fp)
         aName = args.actor
     except IOError as e:
-        print ("I/O error({0}): {1}".format(e.errno, e.strerror))
+        print ("I/O error({0}): {1} {2}".format(e.errno, e.strerror, e.filename))
         os._exit(1)
     except: 
         print ("Unexpected error:", sys.exc_info()[0])
@@ -73,13 +79,15 @@ def main(debug=True):
     global theActor
     theActor = Actor(model,args.model,aName,rest)   # Construct the Actor
     signal.signal(signal.SIGTERM,termHandler)       # Termination signal handler
-    signal.signal(signal.SIGXCPU,sigXCPUHandler)    # CPU limit exceeded handler 
-    signal.signal(signal.SIGUSR1,sigXMEMHandler)    # Mem limit exceeded handler    
+#     signal.signal(signal.SIGXCPU,sigXCPUHandler)    # CPU limit exceeded handler 
+#     signal.signal(signal.SIGUSR1,sigXMEMHandler)    # Mem limit exceeded handler 
+#     signal.signal(signal.SIGUSR2,sigXSPCHandler)    # Spc limit exceeded handler     
     try:
         theActor.setup()                        # Setup the objects contained in the actor
         theActor.activate()                     # Activate the components 
         theActor.start()                        # Start the actor main loop
     except:
+        traceback.print_exc()
         info = sys.exc_info()
         print ("riaps_actor: Fatal error: %s" % (info[1],))
         os._exit(1)

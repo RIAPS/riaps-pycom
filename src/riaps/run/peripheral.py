@@ -56,7 +56,9 @@ class Peripheral(object):
         self.args = iArgs
         self.state = Peripheral.State.Initial
         
-        
+    def getControl(self):
+        return None
+    
     def setup(self):
         '''
         Set up the peripheral and change its state to Ready
@@ -121,9 +123,25 @@ class Peripheral(object):
         # for the device components that live inside
         # device actors. 
         pass 
+        
+    def handleMemLimit(self):
+        pass
+
+    def handleSpcLimit(self):
+        pass
+        
+    def handleNetLimit(self):
+        pass
+
+    def handleNICStateChange(self,state):
+        pass
+        
+    def handlePeerStateChange(self,state,uuid):
+        pass
     
     def terminate(self):
-        self.logger.info("terminating")
+        self.logger.info("terminating %s" % self.typeName)
         msg = (self.typeName,)
         resp = self.parent.unregisterDevice(msg)
+        self.logger.info("terminating %s" % self.typeName)
     

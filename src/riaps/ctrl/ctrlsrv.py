@@ -8,6 +8,8 @@ import rpyc
 import time
 from rpyc import async
 from rpyc.utils.server import ThreadedServer
+rpyc.core.protocol.DEFAULT_CONFIG['allow_pickle'] = True
+
 from riaps.consts.defs import *
 import threading
 import logging
@@ -53,7 +55,7 @@ class ServiceClient(object):
         ''' 
         if self.callback != None:
             res = self.callback(('setupApp',appName,appNameJSON))
-            return res.value
+            return res
             
     def cleanupApp(self,appName):
         '''
@@ -62,7 +64,7 @@ class ServiceClient(object):
         ''' 
         if self.callback != None:
             res = self.callback(('cleanupApp',appName))
-            return res.value
+            return res
     
     def cleanupApps(self):
         '''
@@ -71,7 +73,7 @@ class ServiceClient(object):
         ''' 
         if self.callback != None:
             res = self.callback(('cleanupApps',))
-            return res.value
+            return res
             
     def launch(self,appName,appNameJSON,actorName,actuals):
         '''
@@ -80,7 +82,7 @@ class ServiceClient(object):
         ''' 
         if self.callback != None:
             res = self.callback(('launch',appName,appNameJSON,actorName,actuals))
-            return res.value
+            return res
     
     def halt(self,appName,actorName):
         '''
@@ -89,8 +91,42 @@ class ServiceClient(object):
         ''' 
         if self.callback != None:
             res = self.callback(('halt',appName,actorName))
-            return res.value
+            return res
+        
+    def clean(self):
+        '''
+        Clean the riaps_deplo app folder
+        '''
+        if self.callback != None:
+            res = self.callback(('clean',))
+            return res
+        
+    def kill(self):
+        '''
+        Kill the riaps_deplo 
+        '''
+        if self.callback != None:
+            res = self.callback(('kill',))
+            return res
     
+    def query(self):
+        '''
+        Query client for running apps
+        '''
+        res = None
+        if self.callback != None:
+            res = self.callback(('query',))
+        return res
+    
+    def reclaim(self,appName):
+        '''
+        Reclaim app files 
+        '''
+        res = None
+        if self.callback != None:
+            res = self.callback(('reclaim',appName))
+        return res
+            
 class ControllerService(rpyc.Service):
     '''
     Controller Service implementation (rpyc service)
@@ -160,7 +196,9 @@ class ServiceThread(threading.Thread):
         '''
         global theController
         host = theController.hostAddress
-        self.server = ThreadedServer(ControllerService,hostname=host, port=self.port,auto_register=True)
+        self.server = ThreadedServer(ControllerService,hostname=host, port=self.port,
+                                     auto_register=True,
+                                     protocol_config = {"allow_public_attrs" : True})
         self.server.start()
         time.sleep(0.010)
         

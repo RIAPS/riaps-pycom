@@ -13,7 +13,8 @@ from os.path import join
 from _collections import OrderedDict
 import re
 import logging
-import tarfile
+import subprocess
+from riaps.lang.gviz import gviz
 
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, GLib, Gdk
@@ -52,8 +53,11 @@ class ControlGUIClient(object):
                                       "onSelectApplication": self.on_SelectApplication,
                                       "onSelectDeployment": self.on_SelectDeployment,
                                       "onFolderEntryActivate": self.on_folderEntryActivate,
+                                      "onKill": self.on_Kill,
+                                      "onClean": self.on_Clean,
                                       "onQuit": self.on_Quit,
-                                      "onLoadApplication": self.on_LoadApplication
+                                      "onLoadApplication": self.on_LoadApplication,
+                                      "onViewApplication": self.on_ViewApplication
                                       })
 
         self.conn = rpyc.connect(self.controller.hostAddress, port)  # Local connection to the service
@@ -79,8 +83,8 @@ class ControlGUIClient(object):
         Status Table Additions
         '''
         self.cellTextPlaceHolder = '                '
-        self.column_cur_size = 8
-        self.row_cur_size = 32
+        self.column_cur_size = 12
+        self.row_cur_size = 16
         self.appToLoad = None
         self.appSelected = None
         self.gridScrollWindow = self.builder.get_object('scrolledwindow2')
@@ -123,10 +127,10 @@ class ControlGUIClient(object):
         Called when the console entry receives an 'activate' event
         NOT USED
         '''
-        source = self.consoleIn.get_text()
+        _source = self.consoleIn.get_text()
         pass
 
-    def selectFile(self, title, pattern, pattern2=None):
+    def selectFile(self, title, patterns):
         '''
         File selection dialog
         '''
@@ -135,13 +139,12 @@ class ControlGUIClient(object):
                                          Gtk.FileChooserAction.OPEN,
                                          (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
                                           Gtk.STOCK_OPEN, Gtk.ResponseType.OK))
-        filterR = Gtk.FileFilter()
-        filterR.set_name("%s" % pattern)
-        filterR.add_pattern(pattern)
-        if (pattern2 is not None):
-            filterR.add_pattern(pattern2)
-        self.fcd.add_filter(filterR)
-         
+        for pattern in patterns:
+            filterR = Gtk.FileFilter()
+            filterR.set_name("%s" % pattern)
+            filterR.add_pattern(pattern)
+            self.fcd.add_filter(filterR)
+
         filterA = Gtk.FileFilter()
         filterA.set_name("All files")
         filterA.add_pattern("*")
@@ -184,7 +187,7 @@ class ControlGUIClient(object):
         '''
         App selection. Sets the app entry and calls the controller to compile the app model.
         '''
-        fileName = self.selectFile("application", "*.riaps", "*.gz")
+        fileName = self.selectFile("application", ["*.riaps","*.json"])
         if fileName != None:
                         
             if ('tar' in fileName) :
@@ -231,10 +234,7 @@ class ControlGUIClient(object):
         Deployment selection. Sets the deployment entry and calls the controller
         to compile the deployment model.
         '''
-        if self.folderEntry.get_text() is "":
-            self.logger.error("Please Select root directory")
-            return
-        fileName = self.selectFile("application", pattern="*depl*")
+        fileName = self.selectFile("application", ["*.depl","*.json"])
         if fileName != None:
             if 'json' in fileName:
                 appFolder = self.folderEntry.get_text()+'/tar'
@@ -264,6 +264,18 @@ class ControlGUIClient(object):
         if folderName != None:
             self.folderEntry.set_text(folderName)
             self.controller.setAppFolder(folderName)
+
+    def on_Kill(self, *args):
+        '''
+        Kill all connected deplos
+        '''
+        self.controller.killAll()
+        
+    def on_Clean(self, *args):
+        '''
+        Clean all connected deplos
+        '''
+        self.controller.cleanAll()
 
     def on_Quit(self, *args):
         '''
@@ -338,6 +350,13 @@ class ControlGUIClient(object):
         app = info[3]
         actor = info[4]
         self.launch_app(node, app, actor)
+        
+    def update_node_apps(self,clientName,value):
+        for appName in value.keys():
+            actors = value[appName]
+            for actorName in actors:
+                self.launch_app(clientName,appName,actorName)
+                self.controller.addToLaunchList(clientName,appName,actorName)
 
     """ Status grid gui update functions - these are the actual update functions """
         
@@ -376,8 +395,8 @@ class ControlGUIClient(object):
         c_cell = self.gridTable.get_child_at(col_idx, 0)
 
         if c_cell is not None:
-            # self.modify_text_cell_color(c_cell, 'black')
-            self.modify_text_cell_text(c_cell, 'black', 'gray')
+            self.modify_text_cell_color(c_cell, 'black', 'black')
+            self.modify_text_cell_text(c_cell, '')
 
             # modify data - reset the data at a particular (col_idx)
             for row_idx, key in enumerate(self.appStatusDict, 1):
@@ -481,6 +500,19 @@ class ControlGUIClient(object):
         self.clearDeployment()
         self.appToLoad = ''
 
+    def on_ViewApplication(self, widget):
+        '''
+        View the selected application as to be deployed
+        '''
+        model = self.appNameEntry.get_text()
+        deplo = self.deplNameEntry.get_text()
+        try:
+            fileName = gviz(model,deplo) + '.dot'
+            subprocess.Popen(['xdot',fileName])
+        except:
+            pass
+        
+        
     ''' Event handlers for widgets(buttons etc) '''
     def on_show_app_ctrl_options(self, widget):
         # set selected app name

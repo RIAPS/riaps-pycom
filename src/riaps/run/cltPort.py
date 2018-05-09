@@ -25,6 +25,7 @@ class CltPort(Port):
         
         self.req_type = portSpec["req_type"]
         self.rep_type = portSpec["rep_type"]
+        self.isTimed = portSpec["timed"]
         parentActor = parentComponent.parent
         # The request and reply message types must be of the same kind (global/local)
         assert parentActor.isInnerMessage(self.req_type) == parentActor.isInnerMessage(self.rep_type)
@@ -33,7 +34,7 @@ class CltPort(Port):
         self.isLocalPort = parentActor.isLocalMessage(self.req_type) and parentActor.isLocalMessage(self.rep_type)
         self.serverHost = None
         self.serverPort = None
-
+        self.info = None
 
     def setup(self):
         '''
@@ -56,7 +57,8 @@ class CltPort(Port):
             localHost = self.getLocalIface()
             self.portNum = -1 
             self.host = localHost
-        return ('clt',self.isLocalPort,self.name,str(self.req_type) + '#' + str(self.rep_type),self.host)
+        self.info = ('clt',self.isLocalPort,self.name,str(self.req_type) + '#' + str(self.rep_type),self.host)
+        return self.info
     
     def getSocket(self):
         '''
@@ -80,40 +82,20 @@ class CltPort(Port):
         self.socket.connect(srvPort)
     
     def recv_pyobj(self):
-        '''
-        Receive an object through this port
-        '''
-        return self.socket.recv_pyobj()
+        return self.port_recv(True)
     
     def send_pyobj(self,msg):
-        '''
-        Send an object through this port
-        '''
-        try:
-            self.socket.send_pyobj(msg)
-        except ZMQError as e:
-            if e.errno == zmq.EAGAIN:
-                return False
-            else:
-                raise
-        return True
-
+        return self.port_send(msg,True)              
+    
     def recv_capnp(self):
-        return self.socket.recv()
+        return self.port_recv(False)
     
     def send_capnp(self, msg):
-        try:
-            self.socket.send(msg)
-        except ZMQError as e:
-            if e.errno == zmq.EAGAIN:
-                return False
-            else:
-                raise
-        return True
+        return self.port_send(msg,False) 
     
     def getInfo(self):
         '''
         Retrieve relevant information about this port
         '''
-        return ("clt",self.name,(self.req_type,self.rep_type),self.host,self.portNum,self.serverHost,self.serverPort)
+        return self.info 
     

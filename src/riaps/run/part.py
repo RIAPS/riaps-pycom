@@ -87,6 +87,9 @@ class Part(object):
 
     def getActorID(self):
         return self.parent.getActorID()
+    
+    def getUUID(self):
+        return self.parent.getUUID()
         
     def load(self):
         '''
@@ -145,7 +148,10 @@ class Part(object):
         if self.control != None:
             self.control.setsockopt(zmq.SNDTIMEO,timeOut) 
             self.control.send_pyobj(cmd)
-        
+    
+    def getControl(self):
+        return self.control
+    
     def setup(self):
         '''
         Set up the part and change its state to Ready
@@ -179,7 +185,7 @@ class Part(object):
                 raise BuildError("invalid response from ComponentThread %s" % msg)
         # Process all component thread responses 
         for elt in queue:
-            self.parent.registerEndpoint(elt) 
+            self.parent.registerEndpoint(elt)
         self.state = Part.State.Ready
         
     def handlePortUpdate(self,portName,host,port):
@@ -188,7 +194,6 @@ class Part(object):
         '''
         self.logger.info("handlePortUpdate %s %s %s" % (portName,str(host),str(port)))
         msg = ("portUpdate",portName,host,port)
-        # print(msg)
         self.control.send_pyobj(msg)        # Relay message to component thread
         rep = self.control.recv_pyobj()     # Wait for an OK response
         if rep == "ok" :
@@ -224,13 +229,13 @@ class Part(object):
         if self.state != Part.State.Active:
             raise StateError("Invalid state %s in deactivate()" % self.state)
         self.deactivatePorts(self.ports)
-#        self.sendControl("deactivate",-1)         # Send deactivation command to component thread
+        self.sendControl("deactivate",-1)         # Send deactivation command to component thread
         self.state = Part.State.Inactive
     
     def passivate(self):
         if self.state != Part.State.Active:
             raise StateError("Invalid state %s in passivate()" % self.state)
-#        self.sendControl("passivate",-1)         # Send passivate command to component thread
+        self.sendControl("passivate",-1)         # Send passivate command to component thread
         self.state = Part.State.Passive
     
     def reactivate(self):
@@ -247,7 +252,21 @@ class Part(object):
         if self.state == Part.State.Destroyed:
             raise StateError("Invalid state %s in destroy()" % self.state)
         # Destroy thread
-    
+        
+    def handleReinstate(self):
+        '''
+        Reinstate providers with a restarted disco
+        '''
+        self.logger.info("handleReinstate - %s:%s" % (self.name,self.typeName))
+        prefix = (self.name,self.typeName)
+        for portName in self.ports:
+            port = self.ports[portName]
+            info = port.getInfo()
+            kind = info[0]
+            if kind == 'pub' or kind == 'srv' or kind == 'rep' or kind == 'ans':
+                endp = prefix + info
+                self.parent.registerEndpoint(endp) 
+        
     def handleCPULimit(self):
         self.logger.info("handleCPULimit - %s:%s" % (self.name,self.typeName))
         msg = ("limitCPU",)
@@ -269,14 +288,59 @@ class Part(object):
             pass
         else:
             pass
+    
+    def handleSpcLimit(self):
+        self.logger.info("handleSpcLimit - %s:%s" % (self.name,self.typeName))
+        msg = ("limitSpc",)
+        # print(msg)
+        self.control.send_pyobj(msg)        # Relay message to component thread
+        rep = self.control.recv_pyobj()     # Wait for an OK response
+        if rep == "ok" :
+            pass
+        else:
+            pass
+        
+    def handleNetLimit(self):
+        self.logger.info("handleNetLimit - %s:%s" % (self.name,self.typeName))
+        msg = ("limitNet",)
+        # print(msg)
+        self.control.send_pyobj(msg)        # Relay message to component thread
+        rep = self.control.recv_pyobj()     # Wait for an OK response
+        if rep == "ok" :
+            pass
+        else:
+            pass
+    
+    def handleNICStateChange(self,state):
+        self.logger.info("handleNICStateChange - %s:%s NIC %s" % (self.name,self.typeName,state))
+        msg = ("nicState",state)
+        # print(msg)
+        self.control.send_pyobj(msg)        # Relay message to component thread
+        rep = self.control.recv_pyobj()     # Wait for an OK response
+        if rep == "ok" :
+            pass
+        else:
+            pass
+        
+    def handlePeerStateChange(self,state,uuid):
+        self.logger.info("handlePeerStateChange - %s:%s peer %s at %s" 
+                         % (self.name,self.typeName,state,uuid))
+        msg = ("peerState",state,uuid)
+        # print(msg)
+        self.control.send_pyobj(msg)        # Relay message to component thread
+        rep = self.control.recv_pyobj()     # Wait for an OK response
+        if rep == "ok" :
+            pass
+        else:
+            pass
         
     def terminate(self):
-        self.logger.info("terminating")
+        self.logger.info("terminating %s" % self.typeName)
         self.sendControl("kill",-1)         # Send message to the thread to kill itself
-        time.sleep(0.001)
+        time.sleep(0.1)
         if self.thread != None:
             self.thread.join()
         for portObj in self.ports.values():
             portObj.terminate()
-        self.logger.info("terminated")
+        self.logger.info("terminated %s" % self.typeName)
         

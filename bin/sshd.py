@@ -29,7 +29,8 @@ from mininet.util import waitListening
 def TreeNet( depth=1, fanout=2, **kwargs ):
     "Convenience function for creating tree networks."
     topo = TreeTopo( depth, fanout )
-    return Mininet( topo, **kwargs )
+    return Mininet( topo, ipBase = '192.168.57.0/24', 
+                    **kwargs )
 
 def connectToRootNS( network, switch, ip, routes ):
     """Connect hosts to root namespace via switch. Starts network.
@@ -48,7 +49,8 @@ def connectToRootNS( network, switch, ip, routes ):
         root.cmd( 'route add -net ' + route + ' dev ' + str( intf ) )
 
 def sshd( network, cmd='/usr/sbin/sshd', opts='-D',
-          ip='10.123.123.1/32', routes=None, switch=None ):
+          ip='192.168.57.126/32', # '10.123.123.1/32'   
+          routes=None, switch=None ):
     """Start a network, connect it to root ns, and run sshd on all hosts.
        ip: root-eth0 IP address in root namespace (10.123.123.1/32)
        routes: Mininet host networks to route to (10.0/24)
@@ -56,7 +58,7 @@ def sshd( network, cmd='/usr/sbin/sshd', opts='-D',
     if not switch:
         switch = network[ 's1' ]  # switch to use
     if not routes:
-        routes = [ '10.0.0.0/24' ]
+        routes = [ '192.168.57.0/24' ] # '10.0.0.0/24'  
     connectToRootNS( network, switch, ip, routes )
     for host in network.hosts:
         host.cmd( cmd + ' ' + opts + '&' )

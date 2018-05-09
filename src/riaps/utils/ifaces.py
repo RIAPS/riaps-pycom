@@ -18,6 +18,7 @@ def getNetworkInterfaces(nicName=None):
     local = None
     ipAddressList = []
     macAddressList = []
+    ifNameList = []
     ifNames = netifaces.interfaces()      
     for ifName in ifNames:
         ifInfo = netifaces.ifaddresses(ifName)
@@ -28,6 +29,7 @@ def getNetworkInterfaces(nicName=None):
                 local = ifAddr
             else:
                 ipAddressList.append(ifAddr)
+                ifNameList.append(ifName)
                 linkAddrs = netifaces.ifaddresses(ifName)[netifaces.AF_LINK]
                 linkAddr = linkAddrs[0]['addr'].replace(':','')
                 macAddressList.append(linkAddr)
@@ -35,5 +37,5 @@ def getNetworkInterfaces(nicName=None):
                     ipAddressList = [ipAddressList[-1]]
                     macAddressList = [macAddressList[-1]] 
                     break
-    return (ipAddressList,macAddressList,local)
+    return (ipAddressList,macAddressList,ifNameList,local)
 

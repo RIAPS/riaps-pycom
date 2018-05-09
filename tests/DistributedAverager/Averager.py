@@ -56,3 +56,8 @@ class Averager(Component):
     def on_display(self):
         msg = self.display.recv_pyobj()
         self.logger.info('[%s]:%f' % (str(self.pid),self.ownValue))
+        
+    def handlePeerStateChange(self,state,uuid):
+        self.logger.info("peer %s is %s" % (uuid,state))
+        
+        

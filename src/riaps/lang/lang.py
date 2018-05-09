@@ -120,28 +120,39 @@ class RiapsModel2JSON(object):
             portClass = port.__class__.__name__
             if (portClass == 'PubPort'):
                 portObj['type'] = port.type.name
+                portObj['timed'] = port.timed
                 pubs[port.name] = portObj
             elif (portClass == 'SubPort'):
                 portObj['type'] = port.type.name
+                portObj['timed'] = port.timed
+                portObj['deadline'] = port.deadline
                 subs[port.name] = portObj
             elif (portClass == 'ClntPort'):
                 portObj['req_type'] = port.req_type.name
                 portObj['rep_type'] = port.rep_type.name
+                portObj['timed'] = port.timed
                 clts[port.name] = portObj
             elif (portClass == 'SrvPort'):
                 portObj['req_type'] = port.req_type.name
                 portObj['rep_type'] = port.rep_type.name
+                portObj['timed'] = port.timed
+                portObj['deadline'] = port.deadline
                 srvs[port.name] = portObj
             elif (portClass == 'ReqPort'):
                 portObj['req_type'] = port.req_type.name
                 portObj['rep_type'] = port.rep_type.name
+                portObj['timed'] = port.timed
+                portObj['deadline'] = port.deadline
                 reqs[port.name] = portObj
             elif(portClass == 'RepPort'):
                 portObj['req_type'] = port.req_type.name
                 portObj['rep_type'] = port.rep_type.name
+                portObj['timed'] = port.timed
+                portObj['deadline'] = port.deadline
                 reps[port.name] = portObj
             elif(portClass == 'TimPort'):
                 portObj['period'] = port.period
+                portObj['deadline'] = port.deadline
                 tims[port.name] = portObj
             elif (portClass == 'InsPort'):
                 inss[port.name] = portObj
@@ -149,10 +160,14 @@ class RiapsModel2JSON(object):
             elif (portClass == 'QryPort'):
                 portObj['req_type'] = port.req_type.name
                 portObj['rep_type'] = port.rep_type.name
+                portObj['timed'] = port.timed
+                portObj['deadline'] = port.deadline
                 qrys[port.name] = portObj
             elif (portClass == 'AnsPort'):
                 portObj['req_type'] = port.req_type.name
                 portObj['rep_type'] = port.rep_type.name
+                portObj['timed'] = port.timed
+                portObj['deadline'] = port.deadline
                 anss[port.name] = portObj
             else:
                 raise TextXSemanticError('Unknown type for port "%s"' %
@@ -175,7 +190,7 @@ class RiapsModel2JSON(object):
             actObj["internals"] = self.getInternals(act.internals)
             actObj["usage"] = self.getUsage(act.usage)
             actObj["instances"] = self.getInstances(act.instances)
-            actObj["wires"] = self.getWires(act.wires)
+#            actObj["wires"] = self.getWires(act.wires)
             res[act.name] = actObj
         return res
     def getLocals(self,locals_):
@@ -210,7 +225,8 @@ class RiapsModel2JSON(object):
                 actualObj["value"] = actual.argValue.value
             res.append(actualObj)
         return res
-    def convertTime(self,value,unit):
+    @staticmethod
+    def convertTime(value,unit):
         ''' Convert all time values to msec'''
         if unit == 'msec':
             return value 
@@ -218,14 +234,23 @@ class RiapsModel2JSON(object):
             return value * 1000
         elif unit == 'min':
             return value * 60 * 1000
-    def convertMem(self,value,unit):
-        ''' Convert all memory size values to kB'''
-        if unit == 'MB':
+    @staticmethod
+    def convertMem(value,unit):
+        ''' Convert all memory size values to kilobytes'''
+        if unit == 'mb':
             return value * 1024 
-        elif unit == 'kB':
+        elif unit == 'kb':
             return value
-        elif unit == 'GB':
+        elif unit == 'gb':
             return value * 1024 * 1024
+    def convertRate(self,value,unit):
+        ''' Convert all rate values to bytes/sec'''
+        if unit == 'kbps':
+            return int(value * 1024)
+        elif unit == 'mbps':
+            return int(value * 1024 * 1024)
+        else:
+            return None;
     def getUsage(self,usage):
         cpuUsage = { }
         memUsage = { }
@@ -245,11 +270,9 @@ class RiapsModel2JSON(object):
                 unit = 'MB' if use.unit == None else use.unit
                 spcUsage['use'] = self.convertMem(use.usage,unit)
             elif (useClass == 'NetUsage'):
-                memUnit = 'MB' if use.memUnit == None else use.memUnit
-                netUsage['use'] = self.convertMem(use.usage,memUnit)
-                netUsage['max'] = use.max
-                timeUnit = 'MB' if use.timeUnit == None else use.timeUnit
-                netUsage['interval'] = self.convertTime(use.interval,timeUnit)
+                netUsage['rate'] = self.convertRate(use.rate,use.rateUnit)
+                netUsage['ceil'] = 0 if use.ceil == None else self.convertRate(use.ceil,use.ceilUnit)
+                netUsage['burst'] = 0 if use.burst == None else int(use.burst * 1024)
             else:
                 raise TextXSemanticError('Unknown usage for port "%s"' %
                                          (str(use)))
@@ -267,23 +290,29 @@ class RiapsModel2JSON(object):
             instObj["actuals"] = self.getActuals(inst.actuals)
             res[inst.name] = instObj
         return res
-    def getWires(self,wires):
-        res = []
-        for wire in wires:
-            wireObj = { "lhsName" : wire.lhsInst.name,
-                        "lhsPort" : wire.lhsPort.name,
-                        "rhsName" : wire.rhsInst.name,
-                        "rhsPort" : wire.rhsPort.name,
-                        }
-            res.append(wireObj)
-        return res
+#     def getWires(self,wires):
+#         res = []
+#         for wire in wires:
+#             wireObj = { "lhsName" : wire.lhsInst.name,
+#                         "lhsPort" : wire.lhsPort.name,
+#                         "rhsName" : wire.rhsInst.name,
+#                         "rhsPort" : wire.rhsPort.name,
+#                         }
+#             res.append(wireObj)
+#         return res
 
 # Object processor for timer ports: the 'spec' part is optional. If missing, it means period=0, i.e. a one-shot timer
 def timport_obj_processor(timport):
     if timport.spec == 0:
         timport.period = 0
     else:
-        timport.period = timport.spec
+        spec = timport.spec
+        unit = 'msec' if timport.periodUnit == None else timport.periodUnit 
+        timport.period = RiapsModel2JSON.convertTime(spec,unit)
+    if timport.deadline != 0:
+        spec = timport.deadline
+        unit = 'msec' if timport.unit == None else timport.unit
+        timport.deadline = RiapsModel2JSON.convertTime(spec,unit)
 
 # Object processor for inside  ports: the 'spec' part is optional. If missing it implies the default 1sec trigger
 def insport_obj_processor(insport):
@@ -291,6 +320,24 @@ def insport_obj_processor(insport):
         insport.spec = 'default'
     else:
         insport.spec = None
+
+# Object processor for non-operation ports: the 'timed' flag is optional. 
+def timed_port_obj_processor(port):
+    if port.timed == 'timed':
+        port.timed = True
+    else:
+        port.timed = False
+
+# Object processor for operation ports: the 'timed' and deadline are optional. 
+def op_port_obj_processor(port):
+    if port.timed == 'timed':
+        port.timed = True
+    else:
+        port.timed = False
+    if port.deadline != 0:
+        spec = port.deadline
+        unit = 'msec' if port.unit == None else port.unit
+        port.deadline = RiapsModel2JSON.convertTime(spec,unit)
 
 # Object processor for io component instances: messages must be local
 def instance_obj_processor(instance):
@@ -315,38 +362,38 @@ def instance_obj_processor(instance):
     else:
         pass
 
-# Object processor for wires: checks if the names used are correct. 
-# Wires are to connect ports of local instances.
-def wire_obj_processor(wire):
-#    print '(' + wire.lhsName + '.' + wire.lhsPortName + '=' + wire.rhsName + '.' + wire.rhsPortName + ')'
-    instances = wire.parent.instances
-    lhsInst = [inst for inst in instances if inst.name == wire.lhsName]
-    if not lhsInst:
-        raise TextXSemanticError('Wire LHS instance "%s" not found.' %
-                                 wire.lhsName)
-    else:
-        wire.lhsInst = lhsInst[0]
-    lhsPort = [port for port in wire.lhsInst.type.ports if port.name == wire.lhsPortName]
-    if not lhsPort:
-        raise TextXSemanticError('Wire LHS port "%s" in instance "%s" not found.' %
-                                 (wire.lhsPortName, wire.lhsName))
-    else:
-        wire.lhsPort=lhsPort[0]
-    rhsInst = [inst for inst in instances if inst.name == wire.rhsName]
-    if not rhsInst:
-        raise TextXSemanticError('Wire RHS instance "%s" not found.' %
-                                 wire.rhsName)
-    else:
-        wire.rhsInst=rhsInst[0]
-    rhsPort = [port for port in wire.rhsInst.type.ports if port.name == wire.rhsPortName]
-    if not rhsPort:
-        raise TextXSemanticError('Wire RHS port "%s" in instance "%s" not found.' %
-                                 (wire.rhsPortName, wire.rhsName))
-    else:
-        wire.rhsPort=rhsPort[0]
-#    print lhsInst, lhsPort, rhsInst, rhsPort
+# # Object processor for wires: checks if the names used are correct. 
+# # Wires are to connect ports of local instances.
+# def wire_obj_processor(wire):
+# #    print '(' + wire.lhsName + '.' + wire.lhsPortName + '=' + wire.rhsName + '.' + wire.rhsPortName + ')'
+#     instances = wire.parent.instances
+#     lhsInst = [inst for inst in instances if inst.name == wire.lhsName]
+#     if not lhsInst:
+#         raise TextXSemanticError('Wire LHS instance "%s" not found.' %
+#                                  wire.lhsName)
+#     else:
+#         wire.lhsInst = lhsInst[0]
+#     lhsPort = [port for port in wire.lhsInst.type.ports if port.name == wire.lhsPortName]
+#     if not lhsPort:
+#         raise TextXSemanticError('Wire LHS port "%s" in instance "%s" not found.' %
+#                                  (wire.lhsPortName, wire.lhsName))
+#     else:
+#         wire.lhsPort=lhsPort[0]
+#     rhsInst = [inst for inst in instances if inst.name == wire.rhsName]
+#     if not rhsInst:
+#         raise TextXSemanticError('Wire RHS instance "%s" not found.' %
+#                                  wire.rhsName)
+#     else:
+#         wire.rhsInst=rhsInst[0]
+#     rhsPort = [port for port in wire.rhsInst.type.ports if port.name == wire.rhsPortName]
+#     if not rhsPort:
+#         raise TextXSemanticError('Wire RHS port "%s" in instance "%s" not found.' %
+#                                  (wire.rhsPortName, wire.rhsName))
+#     else:
+#         wire.rhsPort=rhsPort[0]
+# #    print lhsInst, lhsPort, rhsInst, rhsPort
            
-def compileModel(modelFileName,verbose=False,debug=False):
+def compileModel(modelFileName,verbose=False,debug=False,generate=True):
     riaps_folder = os.getenv('RIAPSHOME', './') # RIAPSHOME points to the folder containing the grammar
     this_folder = os.getcwd()  
     
@@ -356,10 +403,18 @@ def compileModel(modelFileName,verbose=False,debug=False):
     
     # Register object processors for wires and timer ports
     obj_processors = {
-        'Wire': wire_obj_processor,
+#         'Wire': wire_obj_processor,
         'TimPort': timport_obj_processor,
-        'InsPort': insport_obj_processor,
+         # 'InsPort': op_port_obj_processor, # Inside port cannot be timed / have deadline
         'Instance': instance_obj_processor,
+        'PubPort' : timed_port_obj_processor,
+        'SubPort' : op_port_obj_processor,
+        'ClntPort': timed_port_obj_processor,
+        'SrvPort' : op_port_obj_processor,
+        'ReqPort' : op_port_obj_processor,
+        'RepPort' : op_port_obj_processor,
+        'QryPort' : op_port_obj_processor,
+        'AnsPort' : op_port_obj_processor,
         # We should also check for parameters: 
         #   (1) formal/actual lists should match, 
         #   (2) inherited parameters should appear in their parent 
@@ -368,7 +423,6 @@ def compileModel(modelFileName,verbose=False,debug=False):
     
     # Optionally export meta-model to dot (for debugging only)
     # metamodel_export(riaps_meta, join(this_folder, 'riaps_meta.dot'))
-    
     
     try:
         # Instantiate the model object structure from the model file 
@@ -404,11 +458,12 @@ def compileModel(modelFileName,verbose=False,debug=False):
         print(riaps_model_json)
     
     # Generated JSON files for each app    
-    for appName in riaps_model.apps:
-        fp = open(appName + '.json','w')
-        appObj = riaps_model.apps[appName]
-        json.dump(appObj,fp,indent=4,sort_keys=True,separators=(',', ':'))
-        fp.close()
+    if generate:
+        for appName in riaps_model.apps:
+            fp = open(appName + '.json','w')
+            appObj = riaps_model.apps[appName]
+            json.dump(appObj,fp,indent=4,sort_keys=True,separators=(',', ':'))
+            fp.close()
         
     return riaps_model.apps
     

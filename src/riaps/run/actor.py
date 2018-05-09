@@ -10,9 +10,10 @@ from .peripheral import Peripheral
 from .exc import BuildError
 import zmq
 import time
-from .disco import DiscoClient
-from .devc import DevmClient
+from riaps.run.disco import DiscoClient
+from riaps.run.deplc import DeplClient
 from riaps.proto import disco_capnp
+from riaps.proto import deplo_capnp
 from riaps.utils.ifaces import getNetworkInterfaces
 import getopt
 import logging
@@ -36,6 +37,7 @@ class Actor(object):
         self.modelName = gModelName
         self.name = aName
         self.pid = os.getpid()
+        self.uuid = None
         self.setupIfaces()
         # Assumption : pid is a 4 byte int
         self.actorID = ipaddress.IPv4Address(self.globalHost).packed + self.pid.to_bytes(4,'big')
@@ -82,10 +84,14 @@ class Actor(object):
             instFormals = typeSpec['formals']
             instActuals = instSpec['actuals']
             instArgs = self.buildInstArgs(instName,instFormals,instActuals)
-            if not ioComp:
-                self.components[instName]= Part(self,typeSpec,instName, instType, instArgs)
-            else:
-                self.components[instName]= Peripheral(self,typeSpec,instName, instType, instArgs)
+            try:
+                if not ioComp:
+                    self.components[instName]= Part(self,typeSpec,instName, instType, instArgs)
+                else:
+                    self.components[instName]= Peripheral(self,typeSpec,instName, instType, instArgs)
+            except TypeError as e:
+                self.logger.error("Error while constructing part '%s.%s': %s" % (instType,instName,str(e)))
+                
            
     def getParameterValueType(self,param,defaultType):
         paramValue, paramType = None, None
@@ -124,11 +130,10 @@ class Actor(object):
             self.params[key] = default
             optList.append("%s=" % key) 
         try:
-            opts,args = getopt.getopt(sysArgv, '', optList)
+            opts,_args = getopt.getopt(sysArgv, '', optList)
         except:
             self.logger.info("Error parsing actor options %s" % str(sysArgv))
             return
-#        try:
         for opt in opts:
             optName2,optValue = opt 
             optName = optName2[2:] # Drop two leading dashes 
@@ -208,11 +213,17 @@ class Actor(object):
     def getActorID(self):
         return self.actorID
     
+    def setUUID(self,uuid):
+        self.uuid = uuid
+        
+    def getUUID(self):
+        return self.uuid
+        
     def setupIfaces(self):
         '''
         Find the IP addresses of the (host-)local and network(-global) interfaces
         '''
-        (globalIPs,globalMACs,localIP) = getNetworkInterfaces()
+        (globalIPs,globalMACs,_globalNames,localIP) = getNetworkInterfaces()
         try:
             assert len(globalIPs) > 0 and len(globalMACs) > 0
         except:
@@ -233,9 +244,11 @@ class Actor(object):
         self.disco = DiscoClient(self,self.suffix)
         self.disco.start()                  # Start the discovery service client
         self.disco.registerApp()            # Register this actor with the discovery service
-        self.devc = DevmClient(self,self.suffix)
-        self.devc.start()
-        self.devc.registerApp()
+        self.logger.info("actor registered with disco")
+        self.deplc = DeplClient(self,self.suffix)
+        self.deplc.start()
+        ok = self.deplc.registerApp()
+        self.logger.info("actor %s registered with depl" % ("is" if ok else "is not"))
         for inst in self.components:
             self.components[inst].setup()
     
@@ -243,18 +256,19 @@ class Actor(object):
         '''
         Relay the endpoint registration message to the discovery service client 
         '''
+        self.logger.info("registerEndpoint")
         result = self.disco.registerEndpoint(bundle)
         for res in result:
             (partName,portName,host,port) = res
             self.updatePart(partName,portName,host,port)
-
+    
     def registerDevice(self,bundle):
         '''
         Relay the device registration message to the device interface service client
         '''
         typeName,args = bundle
         msg = (self.appName,self.modelName,typeName,args)
-        result = self.devc.registerDevice(msg)
+        result = self.deplc.registerDevice(msg)
         return result
 
     def unregisterDevice(self,bundle):
@@ -263,7 +277,7 @@ class Actor(object):
         '''
         typeName, = bundle
         msg = (self.appName,self.modelName,typeName)
-        result = self.devc.unregisterDevice(msg)
+        result = self.deplc.unregisterDevice(msg)
         return result
     
     def activate(self):
@@ -298,11 +312,21 @@ class Actor(object):
         '''
         self.logger.info("starting")
         self.discoChannel = self.disco.channel              # Private channel to the discovery service
-        self.devcChannel = self.devc.channel
+        self.deplChannel = self.deplc.channel
+        
+        self.controls = { }
+        self.controlMap = { }
+        for inst in self.components:
+            control = self.components[inst].getControl()
+            if control != None: 
+                self.controls[inst] = control
+                self.controlMap[id(control)] = self.components[inst]
        
         self.poller = zmq.Poller()                          # Set up the poller
-        self.poller.register(self.devcChannel,zmq.POLLIN)
+        self.poller.register(self.deplChannel,zmq.POLLIN)
         self.poller.register(self.discoChannel,zmq.POLLIN)
+        for control in self.controls:
+            self.poller.register(self.controls[control],zmq.POLLIN)
         
         while 1:
             sockets = dict(self.poller.poll())              
@@ -311,14 +335,22 @@ class Actor(object):
                 for msg in msgs:
                     self.handleServiceUpdate(msg)               # Handle message from disco service
                 del sockets[self.discoChannel]    
-            elif self.devcChannel in sockets:
-                msgs = self.recvChannelMessages(self.devcChannel)
+            elif self.deplChannel in sockets:
+                msgs = self.recvChannelMessages(self.deplChannel)
                 for msg in msgs:
-                    msg = self.devcChannel.recv()
-                    pass                                        # Handle message from devm service
-                del sockets[self.devcChannel]
+                    self.handleDeplMessage(msg)                 # Handle message from depl service
+                del sockets[self.deplChannel]
             else:
-                pass
+                toDelete = []
+                for s in sockets:
+                    if s in self.controls.values():
+                        part = self.controlMap[id(s)]
+                        msg = s.recv_pyobj()
+                        self.handleEventReport(part,msg)
+                    toDelete += [s]
+                for s in toDelete:
+                    del sockets[s]
+
             
     def handleServiceUpdate(self,msgBytes):
         '''
@@ -353,11 +385,72 @@ class Actor(object):
         part = self.components[instanceName]
         part.handlePortUpdate(portName,host,port)
         
+    def handleDeplMessage(self,msgBytes):
+        '''
+        Handle a message from the deployment service
+        '''
+        msgUpd = deplo_capnp.DeplCmd.from_bytes(msgBytes)     # Parse the incoming message
+
+        which = msgUpd.which()
+        if which == 'resourceMsg':
+            what = msgUpd.resourceMsg.which()
+            if what == 'resCPUX':
+                self.handleCPULimit()
+            elif what == 'resMemX':
+                self.handleMemLimit()
+            elif what == 'resSpcX':
+                self.handleSpcLimit()
+            elif what == 'resNetX':
+                self.handleNetLimit()
+            else:
+                self.logger.error("unknown resource msg from deplo: '%s'" % what)
+                pass
+        elif which == 'reinstateCmd':
+            self.handleReinstate()
+        elif which == 'nicStateMsg' :
+            stateMsg = msgUpd.nicStateMsg
+            state = str(stateMsg.nicState)
+            self.handleNICStateChange(state)
+        elif which == 'peerInfoMsg':
+            peerMsg = msgUpd.peerInfoMsg
+            state = str(peerMsg.peerState)
+            uuid = peerMsg.uuid
+            self.handlePeerStateChange(state,uuid)
+        else:
+            self.logger.error("unknown msg from deplo: '%s'" % which)
+            pass
+           
+    def handleReinstate(self):
+        self.logger.info('handleReinstate')
+        self.poller.unregister(self.discoChannel)
+        self.disco.reconnect()
+        self.discoChannel = self.disco.channel
+        self.poller.register(self.discoChannel,zmq.POLLIN)
+        for inst in self.components:
+            self.components[inst].handleReinstate()
+    
+    def handleNICStateChange(self,state):
+        '''
+        Handle the NIC state change message: notify components   
+        ''' 
+        self.logger.info("handleNICStateChange")
+        for component in self.components.values():
+            component.handleNICStateChange(state)
+            
+    def handlePeerStateChange(self,state,uuid):
+        '''
+        Handle the peer state change message: notify components   
+        ''' 
+        self.logger.info("handlePeerStateChange")
+        for component in self.components.values():
+            component.handlePeerStateChange(state,uuid)
+    
     def handleCPULimit(self):
         '''
         Handle the case when the CPU limit is exceeded: notify each component.
         If the component has defined a handler, it will be called.   
         ''' 
+        self.logger.info("handleCPULimit")
         for component in self.components.values():
             component.handleCPULimit()
             
@@ -366,14 +459,41 @@ class Actor(object):
         Handle the case when the memory limit is exceeded: notify each component.
         If the component has defined a handler, it will be called.   
         ''' 
+        self.logger.info("handleMemLimit")
         for component in self.components.values():
             component.handleMemLimit()
+            
+    def handleSpcLimit(self):
+        '''
+        Handle the case when the file space limit is exceeded: notify each component.
+        If the component has defined a handler, it will be called.   
+        ''' 
+        self.logger.info("handleSpcLimit")
+        for component in self.components.values():
+            component.handleSpcLimit()
+            
+    def handleNetLimit(self):
+        '''
+        Handle the case when the net usage limit is exceeded: notify each component.
+        If the component has defined a handler, it will be called.   
+        ''' 
+        self.logger.info("handleNetLimit")
+        for component in self.components.values():
+            component.handleNetLimit()
     
+    def handleEventReport(self,part,msg):
+        # call deplc to send a report
+        partName = part.getName()
+        typeName = part.getTypeName() 
+        bundle = (partName,typeName,) + msg
+        self.deplc.reportEvent(bundle)
+            
     def terminate(self):
         self.logger.info("terminating")
         for component in self.components.values():
             component.terminate()
-        self.devc.terminate()
+        time.sleep(1.0)
+        self.deplc.terminate()
         self.disco.terminate()
         # Clean up everything
         # self.context.destroy()

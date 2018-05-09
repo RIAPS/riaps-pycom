@@ -105,6 +105,8 @@ class DiscoDbase(object):
         self.logger.info("insert %s -> %s" % (repr(key),repr(value)))
         try:
             clientsToNotify = []
+            if self.r.exists(key) and (value in self.r.smembers(key)):
+                return []
             self.r.sadd(key,value)
 #            self.updateSubs(key)
             clientsKey = key + "_clients"
@@ -133,6 +135,7 @@ class DiscoDbase(object):
             raise DatabaseError("db connection lost")
         except OSError:
             raise DatabaseError("OS error")
+          
         
     def remove(self,key,value):
         '''

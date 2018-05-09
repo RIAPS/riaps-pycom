@@ -4,27 +4,33 @@ Created on Oct 10, 2016
 @author: riaps
 '''
 import zmq
+import time
+import struct
 from riaps.run.port import Port
 from riaps.run.exc import OperationError
 from riaps.utils.config import Config
 from zmq.error import ZMQError
-#from .part import Part
-#from .actor import Actor
+try:
+    import cPickle
+    pickle = cPickle
+except:
+    cPickle = None
+    import pickle
 
 class PubPort(Port):
     '''
     classdocs
     '''
-
-
     def __init__(self, parentComponent, portName, portSpec):
         '''
         Constructor
         '''
         super(PubPort,self).__init__(parentComponent,portName)
         self.type = portSpec["type"]
+        self.isTimed = portSpec["timed"]
         parentActor = parentComponent.parent
         self.isLocalPort = parentActor.isLocalMessage(self.type)
+        self.info = None
     
     def setup(self):
         pass
@@ -42,7 +48,9 @@ class PubPort(Port):
             localHost = self.getLocalIface()
             self.portNum = self.socket.bind_to_random_port("tcp://" + localHost)
             self.host = localHost
-        return ('pub',self.isLocalPort,self.name,self.type,self.host,self.portNum)
+        self.info = ('pub',self.isLocalPort,self.name,self.type,self.host,self.portNum)
+        return self.info
+        
     
     def update(self, host, port):
         raise OperationError("Unsupported update() on PubPort")
@@ -54,24 +62,10 @@ class PubPort(Port):
         return False
     
     def send_pyobj(self,msg):
-        try:
-            self.socket.send_pyobj(msg)
-        except ZMQError as e:
-            if e.errno == zmq.EAGAIN:
-                return False
-            else:
-                raise
-        return True
+        return self.port_send(msg,True)
 
     def send_capnp(self, msg):
-        try:
-            self.socket.send(msg)
-        except ZMQError as e:
-            if e.errno == zmq.EAGAIN:
-                return False
-            else:
-                raise
-        return True
+        return self.port_send(msg,False)
         
     def recv_pyobj(self):
         raise OperationError("attempt to receive through a publish port")
@@ -80,5 +74,7 @@ class PubPort(Port):
         raise OperationError("attempt to receive through a publish port")
     
     def getInfo(self):
-        return ("pub",self.name,self.type,self.host,self.portNum)
+        return self.info
+    
+    
     

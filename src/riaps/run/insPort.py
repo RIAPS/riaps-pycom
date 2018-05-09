@@ -57,6 +57,7 @@ class InsPort(Port):
         self.instName = self.parent.name + '.' + self.name
         self.spec = portSpec["spec"]
         self.thread = None
+        self.info = None
 
     def setup(self):
         if self.spec == 'default':
@@ -68,7 +69,8 @@ class InsPort(Port):
     def setupSocket(self):
         self.socket = self.context.socket(zmq.PAIR)
         self.socket.connect('inproc://inside_' + self.instName)
-        return ('ins',self.name)
+        self.info = ('ins',self.name)
+        return self.info
     
     def setupPlug(self,thread):
         # Must not be called from the main thread
@@ -91,7 +93,7 @@ class InsPort(Port):
             self.thread.deactivate()
         
     def terminate(self):
-        if self.thread and hasattr(self.thread,'terminate'):
+        if self.thread and hasattr(self.thread,'terminate') and self.thread.is_alive():
             self.thread.terminate()
 
     def getSocket(self):
@@ -110,7 +112,7 @@ class InsPort(Port):
     def send_pyobj(self,msg):
         try:
             self.socket.send_pyobj(msg)
-        except ZMQError as e:
+        except zmq.error.ZMQError as e:
             if e.errno == zmq.EAGAIN:
                 return False
             else:
@@ -118,4 +120,5 @@ class InsPort(Port):
         return True
     
     def getInfo(self):
-        return ("ins",self.name,self.kind)
+        return self.info
+    

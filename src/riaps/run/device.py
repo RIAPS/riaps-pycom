@@ -10,8 +10,8 @@ from .peripheral import Peripheral
 from .exc import BuildError
 import zmq
 import time
-from .disco import DiscoClient
-#from .devm import DevmClient
+from riaps.run.disco import DiscoClient
+from riaps.run.deplc import DeplClient
 from riaps.proto import disco_capnp
 from riaps.utils.ifaces import getNetworkInterfaces
 from riaps.utils.config import Config
@@ -227,7 +227,7 @@ class Device(Actor):
 #         '''
 #         Find the IP addresses of the (host-)local and network(-global) interfaces
 #         '''
-#         (globalIPs,globalMACs,localIP) = getNetworkInterfaces()
+#         (globalIPs,globalMACs,globalNames,localIP) = getNetworkInterfaces()
 #         assert len(globalIPs) > 0 and len(globalMACs) > 0
 #         globalIP = globalIPs[0]
 #         globalMAC = globalMACs[0]
@@ -245,101 +245,40 @@ class Device(Actor):
         self.disco = DiscoClient(self,self.suffix)
         self.disco.start()                  # Start the discovery service client
         self.disco.registerApp()            # Register this actor with the discovery service
-        # This is a device - does not register with the device manager
-#         self.devc = DevmClient(self,self.suffix)
-#         self.devc.start()
-#         self.devc.registerApp()
+        self.logger.info("device registered with disco")
+        self.deplc = DeplClient(self,self.suffix)
+        self.deplc.start()
+        ok = self.deplc.registerApp(isDevice=True)       
+        self.logger.info("device %s registered with depl" % ("is" if ok else "is not"))
         for inst in self.components:
             self.components[inst].setup()
     
-#     def registerEndpoint(self,bundle):
+#     def start(self):
 #         '''
-#         Relay the endpoint registration message to the discovery service client 
+#         Start and operate the actor (infinite polling loop)
 #         '''
-#         result = self.disco.registerEndpoint(bundle)
-#         for res in result:
-#             (partName,portName,host,port) = res
-#             self.updatePart(partName,portName,host,port)
-
-#     def registerDevice(self,bundle):
-#         '''
-#         Relay the device registration message to the device interface service client
-#         '''
-#         typeName,args = bundle
-#         msg = (self.appName,self.modelName,typeName,args)
-#         result = self.devc.registerDevice(msg)
-#         return result
-
-#     def activate(self):
-#         '''
-#         Activate the parts
-#         '''
-#         self.logger.info("activate")
-#         for inst in self.components:
-#             self.components[inst].activate()
-#             
-#     def deactivate(self):
-#         '''
-#         Deactivate the parts
-#         '''
-#         self.logger.info("deactivate")
-#         for inst in self.components:
-#             self.components[inst].deactivate()
-
-    def start(self):
-        '''
-        Start and operate the actor (infinite polling loop)
-        '''
-        self.logger.info("starting")
-        self.discoChannel = self.disco.channel              # Private channel to the discovery service
-#        self.devcChannel = self.devc.channel
-       
-        self.poller = zmq.Poller()                          # Set up the poller
-#        self.poller.register(self.devcChannel,zmq.POLLIN)
-        self.poller.register(self.discoChannel,zmq.POLLIN)
-        
-        while 1:
-            sockets = dict(self.poller.poll())              
-            if self.discoChannel in sockets:                # If there is a message from a service, handle it
-                msgs = self.recvChannelMessages(self.discoChannel)
-                for msg in msgs:
-                    self.handleServiceUpdate(msg)               # Handle message from disco service
-                del sockets[self.discoChannel]    
-#            elif self.devicChannel in sockets:
-#                msg = self.devcChannel.recv()
-#                pass                                        # Handle message from devm service
-#                del sockets[self.devcChannel]
-            else:
-                pass
-            
-#     def handleServiceUpdate(self,msgBytes):
-#         '''
-#         Handle a service update message from the discovery service
-#         '''
-#         msg = disco_capnp.DiscoUpd.from_bytes(msgBytes)     # Parse the incoming message
-#         client = msg.client
-#         actorHost = client.actorHost
-#         assert actorHost == self.globalHost                 # It has to be addressed to this actor
-#         actorName = client.actorName
-#         assert actorName == self.name
-#         instanceName = client.instanceName
-#         assert instanceName in self.components              # It has to be for a part of this actor
-#         portName = client.portName
-#         scope = msg.scope
-#         socket = msg.socket
-#         host = socket.host
-#         port = socket.port 
-#         if scope == "local":
-#             assert host == self.localHost
-#         self.updatePart(instanceName,portName,host,port)    # Update the selected part
-#     
-#     def updatePart(self,instanceName,portName,host,port):
-#         '''
-#         Ask a part to update itself
-#         '''
-#         self.logger.info("updatePart %s" % str((instanceName,portName,host,port)))
-#         part = self.components[instanceName]
-#         part.handlePortUpdate(portName,host,port)
+#         self.logger.info("starting")
+#         self.discoChannel = self.disco.channel              # Private channel to the discovery service
+#         self.deplChannel = self.deplc.channel
+#        
+#         self.poller = zmq.Poller()                          # Set up the poller
+#         self.poller.register(self.deplChannel,zmq.POLLIN)
+#         self.poller.register(self.discoChannel,zmq.POLLIN)
+#         
+#         while 1:
+#             sockets = dict(self.poller.poll())              
+#             if self.discoChannel in sockets:                # If there is a message from a service, handle it
+#                 msgs = self.recvChannelMessages(self.discoChannel)
+#                 for msg in msgs:
+#                     self.handleServiceUpdate(msg)               # Handle message from disco service
+#                 del sockets[self.discoChannel]    
+#             elif self.deplChannel in sockets:
+#                 msgs = self.recvChannelMessages(self.deplChannel)
+#                 for msg in msgs:
+#                     self.handleDeplMessage(msg)                 # Handle message from depl service
+#                 del sockets[self.deplChannel]
+#             else:
+#                 pass
 
     def terminate(self):
         self.logger.info("terminating")

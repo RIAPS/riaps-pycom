@@ -4,7 +4,13 @@
 # For riaps developers - NOT APP DEVELOPERS 
 
 # Add default gateway (mininet)
-route add default gw 10.0.0.1
+route add default gw 192.168.57.1
 
-# Change to (non-privileged) user
-echo "source setup.node; export PYTHONPATH=`pwd`/src; cd src; python3 riaps/riaps_deplo.py" | sudo -s -u riaps 
+# Add route to outer net 
+ip route add 192.168.56.0/24 via 192.168.57.126
+
+# Launch deplo as root
+echo "source setup.node; export PYTHONPATH=`pwd`/src; cd src; python3 riaps/riaps_deplo.py" | sudo -s -u root
+
+# Deprecated: change to (non-privileged) user
+# echo "source setup.node; export PYTHONPATH=`pwd`/src; cd src; python3 riaps/riaps_deplo.py" | sudo -s -u riaps
