@@ -21,6 +21,8 @@ env.nodePath = '/home/riaps/'           # Path on target
 
 env.riapsHome = '/usr/local/riaps'
 env.riapsApps = '/home/riaps/riaps_apps'
+env.riapsLib = '/opt/riaps/armhf/lib:/usr/local/lib'
+
 
 # System Utilities
 #--------------------
@@ -82,8 +84,8 @@ def check():
 def start_deplo():
     """start deplo on hosts"""
     hostname = env.host_string
-    command = ('RIAPSAPPS=%s RIAPSHOME=%s riaps_deplo >~/riaps-' + hostname + '.log 2>&1 &') % (env.riapsApps,env.riapsHome)
-    run(command)
+    command = ('RIAPSAPPS=%s RIAPSHOME=%s LD_LIBRARY_PATH=%s riaps_deplo >~/riaps-' + hostname + '.log 2>&1 &') % (env.riapsApps,env.riapsHome,env.riapsLib)
+    sudo(command)
 
 # Stop anything related to riaps on the hosts
 @parallel
@@ -177,6 +179,11 @@ def startDeplo():
     """start deplo background service on hosts"""
     sudo('systemctl enable riaps-deplo.service')
     sudo('systemctl start riaps-deplo.service')
+    
+@parallel
+def restartDeplo():
+    """restart the deplo background service on hosts"""
+    sudo('systemctl restart riaps-deplo.service')
 
 @parallel
 def stopDeplo():
