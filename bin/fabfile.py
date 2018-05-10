@@ -36,11 +36,11 @@ def putFile(fileName, localPrefix='', use_sudo=False):
     
 # RIAPS packages
 packages = [ 
-#            'riaps-externals-armhf', 
-#            'riaps-core-armhf', 
+            'riaps-externals-armhf', 
+            'riaps-core-armhf', 
             'riaps-pycom-armhf', 
-#            'riaps-systemd-armhf',
-#            'riaps-timesync-armhf',  
+            'riaps-systemd-armhf',
+            'riaps-timesync-armhf',  
             ]
 
 # RIAPS update (from release)
@@ -79,7 +79,7 @@ def check():
 
 # Start the deplo on all hosts
 @parallel
-def start():
+def start_deplo():
     """start deplo on hosts"""
     hostname = env.host_string
     command = ('RIAPSAPPS=%s RIAPSHOME=%s riaps_deplo >~/riaps-' + hostname + '.log 2>&1 &') % (env.riapsApps,env.riapsHome)
@@ -90,6 +90,34 @@ def start():
 def stop():
     """stop RIAPS functions on hosts"""
     sudo('pkill -SIGKILL riaps')
+    
+    
+# Stop anything related to riaps on the hosts - app_name
+# EXTREMELY HEAVY HANDED: If run, you must restart riaps-deplo.service
+@parallel
+def kill(app_name):
+    """kill RIAPS functions and application on hosts"""
+    pgrepResult = run('pgrep \'riaps_\' -l')
+    pgrepEntries = pgrepResult.rsplit('\n')
+    processList = []
+ 
+    for process in pgrepEntries:
+        processList.append(process.split()[1])
+ 
+    for process in processList:
+        sudo('pkill -SIGKILL '+process,combine_stderr=True,warn_only=True)
+ 
+    hostname = run('hostname')
+    if hostname[0:3] == 'bbb':
+        host_last_4 = hostname[-4:]
+    # If it doesn't start with bbb, assume it is a development VM
+    else:
+        vm_mac = run('ip link show enp0s8 | awk \'/ether/ {print $2}\'')
+        host_last_4 = vm_mac[-5:-3] + vm_mac[-2:]
+ 
+    sudo('rm -R /home/riaps/riaps_apps/riaps-apps.lmdb/')
+    sudo('rm -R /home/riaps/riaps_apps/'+app_name+'/')
+    sudo('userdel ' + app_name.lower() + host_last_4)
 
 # Halt the hosts
 # Note: must be used prior to powering down the hosts
@@ -109,6 +137,7 @@ def reboot():
 @hosts('localhost')
 def riaps():
     """launch RIAPS controller"""
+    sudo ('systemctl stop riaps-rpyc-registry.service')
     local('(rpyc_registry.py &) && riaps_ctrl && pkill rpyc')
 
 # Note on rpyc_registry: If the control host (dev vm) has a 2 or more network interfaces,
@@ -145,17 +174,23 @@ def checkPTP():
 # service must be disabled
 @parallel
 def startDeplo():
-    """start deplo.service"""
-    sudo('systemctl enable riaps-disco.service')
-    sudo('systemctl start riaps-disco.service')
+    """start deplo background service on hosts"""
     sudo('systemctl enable riaps-deplo.service')
     sudo('systemctl start riaps-deplo.service')
 
 @parallel
 def stopDeplo():
-    """stop deplo.service"""
-    sudo('systemctl stop riaps-disco.service')
-    sudo('systemctl disable riaps-disco.service')
+    """stop deplo background service on hosts"""
+    pgrepResult = run('pgrep \'riaps_\' -l')
+    pgrepEntries = pgrepResult.rsplit('\n')
+    processList = []
+ 
+    for process in pgrepEntries:
+        processList.append(process.split()[1])
+ 
+    for process in processList:
+        sudo('pkill -SIGKILL '+process,combine_stderr=True,warn_only=True)
+
     sudo('systemctl stop riaps-deplo.service')
     sudo('systemctl disable riaps-deplo.service')
 
