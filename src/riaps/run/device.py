@@ -36,6 +36,7 @@ class Device(Actor):
         self.appName = gModel["name"]
         self.modelName = gModelName
         self.name = dName
+        self.pid = os.getpid()
         self.suffix = ""
         if dName not in gModel["devices"]:
             raise BuildError('Device "%s" unknown' % dName)
