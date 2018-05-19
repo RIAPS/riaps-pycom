@@ -177,6 +177,10 @@ class Component(object):
     def __init__(self):
         '''
         Constructor
+        Logger attributes
+        logger: logger for this class
+        loghandler: handler for the logger (defaults to a StreamHandler)
+        logformatter: formatter assigned to the handler (default: Level:Time:Process:Class:Message)
         '''
         class_ = getattr(self,'__class__')
         className = getattr(class_,'__name__')
@@ -184,11 +188,11 @@ class Component(object):
         self.logger = logging.getLogger(className)
         self.logger.setLevel(logging.INFO)
         self.logger.propagate=False
-        ch = logging.StreamHandler()
-        ch.setLevel(logging.INFO)
-        formatter = logging.Formatter('%(levelname)s:%(asctime)s:[%(process)d]:%(name)s:%(message)s')
-        ch.setFormatter(formatter)
-        self.logger.addHandler(ch)
+        self.loghandler = logging.StreamHandler()
+        self.loghandler.setLevel(logging.INFO)
+        self.logformatter = logging.Formatter('%(levelname)s:%(asctime)s:[%(process)d]:%(name)s:%(message)s')
+        self.loghandler.setFormatter(self.logformatter)
+        self.logger.addHandler(self.loghandler)
 #        print  ( "Component() : '%s'" % self )
  
     def getName(self):
