@@ -9,8 +9,10 @@ route add default gw 192.168.57.1
 # Add route to outer net 
 ip route add 192.168.56.0/24 via 192.168.57.126
 
-# Launch deplo as root
-echo "source setup.node; export PYTHONPATH=`pwd`/src; cd src; python3 riaps/riaps_deplo.py" | sudo -s -u root
+# Make sure that tmp folder exists
+if [ ! -d "tmp" ]; then
+        mkdir tmp
+fi
 
-# Deprecated: change to (non-privileged) user
-# echo "source setup.node; export PYTHONPATH=`pwd`/src; cd src; python3 riaps/riaps_deplo.py" | sudo -s -u riaps
+# Launch deplo as root
+echo "source setup.node; export LD_LIBRARY_PATH=/opt/riaps/amd64/lib:/usr/local/lib; riaps_deplo" | sudo -s -u root
