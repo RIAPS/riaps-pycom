@@ -121,7 +121,6 @@ class ControlGUIClient(object):
             self.messages.insert(end, text)
         self.check_server_msg(text)
 
-
     def on_ConsoleEntry(self, *args):
         '''
         Called when the console entry receives an 'activate' event
@@ -189,39 +188,11 @@ class ControlGUIClient(object):
         '''
         fileName = self.selectFile("application", ["*.riaps","*.json"])
         if fileName != None:
-                        
-            if ('tar' in fileName) :
-                self.logger.warning("tarball present")
-                appFolder = self.folderEntry.get_text()+'/tar'
-                self.logger.warning("appFolder : %s"  %appFolder)
-                tar = tarfile.open(fileName)
-                tar.extractall(path=appFolder)
-                appName = os.path.basename(fileName).split('.')[0] # with .tar.gz
-                self.logger.warning("tar.getnames : %s" %tar.getnames()[0])
-                #appName = (tar.getnames()[0])
-                self.appNameEntry.set_text(appName)
-                self.logger.warning("appName : %s" %appName)
-                self.dsml = True   
-                self.appToLoad = appName # used by deploy button
-                appjson = self.controller.loadAppJSON(appName, appFolder)
-                depljson = self.controller.loadDeplJSON(appName, appFolder)
-                # WeatherMonitor.depl or WeatherMonitor_depl.json
-                self.deplNameEntry.set_text(depljson.split('.')[0])
-                #self.deplNameEntry.set_text(depljson)
-                self.logger.warning("depljson %s" %depljson)
-                self.controller.setAppFolder(appFolder+'/'+appName)
-                
-            else:
-                self.controller.compileApplication(fileName, self.folderEntry.get_text())
-                self.appNameEntry.set_text(os.path.basename(fileName))
+            self.appNameEntry.set_text(os.path.basename(fileName))
+            self.controller.compileApplication(fileName, self.folderEntry.get_text())
             #if self.isAppOK():
             #    self.launchButton.set_sensitive(True)
             #    self.removeButton.set_sensitive(True)#        
-          
-         
-         
-          
-
 
     def clearApplication(self):
         '''
@@ -236,16 +207,8 @@ class ControlGUIClient(object):
         '''
         fileName = self.selectFile("application", ["*.depl","*.json"])
         if fileName != None:
-            if 'json' in fileName:
-                appFolder = self.folderEntry.get_text()+'/tar'
-                self.logger.warning("appFolder : %s"  %appFolder)
-                appName = os.path.basename(fileName).split("_depl")[0]
-                depljson = self.controller.loadDeplJSON(appName, appFolder)
-                #self.deplNameEntry.set_text(depljson)
-                self.deplNameEntry.set_text(depljson.split('.')[0])
-            else:
-                self.deplNameEntry.set_text(os.path.basename(fileName))
-                self.appToLoad = self.controller.compileDeployment(fileName)
+            self.deplNameEntry.set_text(os.path.basename(fileName))
+            self.appToLoad = self.controller.compileDeployment(fileName)
             #if self.isAppOK():
             #    self.launchButton.set_sensitive(True)
             #    self.removeButton.set_sensitive(True)
@@ -491,7 +454,6 @@ class ControlGUIClient(object):
         Load the selected application onto to the network
         '''
         # add a row in the table for the application
-        self.logger.warning("on_LoadApplication %s" %self.appToLoad)
         if self.appToLoad is None:
             return
 
