@@ -76,7 +76,7 @@ class DeploService(object):
            
     def login(self,retry = True):
         '''
-        Log in to the controller. First  to reach the controller via the standard service registry, 
+        Log in to the controller. First try to reach the controller via the standard service registry, 
         if that fails try to access it via the supplied hostname/port arguments. If that fails, sleep a
         little and try again. 
         '''
@@ -85,12 +85,10 @@ class DeploService(object):
                 self.conn = rpyc.connect_by_service(const.ctrlServiceName,config = {"allow_public_attrs" : True})
                 break
             except:
-                self.logger.warning(" failed to login with rpyc service registry %s" %const.ctrlServiceName)
                 try:  
                     self.conn = rpyc.connect(self.ctrlrHost,self.ctrlrPort,config = {"allow_public_attrs" : True})
                     break
                 except:
-                    self.logger.warning("Failed to connect to rpyc with hostname/port %s/%s" %(self.ctrlrHost, self.ctrlrPort))                
                     if retry == False:
                         return False
                     time.sleep(5)
