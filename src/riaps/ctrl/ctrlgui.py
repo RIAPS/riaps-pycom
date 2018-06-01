@@ -95,7 +95,6 @@ class ControlGUIClient(object):
         self.init_GridTable()
 
         self.mainWindow.show_all()
-        self.dsml = False
 
     def run(self):
         Gtk.main()

@@ -81,7 +81,6 @@ class Controller(object):
         self.riaps_depl = None      # App deployment model to be launched
         self.launchList = []        # List of launch operations
         self.setupHostKeys()
-        self.dsml =False
 
         # (DY) 2-18-2017:
         self.riaps_appInfoDict = dict()     # appName: {appFolder, model, depl}
@@ -311,7 +310,6 @@ class Controller(object):
             sftpClient.mkdir(dirRemote,ignore_existing=True)
 
             for fileName in files:
-                self.logger.info('downloadAppToClient fileName : %s' %fileName)
                 isUptodate = False
                 #localFile = os.path.join(self.riaps_appFolder,fileName)
                 localFile = os.path.join(appFolder, fileName)
@@ -399,7 +397,6 @@ class Controller(object):
             return noresult
         appInfoDict = self.riaps_appInfoDict[appName]
         appNameJSON = appName + ".json"
-        self.logger.info("appInfoDict %s" %appInfoDict)
         
         if ('riaps_model' not in appInfoDict) or ('riaps_depl' not in appInfoDict):
             self.log("Error: Mismatched model or deployment for app '%s'" % appName)
@@ -411,14 +408,7 @@ class Controller(object):
         else:
             download.append(appNameJSON)
         appObj = appInfoDict['riaps_model'][appName]
-        self.logger.info("appObj %s" %appObj)
-        
-        if type(appInfoDict['riaps_depl']) is list:
-            depls = appInfoDict['riaps_depl']
-        else:
-            depls = appInfoDict['riaps_depl'].getDeployments()
-            
-        self.logger.info("depls: %s" %depls)
+        depls = appInfoDict['riaps_depl'].getDeployments()
         # Check the all actors are present in the model
         for depl in depls:
             actors = depl['actors']
@@ -431,7 +421,6 @@ class Controller(object):
         for component in appObj["components"]:
             pyComponentFile = str(component) + ".py"
             ccComponentFile = "lib" + str(component).lower() + ".so"
-            self.logger.warning("path %s" %os.getcwd())
             if os.path.isfile(pyComponentFile):
                 download.append(pyComponentFile)
             if os.path.isfile(ccComponentFile):
@@ -493,21 +482,17 @@ class Controller(object):
         for depl in depls:
             targets = depl['target']
             actors = depl['actors']
-            self.logger.info("targets: %s" %targets)
             with ctrlLock:
                 if targets == []:
                     for clientName in self.clientMap:
                         client = self.clientMap[clientName]
-                        self.logger.info("client %s" %client)
                         client.setupApp(appName,appNameJSON)
                         for actor in actors:
                             actorName = actor["name"]
                             actuals = actor["actuals"]
                             actualArgs = self.buildArgs(actuals)
                             try:
-                                self.logger.info("before client launch")
                                 client.launch(appName,appNameJSON,actorName,actualArgs)
-                                self.logger.info("after client launch")
                                 self.launchList.append([client,appName,actorName])
                                 self.log("L %s %s %s %s" % (clientName,appName,actorName,str(actualArgs)))
                             except Exception:
@@ -671,10 +656,11 @@ class Controller(object):
             if depInfo is None:
                 return None
             appNameKey = depInfo.appName
-            self.logger.info(depInfo)
+
             if appNameKey not in self.riaps_appInfoDict:
                 self.riaps_appInfoDict[appNameKey] = dict()
             self.riaps_appInfoDict[appNameKey]['riaps_depl'] = depInfo
+            #print(self.riaps_appInfoDict)
             return appNameKey
         except Exception as e:
             self.log("Error in compiling depl '%s':\n%s" % (depModelName,e.args[0]))
