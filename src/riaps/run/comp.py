@@ -169,7 +169,7 @@ class ComponentThread(threading.Thread):
             destroy_()
         self.logger.info("stopped")
 
-                   
+
 class Component(object):
     '''
     Base class for RIAPS application components
@@ -185,16 +185,32 @@ class Component(object):
         class_ = getattr(self,'__class__')
         className = getattr(class_,'__name__')
         self.owner = class_.OWNER                   # This is set in the parent part (temporarily)
+        
         self.logger = logging.getLogger(className)
         self.logger.setLevel(logging.INFO)
         self.logger.propagate=False
-        self.loghandler = logging.StreamHandler()
-        self.loghandler.setLevel(logging.INFO)
         self.logformatter = logging.Formatter('%(levelname)s:%(asctime)s:[%(process)d]:%(name)s:%(message)s')
-        self.loghandler.setFormatter(self.logformatter)
-        self.logger.addHandler(self.loghandler)
+
+        self.addConsoleLogger() # Add a console log handler by default
 #        print  ( "Component() : '%s'" % self )
- 
+
+    def purgeLoggers(self):
+        self.logger.handlers = []
+
+    def addLogHandler(self, handler):
+        handler.setLevel(logging.INFO)
+        handler.setFormatter(self.logformatter)
+        self.logger.addHandler(handler)
+
+    def addConsoleLogger(self):
+        self.addLogHandler(logging.StreamHandler())
+
+    def addFileLogger(self, logFile):
+        self.addLogHandler(logging.FileHandler(logFile))
+
+    def addNetworkLogger(self, host, port=logging.handlers.DEFAULT_TCP_LOGGING_PORT):
+        self.addLogHandler(logging.handlers.SocketHandler(host, port))
+
     def getName(self):
         '''
         Return the name of the component (as in model)
