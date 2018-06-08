@@ -523,17 +523,20 @@ class Controller(object):
         Halt (terminate) all launched actors
         '''
         newLaunchList = []
+        clientList = []
         for elt in self.launchList:
             client,appName,actorName = elt[0], elt[1], elt[2]
             if appName == appNameToHalt:
                 client.halt(appName,actorName)
                 self.log("H %s %s %s" % (client.name,appName,actorName))
+                clientList.append(client)
             else:
                 newLaunchList.append(elt)
-        res = client.reclaim(appName)
-        if res.error:
-            self.log('? Query')
-        while not res.ready: time.sleep(1.0)
+        for client in clientList:
+            res = client.reclaim(appName)
+            if res.error:
+                self.log('? Query')
+            while not res.ready: time.sleep(1.0)
         self.launchList = newLaunchList
 
     def addToLaunchList(self,clientName,appName,actorName):
