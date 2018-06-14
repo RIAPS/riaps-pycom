@@ -134,7 +134,7 @@ class Port(object):
             if is_pyobj:
                 sendMsg = [zmq.Frame(pickle.dumps(msg))]
             else:
-                sendMsg = msg
+                sendMsg = [zmq.Frame(msg)]
             if self.isTimed:
                 now = time.time()
                 now = struct.pack("d", now)
