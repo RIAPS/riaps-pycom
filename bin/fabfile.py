@@ -84,8 +84,8 @@ def check():
 def start_deplo():
     """start deplo on hosts"""
     hostname = env.host_string
-    command = ('RIAPSAPPS=%s RIAPSHOME=%s LD_LIBRARY_PATH=%s riaps_deplo >~/riaps-' + hostname + '.log 2>&1 &') % (env.riapsApps,env.riapsHome,env.riapsLib)
-    sudo(command)
+    command = ('sudo -E riaps_deplo >~/riaps-' + hostname + '.log 2>&1 &')
+    run(command)
 
 # Stop anything related to riaps on the hosts
 @parallel
