@@ -1,3 +1,0 @@
-app ReqRepLib {
-	on all ReqActor,RepActor;
-}
