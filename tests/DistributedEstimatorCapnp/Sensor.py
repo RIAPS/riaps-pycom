@@ -15,7 +15,7 @@ class Sensor(Component):
         msg = distributedestimator_capnp.SensorReady.new_message()
         msg.msg = "data_ready"
         msgBytes = msg.to_bytes()
-        self.ready.send_capnp(msgBytes)
+        self.ready.send(msgBytes)
         #msg = "data_ready"
         #self.ready.send_pyobj(msg)
     
@@ -23,7 +23,7 @@ class Sensor(Component):
         # one more abstraction would be useful
         # the developers should get the capnp object and shouldnt
         # deal with the deserializing
-        bytes = self.request.recv_capnp()
+        bytes = self.request.recv()
         req = distributedestimator_capnp.SensorQuery.from_bytes(bytes)
 
 
@@ -33,7 +33,7 @@ class Sensor(Component):
         rep = distributedestimator_capnp.SensorValue.new_message()
         rep.msg = "sensor_rep"
         repBytes = rep.to_bytes()
-        self.request.send_capnp(repBytes)
+        self.request.send(repBytes)
         #rep = "sensor_rep"
         #self.request.send_pyobj(rep)
 

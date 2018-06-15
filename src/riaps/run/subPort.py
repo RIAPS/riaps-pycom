@@ -37,7 +37,8 @@ class SubPort(Port):
     def setup(self):
         pass
        
-    def setupSocket(self):
+    def setupSocket(self,owner):
+        self.setOwner(owner)
         self.socket = self.context.socket(zmq.SUB)
         self.socket.setsockopt_string(zmq.SUBSCRIBE, '')
         self.host = ''
@@ -51,6 +52,9 @@ class SubPort(Port):
             self.host = localHost
         self.info = ('sub',self.isLocalPort,self.name,self.type,self.host)
         return self.info
+    
+    def reset(self):
+        pass
     
     def getSocket(self):
         return self.socket
@@ -69,10 +73,10 @@ class SubPort(Port):
     def send_pyobj(self,msg):
         raise OperationError("attempt to send through a subscriber port")
     
-    def recv_capnp(self):
+    def recv(self):
         return self.port_recv(False)
     
-    def send_capnp(self):
+    def send(self):
         raise OperationError("attempt to send through a subscriber port")
 
     def getInfo(self):

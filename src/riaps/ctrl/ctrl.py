@@ -31,7 +31,6 @@ from riaps.lang.depl import DeploymentModel
 import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
-import json
 
 ctrlLock = RLock()
 
@@ -520,7 +519,7 @@ class Controller(object):
 
     def haltByName(self, appNameToHalt):
         '''
-        Halt (terminate) all launched actors
+        Halt (terminate) all launched actors of an app
         '''
         newLaunchList = []
         clientList = []
@@ -659,7 +658,6 @@ class Controller(object):
             if depInfo is None:
                 return None
             appNameKey = depInfo.appName
-
             if appNameKey not in self.riaps_appInfoDict:
                 self.riaps_appInfoDict[appNameKey] = dict()
             self.riaps_appInfoDict[appNameKey]['riaps_depl'] = depInfo

@@ -17,6 +17,7 @@ from riaps.proto import deplo_capnp
 from riaps.utils.ifaces import getNetworkInterfaces
 import getopt
 import logging
+import traceback
 from builtins import int, str
 import re
 import sys
@@ -90,6 +91,7 @@ class Actor(object):
                 else:
                     self.components[instName]= Peripheral(self,typeSpec,instName, instType, instArgs)
             except TypeError as e:
+                traceback.print_exc()
                 self.logger.error("Error while constructing part '%s.%s': %s" % (instType,instName,str(e)))
                 
            
