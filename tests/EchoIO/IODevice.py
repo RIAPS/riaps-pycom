@@ -73,6 +73,7 @@ class IODevice(Component):
         if self.IODeviceThread == None: # First clock pulse
             self.IODeviceThread = IODeviceThread(self.trigger,self.port,self.logger) # Inside port, external zmq port
             self.IODeviceThread.start() # Start thread
+            time.sleep(0.1)
             self.trigger.activate()
         now = self.clock.recv_pyobj()   # Receive time (as float)
         self.clock.halt()               # Halt this timer (don't need it anymore)
