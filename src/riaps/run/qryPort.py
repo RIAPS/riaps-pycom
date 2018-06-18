@@ -13,7 +13,7 @@ from zmq.error import ZMQError
 
 class QryPort(Port):
     '''
-    Query port is to access a server. Has a request and a response message type, and uses a REQ socket.
+    Query port is to access a server. Has a request and a response message type, and uses a DEALER socket.
     '''
 
 
@@ -44,10 +44,11 @@ class QryPort(Port):
         '''
         pass
   
-    def setupSocket(self):
+    def setupSocket(self,owner):
         '''
         Set up the socket of the port. Return a tuple suitable for querying the discovery service for the publishers
         '''
+        self.setOwner(owner)
         self.socket = self.context.socket(zmq.DEALER)
         self.socket.setsockopt_string(zmq.IDENTITY, str(id(self)), 'utf-8')  # FIXME: identity is not unique across nodes
         self.socket.setsockopt(zmq.SNDTIMEO,self.sendTimeout) 
@@ -62,6 +63,9 @@ class QryPort(Port):
             self.host = localHost
         self.info = ('qry',self.isLocalPort,self.name,str(self.req_type) + '#' + str(self.rep_type),self.host)
         return self.info
+    
+    def reset(self):
+        pass
     
     def getSocket(self):
         '''
@@ -100,7 +104,7 @@ class QryPort(Port):
             return False
         return self.port_send(msg,True)              
     
-    def recv_capnp(self):
+    def recv(self):
         '''
         Receive an bytearray through this port
         '''
@@ -108,7 +112,7 @@ class QryPort(Port):
             return None
         return self.port_recv(False)
     
-    def send_capnp(self, msg):
+    def send(self, msg):
         '''
         Send a bytearray through this port
         '''

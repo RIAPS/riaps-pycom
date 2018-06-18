@@ -4,7 +4,7 @@ app ReqRepLib {
     message CltReq; 
     message SrvRep;
 
-	library ReqRep; 
+	library reqreplib; 
 	     
     // Client
     component Requestor {

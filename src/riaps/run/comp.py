@@ -37,7 +37,7 @@ class ComponentThread(threading.Thread):
         if msg != "build":
             raise BuildError 
         for portName in self.parent.ports:
-            res = self.parent.ports[portName].setupSocket()
+            res = self.parent.ports[portName].setupSocket(self)
             if res[0] == 'tim' or res[0] == 'ins':
                 continue
             elif res[0] == 'pub' or res[0] == 'sub' or \
@@ -64,6 +64,15 @@ class ComponentThread(threading.Thread):
                 if portIsInput:
                     self.poller.register(portSocket,zmq.POLLIN)
                     self.sock2NameMap[portSocket] = portName
+    
+    def replaceSocket(self,portObj,newSocket):
+        oldSocket = portObj.getSocket()
+        if portObj.inSocket():
+            self.poller.unregister(oldSocket)
+        oldSocket.setsockopt(zmq.LINGER, 0)
+        oldSocket.close()
+        if portObj.inSocket():
+            self.poller.register(newSocket)
             
     def runCommand(self):
         res = False

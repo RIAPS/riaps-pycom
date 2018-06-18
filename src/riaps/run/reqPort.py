@@ -35,7 +35,8 @@ class ReqPort(Port):
     def setup(self):
         pass
   
-    def setupSocket(self):
+    def setupSocket(self,owner):
+        self.setOwner(owner)
         self.socket = self.context.socket(zmq.REQ)
         self.socket.setsockopt(zmq.SNDTIMEO,self.sendTimeout)   
         self.host = ''
@@ -49,6 +50,16 @@ class ReqPort(Port):
             self.host = localHost
         self.info = ('req',self.isLocalPort,self.name,str(self.req_type) + '#' + str(self.rep_type),self.host)
         return self.info
+    
+    def reset(self):
+        newSocket = self.context.socket(zmq.REQ)
+        newSocket.setsockopt(zmq.SNDTIMEO,self.sendTimeout)
+        newSocket.setsockopt(zmq.RCVTIMEO,self.recvTimeout)
+        self.owner.replaceSocket(self,newSocket)
+        self.socket = newSocket
+        if self.replyHost != None and self.replyPort != None:
+            repPort = "tcp://" + str(self.replyHost) + ":" + str(self.replyPort)
+            self.socket.connect(repPort)
     
     def getSocket(self):
         return self.socket
@@ -68,10 +79,10 @@ class ReqPort(Port):
     def send_pyobj(self,msg):
         return self.port_send(msg,True)              
     
-    def recv_capnp(self):
+    def recv(self):
         return self.port_recv(False)
     
-    def send_capnp(self, msg):
+    def send(self, msg):
         return self.port_send(msg,False) 
 
     def getInfo(self):

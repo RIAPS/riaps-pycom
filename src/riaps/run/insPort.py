@@ -66,11 +66,15 @@ class InsPort(Port):
         else:
             pass 
     
-    def setupSocket(self):
+    def setupSocket(self,owner):
+        self.setOwner(owner)
         self.socket = self.context.socket(zmq.PAIR)
         self.socket.connect('inproc://inside_' + self.instName)
         self.info = ('ins',self.name)
         return self.info
+    
+    def reset(self):
+        pass
     
     def setupPlug(self,thread):
         # Must not be called from the main thread

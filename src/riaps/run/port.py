@@ -8,9 +8,10 @@ Created on Oct 9, 2016
 import zmq
 import time
 import struct
-from .exc import SetupError,OperationError
+from .exc import SetupError,OperationError,PortError
 from riaps.utils.config import Config
 import logging
+
 try:
     import cPickle
     pickle = cPickle
@@ -34,12 +35,32 @@ class Port(object):
         self.localIface = None
         self.globalIface = None
         self.sendTimeout = Config.SEND_TIMEOUT
+        self.recvTimeout = Config.RECV_TIMEOUT
         self.sendTime = 0.0
         self.recvTime = 0.0
         self.socket = None
         self.isTimed = False
         self.deadline = 0.0
         self.info = None
+        self.owner = None
+    
+    def setupSocket(self,owner):
+        '''
+        Setup the socket. Subclasses override this method to perform the specific setup. 
+        '''
+        pass
+    
+    def setOwner(self,owner):
+        '''
+        Save owner thread.
+        '''
+        self.owner = owner
+    
+    def reset(self):
+        '''
+        Reset socket. Subclasses are to override this method.
+        '''
+        pass
     
     def getDeadline(self):
         return self.deadline
@@ -61,12 +82,6 @@ class Port(object):
     def setup(self):
         '''
         Initialize the port object (after construction but before socket creation) 
-        '''
-        raise SetupError
-    
-    def setupSocket(self):
-        '''
-        Create the socket(s) used by the port
         '''
         raise SetupError
             
@@ -116,16 +131,32 @@ class Port(object):
         Receive an object (if possible) through the port
         '''
         return None
-    
+
     def send_capnp(self,msg):
         '''
-        Send an object (if possible) out through the port
+        DEPRECATED
+        Send a byte array (if possible) out through the port
         '''
+        self.logger.warning("send_capnp: deprecated, use send() instead")
         pass
     
     def recv_capnp(self):
         '''
+        DEPRECATED
         Receive an object (if possible) through the port
+        '''
+        self.logger.warning("recv_capnp: deprecated, use recv() instead")
+        return None
+    
+    def send(self,msg):
+        '''
+        Send a byte array (if possible) out through the port
+        '''
+        pass
+    
+    def recv(self):
+        '''
+        Receive a byte array (if possible) through the port
         '''
         return None
     
@@ -142,14 +173,14 @@ class Port(object):
                 sendMsg += [nowFrame]
             self.socket.send_multipart(sendMsg)
         except zmq.error.ZMQError as e:
-            if e.errno == zmq.EAGAIN:
-                return False
-            else:
-                raise
+            raise PortError("send error (%d)" % e.errno, e.errno) from e
         return True
     
     def port_recv(self,is_pyobj):
-        msgFrames = self.socket.recv_multipart()
+        try:
+            msgFrames = self.socket.recv_multipart()
+        except zmq.error.ZMQError as e:
+            raise PortError("recv error (%d)" % e.errno, e.errno) from e
         if self.isTimed:
             self.recvTime = time.time()
         if is_pyobj:
@@ -167,3 +198,22 @@ class Port(object):
     
     def get_sendTime(self):
         return self.sendTime
+    
+    def get_recv_timeout(self):
+        rto = None if self.recvTimeout == -1 else self.recvTimeout * 0.001
+        return rto
+        
+    def get_send_timeout(self):
+        sto = None if self.sendTimeout == -1 else self.sendTimeout * 0.001
+        return sto
+    
+    def set_recv_timeout(self,rto):
+        assert rto == None or (type(rto) == float and rto >= 0.0)
+        self.recvTimeout = -1 if rto == None else int(rto * 1000)
+        self.socket.setsockopt(zmq.RCVTIMEO,self.recvTimeout)
+
+    def set_send_timeout(self,sto):
+        assert sto == None or (type(sto) == float and sto >= 0.0)
+        self.sendTimeout = -1 if sto == None else int(sto * 1000)
+        self.socket.setsockopt(zmq.SNDTIMEO,self.sendTimeout)
+    
