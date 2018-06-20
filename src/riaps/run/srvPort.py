@@ -30,7 +30,8 @@ class SrvPort(Port):
     def setup(self):
         pass
   
-    def setupSocket(self):
+    def setupSocket(self,owner):
+        self.setOwner(owner)
         self.socket = self.context.socket(zmq.REP)
         self.socket.setsockopt(zmq.SNDTIMEO,self.sendTimeout)
         self.host = ''
@@ -45,6 +46,9 @@ class SrvPort(Port):
         self.info = ('srv',self.isLocalPort,self.name,str(self.req_type) + '#' + str(self.rep_type), self.host,self.portNum)
         return self.info
 
+    def reset(self):
+        pass
+    
     def update(self, host, port):
         raise OperationError("Unsupported update() on SrvPort")
     
@@ -60,10 +64,10 @@ class SrvPort(Port):
     def send_pyobj(self,msg):
         return self.port_send(msg,True)              
     
-    def recv_capnp(self):
+    def recv(self):
         return self.port_recv(False)
     
-    def send_capnp(self, msg):
+    def send(self, msg):
         return self.port_send(msg,False) 
             
     def getInfo(self):

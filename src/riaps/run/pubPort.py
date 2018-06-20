@@ -35,7 +35,8 @@ class PubPort(Port):
     def setup(self):
         pass
         
-    def setupSocket(self):
+    def setupSocket(self,owner):
+        self.setOwner(owner)
         self.socket = self.context.socket(zmq.PUB)
         self.socket.setsockopt(zmq.SNDTIMEO,self.sendTimeout) 
         self.host = ''
@@ -51,6 +52,8 @@ class PubPort(Port):
         self.info = ('pub',self.isLocalPort,self.name,self.type,self.host,self.portNum)
         return self.info
         
+    def reset(self):
+        pass
     
     def update(self, host, port):
         raise OperationError("Unsupported update() on PubPort")
@@ -64,13 +67,13 @@ class PubPort(Port):
     def send_pyobj(self,msg):
         return self.port_send(msg,True)
 
-    def send_capnp(self, msg):
+    def send(self, msg):
         return self.port_send(msg,False)
         
     def recv_pyobj(self):
         raise OperationError("attempt to receive through a publish port")
     
-    def recv_capnp(self):
+    def recv(self):
         raise OperationError("attempt to receive through a publish port")
     
     def getInfo(self):

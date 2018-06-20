@@ -8,6 +8,7 @@ import threading
 import zmq
 import time
 import logging
+import struct
 from .exc import OperationError
 
 class TimerThread(threading.Thread):
@@ -159,7 +160,8 @@ class TimPort(Port):
         self.thread = TimerThread(self)
         self.thread.start() 
     
-    def setupSocket(self):
+    def setupSocket(self,owner):
+        self.setOwner(owner)
         assert self.instName == self.thread.name       
         self.socket = self.context.socket(zmq.PAIR) # SUB
         self.socket.connect('inproc://timer_' + self.instName)
@@ -167,6 +169,9 @@ class TimPort(Port):
         self.info = ('tim',self.name)
         return self.info
 
+    def reset(self):
+        pass
+    
     def activate(self):
         '''
         Activate the timer port
@@ -270,6 +275,17 @@ class TimPort(Port):
         return res
     
     def send_pyobj(self,msg):
+        raise OperationError("attempt to send through a timer port")
+    
+    def recv(self):
+        '''
+        Receive time stamp (a float) as a byte array
+        '''
+        value = self.socket.recv_pyobj()
+        res = bytearray(struct.pack("f", value))
+        return res
+    
+    def send(self):
         raise OperationError("attempt to send through a timer port")
     
     def getInfo(self):

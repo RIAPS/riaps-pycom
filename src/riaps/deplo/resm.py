@@ -109,6 +109,7 @@ class ActorResourceManager(object):
             try:
                 self.memController = self.memCGroup.controller
                 self.memController.limit_in_bytes = self.memUsage * 1024 # Value is in kBytes
+                self.memController.oom_control = 1   # Disable OOM killer
                 efd = Eventfd()
                 mem = self.memCGroup
                 mpl = mem.full_path.decode('utf-8') + '/memory.pressure_level'
