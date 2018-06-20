@@ -5,6 +5,7 @@ Created on Jun 5, 2018
 '''
 # import riaps
 from riaps.run.comp import Component
+from riaps.utils.logging import NetLogHandler
 import logging
 import time
 import os
@@ -13,7 +14,8 @@ import socket
 class TempMonitor(Component):
     def __init__(self):
         super(TempMonitor, self).__init__()
-        self.addNetworkLogger('vbox.local')
+        self.netLog = NetLogHandler()
+        self.logger.addHandler(self.netLog)
         self.pid = os.getpid()
         self.hostname = socket.gethostname()
         self.logger.info("["+self.hostname +"]("+str(self.pid)+")-starting TempMonitor")

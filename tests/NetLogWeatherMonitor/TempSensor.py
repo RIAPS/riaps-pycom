@@ -4,6 +4,7 @@ Created on Jun 5, 2018
 @author: jeholliday
 '''
 from riaps.run.comp import Component
+from riaps.utils.logging import NetLogHandler
 import logging
 import time
 import os
@@ -12,7 +13,8 @@ import socket
 class TempSensor(Component):
     def __init__(self):
         super(TempSensor, self).__init__()
-        self.addNetworkLogger('vbox.local')
+        self.netLog = NetLogHandler()
+        self.logger.addHandler(self.netLog)
         self.pid = os.getpid()
         self.temperature = 65
         self.hostname = socket.gethostname()

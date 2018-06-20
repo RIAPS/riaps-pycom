@@ -1,107 +1,67 @@
 '''
+Server for collecting remote server logs from RIAPS components
 Created on Jun 5, 2018
 
 @author: jeholliday
 '''
-import cPickle
 import logging
 import logging.handlers
-import SocketServer
-import struct
 import signal
-import os
+import time
+import threading
+import sys
+import copy
+import pickle
+import rpyc
+from rpyc.utils.server import ThreadedServer
+from riaps.consts.defs import *
 
 logFile = 'riaps-logserver.log'
-tcpserver = None
 
-class LogRecordStreamHandler(SocketServer.StreamRequestHandler):
-    """Handler for logging remote logs"""
+class LogService(rpyc.Service):
+    '''
+    rpyc service for collecting remote logs
+    '''
+    ALIASES = [const.logServiceName] # Registry name for the service
+    
+    STOPPING = False
 
-    def handle(self):
-        """
-        Handle multiple requests - each expected to be a 4-byte length,
-        followed by the LogRecord in pickle format.
-        """
-        while 1:
-            chunk = self.connection.recv(4)
-            if len(chunk) < 4:
-                break
-            slen = struct.unpack(">L", chunk)[0]
-            chunk = self.connection.recv(slen)
-            while len(chunk) < slen:
-                chunk = chunk + self.connection.recv(slen - len(chunk))
-            obj = self.unPickle(chunk)
-            record = logging.makeLogRecord(obj)
-            self.handleLogRecord(record)
-
-    def unPickle(self, data):
-        return cPickle.loads(data)
-
-    def handleLogRecord(self, record):
-        logger = logging.getLogger(record.name)
-        logger.handle(record)
-
-class LogRecordSocketReceiver(SocketServer.ThreadingTCPServer):
-    allow_reuse_address = 1
-
-    def __init__(self, host, port, handler=LogRecordStreamHandler):
-        self.handler = handler
-        self.abort = 0
-        self.timeout = 1
-        SocketServer.ThreadingTCPServer.__init__(self, (host, port), self.handler)
-
-    def serve_until_stopped(self):
-        import select
-        abort = 0
-        while not abort:
-            rd, wr, ex = select.select([self.socket.fileno()],[], [],self.timeout)
-            if rd:
-                self.handle_request()
-            abort = self.abort
-
-    def halt(self):
-        self.abort = 1
-
-def findLocalIP():
-    import socket
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.connect(("8.8.8.8", 80))
-    ip = s.getsockname()[0]
-    s.close()
-    return ip
+    def exposed_handle(self, data):
+        '''
+        Exposed method for remote clients to pass log records to
+        '''
+        if not LogService.STOPPING:
+            record = pickle.loads(data)
+            log = logging.getLogger(record.name)
+            log.handle(record)
 
 if __name__ == "__main__":
-    host = findLocalIP()
-    port = logging.handlers.DEFAULT_TCP_LOGGING_PORT
-
-    # fetch root logger
-    logger = logging.getLogger('')
-    # create file handler
+    # Setup root logger for displaying all messages
+    rootLogger = logging.getLogger('')
+    format = logging.Formatter("%(levelname)s:%(asctime)s:[%(process)d]:%(name)s:%(message)s")
+    # Construct console handler for displaying logs in the console
+    ch = logging.StreamHandler(sys.stdout)
+    ch.setFormatter(format)
+    rootLogger.addHandler(ch)
+    # Construct file handler for saving logs to a file
     fh = logging.FileHandler(logFile)
-    fh.setLevel(logging.INFO)
-    # create console handler
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.INFO)
-    # create formatter and add it to the handlers
-    formatter = logging.Formatter('%(asctime)s:%(name)s:%(message)s')
-    fh.setFormatter(formatter)
-    ch.setFormatter(formatter)
-    # add the handlers to the logger
-    logger.addHandler(fh)
-    logger.addHandler(ch)
+    fh.setFormatter(format)
+    rootLogger.addHandler(fh)
 
-    tcpserver = LogRecordSocketReceiver(host, port)
+    # Setup local logger
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.INFO)
 
-    # Create catch for CTRL+C
-    def signal_handler(signal, frame):
-        print('SIGNAL: Exitting gracefully!')
-        tcpserver.halt()
-        os._exit(0)
-    signal.signal(signal.SIGINT, signal_handler)
+    # Create and configure rpyc service
+    server = ThreadedServer(LogService, auto_register=True, protocol_config=const.logServiceConfig)
 
-    print("\nStarting RIAPS Log Server")
-    print("-------------------------")
-    print("Listening on: " + host + ":" + str(port))
-    print("Saving logs to: " + logFile)
-    print("-------------------------\n")
-    tcpserver.serve_until_stopped()
+    # Create catch for kill signals
+    def exit_gracefully(signal, frame):
+        LogService.STOPPING = True
+        server.close()
+    signal.signal(signal.SIGINT, exit_gracefully)
+    signal.signal(signal.SIGTERM, exit_gracefully)
+
+    logger.info("\nStarting RIAPS Log Server on port " + str(server.port) + " and saving files to " + logFile)
+
+    server.start()
