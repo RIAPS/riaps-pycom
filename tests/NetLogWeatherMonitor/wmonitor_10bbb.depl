@@ -1,0 +1,13 @@
+// Deploy on 10 BBB
+app WeatherMonitor {
+	on (bbb-4930.local) WeatherIndicator;
+	on (bbb-20fb.local) WeatherReceiver;
+	on (bbb-da61.local) WeatherReceiver;
+	on (bbb-e7b9.local) WeatherReceiver;
+	on (bbb-da2e.local) WeatherReceiver;
+	on (bbb-1610.local) WeatherReceiver;
+	on (bbb-5df2.local) WeatherReceiver;
+	on (bbb-7030.local) WeatherReceiver;
+	on (bbb-93bb.local) WeatherReceiver;
+	on (bbb-e528.local) WeatherReceiver; 
+}

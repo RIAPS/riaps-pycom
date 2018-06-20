@@ -51,6 +51,11 @@ const.ctrlSSHPort = 22
 # Control/deplo delay (in msec) - time allowed for recovered apps to start
 const.ctrlDeploDelay = 1000
 
+# Log service name
+const.logServiceName = 'RIAPSLog'
+# Log service configuration
+const.logServiceConfig = {"allow_public_attrs": True, "allow_pickle": True}
+
 # Nethog
 const.nethogLibrary = 'libnethogs.so'
 
