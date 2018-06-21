@@ -65,6 +65,10 @@ class CltPort(Port):
         newSocket = self.context.socket(zmq.REQ)
         newSocket.setsockopt(zmq.SNDTIMEO,self.sendTimeout)
         newSocket.setsockopt(zmq.RCVTIMEO,self.recvTimeout)
+        self.socket.setsockopt(zmq.LINGER, 0)
+        if self.serverHost != None and self.serverPort != None:
+            srvPort = "tcp://" + str(self.serverHost) + ":" + str(self.serverPort)
+            self.socket.disconnect(srvPort)
         self.owner.replaceSocket(self,newSocket)
         self.socket = newSocket
         if self.serverHost != None and self.serverPort != None:

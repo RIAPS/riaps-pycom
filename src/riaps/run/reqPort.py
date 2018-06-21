@@ -55,6 +55,10 @@ class ReqPort(Port):
         newSocket = self.context.socket(zmq.REQ)
         newSocket.setsockopt(zmq.SNDTIMEO,self.sendTimeout)
         newSocket.setsockopt(zmq.RCVTIMEO,self.recvTimeout)
+        self.socket.setsockopt(zmq.LINGER, 0)
+        if self.replyHost != None and self.replyPort != None:
+            repPort = "tcp://" + str(self.replyHost) + ":" + str(self.replyPort)
+            self.socket.disconnect(repPort)
         self.owner.replaceSocket(self,newSocket)
         self.socket = newSocket
         if self.replyHost != None and self.replyPort != None:
