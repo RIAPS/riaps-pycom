@@ -11,9 +11,7 @@ from zmq.error import ZMQError
 
 class RepPort(Port):
     '''
-    Similar to a server port, but it uses two separate sockets: in_socket for receiving requests, 
-    out_socket for sending replies.
-    One RepPort is connected to one ReqPort 
+    Similar to a server port.
     '''
 
 

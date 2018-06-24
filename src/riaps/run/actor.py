@@ -1,8 +1,7 @@
-'''
-Actor class to hold and manage components. 
-Created on Oct 9, 2016
+'''Actor class to hold and manage components.
 
-@author: riaps
+Actors are processes that act as shells for components that run in their own thread.
+ 
 '''
 
 from .part import Part
@@ -20,13 +19,21 @@ import logging
 import traceback
 from builtins import int, str
 import re
-import sys
 import os
 import ipaddress
 
 class Actor(object):
-    '''
-    The actor class implements all the management and control functions over its components
+    '''The actor class implements all the management and control functions over its components
+    
+    :param gModel: the JSON-based dictionary holding the model for the app this actor belongs to.
+    :type gModel: dict
+    :param gModelName: the name of the top-level model for the app
+    :type gModelName: str
+    :param aName: name of the actor. It is an index into the gModel that points to the part of the model specific to the actor
+    :type aName: str
+    :param sysArgv: list of arguments for the actor: -key1 value1 -key2 value2 ...
+    :type list:
+         
     '''          
     def __init__(self, gModel, gModelName, aName, sysArgv):
         '''
@@ -96,6 +103,17 @@ class Actor(object):
                 
            
     def getParameterValueType(self,param,defaultType):
+        ''' Infer the type of a parameter from its value unless a default type is provided. \
+            In the latter case the parameter's value is converted to that type.
+            
+            :param param: a parameter value
+            :type param: one of bool,int,float,str
+            :param defaultType:
+            :type defaultType: one of bool,int,float,str
+            :return: a pair (value,type)
+            :rtype: tuple
+             
+        '''
         paramValue, paramType = None, None
         if defaultType != None:
             if defaultType == str:
@@ -123,6 +141,13 @@ class Actor(object):
         return (paramValue,paramType)
 
     def parseParams(self,sysArgv):
+        '''Parse actor arguments from the command line
+        
+        Compares the actual arguments to the formal arguments (from the model) and
+        fills out the local parameter table accordingly. Generates a warning on 
+        extra arguments and raises an exception on required but missing ones.
+           
+        '''
         self.params = { } 
         formals = self.model["formals"]
         optList = []
@@ -183,47 +208,61 @@ class Actor(object):
         return args
     
     def isLocalMessage(self,msgTypeName):
-        '''
-        Return True if the message type is local
+        '''Return True if the message type is local
+        
         '''
         return msgTypeName in self.localNames
 
     def isInnerMessage(self,msgTypeName):
-        '''
-        Return True if the message type is internal
+        '''Return True if the message type is internal
+        
         '''
         return msgTypeName in self.internalNames
         
     def getLocalIface(self):
-        '''
-        Return the IP address of the host-local network interface (usually 127.0.0.1) 
+        '''Return the IP address of the host-local network interface (usually 127.0.0.1) 
         '''
         return self.localHost
     
     def getGlobalIface(self):
-        '''
-        Return the IP address of the global network interface
+        '''Return the IP address of the global network interface
         '''
         return self.globalHost
 
     def getActorName(self):
+        '''Return the name of this actor (as defined in the app model)
+        '''
         return self.name
     
     def getAppName(self):
+        '''Return the name of the app this actor belongs to
+        '''
         return self.appName 
         
     def getActorID(self):
+        '''Returns an ID for this actor.
+        
+        The actor's id constructed from the host's IP address the actor's process id. 
+        The id is unique for a given host and actor run.
+        '''
         return self.actorID
     
     def setUUID(self,uuid):
+        '''Sets the UUID for this actor.
+        
+        The UUID is dynamically generated (by the peer-to-peer network system)
+        and is unique. 
+        '''
         self.uuid = uuid
         
     def getUUID(self):
+        '''Return the UUID for this actor. 
+        '''
         return self.uuid
         
     def setupIfaces(self):
-        '''
-        Find the IP addresses of the (host-)local and network(-global) interfaces
+        '''Find the IP addresses of the (host-)local and network(-global) interfaces
+        
         '''
         (globalIPs,globalMACs,_globalNames,localIP) = getNetworkInterfaces()
         try:
@@ -238,8 +277,9 @@ class Actor(object):
         self.macAddress = globalMAC
                
     def setup(self):
-        '''
-        Perform a setup operation on the actor (after  the initial construction but before the activation of parts)
+        '''Perform a setup operation on the actor, after  the initial construction 
+        but before the activation of parts
+        
         '''
         self.logger.info("setup")
         self.suffix = self.macAddress
@@ -265,8 +305,8 @@ class Actor(object):
             self.updatePart(partName,portName,host,port)
     
     def registerDevice(self,bundle):
-        '''
-        Relay the device registration message to the device interface service client
+        '''Relay the device registration message to the device interface service client
+        
         '''
         typeName,args = bundle
         msg = (self.appName,self.modelName,typeName,args)
@@ -274,8 +314,8 @@ class Actor(object):
         return result
 
     def unregisterDevice(self,bundle):
-        '''
-        Relay the device registration message to the device interface service client
+        '''Relay the device unregistration message to the device interface service client
+        
         '''
         typeName, = bundle
         msg = (self.appName,self.modelName,typeName)
@@ -283,22 +323,24 @@ class Actor(object):
         return result
     
     def activate(self):
-        '''
-        Activate the parts
+        '''Activate the parts
+        
         '''
         self.logger.info("activate")
         for inst in self.components:
             self.components[inst].activate()
             
     def deactivate(self):
-        '''
-        Deactivate the parts
+        '''Deactivate the parts
+        
         '''
         self.logger.info("deactivate")
         for inst in self.components:
             self.components[inst].deactivate()
             
     def recvChannelMessages(self,channel):
+        '''Collect all messages from the channel queue and return them in a list
+        '''
         msgs = []
         while True:
             try:
@@ -335,20 +377,20 @@ class Actor(object):
             if self.discoChannel in sockets:                # If there is a message from a service, handle it
                 msgs = self.recvChannelMessages(self.discoChannel)
                 for msg in msgs:
-                    self.handleServiceUpdate(msg)               # Handle message from disco service
+                    self.handleServiceUpdate(msg)           # Handle message from disco service
                 del sockets[self.discoChannel]    
             elif self.deplChannel in sockets:
                 msgs = self.recvChannelMessages(self.deplChannel)
                 for msg in msgs:
-                    self.handleDeplMessage(msg)                 # Handle message from depl service
+                    self.handleDeplMessage(msg)             # Handle message from depl service
                 del sockets[self.deplChannel]
-            else:
+            else:                                           # Handle messages from the components.  
                 toDelete = []
                 for s in sockets:
                     if s in self.controls.values():
                         part = self.controlMap[id(s)]
                         msg = s.recv_pyobj()
-                        self.handleEventReport(part,msg)
+                        self.handleEventReport(part,msg)    # Report event
                     toDelete += [s]
                 for s in toDelete:
                     del sockets[s]
@@ -484,13 +526,21 @@ class Actor(object):
             component.handleNetLimit()
     
     def handleEventReport(self,part,msg):
-        # call deplc to send a report
+        '''Handle event report from a part
+        
+        The event report is forwarded to the deplo service. 
+        '''
         partName = part.getName()
         typeName = part.getTypeName() 
         bundle = (partName,typeName,) + msg
         self.deplc.reportEvent(bundle)
             
     def terminate(self):
+        '''Terminate all functions of the actor. 
+        
+        Terminate all components, and connections to the deplo/disco services.
+        Finally exit the process. 
+        '''
         self.logger.info("terminating")
         for component in self.components.values():
             component.terminate()

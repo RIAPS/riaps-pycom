@@ -29,13 +29,17 @@ def riaps_trace_setup(debug):
     
 def riaps_trace(debug=None,prog=None):
     ''' Setup trace mode and wait for the debug server.
+    
     @debug: Debug server control string of the form 'hostname:portname', 
             both of which are optional, ':' defaulting to localhost:5678
+            
     @prog:  Label for the program, looked up in the riaps configuration file.
+    
     First, it attempts to connect to the debug server using the debug argument (if present).
     Second, it tries to connect to the debug server using the information from the configuration file.
     If the config file argument is empty, it silently returns.  
-    Returns: True of False depending on whether the program is running in trace mode. 
+    Returns: True of False depending on whether the program is running in trace mode.
+     
     '''
     ok = False
     if debug != None: ok = riaps_trace_setup(debug)
