@@ -34,15 +34,10 @@ class NetLogConnection(threading.Thread):
     def stopped(self):
         return self._stopped.is_set()
 
-    def _stop(self):
+    def stop(self):
         self._stopped.set()
         self._connected.clear()
-        self._conn.close()  
-
-    def stop(self):
-        if self.lock.acquire():
-            self._stop()
-            self.lock.release()           
+        self._conn.close()        
 
     def run(self):
         '''
@@ -63,14 +58,12 @@ class NetLogConnection(threading.Thread):
         Will throw an exception if sending the message fails
         '''
         if self.lock.acquire():
-            if not self.stopped() and self.connected():
-                try:
+            try:
+                if not self.stopped() and self.connected():
                     data = pickle.dumps(record)
                     self._conn.root.handle(data)
-                except:
-                    self._stop()
-                    raise
-            self.lock.release()
+            finally:
+                self.lock.release()
 
 class NetLogHandler(logging.Handler):
     '''
@@ -79,32 +72,26 @@ class NetLogHandler(logging.Handler):
     def __init__(self):
         logging.Handler.__init__(self)
 
-        self.lock = threading.Lock()
-
-        signal.signal(signal.SIGINT, self.exit_gracefully)
-        signal.signal(signal.SIGTERM, self.exit_gracefully)
-
         # Spawn a new thread which connects to server
         self.conn = NetLogConnection()
+        self.conn.daemon = True
         self.conn.start()
-
-    def exit_gracefully(self, signal, frame):
-        '''
-        Stop any spawned threads
-        '''
-        self.conn.stop()
+        self.connLock = threading.Lock()
 
     def emit(self, record):
         '''
         Catch a LogRecord and pass it to the connection thread
         '''
-         # Acquire lock to prevent simultaneous modification of self.conn
-        if self.lock.acquire():
-            try:
-                self.conn.handleLog(record)
-            except:
-                self.conn.logger.info("Lost connection to Log Server")
-                self.conn = NetLogConnection() # Spawn a new thread which will reconnect
-                self.conn.start()
-            self.lock.release()
+        try:
+            self.conn.handleLog(record)
+        except:
+            # Acquire lock to prevent simultaneous modification of self.conn
+            if self.connLock.acquire():
+                if not self.conn.stopped():
+                    self.conn.stop()
+                    self.conn.logger.info("Lost connection to Log Server")
+                    self.conn = NetLogConnection() # Spawn a new thread which will reconnect
+                    self.conn.daemon = True
+                    self.conn.start()
+                    self.connLock.release()
 
