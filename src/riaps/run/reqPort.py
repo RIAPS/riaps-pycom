@@ -12,9 +12,7 @@ from zmq.error import ZMQError
 
 class ReqPort(Port):
     '''
-    Similar to a client port, but it uses two separate sockets: out_socket for sending requests, 
-    in_socket for receiving replies.
-    One ReqPort is connected to one RepPort 
+    Similar to a client port
     '''
 
     def __init__(self, parentComponent, portName, portSpec):
@@ -55,6 +53,10 @@ class ReqPort(Port):
         newSocket = self.context.socket(zmq.REQ)
         newSocket.setsockopt(zmq.SNDTIMEO,self.sendTimeout)
         newSocket.setsockopt(zmq.RCVTIMEO,self.recvTimeout)
+        self.socket.setsockopt(zmq.LINGER, 0)
+        if self.replyHost != None and self.replyPort != None:
+            repPort = "tcp://" + str(self.replyHost) + ":" + str(self.replyPort)
+            self.socket.disconnect(repPort)
         self.owner.replaceSocket(self,newSocket)
         self.socket = newSocket
         if self.replyHost != None and self.replyPort != None:

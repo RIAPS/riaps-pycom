@@ -1,9 +1,21 @@
-'''
-RIAPS run-time system main program for an actor
-Created on Oct 9, 2016
+'''RIAPS run-time system main program for an actor. 
+It is called by the wrapper script ``riaps_actor``.
 
-@author: riaps
+Example:
+
+    ``riaps_actor app model actor args [-t|--trace host:port]``
+    
+The actor is started and terminated by the deployment manager. 
+    
+Arguments:
+    - ``app``:    Name of application
+    - ``model``:  Name of .json model file
+    - ``actor``:  Name of actor
+    - ``args``:   List of arguments of the form: -keyword value
+    - ``-t|--trace host:port`` : starts the actor in trace mode; it connects to a debug server running on the host and listening on the port. 
+
 '''
+
 import sys
 import os, signal
 from os.path import join
@@ -17,18 +29,23 @@ from riaps.utils.trace import riaps_trace
 
 from .actor import Actor
 
-# Singleton Actor object
+#: Singleton Actor object
 theActor = None
 
-# Config object
+#: Singleton Config object, holds the configuration information. 
 theConfig = None 
 
-# Interactive console for debugging (not used)
 def interact():
+    ''' Interactive console for debugging (not used)
+    '''
     import code
     code.InteractiveConsole(locals=globals()).interact()
 
 def termHandler(signal,frame):
+    '''Actor termination handler, attached to SIGTERM.
+    
+    Simply calls the Actor.terminate() method.
+    '''
     global theActor
     theActor.terminate()
 
@@ -45,6 +62,14 @@ def termHandler(signal,frame):
 #     theActor.handleSpcLimit()
     
 def main(debug=True):
+    ''' main() entry point for riaps_actor. 
+    
+    Parses its arguments, reads the configuration file, if started in 
+    debug mode it waits for connecting to the debug server, then it
+    reads the model file creates the singleton Actor object.
+      
+    '''
+    
     parser = argparse.ArgumentParser()
     parser.add_argument("app", help="app name")             # App name
     parser.add_argument("model", help="model file name")    # Model file argument

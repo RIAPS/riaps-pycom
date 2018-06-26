@@ -66,13 +66,17 @@ class ComponentThread(threading.Thread):
                     self.sock2NameMap[portSocket] = portName
     
     def replaceSocket(self,portObj,newSocket):
+        portName = portObj.name
         oldSocket = portObj.getSocket()
+        del self.sock2PortMap[oldSocket]
         if portObj.inSocket():
-            self.poller.unregister(oldSocket)
-        oldSocket.setsockopt(zmq.LINGER, 0)
+            self.poller.register(oldSocket, 0)
+            del self.sock2NameMap[oldSocket]
         oldSocket.close()
+        self.sock2PortMap[newSocket] = portObj
         if portObj.inSocket():
-            self.poller.register(newSocket)
+            self.poller.register(newSocket,zmq.POLLIN)
+            self.sock2NameMap[newSocket] = portName
             
     def runCommand(self):
         res = False
@@ -300,7 +304,7 @@ class Component(object):
         '''
         pass
     
-    def handleDeadlline(self,_funcName):
+    def handleDeadline(self,_funcName):
         '''
         Default handler for deadline MultipartInvariantViolationDefect
         '''
