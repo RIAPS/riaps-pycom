@@ -304,7 +304,7 @@ class Component(object):
         '''
         pass
     
-    def handleDeadlline(self,_funcName):
+    def handleDeadline(self,_funcName):
         '''
         Default handler for deadline MultipartInvariantViolationDefect
         '''
