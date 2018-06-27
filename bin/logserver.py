@@ -1,9 +1,7 @@
-'''
-Server for collecting remote server logs from RIAPS components
-Created on Jun 5, 2018
-
-@author: jeholliday
-'''
+"""
+.. module:: logserver
+   :synopsis: Server for collecting logs from remote RIAPS components
+"""
 import logging
 import logging.handlers
 import signal
@@ -19,23 +17,35 @@ from riaps.consts.defs import *
 logFile = 'riaps-logserver.log'
 
 class LogService(rpyc.Service):
-    '''
-    rpyc service for collecting remote logs
-    '''
+    """RPyC service for collecting remote logs
+
+    This acts as a server which remote clients can connect to. The
+    Clients can then call exposed_handle with any LogRecords which
+    should be logged. Those LogRecords are then passed to the local
+    Python logger.
+    """
     ALIASES = [const.logServiceName] # Registry name for the service
     
     STOPPING = False
 
     def exposed_handle(self, data):
-        '''
-        Exposed method for remote clients to pass log records to
-        '''
+        """Exposed method for remote clients to pass log records to
+
+        Args:
+            data (bytes): Pickled LogRecord
+        """
         if not LogService.STOPPING:
             record = pickle.loads(data)
             log = logging.getLogger(record.name)
             log.handle(record)
 
-if __name__ == "__main__":
+def main():
+    """Start a Log Server
+
+    This creates an instance of the LogService to accept remote logs.
+    This then configures the local root logger to automatically output
+    and LogRecords to both the console and a file.
+    """
     # Setup root logger for displaying all messages
     rootLogger = logging.getLogger('')
     format = logging.Formatter("%(levelname)s:%(asctime)s:[%(process)d]:%(name)s:%(message)s")
@@ -65,3 +75,6 @@ if __name__ == "__main__":
     logger.info("\nStarting RIAPS Log Server on port " + str(server.port) + " and saving files to " + logFile)
 
     server.start()
+
+if __name__ == "__main__":
+    main()
