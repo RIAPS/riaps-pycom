@@ -1,10 +1,10 @@
 # Fabric tasks for controlling riaps-deplo
 import time
-from .sys import sudo
+from .sys import sudo, run
 from fabric.api import env, serial, task
 
 # Prevent namespace errors by explicitly defining which tasks belong to this file
-__all__ = ['start', 'startSlow', 'restart', 'stop', 'enable', 'disable', 'status', 'journal']
+__all__ = ['start', 'startSlow', 'startManual', 'restart', 'stop', 'enable', 'disable', 'status', 'journal']
 
 @task
 def start():
@@ -14,9 +14,17 @@ def start():
 @serial
 @task
 def startSlow(delay=1):
-    """start service serially with delay: """
+    """start service serially with delay:[delay]"""
     time.sleep(delay)
     sudo('systemctl start riaps-deplo.service')
+
+@task
+# Start the deplo on all hosts
+def startManual():
+    """Start deplo on hosts without service"""
+    hostname = env.host_string
+    command = ('sudo -E riaps_deplo >~/riaps-' + hostname + '.log 2>&1 &')
+    run(command)
 
 @task
 def restart():
