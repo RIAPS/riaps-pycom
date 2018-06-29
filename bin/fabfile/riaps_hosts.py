@@ -1,9 +1,10 @@
-# fab config - Configuration for RIAPS hosts
+# riaps_hosts.py - Configuration for RIAPS hosts
 # imported into the fab file
 # Edit this file to match your configuration
 from fabric.api import env
 
-# If a no commandline roles or hosts are passed (i.e. -R or -H), set a default role
+# If a no commandline roles or hosts are passed (i.e. -R or -H), only then use listed hosts
+# Allows for passing of individual hosts or roles on which to run tasks
 if not env.roles and not env.hosts:
     # List of roles and hosts -- EDIT HERE --
     env.hosts = ['bbb-2839.local','bbb-164c.local','bbb-e835.local','bbb-ef9f.local',
@@ -14,17 +15,3 @@ if not env.roles and not env.hosts:
                   'bbb-e7b8.local','bbb-23c6.local','bbb-f365.local','bbb-8be2.local',
                   'bbb-e7b9.local','bbb-da61.local','bbb-20fb.local','bbb-4930.local',
                   'bbb-7030.local','bbb-5df2.local','bbb-1610.local','bbb-da2e.local']
-
-# Standard riaps setup
-env.password = 'riaps'
-env.user = 'riaps'
-env.sudo_password = 'riaps'
-
-# File transfer directories 
-env.localPath = '/home/riaps/riaps/'    # Path on localhost
-env.nodePath = '/home/riaps/'           # Path on target
-
-# RIAPS directories
-env.riapsHome = '/usr/local/riaps'
-env.riapsApps = '/home/riaps/riaps_apps'
-env.riapsLib = '/opt/riaps/armhf/lib:/usr/local/lib'
