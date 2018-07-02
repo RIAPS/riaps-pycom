@@ -24,7 +24,7 @@ Message:
 
 // Libraries used in the app
 Library:
-  'library' name=ID ';'
+  'library' ( name=ID | name=STRING) ';'
 ;
  
 // Component types used in the application

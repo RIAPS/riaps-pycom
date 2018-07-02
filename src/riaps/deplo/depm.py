@@ -174,13 +174,24 @@ class DeploymentManager(threading.Thread):
         if user_name not in self.users: return
         del self.users[user_name]
     
-    def makeUserEnv(self,user_name):
+    def makeLdLibEnv(self,os_env,libs=[]):
+        if libs != []:
+            ld_libs = os.getenv('LD_LIBRARY_PATH')
+            if ld_libs != None:
+                ld_libs += ':' + ':'.join(str(l) for l in libs)
+            else:
+                ld_libs = ':'.join(str(l) for l in libs)
+            os_env['LD_LIBRARY_PATH'] = ld_libs
+        
+    def makeUserEnv(self,user_name,ld_libs=[]):
         user_env = os.environ.copy()
         user_record = self.users[user_name]
         user_env[ 'HOME'     ]  = user_record.home
         user_env[ 'LOGNAME'  ]  = user_record.name
         user_env[ 'PWD'      ]  = os.getcwd()
         user_env[ 'USER'     ]  = user_record.name
+        if ld_libs != []:
+            self.makeLdLibEnv(user_env,ld_libs)
         return user_env
 
     @staticmethod
@@ -384,7 +395,8 @@ class DeploymentManager(threading.Thread):
     
         userName = self.appUser[appName]
         user_record = self.users[userName]
-        user_env = self.makeUserEnv(userName)
+        user_ld_libs = self.getAppLibs(appName)
+        user_env = self.makeUserEnv(userName,user_ld_libs)
         user_uid = user_record.uid
         user_gid = user_record.gid
         user_cwd = appFolder
@@ -397,19 +409,9 @@ class DeploymentManager(threading.Thread):
             command.append(arg)
         self.logger.info("Launching %s " % str(command))
         try:
-            # Removing logging until determine desired platform approach
-            #logDir = appFolder + "/logs/"
-            #os.makedirs(os.path.dirname(logDir), exist_ok=True)
-            #os.chown(os.path.dirname(logDir), user_uid, user_gid)
-            #appLogfile = actorName + ".txt"
-            #with open(logDir + appLogfile, "a") as out:
-                #os.chown(logDir + appLogfile, user_uid, user_gid)
-                #out.write('Application Log File\n')
-                #out.flush()  # <-- here's something not to forget!
             proc = psutil.Popen(command,
-                                preexec_fn=self.demote(user_uid, user_gid, self.is_su),
+                                preexec_fn=self.demote(user_uid, user_gid,self.is_su), 
                                 cwd=user_cwd, env=user_env)
-                            # (with above commented out change -    stdout=out, stderr=out, universal_newlines=True)
         except (FileNotFoundError,PermissionError):
             try:
                 if isPython:
@@ -457,7 +459,15 @@ class DeploymentManager(threading.Thread):
             raise BuildError('Actor "%s" unknown' % actorName)
         
         return actorModel
-    
+
+    def getAppLibs(self,appName):
+        model = self.getAppModel(appName)
+        app_libs = []
+        libraries = model["libraries"]
+        for lib in libraries:
+            app_libs += [lib['name']]
+        return app_libs
+        
     def getComponentTypes(self,appName, actorName):
         '''
         Collects all the component types of an actor.
@@ -963,6 +973,10 @@ class DeploymentManager(threading.Thread):
         self.resm.addActor(appName, actorName, self.getActorModel(appName, actorName))
         self.fm.addActor(appName, actorName, self.getActorModel(appName, actorName))
         
+        dev_env = os.environ.copy()             
+        app_libs = self.getAppLibs(appName)
+        self.makeLdLibEnv(dev_env,app_libs)
+        
         riaps_arg1 = appName 
         riaps_arg2 = appModelPath
         riaps_arg3 = actorName
@@ -972,14 +986,14 @@ class DeploymentManager(threading.Thread):
         self.logger.info("Launching %s " % str(command))
                 
         try:
-            proc = subprocess.Popen(command,cwd=appFolder)
+            proc = subprocess.Popen(command,cwd=appFolder,env=dev_env)
         except FileNotFoundError:
             try:
                 if isPython: 
                     command = ['python3',riaps_mod] + command[1:]
                 else:
                     command = [riaps_prog] + command[1:]
-                proc = subprocess.Popen(command,cwd=appFolder)
+                proc = subprocess.Popen(command,cwd=appFolder,env=dev_env)
             except:
                 raise BuildError("Error while starting device: %s" % sys.exc_info()[1])
         try:
