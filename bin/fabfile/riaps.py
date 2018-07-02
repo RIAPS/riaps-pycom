@@ -22,9 +22,15 @@ def update():
     sudo('apt-get update')
     architecture = arch()
     global packages
-    for package in packages:
-        sudo('apt-get install ' + package + architecture + ' -y')
+    for pack in packages:
+        package = pack + architecture
+        sudo('apt-get install ' + package + ' -y')
         run('echo "updated %s"' % (package))
+
+@task
+def updateKey():
+    """Update RIAPS apt key"""
+    sudo('wget -qO - https://riaps.isis.vanderbilt.edu/keys/riapspublic.key | apt-key add -')
 
 # RIAPS install (from local host) 
 @task
