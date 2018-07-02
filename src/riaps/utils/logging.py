@@ -8,6 +8,7 @@ import pickle
 import threading
 import signal
 import rpyc
+from rpyc.utils.server import ThreadedServer
 from riaps.consts.defs import *
 
 class NetLogConnection(threading.Thread):
@@ -138,3 +139,38 @@ class NetLogHandler(logging.Handler):
                     self.conn.start()
                     self.connLock.release()
 
+class LogService(rpyc.Service):
+    """RPyC service for collecting remote logs
+
+    This acts as a server which remote clients can connect to. The
+    Clients can then call exposed_handle with any LogRecords which
+    should be logged. Those LogRecords are then passed to the local
+    Python logger.
+    """
+    ALIASES = [const.logServiceName] # Registry name for the service
+    
+    STOPPING = False
+
+    def exposed_handle(self, data):
+        """Exposed method for remote clients to pass log records to
+
+        Args:
+            data (bytes): Pickled LogRecord
+        """
+        if not LogService.STOPPING:
+            record = pickle.loads(data)
+            log = logging.getLogger(record.name)
+            log.handle(record)
+
+class LogServer(ThreadedServer):
+    """ThreadedServer which executes the LogService"""
+
+    def __init__(self):
+        ThreadedServer.__init__(self, LogService, auto_register=True, protocol_config=const.logServiceConfig)
+
+        # Create catch for kill signals
+        def exit_gracefully(signal, frame):
+            LogService.STOPPING = True
+            self.close()
+        signal.signal(signal.SIGINT, exit_gracefully)
+        signal.signal(signal.SIGTERM, exit_gracefully)
