@@ -8,6 +8,7 @@ class Requestor(Component):
     def __init__(self):
         super(Requestor, self).__init__()
         self.pid = os.getpid()
+        self.logger.info("LD_LIBRARY_PATH=%s" % (os.getenv("LD_LIBRARY_PATH") or ""))
         self.logger.info('call ReqRep')
         self.rr = ReqRep()
         self.logger.info('called ReqRep')
