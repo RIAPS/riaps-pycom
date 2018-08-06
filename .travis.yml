@@ -9,16 +9,16 @@ addons:
 script:
 - chmod +x package.sh
 - ./package.sh
-deploy:
-  provider: releases
-  overwrite: true
-  api_key:
-   secure: vVkYyy67ENfj/GcGEsMxU01aVCifbe2yC/+ggjyJbhoFrLlEAvgJrL6yQiPsBCmFAq+SpuJYn6vcPD6YPxaQWpZCjS7mZVdfN5bkWEskwQnxIIhIjQxZGz9FCyaiv9UJKun23+jxeKKZ52dzHhR5vuoNqkR8he8vqQecCPlvR4KUmY/93F3CIU7VY7tpv1oLZiihJm4pli8hswbgeXnIPzloq31hVahqRXShBFq0AdpkTms2W6Cktr6CPYii3EpHV+ft+d6A0qDyJPVF4Hmv8CmNKhudH59qvKv9X7rPw7COSlSVxyLnWmXkKfkjFQtKXh4mm5m9hFkiUGjl30n3ZU23W6IkiZ11k/y1SlpCHOsqQsSisTIFB70mI0exU2UQ5eFJ9DiLOm8i4URF4ZwoPYobZ8CcW1HXxawGXwTi7GWYo5cS8yMjuzQf+Imb05dgU+XCPess/ZIV78NSWTHuRBJFgY33sDhRBnxmg+d//jyALBFRS8n2iTQ2PQMGFPugnp63F6KuDyVLQU1wzuwwP/VOoDMkZXgeyhqzljIId4kScJlc/ucJOmnCWim124V/sUpslpmnu+dYm0PUQ9uXEHmcOheRc87JfMuCMUJKUko1f54FetKfqMYirWnwLlSLn5xNQdja0IXZhdItu//QbHVaiCHwtObNkGiDay6vMy8=
-  file:
-   - riaps-pycom-amd64.deb 
-   - riaps-pycom-armhf.deb
-   - riaps-systemd-amd64.deb 
-   - riaps-systemd-armhf.deb 
-  skip_cleanup: true
-  on:
-    tags: true
+#deploy:
+#  provider: releases
+#  overwrite: true
+#  api_key:
+#   secure: vVkYyy67ENfj/GcGEsMxU01aVCifbe2yC/+ggjyJbhoFrLlEAvgJrL6yQiPsBCmFAq+SpuJYn6vcPD6YPxaQWpZCjS7mZVdfN5bkWEskwQnxIIhIjQxZGz9FCyaiv9UJKun23+jxeKKZ52dzHhR5vuoNqkR8he8vqQecCPlvR4KUmY/93F3CIU7VY7tpv1oLZiihJm4pli8hswbgeXnIPzloq31hVahqRXShBFq0AdpkTms2W6Cktr6CPYii3EpHV+ft+d6A0qDyJPVF4Hmv8CmNKhudH59qvKv9X7rPw7COSlSVxyLnWmXkKfkjFQtKXh4mm5m9hFkiUGjl30n3ZU23W6IkiZ11k/y1SlpCHOsqQsSisTIFB70mI0exU2UQ5eFJ9DiLOm8i4URF4ZwoPYobZ8CcW1HXxawGXwTi7GWYo5cS8yMjuzQf+Imb05dgU+XCPess/ZIV78NSWTHuRBJFgY33sDhRBnxmg+d//jyALBFRS8n2iTQ2PQMGFPugnp63F6KuDyVLQU1wzuwwP/VOoDMkZXgeyhqzljIId4kScJlc/ucJOmnCWim124V/sUpslpmnu+dYm0PUQ9uXEHmcOheRc87JfMuCMUJKUko1f54FetKfqMYirWnwLlSLn5xNQdja0IXZhdItu//QbHVaiCHwtObNkGiDay6vMy8=
+#  file:
+#   - riaps-pycom-amd64.deb 
+#   - riaps-pycom-armhf.deb
+#   - riaps-systemd-amd64.deb 
+#   - riaps-systemd-armhf.deb 
+#  skip_cleanup: true
+#  on:
+#    tags: true
