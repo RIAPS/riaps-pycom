@@ -52,7 +52,7 @@ def uninstall():
     architecture = arch()
     for pack in packages:
         package = pack + architecture
-        sudo("apt remove " + package)
+        sudo('apt-get remove -y ' + package)
 
 @task
 def kill():
