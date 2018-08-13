@@ -58,7 +58,7 @@ def sudo(command):
 @task
 def get(fileName,localPrefix=''):
     """Download file from host:<file name>,[local prefix]"""
-    api.get(env.nodePath + fileName, env.localPath+localPrefix)
+    api.get(env.nodePath + fileName, env.localPath+localPrefix+fileName)
 
 # If transferring to a RIAPS account directory, use_sudo=False. 
 # If transferring to a system location, use_sudo=True
