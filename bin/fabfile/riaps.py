@@ -4,7 +4,7 @@ from .sys import run, sudo, put, get, arch
 from fabric.api import env, task, hosts, local
 
 # Prevent namespace errors by explicitly defining which tasks belong to this file
-__all__ = ['update','install','uninstall','kill','getLogs','setup_cython', 'ctrl', 'configRouting']
+__all__ = ['update','updateKey','install','uninstall','kill','getLogs','setup_cython', 'ctrl', 'configRouting']
 
 # RIAPS packages
 packages = [ 
