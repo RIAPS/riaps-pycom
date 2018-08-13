@@ -50,7 +50,7 @@ def uninstall():
     """Uninstall all RIAPS packages"""
     global packages
     architecture = arch()
-    for pack in packages:
+    for pack in reversed(packages):
         package = pack + architecture
         sudo('apt-get remove -y ' + package)
 
