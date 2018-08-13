@@ -8,11 +8,11 @@ __all__ = ['update','install','uninstall','kill','getLogs','setup_cython', 'ctrl
 
 # RIAPS packages
 packages = [ 
-            'riaps-externals-', 
-            'riaps-core-', 
-            'riaps-pycom-', 
+            'riaps-externals-',
+            'riaps-core-',
+            'riaps-pycom-',
             'riaps-systemd-',
-            'riaps-timesync-',  
+            'riaps-timesync-'
             ]
 
 # RIAPS update (from release)
@@ -25,7 +25,6 @@ def update():
     for pack in packages:
         package = pack + architecture
         sudo('apt-get install ' + package + ' -y')
-        run('echo "updated %s"' % (package))
 
 @task
 def updateKey():
@@ -42,8 +41,7 @@ def install():
     for pack in packages:
         package = pack + architecture + '.deb'
         put(package)
-        sudo('apt install ./'+ package + ' > riaps-install-' + hostname + '-' + package + '.log')
-        run('echo "installed %s"' % (package))
+        sudo('dpkg -i '+ package + ' > riaps-install-' + hostname + '-' + package + '.log')
         sudo('rm -f %s' %(package))
         get('riaps-install-' + hostname + '-' + package + '.log', 'logs/')
 
@@ -51,9 +49,10 @@ def install():
 def uninstall():
     """Uninstall all RIAPS packages"""
     global packages
+    architecture = arch()
     for pack in packages:
-        package = pack + '.deb'
-        sudo("apt remove " + pack)
+        package = pack + architecture
+        sudo("apt remove " + package)
 
 @task
 def kill():
@@ -104,8 +103,7 @@ def setup_cython():
 @hosts('localhost')
 def ctrl():
     """launch RIAPS controller"""
-    sudo ('systemctl stop riaps-rpyc-registry.service')
-    local('(rpyc_registry.py &) && riaps_ctrl && pkill rpyc')
+    local('riaps_ctrl')
 
 # Find IP address of primary network interface
 import socket
