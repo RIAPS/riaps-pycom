@@ -30,6 +30,7 @@ from riaps.run.exc import *
 from riaps.proto import deplo_capnp
 from riaps.utils.sudo import riaps_sudo
 from riaps.utils.config import Config
+from riaps.utils.names import *
 
 class SpcMonitorThread(threading.Thread):
     def __init__(self, parent):
@@ -44,39 +45,52 @@ class SpcMonitorThread(threading.Thread):
         self.stopped = threading.Event()  # Set if the monitor is stoppped
         self.stopped.clear()
         self.alive = False
-        self.procs = { }
+        self.uid2Name = { }                 # uid -> [ app.actor ]
         self.rlock = RLock()
         self.notifier = None
         self.notifierPort = None
         self.devices = { }
-        self.pid2Key = { }
+        self.name2Uid = { }                 # app.actor -> uid
+        #self.pid2Key = { }
+        #self.pid2Uid = { }
         self.ds = None
     
-    def addProc(self,proc):
+    def addProc(self,appName,actName,proc):
+        self.logger.info("addProc %s.%s [%d]" % (appName,actName,proc.pid))
         with self.rlock:
             uids = psutil.Process(proc.pid).uids()
             uid  = uids.real    # Real UID
-            if uid in self.procs:
-                self.procs[uid] = self.procs[uid] + [proc]
+            fullName = appName + '.' + actName
+            if uid in self.uid2Name:
+                self.uid2Name[uid] += [fullName]
             else:
-                self.procs[uid] = [proc]
-            self.pid2Key[proc.pid] = '???'
+                self.uid2Name[uid] = [fullName]
+            self.name2Uid[fullName] = uid
+            # self.pid2Key[proc.pid] = '???'
         
-    def delProc(self,proc):
-        uids = psutil.Process(proc.pid).uids()
-        uid  = uids.real    # Real UID
+    def delProc(self,appName,actName,proc):
+        self.logger.info("delProc %s.%s [%d]" % (appName,actName,proc.pid))
+#         uids = psutil.Process(proc.pid).uids()
+#         uid  = uids.real    # Real UID
         with self.rlock:
-            if uid in self.procs:
-                del self.procs[uid]
+            fullName = appName + '.' + actName
+            uid = self.name2Uid[fullName]
+            self.uid2Name[uid].remove(fullName)
+            del self.name2Uid[fullName]
+            # device = self.devices[fullName]
+            del self.devices[fullName]
+            # del self.pid2Key[proc.pid]
     
     def addClientDevice(self,appName,actorName,device,proc):
+        self.logger.info("addClientDevice %s.%s [%d]" % (appName,actorName,proc.pid))
         while self.notifierPort == None:
             time.sleep(0.1)
         with self.rlock:
-            device.connect_in('tcp://127.0.0.1:%i' % self.notifierPort)
             key = str(appName) + "." + str(actorName)
-            self.devices[key] = device
-            self.pid2Key[proc.pid] = key
+            device.connect_in('tcp://127.0.0.1:%i' % self.notifierPort)
+            identity = actorIdentity(appName,actorName,proc.pid)
+            self.logger.info("zmqdev id = %s" % identity)
+            self.devices[key] = (device,identity)
             
     def is_running(self):
         return self.alive
@@ -86,7 +100,7 @@ class SpcMonitorThread(threading.Thread):
         self.running.set()
 
     def run(self):
-        self.logger.info("SpcMonitor started")
+        self.logger.info("run: started")
         self.alive = True
         self.notifier = self.context.socket(zmq.ROUTER)
         # self.notifier.setsockopt(zmq.SNDTIMEO,const.deplEndpointSendTimeout)
@@ -105,24 +119,22 @@ class SpcMonitorThread(threading.Thread):
                     for msg in self.ds.get():
                         uid = msg.get_attr('QUOTA_NL_A_EXCESS_ID')
                         with self.rlock:
-                            if uid in self.procs:
+                            if uid in self.uid2Name:
                                 self.logger.info("SPC limit exceeded by uid = %d" % (uid))
-                                for proc in self.procs[uid]:
+                                for fullName in self.uid2Name[uid]:
                                     # self.logger.info('SIGUSR2 to [%d]' % (proc.pid))
                                     # proc.send_signal(signal.SIGUSR2)
-                                    if proc.pid not in self.pid2Key:
-                                        self.logger.error("Invalid pid %i w/o key" % (proc.pid))
-                                        continue
-                                    key = self.pid2Key[proc.pid]
+                                    (_device,identity) = self.devices[fullName] 
+                                    key = fullName
                                     msg = deplo_capnp.DeplCmd.new_message()
                                     msgCmd = msg.init('resourceMsg')
                                     msgMessage = msgCmd.init('resSpcX')
                                     msgMessage.msg = "X"
                                     msgBytes = msg.to_bytes()
                                     payload = zmq.Frame(msgBytes)
-                                    identity = str(key).encode(encoding='utf-8')
-                                    self.notifier.send_multipart([identity,payload])
-                                    self.logger.info("XSpc sent to [%d]" % (proc.pid))
+                                    header = identity.encode(encoding='utf-8')
+                                    self.notifier.send_multipart([header,payload])
+                                    self.logger.info("XSpc sent to %s [%s]" % (fullName,identity))
                                     time.sleep(0.1)
                 except socket.timeout:
                     self.ds.close()
@@ -144,6 +156,7 @@ class SpcMonitorThread(threading.Thread):
         self.logger.info("SpcMonitor terminated")     
         
     def stop(self):
+        self.logger.info("stop")  
         self.running.clear()
         self.stopped.wait()
         

@@ -120,6 +120,7 @@ class ControlGUIClient(object):
             self.messages.insert(end, text)
         self.check_server_msg(text)
 
+
     def on_ConsoleEntry(self, *args):
         '''
         Called when the console entry receives an 'activate' event
@@ -147,9 +148,9 @@ class ControlGUIClient(object):
         filterA.set_name("All files")
         filterA.add_pattern("*")
         self.fcd.add_filter(filterA)
- 
+
         self.fcd.set_transient_for(self.mainWindow)
- 
+
         self.response = self.fcd.run()
         fileName = None
         if self.response == Gtk.ResponseType.OK:
@@ -173,7 +174,7 @@ class ControlGUIClient(object):
         folderName = None
         if self.response == Gtk.ResponseType.OK:
             folderName = self.fcd.get_filename()
-        self.fcd.destroy()        
+        self.fcd.destroy()
         return folderName
 
     def isAppOK(self):
@@ -191,7 +192,7 @@ class ControlGUIClient(object):
             self.controller.compileApplication(fileName, self.folderEntry.get_text())
             #if self.isAppOK():
             #    self.launchButton.set_sensitive(True)
-            #    self.removeButton.set_sensitive(True)#        
+            #    self.removeButton.set_sensitive(True)
 
     def clearApplication(self):
         '''

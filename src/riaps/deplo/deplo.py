@@ -21,6 +21,7 @@ from riaps.utils.ifaces import getNetworkInterfaces
 from riaps.deplo.depm import DeploymentManager
 from riaps.deplo.resm import ResourceManager
 from riaps.deplo.fm import FaultManager
+from riaps.utils.singleton import singleton
 
 import traceback
 
@@ -48,6 +49,7 @@ class DeploService(object):
         self.context = zmq.Context()
         self.setupIfaces()
         self.suffix = self.macAddress
+        singleton('riaps_deplo',self.suffix)
         self.depmCommandEndpoint = 'inproc://depm-command'
         # self.devmCommandEndpoint = 'inproc://devm-command'
         self.procMonEndpoint = 'inproc://procmon'

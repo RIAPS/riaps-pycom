@@ -131,8 +131,11 @@ class TimerThread(threading.Thread):
         '''
         Cancel the sporadic timer
         '''
-        self.waiting.set()
-    
+        if self.started.is_set():
+            self.waiting.set()      # Go to wait mode if started
+        else:
+            pass                    # Ignore if not started
+        
     def halt(self):
         '''
         Halt the timer

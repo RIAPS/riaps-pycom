@@ -57,6 +57,10 @@ const.nethogLibrary = 'libnethogs.so'
 # Quota system scanning timeout
 const.spcMonitorTimeout = 10.0
 
+# Peer timeouts
+const.peerEvasiveTimeout = 3000
+const.peerExpiredTimeout = 5000
+
 # App database
 const.appDb = 'riaps-apps.lmdb'     # Under RIAPSAPPS
 const.appDbSize = 16                # Mbytes 

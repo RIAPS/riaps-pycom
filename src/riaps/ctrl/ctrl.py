@@ -213,6 +213,16 @@ class Controller(object):
         with ctrlLock:
             res = clientName in self.clientMap
         return res
+    
+    def getClient(self,clientName):
+        '''
+        Find a known client by name
+        '''
+        res = None
+        with ctrlLock:
+            if clientName in self.clientMap:
+                res = self.clientMap[clientName]
+        return res
 
     def killAll(self):
         for client in self.clientMap.values():
@@ -533,6 +543,7 @@ class Controller(object):
                 newLaunchList.append(elt)
         for client in clientList:
             res = client.reclaim(appName)
+            if res == None: continue
             if res.error:
                 self.log('? Query')
             while not res.ready: time.sleep(1.0)

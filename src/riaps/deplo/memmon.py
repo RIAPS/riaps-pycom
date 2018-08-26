@@ -29,6 +29,7 @@ from riaps.run.exc import *
 from riaps.proto import deplo_capnp
 from riaps.utils.sudo import riaps_sudo
 from riaps.utils.config import Config
+from riaps.utils.names import *
     
 class MemMonitorThread(threading.Thread):
     def __init__(self,parent,efd,usage):
@@ -42,7 +43,7 @@ class MemMonitorThread(threading.Thread):
         self.terminated.clear()
         self.running = threading.Event()    # Cleared when the monitor is not to run
         self.running.set()
-        self.stopped = threading.Event()    # Set if the monitor is stoppped
+        self.stopped = threading.Event()    # Set if the monitor is stopped
         self.stopped.clear()
         self.lock = RLock()
         self.notifier = None
@@ -59,7 +60,9 @@ class MemMonitorThread(threading.Thread):
         with self.lock:
             device.connect_in('tcp://127.0.0.1:%i' % self.notifierPort)
             key = str(appName) + "." + str(actorName)
-            self.devices[key] = device
+            identity = actorIdentity(appName,actorName,self.proc.pid)
+            self.logger.info("zmqdev id = %s" % identity)
+            self.devices[key] = (device,identity)
     
     def is_running(self):
         return self.alive
@@ -87,15 +90,16 @@ class MemMonitorThread(threading.Thread):
                 if not self.running.is_set(): continue
                 self.logger.info("MemMonitor[%d] mem limit %d exceeded - %s" % (self.proc.pid,self.usage,str(current)))
                 with self.lock:
-                    for key,_dev in self.devices.items():
+                    for key,pair in self.devices.items():
+                        _device,identity = pair
                         msg = deplo_capnp.DeplCmd.new_message()
                         msgCmd = msg.init('resourceMsg')
                         msgMessage = msgCmd.init('resMemX')
                         msgMessage.msg = "X"
                         msgBytes = msg.to_bytes()
                         payload = zmq.Frame(msgBytes)
-                        identity = str(key).encode(encoding='utf-8')
-                        self.notifier.send_multipart([identity,payload])
+                        header = identity.encode(encoding='utf-8')
+                        self.notifier.send_multipart([header,payload])
                         self.logger.info("XMem sent to [%d]" % (self.proc.pid))
                 # self.proc.send_signal(signal.SIGUSR1)              
                 time.sleep(1.0)

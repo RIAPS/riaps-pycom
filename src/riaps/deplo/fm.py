@@ -88,6 +88,8 @@ class FMMonitor(threading.Thread):
             pass
         self.uuid = self.zyre.uuid()
         self.zyre.set_interface(Config.NIC_NAME.encode('utf-8')) 
+        self.zyre.set_evasive_timeout(const.peerEvasiveTimeout)
+        self.zyre.set_expired_timeout(const.peerExpiredTimeout)
         self.zyre.set_header(b'riaps@' + self.hostAddress.encode('utf-8'),
                              b'hello')
         self.command = self.context.socket(zmq.PAIR)
@@ -159,8 +161,8 @@ class FMMonitor(threading.Thread):
                 msg = event.get_msg()
 #                 if eType != b'EVASIVE':
 #                     print("# %s %s %s %s %s %s %s" 
-#                           % (str(eType),str(pName),str(pUUID),str(pAddr),
-#                              str(group),str(headers),str(msg)))
+#                           % (str(eType),str(_pName),str(pUUID),str(pAddr),
+#                              str(group),str(_headers),str(msg)))
                 if eType == b'ENTER':
                     self.logger.info("FMMon.ENTER %s from %s" % (str(pUUID),str(pAddr)))
                     self.peers[pUUID] = pAddr
@@ -189,7 +191,7 @@ class FMMonitor(threading.Thread):
                                 self.command.send_pyobj(info)
                 elif eType == b'LEAVE':
                     groupName = group.decode()
-                    self.logger.info("FMMon.LEAVE %s from %s" % (str(group), str(pUUID)))
+                    self.logger.info("FMMon.LEAVE %s from %s" % (str(pUUID),str(group)))
                     if groupName == 'riaps':
                         continue                # Left riaps group - should be validated
                     else:
@@ -204,8 +206,16 @@ class FMMonitor(threading.Thread):
                                 info = ('peer-', appName, actorName, peer)
                                 self.command.send_pyobj(info)
                 elif eType == b'EXIT':
-                    self.logger.info("FMMon.EXIT %s " % str(pUUID))
-                    # TODO: Check if peer was involved in groups, inform group members
+                    self.logger.info("FMMon.EXIT %s " % (str(pUUID)))
+                    for appName,group in self.groups.items():
+                        if pUUID in group:
+                            if appName in self.actors:
+                                for actorName in self.actors[appName]:
+                                    peer = pUUID
+                                    self.logger.info("FMMon.EXIT tell %s.%s lost peer at %s" 
+                                                     % (appName,actorName,str(peer))) 
+                                    info = ('peer-', appName, actorName, peer)
+                                    self.command.send_pyobj(info)
                     del self.peers[pUUID]
                 elif eType == b'SHOUT' or eType == b'WHISPER':
                     arg = msg.popstr().decode()
