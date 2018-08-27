@@ -2,13 +2,15 @@
 from riaps.run.comp import Component
 import logging
 import os
-from ReqRep import ReqRep
+from reqreplib.reqrep import ReqRep
 
 class Replier(Component):
     def __init__(self):
         super(Replier, self).__init__()
         self.pid = os.getpid()
+        self.logger.info('call ReqRep')
         self.rr = ReqRep()
+        self.logger.info('called ReqRep')
 
     def on_srvRepPort(self):
         msg = self.srvRepPort.recv_pyobj()

@@ -7,7 +7,7 @@ import time
 import zmq
 import struct
 from .port import Port
-from riaps.run.exc import OperationError
+from riaps.run.exc import OperationError,PortError
 from riaps.utils.config import Config
 from zmq.error import ZMQError
 try:
@@ -39,7 +39,8 @@ class AnsPort(Port):
     def setup(self):
         pass
   
-    def setupSocket(self):
+    def setupSocket(self,owner):
+        self.setOwner(owner)
         self.socket = self.context.socket(zmq.ROUTER)
         self.socket.setsockopt(zmq.SNDTIMEO,self.sendTimeout)
         self.host = ''
@@ -57,6 +58,9 @@ class AnsPort(Port):
     def update(self, host, port):
         raise OperationError("Unsupported update() on AnsPort")
     
+    def reset(self):
+        pass
+    
     def getSocket(self):
         return self.socket
     
@@ -69,8 +73,11 @@ class AnsPort(Port):
     def set_identity(self,identity):
         self.identity = identity
         
-    def ans_port_recv(self,is_pyobj):
-        msgFrames = self.socket.recv_multipart()    # Receive multipart (IDENTITY + payload) message
+    def ans_port_recv(self,is_pyobj):   
+        try:
+            msgFrames = self.socket.recv_multipart()    # Receive multipart (IDENTITY + payload) message
+        except zmq.error.ZMQError as e:
+            raise PortError("recv error (%d)" % e.errno, e.errno) from e
         if self.isTimed:
             self.recvTime = time.time()
         self.identity = msgFrames[0]                # Separate identity, it is a Frame
@@ -98,11 +105,8 @@ class AnsPort(Port):
                 nowFrame = zmq.Frame(now)
                 sendMsg += [nowFrame]
             self.socket.send_multipart(sendMsg)
-        except ZMQError as e:
-            if e.errno == zmq.EAGAIN:
-                return False
-            else:
-                raise
+        except zmq.error.ZMQError as e:
+            raise PortError("send error (%d)" % e.errno, e.errno) from e
         return True
     
     def recv_pyobj(self):
@@ -111,10 +115,10 @@ class AnsPort(Port):
     def send_pyobj(self,msg): 
         return self.ans_port_send(msg,True)     
     
-    def recv_capnp(self):
+    def recv(self):
         return self.ans_port_recv(False)
 
-    def send_capnp(self, msg):
+    def send(self, _msg):
         return self.ans_port_send(False)
         
     def getInfo(self):

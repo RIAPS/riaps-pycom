@@ -7,4 +7,7 @@ d sample.depl
 l DistributedEstimator
 w 30
 h DistributedEstimator
+w 5
+r DistributedEstimator
+w 5
 q

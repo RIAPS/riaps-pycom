@@ -52,7 +52,7 @@ const.ctrlSSHPort = 22
 const.ctrlDeploDelay = 1000
 
 # Nethog
-const.nethogLibrary = 'libnethogs.so.master'
+const.nethogLibrary = 'libnethogs.so'
 
 # Quota system scanning timeout
 const.spcMonitorTimeout = 10.0

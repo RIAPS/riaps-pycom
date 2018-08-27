@@ -11,9 +11,7 @@ from zmq.error import ZMQError
 
 class RepPort(Port):
     '''
-    Similar to a server port, but it uses two separate sockets: in_socket for receiving requests, 
-    out_socket for sending replies.
-    One RepPort is connected to one ReqPort 
+    Similar to a server port.
     '''
 
 
@@ -33,7 +31,8 @@ class RepPort(Port):
     def setup(self):
         pass
         
-    def setupSocket(self):
+    def setupSocket(self,owner):
+        self.setOwner(owner)
         self.socket = self.context.socket(zmq.REP)
         self.socket.setsockopt(zmq.SNDTIMEO,self.sendTimeout)
         self.host = ''
@@ -47,6 +46,10 @@ class RepPort(Port):
             self.host = localHost
         self.info = ('rep',self.isLocalPort,self.name,str(self.req_type) + '#' + str(self.rep_type),self.host,self.portNum)
         return self.info
+    
+    def reset(self):
+        AAAA
+        pass
     
     def getSocket(self):
         return self.socket
@@ -63,10 +66,10 @@ class RepPort(Port):
     def send_pyobj(self,msg):
         return self.port_send(msg,True)              
     
-    def recv_capnp(self):
+    def recv(self):
         return self.port_recv(False)
     
-    def send_capnp(self, msg):
+    def send(self, msg):
         return self.port_send(msg,False) 
     
     def getInfo(self):

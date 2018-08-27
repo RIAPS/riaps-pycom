@@ -37,7 +37,7 @@ class ComponentThread(threading.Thread):
         if msg != "build":
             raise BuildError 
         for portName in self.parent.ports:
-            res = self.parent.ports[portName].setupSocket()
+            res = self.parent.ports[portName].setupSocket(self)
             if res[0] == 'tim' or res[0] == 'ins':
                 continue
             elif res[0] == 'pub' or res[0] == 'sub' or \
@@ -64,6 +64,19 @@ class ComponentThread(threading.Thread):
                 if portIsInput:
                     self.poller.register(portSocket,zmq.POLLIN)
                     self.sock2NameMap[portSocket] = portName
+    
+    def replaceSocket(self,portObj,newSocket):
+        portName = portObj.name
+        oldSocket = portObj.getSocket()
+        del self.sock2PortMap[oldSocket]
+        if portObj.inSocket():
+            self.poller.register(oldSocket, 0)
+            del self.sock2NameMap[oldSocket]
+        oldSocket.close()
+        self.sock2PortMap[newSocket] = portObj
+        if portObj.inSocket():
+            self.poller.register(newSocket,zmq.POLLIN)
+            self.sock2NameMap[newSocket] = portName
             
     def runCommand(self):
         res = False
@@ -291,7 +304,7 @@ class Component(object):
         '''
         pass
     
-    def handleDeadlline(self,_funcName):
+    def handleDeadline(self,_funcName):
         '''
         Default handler for deadline MultipartInvariantViolationDefect
         '''

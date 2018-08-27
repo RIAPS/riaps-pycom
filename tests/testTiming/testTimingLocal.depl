@@ -1,6 +1,0 @@
-
-app testTiming {
-    on (192.168.1.102) ActorRepeater;
-	on (192.168.1.102) ActorForwarder;
-	on (192.168.1.102) ActorFinal;
-}

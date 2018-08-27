@@ -42,10 +42,11 @@ class CltPort(Port):
         '''
         pass
   
-    def setupSocket(self):
+    def setupSocket(self,owner):
         '''
         Set up the socket of the port. Return a tuple suitable for querying the discovery service for the publishers
         '''
+        self.setOwner(owner)
         self.socket = self.context.socket(zmq.REQ)
         self.socket.setsockopt(zmq.SNDTIMEO,self.sendTimeout) 
         self.host = ''
@@ -59,6 +60,20 @@ class CltPort(Port):
             self.host = localHost
         self.info = ('clt',self.isLocalPort,self.name,str(self.req_type) + '#' + str(self.rep_type),self.host)
         return self.info
+
+    def reset(self):
+        newSocket = self.context.socket(zmq.REQ)
+        newSocket.setsockopt(zmq.SNDTIMEO,self.sendTimeout)
+        newSocket.setsockopt(zmq.RCVTIMEO,self.recvTimeout)
+        self.socket.setsockopt(zmq.LINGER, 0)
+        if self.serverHost != None and self.serverPort != None:
+            srvPort = "tcp://" + str(self.serverHost) + ":" + str(self.serverPort)
+            self.socket.disconnect(srvPort)
+        self.owner.replaceSocket(self,newSocket)
+        self.socket = newSocket
+        if self.serverHost != None and self.serverPort != None:
+            srvPort = "tcp://" + str(self.serverHost) + ":" + str(self.serverPort)
+            self.socket.connect(srvPort)
     
     def getSocket(self):
         '''
@@ -80,17 +95,17 @@ class CltPort(Port):
         self.serverHost = host
         self.serverPort = port
         self.socket.connect(srvPort)
-    
+        
     def recv_pyobj(self):
         return self.port_recv(True)
     
     def send_pyobj(self,msg):
         return self.port_send(msg,True)              
     
-    def recv_capnp(self):
+    def recv(self):
         return self.port_recv(False)
     
-    def send_capnp(self, msg):
+    def send(self, msg):
         return self.port_send(msg,False) 
     
     def getInfo(self):

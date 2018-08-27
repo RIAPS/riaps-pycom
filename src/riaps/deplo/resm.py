@@ -108,24 +108,39 @@ class ActorResourceManager(object):
         if self.memCGroup:
             try:
                 self.memController = self.memCGroup.controller
-                self.memController.limit_in_bytes = self.memUsage * 1024 # Value is in kBytes
+                # Hard (OOM) limit - not used
+                # self.memController.limit_in_bytes = self.memUsage * 1024 # Value is in kBytes
                 efd = Eventfd()
                 mem = self.memCGroup
+                # Threshold
+                mub = mem.full_path.decode('utf-8') + '/memory.usage_in_bytes'
+                os.chmod(mub,stat.S_IRUSR) #  | stat.S_IWUSR)
+                mub_file = open(mub,'rb')
+                
+                buf1 = '%d %d %s' % (efd.fileno(),mub_file.fileno(),
+                                     "%d" % (self.memUsage * 1024))
+                buf1 = buf1.encode('utf-8')
+                
+                # Detector
                 mpl = mem.full_path.decode('utf-8') + '/memory.pressure_level'
                 os.chmod(mpl,stat.S_IRUSR) #  | stat.S_IWUSR)
                 mpl_file = open(mpl,'rb')
-        
+                
+                buf2 = '%d %d %s' % (efd.fileno(),mpl_file.fileno(),'low')
+                buf2 = buf2.encode('utf-8')        
+                
                 cgc = mem.full_path.decode('utf-8') + '/cgroup.event_control'
                 # os.chmod(cgc,stat.S_IRUSR | stat.S_IWUSR)
                 cgc_file = open(cgc,'ab',buffering=0)
         
-                buf = '%d %d %s' % (efd.fileno(),mpl_file.fileno(),'low')
-                buf = buf.encode('utf-8')
-        
-                _wrl = cgc_file.write(buf)
-                assert (_wrl == len(buf))
+                _wrl1 = cgc_file.write(buf1)
+                _wrl2 = cgc_file.write(buf2)
+                
+                assert (_wrl1 == len(buf1) and _wrl2 == len(buf2))
+                
                 os.close(cgc_file.fileno())
                 os.close(mpl_file.fileno())
+                os.close(mub_file.fileno())
             except:
                 traceback.print_exc() 
                 return False

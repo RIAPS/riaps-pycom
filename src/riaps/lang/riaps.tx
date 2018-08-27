@@ -24,7 +24,7 @@ Message:
 
 // Libraries used in the app
 Library:
-  'library' name=ID ';'
+  'library' ( name=ID | name=STRING) ';'
 ;
  
 // Component types used in the application
@@ -74,7 +74,7 @@ SubPort:
 // Client port (request and reply message types) - Owned by an SMI client
 // Client operation is expected to send on the port and then receive on the same port
 ClntPort:
-  'clt' name=ID ':' '(' req_type=[Message]? ',' rep_type=[Message]? ')' 
+  'clt' name=ID ':' '(' req_type=[Message]? ',' rep_type=[Message]? ')' (timed='timed')? 
 ;
 
 // Server port (request and reply message types) - Owned by an SMI client

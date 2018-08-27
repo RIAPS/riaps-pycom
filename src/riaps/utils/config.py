@@ -17,6 +17,7 @@ class Config(object):
     '''
     TARGET_USER = 'riaps'
     SEND_TIMEOUT = -1
+    RECV_TIMEOUT = -1
     NIC_NAME = None
     NIC_RATE = '118kbps'   # 90% of 1 gigabits per sec
     NIC_CEIL = '131kbps'   # 1 gigabits per sec

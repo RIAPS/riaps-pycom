@@ -15,7 +15,7 @@ class GlobalEstimator(Component):
         self.logger.info("on_wakeup():%s",msg)
         
     def on_estimate(self):
-        msgEstmiateBytes = self.estimate.recv_capnp()
+        msgEstmiateBytes = self.estimate.recv()
         msgEstimate = distributedestimator_capnp.Estimate.from_bytes(msgEstmiateBytes)
         self.logger.info("on_estimate():%s",msgEstimate.msg)
     
