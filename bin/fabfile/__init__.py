@@ -27,7 +27,7 @@ env.user = 'riaps'
 env.sudo_password = 'riaps'
 
 # File transfer directories 
-env.localPath = getcwd()       # Path on localhost
+env.localPath = getcwd() + '/' # Path on localhost
 env.nodePath = '/home/riaps/'  # Path on target
 
 # RIAPS directories
