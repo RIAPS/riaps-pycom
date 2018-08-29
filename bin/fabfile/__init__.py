@@ -2,6 +2,7 @@
 # fabfile for RIAPS tasks
 #
 from fabric.api import env
+from os import getcwd
 
 # Import user hosts file
 from . import riaps_hosts
@@ -26,8 +27,8 @@ env.user = 'riaps'
 env.sudo_password = 'riaps'
 
 # File transfer directories 
-env.localPath = '/home/riaps/riaps/'    # Path on localhost
-env.nodePath = '/home/riaps/'           # Path on target
+env.localPath = getcwd()       # Path on localhost
+env.nodePath = '/home/riaps/'  # Path on target
 
 # RIAPS directories
 env.riapsHome = '/usr/local/riaps'
