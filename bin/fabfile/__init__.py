@@ -4,6 +4,7 @@
 from fabric.api import env
 from os import getcwd
 
+
 # Import user hosts file
 from . import riaps_hosts
 
