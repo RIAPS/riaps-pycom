@@ -97,9 +97,12 @@ class FMMonitor(threading.Thread):
         self.zyre.start()
         self.zyre.join(b'riaps')
         self.zyreSocket = self.zyre.socket()
-        self.poller = Zpoller(self.command.underlying,self.zyreSocket,0)
+        self.poller = Zpoller(zyre.c_void_p(self.command.underlying),self.zyreSocket,0)
         while True:
             reader = self.poller.wait(-1)   # Wait forever
+            if self.poller.terminated():
+                self.logger.warning("FMMon.run - poller terminated")
+                break
             if type(reader) == zyre.c_void_p and reader.value == self.command.underlying:
                 msg = self.command.recv_pyobj()
                 self.logger.info('FMMon.run - command: %s' % str(msg))

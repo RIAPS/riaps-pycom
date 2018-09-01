@@ -49,7 +49,7 @@ const.ctrlPrivateKey = 'id_rsa.key'
 # SSH port
 const.ctrlSSHPort = 22
 # Control/deplo delay (in msec) - time allowed for recovered apps to start
-const.ctrlDeploDelay = 1000
+const.ctrlDeploDelay = 3000
 
 # Nethog
 const.nethogLibrary = 'libnethogs.so'

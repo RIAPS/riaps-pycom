@@ -136,7 +136,7 @@ class ControllerService(rpyc.Service):
     
     STOPPING = None
     
-    def on_connect(self):
+    def on_connect(self,_conn = None):
         '''
         Called when a client connects. Subsequently the client must login. 
         '''
@@ -144,7 +144,7 @@ class ControllerService(rpyc.Service):
         self.client = None
         self.logger = logging.getLogger('riapsCtrl')
 
-    def on_disconnect(self):
+    def on_disconnect(self,_conn = None):
         '''
         Called when a client disconnects
         '''

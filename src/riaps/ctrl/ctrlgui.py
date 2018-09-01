@@ -315,11 +315,17 @@ class ControlGUIClient(object):
         self.launch_app(node, app, actor)
         
     def update_node_apps(self,clientName,value):
-        for appName in value.keys():
-            actors = value[appName]
-            for actorName in actors:
-                self.launch_app(clientName,appName,actorName)
-                self.controller.addToLaunchList(clientName,appName,actorName)
+        '''
+        Update the gui with list of apps running on the client 
+        '''
+        global guiLock
+        with guiLock:
+            if not value: return
+            for appName in value.keys():
+                actors = value[appName]
+                for actorName in actors:
+                    self.launch_app(clientName,appName,actorName)
+                    self.controller.addToLaunchList(clientName,appName,actorName)
 
     """ Status grid gui update functions - these are the actual update functions """
         

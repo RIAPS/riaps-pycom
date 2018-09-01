@@ -22,6 +22,7 @@ from riaps.deplo.depm import DeploymentManager
 from riaps.deplo.resm import ResourceManager
 from riaps.deplo.fm import FaultManager
 from riaps.utils.singleton import singleton
+from czmq import Zsys
 
 import traceback
 
@@ -46,7 +47,9 @@ class DeploService(object):
         self.ctrlrPort = port
         self.conn = None
         self.bgsrv = None
-        self.context = zmq.Context()
+        # self.context = zmq.Context() - Use czmq's context (see fm / zyre socket)
+        czmq_ctx = Zsys.init()
+        self.context = zmq.Context.shadow(czmq_ctx.value)
         self.setupIfaces()
         self.suffix = self.macAddress
         singleton('riaps_deplo',self.suffix)
@@ -188,7 +191,7 @@ class DeploService(object):
         self.fm.terminate()     # Terminate fault manager
         self.depm.terminate()   # Terminate deployment manager
         self.depm.join() 
-        self.context.destroy()
+        # self.context.destroy()
         time.sleep(0.1)
         self.logger.info("terminated")
         os._exit(0)

@@ -163,31 +163,30 @@ class Controller(object):
             self.dbase.kill()
         if self.service != None:
             self.service.stop()
-
+            
+    def updateClient(self,clientName,client,res):
+        if not res or res.error:
+            self.log('? Query')
+            return
+        if not self.gui:
+            return
+        if res.ready:
+            value = res.value
+            if not value: return
+            self.gui.update_node_apps(clientName,value)
+        else:
+            exe = functools.partial(self.updateClient,  # Keep waiting if result not ready yet
+                                    clientName=clientName,client=client,res=res)
+            timeout = const.ctrlDeploDelay/1000.0
+            Timer(timeout, exe).start()
+        
     def queryClient(self,clientName,client):
         '''
         Query the client for apps already running
         '''
         res = client.query()
-        if res.error:
-            self.log('? Query')
-            return
-        value = None
-        if res.ready:
-            value = res.value
-            if not value:
-                return
-            else:
-                self.gui.update_node_apps(clientName,value)
-        if value == None:
-            self.setupQueryClient(clientName,client)        # Schedule a query again if no response
-            return
-
-    def setupQueryClient(self,clientName,client):
-        exe = functools.partial(self.queryClient,clientName=clientName,client=client)
-        timeout = const.ctrlDeploDelay/1000.0
-        Timer(timeout, exe).start()
-        
+        self.updateClient(clientName,client,res)
+            
     def addClient(self,clientName,client):
         '''
         Add a client object, representing a RIAPS node to the list. The operation is called
@@ -195,7 +194,7 @@ class Controller(object):
         '''
         with ctrlLock:
             self.clientMap[clientName] = client
-            self.setupQueryClient(clientName,client)
+            self.queryClient(clientName,client)
         
     def delClient(self,clientName):
         '''
