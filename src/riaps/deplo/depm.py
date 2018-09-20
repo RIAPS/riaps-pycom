@@ -358,37 +358,26 @@ class DeploymentManager(threading.Thread):
         assert type(msg) == tuple and len(msg) == 4
         appName,appModel,actorName,actorArgs = msg
                 
-        # Python / C++ starters
-        riaps_py_prog = 'riaps_actor'
-        riaps_cc_prog = 'start_actor'
+        # Starter
+        riaps_prog = 'riaps_actor'
 
         appFolder = join(self.riapsApps, appName)
         appModelPath = join(appFolder, appModel)
          
         if not os.path.isdir(appFolder):
             raise BuildError('App folder is missing: %s' % appFolder)
-
-        # Use Python starter by default
-        riaps_prog = riaps_py_prog
-        isPython = True
-
+        
         componentTypes = self.getComponentTypes(appName, actorName)
         if len(componentTypes) == 0:
             raise BuildError('Actor has no components: %s.%s.' % (appName,actorName))
         for componentType in componentTypes:
             # Look up the Python version first
             pyFilePath = join(appFolder, componentType + '.py')
-            if not os.path.isfile(pyFilePath):
-                isPython = False
-        # Mixed mode actors (C++/Python) are not supported. 
-        # Better solution: run C++ binaries inside the Python framework
-        if not isPython:
-            for componentType in componentTypes:
-                # Look up the python version
-                ccFilePath = join(appFolder, 'lib' + componentType.lower() + '.so')
-                if not os.path.isfile(ccFilePath):
-                    raise BuildError('Implementation of component %s is missing' % componentType)
-            riaps_prog = riaps_cc_prog
+            if os.path.isfile(pyFilePath): continue
+            # Look up the C++version 
+            ccFilePath = join(appFolder, 'lib' + componentType.lower() + '.so')
+            if not os.path.isfile(ccFilePath):
+                raise BuildError('Implementation of component %s is missing' % componentType)
 
         self.resm.addActor(appName, actorName, self.getActorModel(appName, actorName))
         self.fm.addActor(appName, actorName, self.getActorModel(appName, actorName))
@@ -421,10 +410,10 @@ class DeploymentManager(threading.Thread):
                                 stdout=logFile, stderr=subprocess.STDOUT)
         except (FileNotFoundError,PermissionError):
             try:
-                if isPython:
-                    command = ['python3',riaps_mod] + command[1:]
-                else:
-                    command = [riaps_prog] + command[1:]
+                # if isPython:
+                command = ['python3',riaps_mod] + command[1:]
+                # else:
+                #    command = [riaps_prog] + command[1:]
                 proc = psutil.Popen(command,
                                     preexec_fn=self.demote(user_uid, user_gid,self.is_su), 
                                     cwd=user_cwd, env=user_env,

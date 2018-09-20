@@ -68,7 +68,7 @@ class Part(object):
         self.instance = self.class_(**self.args)    # Run the component constructor
         self.class_.OWNER = None
         self.context = parentActor.context
-        self.control = None
+        # self.control = None
         self.thread = None
         self.buildAllPorts(self.type["ports"])      # Build all the ports of the component
         self.state = Part.State.Initial
@@ -149,19 +149,20 @@ class Part(object):
             self.control.setsockopt(zmq.SNDTIMEO,timeOut) 
             self.control.send_pyobj(cmd)
     
-    def getControl(self):
-        return self.control
+#     def getControl(self):
+#         return self.control
     
-    def setup(self):
+    def setup(self,control_):
         '''
         Set up the part and change its state to Ready
         '''
         if self.state != Part.State.Initial:
             raise StateError("Invalid state %s in setup()" % self.state)
         
-        # Create the control socket for communicating with the component thread
-        self.control = self.context.socket(zmq.PAIR)
-        self.control.bind('inproc://part_' + self.name + '_control')
+        # Control socket for communicating with the component thread
+        self.control = control_
+        # self.context.socket(zmq.PAIR)
+        # self.control.bind('inproc://part_' + self.name + '_control')
        
         self.setupPorts(self.ports)
         

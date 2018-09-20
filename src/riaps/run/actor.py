@@ -21,6 +21,7 @@ from builtins import int, str
 import re
 import os
 import ipaddress
+import importlib
 
 class Actor(object):
     '''The actor class implements all the management and control functions over its components
@@ -92,12 +93,23 @@ class Actor(object):
             instFormals = typeSpec['formals']
             instActuals = instSpec['actuals']
             instArgs = self.buildInstArgs(instName,instFormals,instActuals)
+
+            # Check whether the component is C++ component
+            ccComponentFile = 'lib' + instType.lower() + '.so'
+            ccComp = os.path.isfile(ccComponentFile)
             try:
                 if not ioComp:
-                    self.components[instName]= Part(self,typeSpec,instName, instType, instArgs)
-                else:
-                    self.components[instName]= Peripheral(self,typeSpec,instName, instType, instArgs)
-            except TypeError as e:
+                    if ccComp:
+                        modObj= importlib.import_module('lib'+instType.lower())
+                        self.components[instName] = modObj.create_component_py(self,self.model,
+                                                                               typeSpec,instName,
+                                                                               instType,instArgs,
+                                                                               self.appName,self.name)
+                    else:
+                        self.components[instName]= Part(self,typeSpec,instName, instType, instArgs)
+                else: 
+                    self.components[instName] = Peripheral(self,typeSpec,instName, instType, instArgs)         
+            except Exception as e:
                 traceback.print_exc()
                 self.logger.error("Error while constructing part '%s.%s': %s" % (instType,instName,str(e)))
                 
@@ -291,8 +303,19 @@ class Actor(object):
         self.deplc.start()
         ok = self.deplc.registerApp()
         self.logger.info("actor %s registered with depl" % ("is" if ok else "is not"))
+            
+        self.controls = { }
+        self.controlMap = { }
         for inst in self.components:
-            self.components[inst].setup()
+            comp = self.components[inst]
+            control = self.context.socket(zmq.PAIR)
+            control.bind('inproc://part_' + inst + '_control')
+            self.controls[inst] = control
+            self.controlMap[id(control)] = comp 
+            if isinstance(comp, Part):
+                self.components[inst].setup(control)
+            else:
+                self.components[inst].setup()
     
     def registerEndpoint(self,bundle):
         '''
@@ -357,15 +380,7 @@ class Actor(object):
         self.logger.info("starting")
         self.discoChannel = self.disco.channel              # Private channel to the discovery service
         self.deplChannel = self.deplc.channel
-        
-        self.controls = { }
-        self.controlMap = { }
-        for inst in self.components:
-            control = self.components[inst].getControl()
-            if control != None: 
-                self.controls[inst] = control
-                self.controlMap[id(control)] = self.components[inst]
-       
+           
         self.poller = zmq.Poller()                          # Set up the poller
         self.poller.register(self.deplChannel,zmq.POLLIN)
         self.poller.register(self.discoChannel,zmq.POLLIN)
@@ -389,7 +404,7 @@ class Actor(object):
                 for s in sockets:
                     if s in self.controls.values():
                         part = self.controlMap[id(s)]
-                        msg = s.recv_pyobj()
+                        msg = s.recv_pyobj()                # receive python object from component
                         self.handleEventReport(part,msg)    # Report event
                     toDelete += [s]
                 for s in toDelete:

@@ -21,6 +21,8 @@ from builtins import int, str
 import re
 import sys
 import os
+import importlib
+import traceback
 from .actor import Actor
 
 class Device(Actor):
@@ -97,10 +99,25 @@ class Device(Actor):
             instFormals = typeSpec['formals']
             instActuals = instSpec['actuals']
             instArgs = self.buildInstArgs(instName,instFormals,instActuals)
-            self.components[instName]= Part(self,typeSpec,instName, instType, instArgs)
+            # Check whether the component is C++ component
+            ccComponentFile = 'lib' + instType.lower() + '.so'
+            ccComp = os.path.isfile(ccComponentFile)
+            try:
+                if ccComp:
+                    modObj= importlib.import_module('lib'+instType.lower())
+                    self.components[instName] = modObj.create_component_py(self,self.model,
+                                                                           typeSpec,instName,
+                                                                           instType,instArgs,
+                                                                           self.appName,self.name)
+                else:
+                    self.components[instName]= Part(self,typeSpec,instName, instType, instArgs)
+            except Exception as e:
+                traceback.print_exc()
+                self.logger.error("Error while constructing part '%s.%s': %s" % (instType,instName,str(e)))
+                    
     
     def getPortMessageTypes(self,ports,key,kinds,res):
-        for name,spec in ports[key].items():
+        for _name,spec in ports[key].items():
             for kind in kinds:
                 typeName = spec[kind]
                 res.append({"type" : typeName})
@@ -251,8 +268,18 @@ class Device(Actor):
         self.deplc.start()
         ok = self.deplc.registerApp(isDevice=True)       
         self.logger.info("device %s registered with depl" % ("is" if ok else "is not"))
+        self.controls = { }
+        self.controlMap = { }
         for inst in self.components:
-            self.components[inst].setup()
+            comp = self.components[inst]
+            control = self.context.socket(zmq.PAIR)
+            control.bind('inproc://part_' + inst + '_control')
+            self.controls[inst] = control
+            self.controlMap[id(control)] = comp 
+            if isinstance(comp, Part):
+                self.components[inst].setup(control)
+            else:
+                self.components[inst].setup()
     
 #     def start(self):
 #         '''
