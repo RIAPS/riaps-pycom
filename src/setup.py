@@ -10,7 +10,7 @@ setup(name='riaps-pycom',
       packages=find_packages(),
       package_data = {
         # If any package contains *.txt or *.rst files, include them:
-        '': ['*.capnp']},      
+        '': ['*.capnp']},
       data_files=[('riaps/etc', ['riaps/etc/riaps.conf',  'riaps/etc/riaps-log.conf']),
                   ('riaps/lang',['riaps/lang/riaps.tx', 'riaps/lang/depl.tx']),
                   ('riaps/etc',['riaps/etc/redis.conf']),
@@ -21,11 +21,8 @@ setup(name='riaps-pycom',
         "scripts/riaps_actor", "scripts/riaps_ctrl", "scripts/riaps_deplo", "scripts/riaps_disco", "scripts/riaps_lang", "scripts/riaps_depll", "scripts/riaps_device", "scripts/riaps_gviz"
 
      ],
-     
-     # Please see the riaps-pycom/DEBIAN/<arch>/postinst file for the PIP package installations needed and RIAPS specific system file placements.  
+
+     # Please see the riaps-externals/DEBIAN/<arch>/postinst file for the PIP package installations needed and RIAPS specific system file placements.  
      # The <arch> is amd64 for the host VM and armhf for the beaglebones.
-     
+
       zip_safe=False)
-
- 
-
