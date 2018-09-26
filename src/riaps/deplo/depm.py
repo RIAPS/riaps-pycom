@@ -366,7 +366,7 @@ class DeploymentManager(threading.Thread):
          
         if not os.path.isdir(appFolder):
             raise BuildError('App folder is missing: %s' % appFolder)
-        
+    
         componentTypes = self.getComponentTypes(appName, actorName)
         if len(componentTypes) == 0:
             raise BuildError('Actor has no components: %s.%s.' % (appName,actorName))
@@ -422,7 +422,7 @@ class DeploymentManager(threading.Thread):
                 self.logger.error("Error while starting actor: %s -- %s" % (command,sys.exc_info()[0]))
                 raise
         try:
-            rc = proc.wait(1.0)
+            rc = proc.wait(const.depmStartTimeout)
         except:
             rc = None
         if rc != None:
@@ -483,10 +483,25 @@ class DeploymentManager(threading.Thread):
             
         return componentTypes
     
+    def terminateActor(self,proc,qualName):
+        '''
+        Terminate actor (runs in a background thread)
+        '''
+        proc.poll()
+        if proc.returncode == None:
+            self.logger.info("Terminating %s" % qualName)
+            try:          
+                proc.terminate()                    # Should check for errors
+                proc.wait(const.depmTermTimeout)    # Wait here
+                self.logger.info("Actor %s terminated" % qualName)
+            except psutil.TimeoutExpired:
+                self.logger.info("Actor %s did not terminate - killing it" % qualName)
+                proc.send_signal(signal.SIGKILL)
+                time.sleep(1.0)
+    
     def stopActor(self,appName,actorName):
         '''
-        Stop (terminate) the actor of an application.
-        Runs in a background thread.
+        Stop the actor of an application.
         '''
         qualName = str(appName) + "." + str(actorName)
         proc = None
@@ -495,7 +510,7 @@ class DeploymentManager(threading.Thread):
             proc = self.launchMap[qualName]
             del self.launchMap[qualName]
         if proc != None:
-            self.logger.info("Halting actor %s" % qualName)
+            self.logger.info("Stopping actor %s" % qualName)
             self.resm.stopActor(appName, actorName, proc)
             self.fm.stopActor(appName, actorName, proc)
             assert qualName in self.actors
@@ -510,17 +525,9 @@ class DeploymentManager(threading.Thread):
             # monitor.close()                
             del self.actors[qualName]
             self.procm.release(qualName)
-            proc.poll()
-            if proc.returncode == None:
-                try:          
-                    proc.terminate()    # Should check for errors
-                    proc.wait()         # Wait here
-                except psutil.TimeoutExpired:
-                    self.logger.info("Actor %s did not terminate - killing it" % qualName)
-                    proc.send_signal(signal.SIGKILL)
-                    time.sleep(1.0)
             self.appDbase.delAppActor(appName, actorName)
-        self.logger.info("Halted %s" % qualName)
+            self.executor.submit(self.terminateActor,proc,qualName)
+        self.logger.info("Stopped %s" % qualName)
 
     def haltActor(self,msg):
         '''
@@ -529,8 +536,7 @@ class DeploymentManager(threading.Thread):
         assert type(msg) == tuple and len(msg) == 2
         appName,actorName = msg 
         try:
-            # self.stopActor(appName, typeName)
-            self.executor.submit(self.stopActor,appName,actorName)
+            self.stopActor(appName,actorName)
         except BuildError as buildError:
             self.logger.error(str(buildError.args[1]))
     
@@ -618,8 +624,8 @@ class DeploymentManager(threading.Thread):
             self.logger.error("Error in handleCommand '%s': %s %s" % (cmd, info[0], info[1]))
             traceback.print_exc()
     
-    def kill(self,pid):
-        self.logger.info("terminating [%d]" % pid)
+    def kill(self,what,pid):
+        self.logger.info("killing %s [%d]" % (what,pid))
         try:
             os.kill(pid, signal.SIGTERM)
         except OSError as err:
@@ -655,7 +661,7 @@ class DeploymentManager(threading.Thread):
             for info in infoList:
                 if cmdline == info['cmdline']:
                     self.logger.info("stopping orphan disco [%d] '%s'" % (pid,' '.join(cmdline)))
-                    self.kill(pid)
+                    self.kill('orphan disco',pid)
                     self.appDbase.delDiscoCommand()
                     
         
@@ -667,7 +673,7 @@ class DeploymentManager(threading.Thread):
         for info in infoList:
             if cmdline == info['cmdline']:
                 self.logger.info("stopping orphan actor [%d] '%s'" % (pid,' '.join(cmdline)))
-                self.kill(pid)
+                self.kill('orphan actor',pid)
         self.appDbase.delAppActor(appName, actorName)
                 
     def unregisterOrphanActor(self,record):
@@ -813,7 +819,7 @@ class DeploymentManager(threading.Thread):
             traceback.print_exc()
 
 
-    def setupClient(self,appName,appVersion,appActorName):
+    def setupClient(self,appName,_appVersion,appActorName):
         '''
         Set up a new client of the deplo manager. The client actors are to register with
         the manager using the 'server' (REQ/REP) socket. The manager will then create a dedicated
@@ -962,12 +968,10 @@ class DeploymentManager(threading.Thread):
                 self.launchRefs[key] += 1 
                 return
         
-        riaps_py_prog = 'riaps_device'      # Python executor
-        riaps_cc_prog = 'start_device'      # C++ executor
+        # Starter 
+        riaps_prog = 'riaps_device'      #
         
-        riaps_prog = riaps_py_prog          # Use Python starter first
         riaps_mod = self.riaps_device_file  # Module file name for script 
-        isPython = True
         
         appFolder = join(self.riapsApps,appName)
         appModelPath = join(appFolder,appModel)
@@ -981,11 +985,9 @@ class DeploymentManager(threading.Thread):
         if os.path.isfile(pyFilePath):
             pass                # Use the Python implementation
         else:                   # Find C++ implementation
-            isPython = False
             ccFilePath = join(appFolder, 'lib' + componentType.lower() + '.so')
             if not os.path.isfile(ccFilePath):
                 raise BuildError('Implementation of component %s is missing' % componentType)
-            riaps_prog = riaps_cc_prog
         
         self.resm.addActor(appName, actorName, self.getActorModel(appName, actorName))
         self.fm.addActor(appName, actorName, self.getActorModel(appName, actorName))
@@ -1000,21 +1002,24 @@ class DeploymentManager(threading.Thread):
         command = [riaps_prog,riaps_arg1,riaps_arg2,riaps_arg3]
         for arg in actorArgs:
             command.append(arg)
+        if Config.APP_LOGS == 'log':
+            logFileName = os.path.join(self.riapsApps,appName,actorName + '.log')
+            logFile = open(logFileName ,"ab")
+        else:
+            logFile = None
         self.logger.info("Launching %s " % str(command))
-                
         try:
             proc = subprocess.Popen(command,cwd=appFolder,env=dev_env)
         except FileNotFoundError:
             try:
-                if isPython: 
-                    command = ['python3',riaps_mod] + command[1:]
-                else:
-                    command = [riaps_prog] + command[1:]
-                proc = subprocess.Popen(command,cwd=appFolder,env=dev_env)
+                command = ['python3',riaps_mod] + command[1:]
+                proc = subprocess.Popen(command,
+                                        cwd=appFolder,env=dev_env,
+                                        stdout=logFile, stderr=subprocess.STDOUT)
             except:
                 raise BuildError("Error while starting device: %s" % sys.exc_info()[1])
         try:
-            rc = proc.wait(1.0)
+            rc = proc.wait(const.depmStartTimeout)
         except:
             rc = None
         if rc != None:
@@ -1062,7 +1067,8 @@ class DeploymentManager(threading.Thread):
             if running:
                 try: 
                     proc.terminate()            # Should check for errors
-                    proc.wait(None)             # 
+                    proc.wait(const.depmTermTimeout)   
+                    self.logger.info("Device %s terminated" % qualName) # 
                 except psutil.TimeoutExpired:
                     self.logger.info("Device %s did not stop - killing it" % qualName)
                     proc.send_signal(signal.SIGKILL)
@@ -1156,7 +1162,7 @@ class DeploymentManager(threading.Thread):
         self.logger.info("handleReportEvent: done")
     
     def stop(self):
-        self.logger.info("terminating")
+        self.logger.info("stopping")
         # Clean up everything
         # Logout from service
         # Kill actors
@@ -1166,7 +1172,8 @@ class DeploymentManager(threading.Thread):
             toHalt += [(appName,actorName)]
         for h in toHalt:
             self.haltActor(h)
-        time.sleep(1.0) # Allow actors terminate cleanly
+        # time.sleep(3.0) # Allow actors terminate cleanly
+        self.executor.shutdown()    # Ensure all actors have terminated 
         # Cleanup resm 
         self.resm.cleanupApps()
         # Cleanup fm
@@ -1177,7 +1184,7 @@ class DeploymentManager(threading.Thread):
             self.disco.terminate()
             self.disco = None
         self.appDbase.closeDbase()
-        self.logger.info("terminated")
+        self.logger.info("stopped")
         
 
     def reinstate(self):

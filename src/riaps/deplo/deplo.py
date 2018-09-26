@@ -50,6 +50,7 @@ class DeploService(object):
         # self.context = zmq.Context() - Use czmq's context (see fm / zyre socket)
         czmq_ctx = Zsys.init()
         self.context = zmq.Context.shadow(czmq_ctx.value)
+        Zsys.handler_reset()            # Reset previous signal 
         self.setupIfaces()
         self.suffix = self.macAddress
         singleton('riaps_deplo',self.suffix)
@@ -188,9 +189,9 @@ class DeploService(object):
     def terminate(self):
         self.logger.info("terminating")
         self.resm.terminate()   # Terminate resource manager
-        self.fm.terminate()     # Terminate fault manager
         self.depm.terminate()   # Terminate deployment manager
         self.depm.join() 
+        self.fm.terminate()     # Terminate fault manager
         # self.context.destroy()
         time.sleep(0.1)
         self.logger.info("terminated")

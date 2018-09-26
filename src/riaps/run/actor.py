@@ -22,6 +22,7 @@ import re
 import os
 import ipaddress
 import importlib
+from czmq import Zsys
 
 class Actor(object):
     '''The actor class implements all the management and control functions over its components
@@ -58,8 +59,10 @@ class Actor(object):
         self.INT_RE = re.compile(r"^[-]?\d+$")
         self.parseParams(sysArgv)
         
-        self.context = zmq.Context()
-        
+        # self.context = zmq.Context() - Use czmq's context
+        czmq_ctx = Zsys.init()
+        self.context = zmq.Context.shadow(czmq_ctx.value)
+        Zsys.handler_reset()                                # Reset previous signal handler
         messages = gModel["messages"]                       # Global message types (global on the network)
         self.messageNames = []
         for messageSpec in messages:

@@ -24,6 +24,7 @@ import os
 import importlib
 import traceback
 from .actor import Actor
+from czmq import Zsys
 
 class Device(Actor):
     '''
@@ -68,9 +69,12 @@ class Device(Actor):
         self.INT_RE = re.compile(r"^[-]?\d+$")
         self.parseParams(sysArgv)
         
-        self.context = zmq.Context()
+        # self.context = zmq.Context() - Use czmq's context
+        czmq_ctx = Zsys.init()
+        self.context = zmq.Context.shadow(czmq_ctx.value)
+        Zsys.handler_reset()            # Reset previous signal 
         
-        messages = gModel["messages"]                       # Global message types (global on the network)
+        messages = gModel["messages"]              # Global message types (global on the network)
         self.messageNames = []
         for messageSpec in messages:
             self.messageNames.append(messageSpec["name"])
