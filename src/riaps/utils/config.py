@@ -26,6 +26,7 @@ class Config(object):
     DISCO_DEBUG_SERVER = ''
     ACTOR_DEBUG_SERVER = ''
     DEVICE_DEBUG_SERVER = ''
+    APP_LOGS = ''
     
     def __init__(self):
         '''

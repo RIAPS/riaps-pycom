@@ -11,7 +11,6 @@ import time
 import logging
 import traceback
 from .exc import BuildError
-from email.errors import MultipartInvariantViolationDefect
 
 class ComponentThread(threading.Thread):
     '''
@@ -306,7 +305,7 @@ class Component(object):
     
     def handleDeadline(self,_funcName):
         '''
-        Default handler for deadline MultipartInvariantViolationDefect
+        Default handler for deadline violation
         '''
         pass
     

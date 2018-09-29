@@ -14,8 +14,8 @@ import signal
 import subprocess
 import psutil
 import threading
-from threading import RLock
 import logging
+import random
 from riaps.run.exc import *
 from riaps.utils.sudo import riaps_sudo,is_su
 from riaps.utils.config import Config
@@ -74,7 +74,6 @@ class ActorResourceManager(object):
         self.started = False
     
     def setupCPU(self):
-
         if 'cpu' not in self.settings: return False
         self.cpuSettings = self.settings['cpu']
         try:
@@ -233,11 +232,13 @@ class ActorResourceManager(object):
                 self.memMonitor.restart()
             else:
                 self.memMonitor.start()
+        appName = self.parent.appName
+        actName = self.actorName
         if self.hasSpace:
-            self.parent.spcMonitor.addProc(proc)
+            self.parent.spcMonitor.addProc(appName,actName,proc)
         if self.hasNet:
             self.netController.tasks = proc.pid
-            self.parent.netMonitor.addProc(proc)
+            self.parent.netMonitor.addProc(appName,actName,proc)
         self.proc = proc
         self.started = True
 
@@ -253,11 +254,13 @@ class ActorResourceManager(object):
                     pass # 
         if self.hasMem:
             self.memMonitor.stop()
+        appName = self.parent.appName
+        actName = self.actorName
         if self.hasSpace:
-            self.parent.spcMonitor.delProc(proc)
+            self.parent.spcMonitor.delProc(appName,actName,proc)
         if self.hasNet or self.hasRate:
             # self.netController.tasks = remove proc.pid
-            self.parent.netMonitor.delProc(proc) 
+            self.parent.netMonitor.delProc(appName,actName,proc) 
         self.started = False
     
     def cleanupActor(self):
@@ -335,16 +338,23 @@ class AppResourceManager(object):
             memNode = self.parent.cgroupTree.get_node_by_path(memPath)
             self.memCGroup = memNode if (memNode != None) else self.parent.riapsMem.create_cgroup(self.appName)
         # Set up the data space for the app
+        self.uid = -1
         try:
-            _res = riaps_sudo('adduser --disabled-login --gecos GECOS --no-create-home %s' % self.userName)
-            self.uid = getpwnam(self.userName).pw_uid
-            _res = riaps_sudo('chown -R %s:%s %s' % (self.userName,self.userName,self.appFolder))
-            _res = riaps_sudo('chmod o-rwx %s' % self.appFolder)
+            self.uid = getpwnam(self.userName).pw_uid   # Known uid
         except:
-            # traceback.print_exc()
-            self.logger.warning('creating app user %s failed' % (self.userName))
-            self.userName = Config.TARGET_USER          # Default user
-            self.uid = os.getuid()
+            pass
+        if self.uid == -1:                              # Unknown uid
+            try:
+                time.sleep(random.random())             # Hack to avoid sim. adduser-s
+                _res = riaps_sudo('adduser --disabled-login --gecos GECOS --no-create-home %s' % self.userName)
+                self.uid = getpwnam(self.userName).pw_uid
+            except:
+                # traceback.print_exc()
+                self.logger.warning('creating app user %s failed' % (self.userName))
+                self.userName = Config.TARGET_USER          # Default user
+                self.uid = os.getuid()
+        _res = riaps_sudo('chown -R %s:%s %s' % (self.userName,self.userName,self.appFolder))
+        _res = riaps_sudo('chmod o-rwx %s' % self.appFolder)
         self.spcUsage = 0
         self.spcMonitor = self.parent.spcMonitor
         # Set up the net limits for the app
@@ -380,18 +390,19 @@ class AppResourceManager(object):
     
     def addQuota(self,usage):
         self.spcUsage += usage
-        if self.spcUsage != 0:
-            # Assume here that the spcUsage value is in 1024 byte blocks
-            try:
-                softblock = int(0.9 * self.spcUsage)
-                hardblock = self.spcUsage
-                softinode = 100000
-                hardinode = 100000
-                command = 'setquota -u %s %d %d %d %d /' % (self.userName,softblock,hardblock,softinode,hardinode)
-                self.logger.info('exec: %s' % command)
-                _res = riaps_sudo(command)
-            except:
-                self.logger.warning('setting quota failed')
+        if self.userName != Config.TARGET_USER:             # Don't set quotas for the default user
+            if self.spcUsage != 0:
+                # Assume here that the spcUsage value is in 1024 byte blocks
+                try:
+                    softblock = int(0.9 * self.spcUsage)
+                    hardblock = self.spcUsage
+                    softinode = 100000
+                    hardinode = 100000
+                    command = 'setquota -u %s %d %d %d %d /' % (self.userName,softblock,hardblock,softinode,hardinode)
+                    self.logger.info('exec: %s' % command)
+                    _res = riaps_sudo(command)
+                except:
+                    self.logger.warning('setting quota failed')
         
     def addActor(self,actorName,actorDef):
         if actorName in self.actors:
@@ -462,7 +473,9 @@ class AppResourceManager(object):
         except:
             pass
         try:
-            _res = riaps_sudo('deluser %s' % self.userName)
+            if self.userName != Config.TARGET_USER:
+                _res = riaps_sudo('deluser %s' % self.userName)
+                _res = riaps_sudo('delgroup %s' % self.userName)
             riaps_user = Config.TARGET_USER
             _res = riaps_sudo('chown -R %s:%s %s' % (riaps_user,riaps_user,self.appFolder))
         except:

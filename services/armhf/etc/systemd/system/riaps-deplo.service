@@ -12,7 +12,7 @@ SyslogLevel=info
 ExecStart=/usr/local/bin/riaps_deplo
 Restart=always
 KillMode=process
-KillSignal=SIGKILL
+KillSignal=SIGTERM
 
 [Install]
 WantedBy=multi-user.target

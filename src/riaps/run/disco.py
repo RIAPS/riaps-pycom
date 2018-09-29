@@ -206,7 +206,6 @@ class DiscoClient(object):
         if self.socket == None:
             self.logger.info("No disco service - skipping termination")
             return
-        req = disco_capnp.DiscoReq.new_message()
         reqt = disco_capnp.DiscoReq.new_message()
         appMessage = reqt.init('actorUnreg')
         appMessage.appName = self.appName
@@ -240,8 +239,11 @@ class DiscoClient(object):
             status = respMessage.status
             port = respMessage.port
             if status == 'ok':
-                self.logger.info("disconnecting 127.0.0.1: %s" % str(port))
-                self.channel.disconnect("tcp://127.0.0.1:" + str(port))
+                self.logger.info("disconnecting 127.0.0.1:%s" % str(port))
+                try:
+                    self.channel.disconnect("tcp://127.0.0.1:" + str(port))
+                except:
+                    pass
             else:
                 raise SetupError("Error response from disco service at app unregistration")
         else:

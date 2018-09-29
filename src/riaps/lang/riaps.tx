@@ -10,7 +10,7 @@ RIAPSModel:
 // Application 
 App:
  'app' name=ID '{'
-     messages+=Message
+     messages*=Message
      libraries*=Library
      components+=Component
      actors+=Actor

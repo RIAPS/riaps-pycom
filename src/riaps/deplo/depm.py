@@ -41,8 +41,9 @@ from riaps.proto import deplo_capnp
 from riaps.proto import disco_capnp
 from riaps.run.exc import BuildError
 from riaps.deplo.resm import ResourceManager
-from riaps.deplo.appdb import AppDbase
 from riaps.deplo.procm import ProcessManager
+from riaps.deplo.appdb import AppDbase
+from riaps.utils.names import *
 
 # Record of the app
 DeploAppRecord = namedtuple('DeploAppRecord', 'model hash file')
@@ -56,8 +57,7 @@ DeviceActorRecord = namedtuple('DeviceActorRecord', 'app model actor args device
 DeploActorCommand = namedtuple('DeploActorCommand', 'app model actor args cmd pid')
 # Record of the disco command
 DeploDiscoCommand = namedtuple('DeploDiscoCommand', 'cmd pid')
-           
-            
+
 class DeploymentManager(threading.Thread):
     '''
     Deployment manager service main class, implemented as a thread 
@@ -202,6 +202,7 @@ class DeploymentManager(threading.Thread):
                 os.setuid(user_uid)
         return result
     
+
     def connectDisco(self):        
         self.discoCommand = self.context.socket(zmq.REQ)           # Socket to command disco
         self.discoCommand.setsockopt(zmq.RCVTIMEO,const.discoEndpointRecvTimeout)
@@ -357,37 +358,26 @@ class DeploymentManager(threading.Thread):
         assert type(msg) == tuple and len(msg) == 4
         appName,appModel,actorName,actorArgs = msg
                 
-        # Python / C++ starters
-        riaps_py_prog = 'riaps_actor'
-        riaps_cc_prog = 'start_actor'
+        # Starter
+        riaps_prog = 'riaps_actor'
 
         appFolder = join(self.riapsApps, appName)
         appModelPath = join(appFolder, appModel)
          
         if not os.path.isdir(appFolder):
             raise BuildError('App folder is missing: %s' % appFolder)
-
-        # Use Python starter by default
-        riaps_prog = riaps_py_prog
-        isPython = True
-
+    
         componentTypes = self.getComponentTypes(appName, actorName)
         if len(componentTypes) == 0:
             raise BuildError('Actor has no components: %s.%s.' % (appName,actorName))
         for componentType in componentTypes:
             # Look up the Python version first
             pyFilePath = join(appFolder, componentType + '.py')
-            if not os.path.isfile(pyFilePath):
-                isPython = False
-        # Mixed mode actors (C++/Python) are not supported. 
-        # Better solution: run C++ binaries inside the Python framework
-        if not isPython:
-            for componentType in componentTypes:
-                # Look up the python version
-                ccFilePath = join(appFolder, 'lib' + componentType.lower() + '.so')
-                if not os.path.isfile(ccFilePath):
-                    raise BuildError('Implementation of component %s is missing' % componentType)
-            riaps_prog = riaps_cc_prog
+            if os.path.isfile(pyFilePath): continue
+            # Look up the C++version 
+            ccFilePath = join(appFolder, 'lib' + componentType.lower() + '.so')
+            if not os.path.isfile(ccFilePath):
+                raise BuildError('Implementation of component %s is missing' % componentType)
 
         self.resm.addActor(appName, actorName, self.getActorModel(appName, actorName))
         self.fm.addActor(appName, actorName, self.getActorModel(appName, actorName))
@@ -407,25 +397,32 @@ class DeploymentManager(threading.Thread):
         command = [riaps_prog,riaps_arg1,riaps_arg2,riaps_arg3]
         for arg in actorArgs:
             command.append(arg)
+        if Config.APP_LOGS == 'log':
+            logFileName = os.path.join(self.riapsApps,appName,actorName + '.log')
+            logFile = open(logFileName ,"ab")
+        else:
+            logFile = None
         self.logger.info("Launching %s " % str(command))
         try:
             proc = psutil.Popen(command,
                                 preexec_fn=self.demote(user_uid, user_gid,self.is_su), 
-                                cwd=user_cwd, env=user_env)
+                                cwd=user_cwd, env=user_env, 
+                                stdout=logFile, stderr=subprocess.STDOUT)
         except (FileNotFoundError,PermissionError):
             try:
-                if isPython:
-                    command = ['python3',riaps_mod] + command[1:]
-                else:
-                    command = [riaps_prog] + command[1:]
+                # if isPython:
+                command = ['python3',riaps_mod] + command[1:]
+                # else:
+                #    command = [riaps_prog] + command[1:]
                 proc = psutil.Popen(command,
                                     preexec_fn=self.demote(user_uid, user_gid,self.is_su), 
-                                    cwd=user_cwd, env=user_env)
+                                    cwd=user_cwd, env=user_env,
+                                    stdout=logFile, stderr=subprocess.STDOUT)
             except:
                 self.logger.error("Error while starting actor: %s -- %s" % (command,sys.exc_info()[0]))
                 raise
         try:
-            rc = proc.wait(1.0)
+            rc = proc.wait(const.depmStartTimeout)
         except:
             rc = None
         if rc != None:
@@ -486,10 +483,25 @@ class DeploymentManager(threading.Thread):
             
         return componentTypes
     
+    def terminateActor(self,proc,qualName):
+        '''
+        Terminate actor (runs in a background thread)
+        '''
+        proc.poll()
+        if proc.returncode == None:
+            self.logger.info("Terminating %s" % qualName)
+            try:          
+                proc.terminate()                    # Should check for errors
+                proc.wait(const.depmTermTimeout)    # Wait here
+                self.logger.info("Actor %s terminated" % qualName)
+            except psutil.TimeoutExpired:
+                self.logger.info("Actor %s did not terminate - killing it" % qualName)
+                proc.send_signal(signal.SIGKILL)
+                time.sleep(1.0)
+    
     def stopActor(self,appName,actorName):
         '''
-        Stop (terminate) the actor of an application.
-        Runs in a background thread.
+        Stop the actor of an application.
         '''
         qualName = str(appName) + "." + str(actorName)
         proc = None
@@ -498,28 +510,24 @@ class DeploymentManager(threading.Thread):
             proc = self.launchMap[qualName]
             del self.launchMap[qualName]
         if proc != None:
-            self.logger.info("Halting actor %s" % qualName)
+            self.logger.info("Stopping actor %s" % qualName)
             self.resm.stopActor(appName, actorName, proc)
             self.fm.stopActor(appName, actorName, proc)
             assert qualName in self.actors
             record = self.actors[qualName]
             device = record.device
-            control = record.control
-            monitor = record.monitor
+            _control = record.control
+            _monitor = record.monitor
             # TODO: Stop the zmqdevice, disconnect/destroy sockets
+            device._context.term()          # Terminate context for zmqDevice
+            device.join()
+            # control.close()                # TODO remove sockets from poller
+            # monitor.close()                
             del self.actors[qualName]
             self.procm.release(qualName)
-            proc.poll()
-            if proc.returncode == None:
-                try:          
-                    proc.terminate()    # Should check for errors
-                    proc.wait()         # Wait here
-                except psutil.TimeoutExpired:
-                    self.logger.info("Actor %s did not terminate - killing it" % qualName)
-                    proc.send_signal(signal.SIGKILL)
-                    time.sleep(1.0)
             self.appDbase.delAppActor(appName, actorName)
-        self.logger.info("Halted %s" % qualName)
+            self.executor.submit(self.terminateActor,proc,qualName)
+        self.logger.info("Stopped %s" % qualName)
 
     def haltActor(self,msg):
         '''
@@ -528,8 +536,7 @@ class DeploymentManager(threading.Thread):
         assert type(msg) == tuple and len(msg) == 2
         appName,actorName = msg 
         try:
-            # self.stopActor(appName, typeName)
-            self.executor.submit(self.stopActor,appName,actorName)
+            self.stopActor(appName,actorName)
         except BuildError as buildError:
             self.logger.error(str(buildError.args[1]))
     
@@ -617,8 +624,8 @@ class DeploymentManager(threading.Thread):
             self.logger.error("Error in handleCommand '%s': %s %s" % (cmd, info[0], info[1]))
             traceback.print_exc()
     
-    def kill(self,pid):
-        self.logger.info("terminating [%d]" % pid)
+    def kill(self,what,pid):
+        self.logger.info("killing %s [%d]" % (what,pid))
         try:
             os.kill(pid, signal.SIGTERM)
         except OSError as err:
@@ -654,48 +661,58 @@ class DeploymentManager(threading.Thread):
             for info in infoList:
                 if cmdline == info['cmdline']:
                     self.logger.info("stopping orphan disco [%d] '%s'" % (pid,' '.join(cmdline)))
-                    self.kill(pid)
+                    self.kill('orphan disco',pid)
                     self.appDbase.delDiscoCommand()
                     
         
     def stopOrphanActor(self,record):
         cmdline = record.cmd
-        pid = record.pid 
+        pid,appName,actorName = record.pid, record.app, record.actor
         infoList = [p.info for p in psutil.process_iter(attrs=['pid','cmdline'])
                     if pid == p.info['pid']]
         for info in infoList:
             if cmdline == info['cmdline']:
                 self.logger.info("stopping orphan actor [%d] '%s'" % (pid,' '.join(cmdline)))
-                appName,actorName = record.app, record.actor
-                self.kill(pid)
-                # self.unRegisterActor(appName,actorName,pid)
-                self.appDbase.delAppActor(appName, actorName)
+                self.kill('orphan actor',pid)
+        self.appDbase.delAppActor(appName, actorName)
                 
-    
+    def unregisterOrphanActor(self,record):
+        pid,appName,actorName = record.pid, record.app, record.actor
+        self.unRegisterActor(appName,actorName,pid)
+        
     def recover(self):
         disco = self.appDbase.getDisco()
         apps = self.appDbase.getApps()
         cmds = { } 
-        for app in apps:
+        recs = [ ]
+        for app in apps:                            # Stop orphan actors 
             acts = self.appDbase.getAppActors(app)
             cmds[app] = acts
             for act in acts:
                 self.stopOrphanActor(act)
-        if disco != None:
+                recs += [act]
+        if disco != None:                           # Recover discovery
             self.stopOrphanDisco()
             self.logger.info("recover: disco = %s" % str(disco))
             self.setupDisco(disco)
+        for act in recs:                            # Unregister orphan actors from disco
+            self.unregisterOrphanActor(act)
         for app in apps:
             appSet = False
             self.logger.info("recover: app = %s" % str(app))
             acts = cmds[app]
             for act in acts:
-                if not appSet:
-                    self.setupApp((act.app,act.model))
-                    appSet = True
-                self.logger.info("recover: actor = %s.%s" % (str(act.app),str(act.actor)))
-                self.startActor((act.app,act.model,act.actor,act.args))
-    
+                appName = str(act.app)
+                actName = str(act.actor)
+                try:
+                    if not appSet:
+                        self.setupApp((act.app,act.model))
+                        appSet = True
+                    self.logger.info("recover: actor = %s.%s" % (appName,actName))
+                    self.startActor((act.app,act.model,act.actor,act.args))
+                except:
+                    self.logger.error("recovery failed: actor = %s.%s" % (appName,actName))
+                    self.appDbase.delAppActor(appName,actName)
     
     def pollMonitor(self,appName,actorName,sock):
         if self.poller != None:
@@ -802,7 +819,7 @@ class DeploymentManager(threading.Thread):
             traceback.print_exc()
 
 
-    def setupClient(self,appName,appVersion,appActorName):
+    def setupClient(self,appName,_appVersion,appActorName):
         '''
         Set up a new client of the deplo manager. The client actors are to register with
         the manager using the 'server' (REQ/REP) socket. The manager will then create a dedicated
@@ -861,9 +878,12 @@ class DeploymentManager(threading.Thread):
             return
         
         clientPort = self.setupClient(appName,appVersion,appActorName)
+        clientPID  = self.launchMap[qualName].pid
         
         zmqDevice = devices.ThreadProxy(zmq.DEALER,zmq.PAIR,zmq.PUB)
-        zmqDevice.setsockopt_in(zmq.IDENTITY, str(qualName).encode(encoding='utf_8'))
+        identity = actorIdentity(appName, appActorName, clientPID)
+        self.logger.info("zmqDevice ID = %s" % identity)
+        zmqDevice.setsockopt_in(zmq.IDENTITY, identity.encode(encoding='utf_8'))
         # device.setsockopt_in(zmq.RCVTIMEO,const.deplEndpointRecvTimeout)
         # device.setsockopt_out(zmq.SNDTIMEO,const.deplEndpointSendTimeout)
         zmqDevice.bind_out('tcp://127.0.0.1:%i' % clientPort)      # 
@@ -916,24 +936,27 @@ class DeploymentManager(threading.Thread):
         '''
         Process delayed messages from peer message queue
         '''
-        record = self.actors[qualName]
-        control = record.control
-        assert control != None
-        msgs = self.peerQueue[qualName]
-        for msg in msgs:
-            cmd,appName,actorName,peer = msg
-            assert cmd in ('peer+','peer-')
-            key = str(appName) + "." + str(actorName)
-            assert key == qualName
-            msg = deplo_capnp.DeplCmd.new_message()
-            msgMessage = msg.init('peerInfoMsg')
-            msgMessage.peerState = 'on' if cmd == 'peer+' else 'off'
-            msgMessage.uuid = peer.decode()
-            msgBytes = msg.to_bytes()
-            payload = zmq.Frame(msgBytes)
-            identity = str(qualName).encode(encoding='utf-8')
-            control.send_multipart([identity,payload])
-        self.peerQueue[qualName] = []
+        with self.mapLock:
+            record = self.actors[qualName]
+            control = record.control
+            assert control != None
+            msgs = self.peerQueue[qualName]
+            for msg in msgs:
+                cmd,appName,actorName,peer = msg
+                assert cmd in ('peer+','peer-')
+                key = str(appName) + "." + str(actorName)
+                assert key == qualName
+                msg = deplo_capnp.DeplCmd.new_message()
+                msgMessage = msg.init('peerInfoMsg')
+                msgMessage.peerState = 'on' if cmd == 'peer+' else 'off'
+                msgMessage.uuid = peer.decode()
+                msgBytes = msg.to_bytes()
+                payload = zmq.Frame(msgBytes)
+                pid = self.launchMap[qualName].pid
+                identity = actorIdentity(appName, actorName, pid)
+                header = identity.encode(encoding='utf-8')
+                control.send_multipart([header,payload])
+            self.peerQueue[qualName] = []
         
     def startDevice(self,appName,appModel,actorName,actorArgs):
         '''
@@ -945,12 +968,10 @@ class DeploymentManager(threading.Thread):
                 self.launchRefs[key] += 1 
                 return
         
-        riaps_py_prog = 'riaps_device'      # Python executor
-        riaps_cc_prog = 'start_device'      # C++ executor
+        # Starter 
+        riaps_prog = 'riaps_device'      #
         
-        riaps_prog = riaps_py_prog          # Use Python starter first
         riaps_mod = self.riaps_device_file  # Module file name for script 
-        isPython = True
         
         appFolder = join(self.riapsApps,appName)
         appModelPath = join(appFolder,appModel)
@@ -964,11 +985,9 @@ class DeploymentManager(threading.Thread):
         if os.path.isfile(pyFilePath):
             pass                # Use the Python implementation
         else:                   # Find C++ implementation
-            isPython = False
             ccFilePath = join(appFolder, 'lib' + componentType.lower() + '.so')
             if not os.path.isfile(ccFilePath):
                 raise BuildError('Implementation of component %s is missing' % componentType)
-            riaps_prog = riaps_cc_prog
         
         self.resm.addActor(appName, actorName, self.getActorModel(appName, actorName))
         self.fm.addActor(appName, actorName, self.getActorModel(appName, actorName))
@@ -983,21 +1002,24 @@ class DeploymentManager(threading.Thread):
         command = [riaps_prog,riaps_arg1,riaps_arg2,riaps_arg3]
         for arg in actorArgs:
             command.append(arg)
+        if Config.APP_LOGS == 'log':
+            logFileName = os.path.join(self.riapsApps,appName,actorName + '.log')
+            logFile = open(logFileName ,"ab")
+        else:
+            logFile = None
         self.logger.info("Launching %s " % str(command))
-                
         try:
             proc = subprocess.Popen(command,cwd=appFolder,env=dev_env)
         except FileNotFoundError:
             try:
-                if isPython: 
-                    command = ['python3',riaps_mod] + command[1:]
-                else:
-                    command = [riaps_prog] + command[1:]
-                proc = subprocess.Popen(command,cwd=appFolder,env=dev_env)
+                command = ['python3',riaps_mod] + command[1:]
+                proc = subprocess.Popen(command,
+                                        cwd=appFolder,env=dev_env,
+                                        stdout=logFile, stderr=subprocess.STDOUT)
             except:
                 raise BuildError("Error while starting device: %s" % sys.exc_info()[1])
         try:
-            rc = proc.wait(1.0)
+            rc = proc.wait(const.depmStartTimeout)
         except:
             rc = None
         if rc != None:
@@ -1041,12 +1063,12 @@ class DeploymentManager(threading.Thread):
             self.logger.info("Stopping device %s" % qualName)
             assert qualName in self.devices
             # Remove device from device map
-            
             self.procm.release(qualName)
             if running:
                 try: 
                     proc.terminate()            # Should check for errors
-                    proc.wait(None)             # 
+                    proc.wait(const.depmTermTimeout)   
+                    self.logger.info("Device %s terminated" % qualName) # 
                 except psutil.TimeoutExpired:
                     self.logger.info("Device %s did not stop - killing it" % qualName)
                     proc.send_signal(signal.SIGKILL)
@@ -1140,7 +1162,7 @@ class DeploymentManager(threading.Thread):
         self.logger.info("handleReportEvent: done")
     
     def stop(self):
-        self.logger.info("terminating")
+        self.logger.info("stopping")
         # Clean up everything
         # Logout from service
         # Kill actors
@@ -1150,7 +1172,8 @@ class DeploymentManager(threading.Thread):
             toHalt += [(appName,actorName)]
         for h in toHalt:
             self.haltActor(h)
-        time.sleep(1.0) # Allow actors terminate cleanly
+        # time.sleep(3.0) # Allow actors terminate cleanly
+        self.executor.shutdown()    # Ensure all actors have terminated 
         # Cleanup resm 
         self.resm.cleanupApps()
         # Cleanup fm
@@ -1161,31 +1184,32 @@ class DeploymentManager(threading.Thread):
             self.disco.terminate()
             self.disco = None
         self.appDbase.closeDbase()
-        self.logger.info("terminated")
+        self.logger.info("stopped")
         
 
     def reinstate(self):
         '''
         Ask actors to reinstate their connections to deplo
         '''
-        for actorName in self.actors:
-            proc = self.launchMap[actorName]
+        for qualName,proc in self.launchMap.items():
             proc.poll()
             if proc.returncode == None:
-                if actorName in self.actors:
-                    record = self.actors[actorName]
-                elif actorName in self.devices:
-                    record = self.devices
+                if qualName in self.actors:
+                    record = self.actors[qualName]
+                elif qualName in self.devices:
+                    record = self.devices[qualName]
                 control = record.control
+                appName, actName = record.app, record.actor
                 if control != None: 
                     msg = deplo_capnp.DeplCmd.new_message()
                     msgMessage = msg.init('reinstateCmd')
                     msgMessage.msg = 'doit'
                     msgBytes = msg.to_bytes()
                     payload = zmq.Frame(msgBytes)
-                    identity = str(actorName).encode(encoding='utf-8')
-                    control.send_multipart([identity,payload])
-                    self.logger.info('reinstate cmd to %s' % actorName)
+                    identity = actorIdentity(appName,actName,proc.pid)
+                    header = identity.encode(encoding='utf-8')
+                    control.send_multipart([header,payload])
+                    self.logger.info('reinstate req to %s' % qualName)
                 else:
                     # TODO queue up reinstate command for later send
                     pass
@@ -1236,20 +1260,24 @@ class DeploymentManager(threading.Thread):
         cmd,appName,actorName,peer = msg
         assert cmd in ('peer+','peer-')
         qualName = str(appName) + "." + str(actorName)
-        if qualName in self.actors:
-            record = self.actors[qualName]
-            control = record.control
-            if control != None:
-                msg = deplo_capnp.DeplCmd.new_message()
-                msgMessage = msg.init('peerInfoMsg')
-                msgMessage.peerState = 'on' if cmd == 'peer+' else 'off'
-                msgMessage.uuid = peer.decode()
-                msgBytes = msg.to_bytes()
-                payload = zmq.Frame(msgBytes)
-                identity = str(qualName).encode(encoding='utf-8')
-                control.send_multipart([identity,payload])
-            else:
-                self.peerQueue[qualName].append(msg)        # TODO: limit the queue size
+        with self.mapLock:
+            if qualName in self.actors and qualName in self.launchMap:
+                record = self.actors[qualName]
+                pid = self.launchMap[qualName].pid
+                control = record.control
+                if control != None:
+                    msg = deplo_capnp.DeplCmd.new_message()
+                    msgMessage = msg.init('peerInfoMsg')
+                    msgMessage.peerState = 'on' if cmd == 'peer+' else 'off'
+                    msgMessage.uuid = peer.decode()
+                    msgBytes = msg.to_bytes()
+                    payload = zmq.Frame(msgBytes)
+                    pid = self.launchMap[qualName].pid
+                    identity = actorIdentity(appName,actorName,pid)
+                    header = identity.encode(encoding='utf-8')
+                    control.send_multipart([header,payload])
+                else:
+                    self.peerQueue[qualName].append(msg)        # TODO: limit the queue size
 
     
     def handleNICMon(self):
@@ -1263,6 +1291,7 @@ class DeploymentManager(threading.Thread):
         self.logger.info("handleNICMon: %s " % str(msg))
         for qualName in self.actors:
             record = self.actors[qualName]
+            appName,actName = record.app,record.actor
             control = record.control
             if control == None: continue
             msg = deplo_capnp.DeplCmd.new_message()
@@ -1270,8 +1299,10 @@ class DeploymentManager(threading.Thread):
             msgMessage.nicState = 'up' if flag == 'nic+' else 'down'
             msgBytes = msg.to_bytes()
             payload = zmq.Frame(msgBytes)
-            identity = str(qualName).encode(encoding='utf-8')
-            control.send_multipart([identity,payload])
+            pid = self.launchMap[qualName].pid
+            identity = actorIdentity(appName,actName,pid)
+            header = identity.encode(encoding='utf-8')
+            control.send_multipart([header,payload])
 
         
     def handleActorMessage(self,appName,actorName,msgBytes):

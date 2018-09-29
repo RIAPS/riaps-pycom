@@ -136,7 +136,7 @@ class ControllerService(rpyc.Service):
     
     STOPPING = None
     
-    def on_connect(self):
+    def on_connect(self,_conn = None):
         '''
         Called when a client connects. Subsequently the client must login. 
         '''
@@ -144,7 +144,7 @@ class ControllerService(rpyc.Service):
         self.client = None
         self.logger = logging.getLogger('riapsCtrl')
 
-    def on_disconnect(self):
+    def on_disconnect(self,_conn = None):
         '''
         Called when a client disconnects
         '''
@@ -164,9 +164,12 @@ class ControllerService(rpyc.Service):
             guiClient = ServiceClient(clientName,async(callback),self,None)
             return ()
         else:                           # RIAPS node client
-            if (self.client and not self.client.stale) or theController.isClient(clientName):
-                raise ValueError("already logged in")
             assert (appFolder != None)
+            if (self.client and not self.client.stale) or theController.isClient(clientName):
+                # raise ValueError("already logged in")
+                oldClient = theController.getClient(clientName)
+                oldClient.exposed_logout()
+                theController.delClient(clientName)
             self.client = ServiceClient(clientName, async(callback),self,appFolder)   # Register client's callback
             theController.addClient(clientName,self.client)
             dbaseNode = theController.nodeName      # The (redis) database is running on this same node

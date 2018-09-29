@@ -15,18 +15,17 @@ const.discoEndpointSendTimeout = -1
 # Name of endpoint for actor-depl communication
 const.deplEndpoint = 'tcp://127.0.0.1:9780'     # 'ipc:///tmp/riaps-depl'
 # Timeout for actor-depl communication (-1: wait forever)
-const.deplEndpointRecvTimeout = 10000 
-const.deplEndpointSendTimeout = 10000  
-
-# Name of endpoint for actor-devm communication
-# const.devmEndpoint = 'tcp://127.0.0.1:9790'     # 'ipc:///tmp/riaps-devm
-# # Timeout for actor-depl communication (-1: wait forever)
-# const.devmEndpointRecvTimeout = 10000  
-# const.devmEndpointSendTimeout = 10000
+const.deplEndpointRecvTimeout = 1000 
+const.deplEndpointSendTimeout = 1000  
   
 # Timeout for deplo internal communications
 const.depmRecvTimeout = 3000
 const.depmSendTimeout = 3000
+
+# Timeout for actor/device start by deplo (sec)
+const.depmStartTimeout = 1.0
+# Timeout for actor/device termination by deplo (sec)
+const.depmTermTimeout = 3.0
 
 # Fault monitor endpoints
 const.fmNICMonitorEndpoint = 'inproc://fm-nic'
@@ -49,13 +48,17 @@ const.ctrlPrivateKey = 'id_rsa.key'
 # SSH port
 const.ctrlSSHPort = 22
 # Control/deplo delay (in msec) - time allowed for recovered apps to start
-const.ctrlDeploDelay = 1000
+const.ctrlDeploDelay = 3000
 
 # Nethog
 const.nethogLibrary = 'libnethogs.so'
 
 # Quota system scanning timeout
 const.spcMonitorTimeout = 10.0
+
+# Peer timeouts
+const.peerEvasiveTimeout = 3000
+const.peerExpiredTimeout = 5000
 
 # App database
 const.appDb = 'riaps-apps.lmdb'     # Under RIAPSAPPS

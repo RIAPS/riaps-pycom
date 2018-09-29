@@ -51,7 +51,7 @@ def main(debug=True):
     
     signal.signal(signal.SIGTERM,termHandler)
     signal.signal(signal.SIGINT,termHandler)
-    traced = riaps_trace(args.trace,'DEPLO_DEBUG_SERVER')
+    _traced = riaps_trace(args.trace,'DEPLO_DEBUG_SERVER')
     try:
         global theDepl
         theDepl = DeploService(args.node,args.port)  # Assign the service to the singleton

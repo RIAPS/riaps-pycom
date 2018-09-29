@@ -31,7 +31,7 @@ from riaps.run.exc import *
 from riaps.proto import deplo_capnp
 from riaps.utils.sudo import riaps_sudo
 from riaps.utils.config import Config
-
+from riaps.utils.names import *
 
 #######################
 # BEGIN CONFIGURATION #
@@ -205,34 +205,28 @@ class NetMonitorThread(threading.Thread):
         self.stopped = threading.Event()  # Set if the monitor is stopped
         self.stopped.clear()
         self.alive = False
-        self.procs = { }
         self.rlock = RLock()
         self.device_names = [Config.NIC_NAME]
         self.lib = ctypes.CDLL(const.nethogLibrary)
         self.notifier = None
         self.notifierPort = None
-        self.devices = { }
-        self.pid2Key = { }
-        self.pid2Rate = { }
+        self.devices = { }              # app.actor -> (device,pid)
+        self.pid2Key = { }              # pid -> app.actor
+        self.pid2Rate = { }             # pid -> rate
+        
     
-    def addProc(self, proc):
+    def addProc(self, appName,actName,proc):
+        self.logger.info("addProc %s.%s [%d]" % (appName,actName,proc.pid))
         with self.rlock:
-            uids = psutil.Process(proc.pid).uids()
-            uid = uids.real  # Real UID
-            if uid in self.procs:
-                self.procs[uid] = self.procs[uid] + [proc]
-            else:
-                self.procs[uid] = [proc]
             self.pid2Key[proc.pid] = '???'
             self.pid2Rate[proc.pid] = 0
         
-    def delProc(self, proc):
-        uids = psutil.Process(proc.pid).uids()
-        uid = uids.real  # Real UID
-        if uid in self.procs:
+    def delProc(self,appName,actName,proc):
+        with self.rlock:
+            fullName = appName + '.' + actName
+            del self.devices[fullName]
             del self.pid2Key[proc.pid]
             del self.pid2Rate[proc.pid]
-            del self.procs[uid]
 
     def addClientDevice(self,appName,actorName,device,proc,rate):
         while self.notifierPort == None:
@@ -241,11 +235,13 @@ class NetMonitorThread(threading.Thread):
             rate = int(rate)    # Rate in bits/sec
         except:
             rate = 0         
-        self.logger.info("adding client %s.%s %i %i" % (appName,actorName,proc.pid,rate))  
+        self.logger.info("adding client %s.%s [%i] %i" % (appName,actorName,proc.pid,rate))  
         with self.rlock:
-            device.connect_in('tcp://127.0.0.1:%i' % self.notifierPort)
             key = str(appName) + "." + str(actorName)
-            self.devices[key] = device
+            device.connect_in('tcp://127.0.0.1:%i' % self.notifierPort)
+            identity = actorIdentity(appName,actorName,proc.pid)
+            self.logger.info("zmqdev id = %s" % identity)
+            self.devices[key] = (device,identity)
             self.pid2Key[proc.pid] = key
             self.pid2Rate[proc.pid] = rate
     
@@ -305,8 +301,9 @@ class NetMonitorThread(threading.Thread):
                     msgMessage.msg = "X"
                     msgBytes = msg.to_bytes()
                     payload = zmq.Frame(msgBytes)
-                    identity = str(key).encode(encoding='utf-8')
-                    self.notifier.send_multipart([identity,payload])
+                    _device,identity = self.devices[key]
+                    header = identity.encode(encoding='utf-8')
+                    self.notifier.send_multipart([header,payload])
                     self.logger.info("XNet sent to [%d]" % (_pid))
                     time.sleep(0.1)  
         
