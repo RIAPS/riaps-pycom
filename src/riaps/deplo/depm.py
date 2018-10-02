@@ -74,7 +74,8 @@ class DeploymentManager(threading.Thread):
         self.riapsApps = parent.riapsApps
         self.launchMap = { }            # Map of launched actors
         self.launchRefs = { }           # Reference count for device actors
-        self.mapLock = RLock()
+        self.mapLock = RLock()          # Lock to protect launchMap
+        self.discoLock = RLock()        # Lock to protect disco 
         self.disco = None
         self.dbaseHost = None 
         self.dbasePort = None
@@ -483,10 +484,11 @@ class DeploymentManager(threading.Thread):
             
         return componentTypes
     
-    def terminateActor(self,proc,qualName):
+    def terminateActor(self,proc,appName,actorName):
         '''
         Terminate actor (runs in a background thread)
         '''
+        qualName = str(appName) + "." + str(actorName)
         proc.poll()
         if proc.returncode == None:
             self.logger.info("Terminating %s" % qualName)
@@ -494,10 +496,13 @@ class DeploymentManager(threading.Thread):
                 proc.terminate()                    # Should check for errors
                 proc.wait(const.depmTermTimeout)    # Wait here
                 self.logger.info("Actor %s terminated" % qualName)
-            except psutil.TimeoutExpired:
+            except subprocess.TimeoutExpired:
                 self.logger.info("Actor %s did not terminate - killing it" % qualName)
+                self.unRegisterActor(appName,actorName,proc.pid)
                 proc.send_signal(signal.SIGKILL)
                 time.sleep(1.0)
+            except:
+                traceback.print_exc()
     
     def stopActor(self,appName,actorName):
         '''
@@ -526,7 +531,7 @@ class DeploymentManager(threading.Thread):
             del self.actors[qualName]
             self.procm.release(qualName)
             self.appDbase.delAppActor(appName, actorName)
-            self.executor.submit(self.terminateActor,proc,qualName)
+            self.executor.submit(self.terminateActor,proc,appName,actorName)
         self.logger.info("Stopped %s" % qualName)
 
     def haltActor(self,msg):
@@ -544,40 +549,42 @@ class DeploymentManager(threading.Thread):
         '''
         Unregister a dead actor from the disco service
         '''
-        reqt = disco_capnp.DiscoReq.new_message()
-        appMessage = reqt.init('actorUnreg')
-        appMessage.appName = appName
-        appMessage.version = '0.0.0'
-        appMessage.actorName = actorName
-        appMessage.pid = actorPid
-                  
-        msgBytes = reqt.to_bytes()
-        
-        try:
-            self.discoCommand.send(msgBytes)
-        except Exception as e:
-            self.logger.error("Unable to unregister app with discovery: %s" % e.args)
-            return
-        
-        try:
-            respBytes = self.discoCommand.recv()
-        except Exception as e:
-            self.logger.error("No response from discovery service: %s" % e.args)
-            return
-        
-        resp = disco_capnp.DiscoRep.from_bytes(respBytes)
-        
-        which = resp.which()
-        if which == 'actorUnreg':
-            respMessage = resp.actorUnreg
-            status = respMessage.status
-            if status == 'ok':
-                self.logger.info("unregistered '%s.%s'" % (appName,actorName))
-            else:
-                self.logger.error("Bad response from disco service at app unregistration")
-        else:
-            self.logger.error("Unexpected response from disco service at app unregistration")
+        with self.discoLock:
+            reqt = disco_capnp.DiscoReq.new_message()
+            appMessage = reqt.init('actorUnreg')
+            appMessage.appName = appName
+            appMessage.version = '0.0.0'
+            appMessage.actorName = actorName
+            appMessage.pid = actorPid
+                      
+            msgBytes = reqt.to_bytes()
             
+            try:
+                self.discoCommand.send(msgBytes)
+            except Exception as e:
+                self.logger.error("Unable to unregister app with discovery: %s" % e.args)
+                return
+            
+            try:
+                respBytes = self.discoCommand.recv()
+            except Exception as e:
+                self.logger.error("No response from discovery service: %s" % e.args)
+                return
+            
+            resp = disco_capnp.DiscoRep.from_bytes(respBytes)
+            
+            which = resp.which()
+            if which == 'actorUnreg':
+                respMessage = resp.actorUnreg
+                status = respMessage.status
+                if status == 'ok':
+                    self.logger.info("unregistered '%s.%s'" % (appName,actorName))
+                else:
+                    self.logger.error("Bad response from disco service at app unregistration")
+            else:
+                self.logger.error("Unexpected response from disco service at app unregistration")
+                
+                
     def queryApps(self):
         reply = {}
         # This should be self.actors 
@@ -1035,6 +1042,23 @@ class DeploymentManager(threading.Thread):
         self.procm.monitor(key,proc)
         self.logger.info("Started %s" % key)
 
+    def terminateDevice(self,proc,appName,actorName):
+        '''
+        Ultimate operation to terminate a device
+        '''
+        qualName = str(appName) + "." + str(actorName)
+        try: 
+            proc.terminate()            # Should check for errors
+            proc.wait(const.depmTermTimeout)   
+            self.logger.info("Device %s terminated" % qualName) # 
+        except subprocess.TimeoutExpired:
+            self.logger.info("Device %s did not stop - killing it" % qualName)
+            self.unRegisterActor(appName,actorName,proc.pid)    # Clean discovery service
+            proc.send_signal(signal.SIGKILL)
+            time.sleep(1.0)
+        except:
+            traceback.print_exc()
+    
     def stopDevice(self,appName,actorName):
         '''
         Stop a device actor of an application 
@@ -1062,19 +1086,9 @@ class DeploymentManager(threading.Thread):
         if proc != None:
             self.logger.info("Stopping device %s" % qualName)
             assert qualName in self.devices
-            # Remove device from device map
             self.procm.release(qualName)
-            if running:
-                try: 
-                    proc.terminate()            # Should check for errors
-                    proc.wait(const.depmTermTimeout)   
-                    self.logger.info("Device %s terminated" % qualName) # 
-                except psutil.TimeoutExpired:
-                    self.logger.info("Device %s did not stop - killing it" % qualName)
-                    proc.send_signal(signal.SIGKILL)
-                    time.sleep(1.0)
-                except:
-                    traceback.print_exc()
+            if running:       
+                self.terminateDevice(proc,appName,actorName) 
         self.logger.info("Stopped %s" % qualName)
         
     def handleDeviceReq(self,msg):
