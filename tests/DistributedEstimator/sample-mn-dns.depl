@@ -1,5 +1,0 @@
-// Mininet based deployment with DNS names
-app DistributedEstimator {
-	on all Estimator;
-	on (bbb1.) Aggregator(posArg=1234,optArg="fromDeployment");
-}
