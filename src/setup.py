@@ -18,7 +18,7 @@ setup(name='riaps-pycom',
                   ('riaps/keys',['riaps/keys/id_rsa.key','riaps/keys/id_rsa.pub'])
                ],
       scripts = [
-        "scripts/riaps_actor", "scripts/riaps_ctrl", "scripts/riaps_deplo", "scripts/riaps_disco", "scripts/riaps_lang", "scripts/riaps_depll", "scripts/riaps_device", "scripts/riaps_gviz"
+        "scripts/riaps_actor", "scripts/riaps_ctrl", "scripts/riaps_deplo", "scripts/riaps_disco", "scripts/riaps_lang", "scripts/riaps_depll", "scripts/riaps_device", "scripts/riaps_gviz", "scripts/riaps_ctrl_host"
 
      ],
 
