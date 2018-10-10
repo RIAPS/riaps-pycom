@@ -1,5 +1,0 @@
-// Mininet deployment example
-app DistributedEstimator {
-	on all Estimator;
-	on (192.168.57.1) Aggregator(posArg=123,optArg="fromDeployment");
-}

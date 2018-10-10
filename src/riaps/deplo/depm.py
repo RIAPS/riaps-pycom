@@ -496,7 +496,7 @@ class DeploymentManager(threading.Thread):
                 proc.terminate()                    # Should check for errors
                 proc.wait(const.depmTermTimeout)    # Wait here
                 self.logger.info("Actor %s terminated" % qualName)
-            except subprocess.TimeoutExpired:
+            except psutil.TimeoutExpired:
                 self.logger.info("Actor %s did not terminate - killing it" % qualName)
                 self.unRegisterActor(appName,actorName,proc.pid)
                 proc.send_signal(signal.SIGKILL)
@@ -1016,11 +1016,11 @@ class DeploymentManager(threading.Thread):
             logFile = None
         self.logger.info("Launching %s " % str(command))
         try:
-            proc = subprocess.Popen(command,cwd=appFolder,env=dev_env)
+            proc = psutil.Popen(command,cwd=appFolder,env=dev_env)
         except FileNotFoundError:
             try:
                 command = ['python3',riaps_mod] + command[1:]
-                proc = subprocess.Popen(command,
+                proc = psutil.Popen(command,
                                         cwd=appFolder,env=dev_env,
                                         stdout=logFile, stderr=subprocess.STDOUT)
             except:
@@ -1051,7 +1051,7 @@ class DeploymentManager(threading.Thread):
             proc.terminate()            # Should check for errors
             proc.wait(const.depmTermTimeout)   
             self.logger.info("Device %s terminated" % qualName) # 
-        except subprocess.TimeoutExpired:
+        except psutil.TimeoutExpired:
             self.logger.info("Device %s did not stop - killing it" % qualName)
             self.unRegisterActor(appName,actorName,proc.pid)    # Clean discovery service
             proc.send_signal(signal.SIGKILL)
