@@ -44,6 +44,16 @@ fab riaps.kill
 fab riaps.put <fileName>
 ```
 
+# Eclipse External Tool Launch Files
+
+If using eclipse to work on RIAPS application development, there are several external tool launch files available to run the RIAPS framework tools.  
+These tools can be imported into the eclipse environment using "Run/Debug" and "Launch Configurations" options in the "Import Wizard".  When 
+importing these launch configurations, the "Build before launch" flag is automatically checked under the "Build" tab of the configuration.  ***Make
+sure to uncheck this option.***
+
+- riaps_ctrl.launch:  starts the RIAPS controller
+- riaps_deplo.launch:  starts the RIAPS deployment manager on the host environment
+
 
 # Utilities for Mininet Operations
 This is for RIAPS developers - **NOT for APP developers**.
