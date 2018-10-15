@@ -56,9 +56,7 @@ def uninstall():
 
 @task
 def kill():
-    """Kill all RIAPS functions and application on hosts"""
-    deplo.stop()
-
+    """Kills any hanging processes. deplo.stop should be called first"""
     pgrepResult = run('pgrep \'riaps_\' -l')
     pgrepEntries = pgrepResult.rsplit('\n')
     processList = []
