@@ -35,7 +35,11 @@ fab riaps.update
 ```
 fab deplo.start
 ```
-- Kill all RIAPS actors and deployments
+- Stop deployment and any running applications
+```
+fab deplo.stop
+```
+- Kills any hanging RIAPS processes. Should only be called after deplo.stop
 ```
 fab riaps.kill
 ```
