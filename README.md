@@ -2,6 +2,11 @@
 
 # riaps-pycom
 
+## Security Note
+
+**The riaps pycom repository contains a set of default RSA keys. These keys are used for testing the system and create images. In both the development vm images and the beaglebone image these keys are to be replaced upon install.
+DO NOT USE THESE KEYS IN ANY PRODUCTION SYSTEM!** 
+
 ## Prerequisites
 
 1) Set up a Development Environment using VirtualBox:  https://github.com/RIAPS/riaps-integration/tree/master/riaps-x86runtime
