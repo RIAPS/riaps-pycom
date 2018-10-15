@@ -1,5 +1,10 @@
 #!/bin/sh
 # Start mininet with a single,4 topology and sshd running on each host
-# Should be used after 'setup' has been sourced.
+# Should be used after 'setup' has been sourced (or the RIAPS environment variables set)
+# For riaps developers - NOT APP DEVELOPERS 
 
+# Enable IP forwarding
+sudo sysctl -w net.ipv4.ip_forward=1
+
+# Launch mininet and sshd
 sudo `which sshd.py`

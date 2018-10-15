@@ -1,5 +1,5 @@
 #!/usr/bin/python2
-"""PyTinyDNS docstring.
+"""PyTinyDNS
 
 This script acts as a light A record DNS resolver.
 Use redis_import.py to import a host file into a live DB.

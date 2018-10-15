@@ -10,7 +10,8 @@ RIAPSModel:
 // Application 
 App:
  'app' name=ID '{'
-     messages+=Message
+     messages*=Message
+     libraries*=Library
      components+=Component
      actors+=Actor
  '}'
@@ -21,9 +22,14 @@ Message:
   'message' name=ID ';'
 ;
 
+// Libraries used in the app
+Library:
+  'library' ( name=ID | name=STRING) ';'
+;
+ 
 // Component types used in the application
 Component:
- 'component' name=ID 
+ ( appComponent?='component' | ioComponent?='device') name=ID 
    ( '(' formals*=Formal[','] ')' )? 
   '{'
      ports*=Port
@@ -48,48 +54,76 @@ Port:
    ClntPort | SrvPort | // Client(req,rep) -> Server(req,rep)
    ReqPort  | RepPort | // send Req(msg_req) -> recv Rep(msg_req) ...
                         // ... send Rep(msg_rep) -> recv Req(msg_rep)
-   TimPort) ';'
+   TimPort	|			// timer
+   InsPort	|			// inside
+   QryPort	| AnsPort	// send Qry(msg_qry) * -> recv Ans(msg_ans) * 
+   ) ';'
 ;
 
 // Publisher port (single type)
 PubPort:
-  'pub' name=ID ':' type=[Message] 
+  'pub' name=ID ':' type=[Message] (timed='timed')? 
 ;
 
 // Subscriber port (single type)
 SubPort:
-  'sub' name=ID ':' type=[Message] 
+  'sub' name=ID ':' type=[Message] (timed='timed')? 
+  	( 'within' deadline=INT (unit=TimeUnit)? )? 
 ;
 
 // Client port (request and reply message types) - Owned by an SMI client
 // Client operation is expected to send on the port and then receive on the same port
 ClntPort:
-  'clt' name=ID ':' '(' req_type=[Message]? ',' rep_type=[Message]? ')'
+  'clt' name=ID ':' '(' req_type=[Message]? ',' rep_type=[Message]? ')' (timed='timed')? 
 ;
 
 // Server port (request and reply message types) - Owned by an SMI client
 // Server operation is triggered by the port and is expected to send a reply on the same port 
 SrvPort:
-  'srv' name=ID ':' '(' req_type=[Message]? ',' rep_type=[Message]? ')'
+  'srv' name=ID ':' '(' req_type=[Message]? ',' rep_type=[Message]? ')' 
+  	(timed='timed')? ( 'within' deadline=INT (unit=TimeUnit)? )? 
 ;
 
 // Req port (request and reply message types) - owned by an AMI client
 // Requesting client's operation is expected to send a request on the port and then terminate. 
 // The arrival of the reply triggers the reply operation on the client   
 ReqPort:
-  'req' name=ID ':' '(' req_type=[Message]? ',' rep_type=[Message]? ')'
+  'req' name=ID ':' '(' req_type=[Message]? ',' rep_type=[Message]? ')' 
+  	(timed='timed')? ( 'within' deadline=INT (unit=TimeUnit)? )? 
 ;
 
 // Rep port (request and reply message types) - owned by an AMI server
 // Server's operation is triggered by the request message.
 // The operation is expected to send a reply on the port.   
 RepPort:
-  'rep' name=ID ':' '(' req_type=[Message]? ',' rep_type=[Message]? ')'
+  'rep' name=ID ':' '(' req_type=[Message]? ',' rep_type=[Message]? ')' 
+  	(timed='timed')? ( 'within' deadline=INT (unit=TimeUnit)? )? 
 ;
 
-// Timer port. Optional argument is periodicity in msec
+// Qry port (request and reply message types) - owned by an Query client
+// Querying client's operation is expected to send one or more queries 
+// The arrival of the answer triggers the answer operation on the client   
+QryPort:
+  'qry' name=ID ':' '(' req_type=[Message]? ',' rep_type=[Message]? ')' 
+  	(timed='timed')? ( 'within' deadline=INT (unit=TimeUnit)? )? 
+;
+
+// Ans port (request and reply message types) - owned by an Query server
+// Server's operation is triggered by the query message. 
+// The operation is expected to send a answer on the port.   
+AnsPort:
+  'ans' name=ID ':' '(' req_type=[Message]? ',' rep_type=[Message]? ')' 
+  	(timed='timed')? ( 'within' deadline=INT (unit=TimeUnit)? )? 
+;
+
+// Timer port. Optional argument is period in msec
 TimPort:
-  'timer' name=ID (spec=INT)?
+  'timer' name=ID ((spec=INT) (periodUnit=TimeUnit)? )? ( 'within' (deadline=INT) (unit=TimeUnit)? )? 
+;
+
+// Inside port
+InsPort:
+  'inside' name=ID spec?='default'
 ;
 
 Actual:
@@ -107,14 +141,59 @@ Actor:
   '{'
     ( 'local' locals*=[Message][','] ';' )? 		// Optional: local messages (stay within the host)
     ( 'internal' internals*=[Message][','] ';' )? 	// Optional: internal messages (stay within the actor)
-      '{' instances+=Instance '}'
-      wires*=Wire
+    ( 'uses' '{' usage*=Usage '}' )?				// Optional: resource usage 
+    '{' instances+=Instance '}'
   '}'
 ;
 
-// Wiring of clients to servers (both SMI and AMI)
-Wire:
-  lhsName=ID '.' lhsPortName=ID '=' rhsName=ID '.' rhsPortName=ID ';'
+// Usage:
+Usage: 
+ 	( CPUUsage |
+ 	  MemUsage |
+ 	  SpaceUsage | 
+ 	  NetUsage 
+ 	)
+ 	 ';'
+ ;
+
+CPUUsage:
+	'cpu' (max?='max')? usage=INT '%' ( 'over' interval=INT (unit=TimeUnit)? )? 
+;
+
+TimeUnit:
+	'sec' | 'min' | 'msec'
+;
+
+MemUsage:
+	'mem' usage=INT ( unit=MemUnit )?
+;
+
+MemUnit:
+	'mb' | 'kb' | 'gb'
+;
+
+SpaceUsage:
+	'space' usage=INT ( unit=SpaceUnit )?
+;
+
+SpaceUnit:
+	'mb' | 'gb'
+;
+
+RateUnit:
+	'kbps' | 'mbps' 
+;
+
+
+BurstUnit:
+	'k' | 'kb'
+;
+
+NetUsage:
+//	'net' (max?='max')? usage=INT (memUnit=MemUnit)? ( 'over' interval=INT (timeUnit=TimeUnit)? )? 
+	'net' 'rate' rate=Number rateUnit=RateUnit 
+			( 'ceil' ceil=Number ceilUnit=RateUnit )? 
+			( 'burst' burst=Number burstUnit=BurstUnit )?
 ;
 
 // Instance of a component, used inside an actor
@@ -124,6 +203,6 @@ Instance:
 
 // Obligatory comment spec
 Comment:
- /\/\/.*$/
+	/\/\/.*$/|/\/\*(.|\n)*?\*\// 
 ;
 

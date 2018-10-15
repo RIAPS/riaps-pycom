@@ -1,0 +1,26 @@
+// RIAPS Timer test
+
+app TimerS {
+	message Tick;
+	
+	// Period timer component
+    component PeriodicTimer {
+      timer periodic 5000; 							
+      pub ticker : Tick;
+    }
+    
+    // Sporadic timer component
+    component SporadicTimer {
+      sub ticker : Tick;
+      timer sporadic;
+    }
+
+    // TimerActor
+    actor TimerActor {
+		local Tick;
+      	{
+          periodic: PeriodicTimer; 		
+          sporadic: SporadicTimer;		
+       	}
+    }
+}

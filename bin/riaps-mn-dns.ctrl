@@ -1,6 +1,7 @@
 #!/bin/sh
 # Starts up the RIAPS controller on the mininet
 # To be run on the 'lead' node
+# For riaps developers - NOT APP DEVELOPERS 
 
 echo "*** WARNING: DNS resolver is reconfigured for mininet ***"
 
@@ -18,7 +19,7 @@ echo 'nameserver 10.0.0.1' >/etc/resolv.conf
 python2 bin/pytinydns.py --noredis --config=bin/pytinydns.conf --list=bin/pytinydns.host &
 
 # Change to (non-privileged) user and run mininet
-echo "source setup; python3 src/ctrl.py" | sudo -s -u riaps
+echo "source setup; python3 src/riaps_ctrl.py" | sudo -s -u riaps
 
 # Restore resolver
 mv /etc/resolv.conf.org /etc/resolv.conf

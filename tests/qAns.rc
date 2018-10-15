@@ -1,0 +1,10 @@
+# RIAPS Control command file for QryAns
+e Testing QryAns
+w 5
+f /home/riaps/workspace/RIAPS/tests/QryAns
+m qryans.riaps
+d qryans.depl
+l QryAns
+w 30
+h QryAns
+q

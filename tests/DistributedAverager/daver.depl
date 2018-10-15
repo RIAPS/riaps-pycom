@@ -1,0 +1,3 @@
+app DistributedAverager {
+	on all Averager(value=0.0);
+}

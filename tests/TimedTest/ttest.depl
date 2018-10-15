@@ -1,0 +1,5 @@
+// 
+app TimedTest {
+	on all Sensor;
+	on all Filter; 
+}

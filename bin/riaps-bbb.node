@@ -1,6 +1,0 @@
-#!/bin/sh
-# Run this on the Beaglebone Black 
-# To be run 'non-lead' nodes 
-
-# Change to (non-privileged) user
-echo "source setup; python3 src/deplo.py" | sudo -s -u riaps 

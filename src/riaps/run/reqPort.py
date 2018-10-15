@@ -6,13 +6,13 @@ Created on Oct 10, 2016
 import zmq
 from .port import Port
 from riaps.run.exc import OperationError
+from riaps.utils.config import Config
+from zmq.error import ZMQError
 
 
 class ReqPort(Port):
     '''
-    Similar to a client port, but it uses two separate sockets: out_socket for sending requests, 
-    in_socket for receiving replies.
-    One ReqPort is connected to one RepPort 
+    Similar to a client port
     '''
 
     def __init__(self, parentComponent, portName, portSpec):
@@ -22,16 +22,21 @@ class ReqPort(Port):
         super(ReqPort,self).__init__(parentComponent,portName)
         self.req_type = portSpec["req_type"]
         self.rep_type = portSpec["rep_type"]
+        self.isTimed = portSpec["timed"]
+        self.deadline = portSpec["deadline"] * 0.001 # msec
         parentActor = parentComponent.parent
         self.isLocalPort = parentActor.isLocalMessage(self.req_type) and parentActor.isLocalMessage(self.rep_type)
         self.replyHost = None
         self.replyPort = None
+        self.info = None
 
     def setup(self):
         pass
   
-    def setupSocket(self):
+    def setupSocket(self,owner):
+        self.setOwner(owner)
         self.socket = self.context.socket(zmq.REQ)
+        self.socket.setsockopt(zmq.SNDTIMEO,self.sendTimeout)   
         self.host = ''
         if not self.isLocalPort:
             globalHost = self.getGlobalIface()
@@ -41,7 +46,22 @@ class ReqPort(Port):
             localHost = self.getLocalIface()
             self.portNum = -1
             self.host = localHost
-        return ('req',self.isLocalPort,self.name,str(self.req_type) + '#' + str(self.rep_type),self.host)
+        self.info = ('req',self.isLocalPort,self.name,str(self.req_type) + '#' + str(self.rep_type),self.host)
+        return self.info
+    
+    def reset(self):
+        newSocket = self.context.socket(zmq.REQ)
+        newSocket.setsockopt(zmq.SNDTIMEO,self.sendTimeout)
+        newSocket.setsockopt(zmq.RCVTIMEO,self.recvTimeout)
+        self.socket.setsockopt(zmq.LINGER, 0)
+        if self.replyHost != None and self.replyPort != None:
+            repPort = "tcp://" + str(self.replyHost) + ":" + str(self.replyPort)
+            self.socket.disconnect(repPort)
+        self.owner.replaceSocket(self,newSocket)
+        self.socket = newSocket
+        if self.replyHost != None and self.replyPort != None:
+            repPort = "tcp://" + str(self.replyHost) + ":" + str(self.replyPort)
+            self.socket.connect(repPort)
     
     def getSocket(self):
         return self.socket
@@ -56,13 +76,19 @@ class ReqPort(Port):
         self.socket.connect(repPort)
         
     def recv_pyobj(self):
-        return self.socket.recv_pyobj()
+        return self.port_recv(True)
     
     def send_pyobj(self,msg):
-        self.socket.send_pyobj(msg)
+        return self.port_send(msg,True)              
+    
+    def recv(self):
+        return self.port_recv(False)
+    
+    def send(self, msg):
+        return self.port_send(msg,False) 
 
     def getInfo(self):
-        return ("req",self.name,(self.req_type,self.rep_type),
-                self.host,self.portNum,
-                self.replyHost,self.replyPort)
+        return self.info 
+    
+    
     

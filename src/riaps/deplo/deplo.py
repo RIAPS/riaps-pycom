@@ -3,50 +3,82 @@ Created on Nov 6, 2016
 
 @author: riaps
 '''
-import rpyc
+
+
 import time
 import sys
 import os
-from os.path import join
-import subprocess
-import zmq
-from riaps.consts.defs import *
-from riaps.utils.ifaces import getNetworkInterfaces
-from riaps.run.exc import SetupError
 import logging
-    
+import zmq
+import rpyc
+rpyc.core.protocol.DEFAULT_CONFIG['allow_pickle'] = True
+
+from riaps.consts.defs import *
+from riaps.utils.config import Config
+from riaps.run.exc import *
+from riaps.utils.ifaces import getNetworkInterfaces
+# from riaps.deplo.devm import DeviceManager
+from riaps.deplo.depm import DeploymentManager
+from riaps.deplo.resm import ResourceManager
+from riaps.deplo.fm import FaultManager
+from riaps.utils.singleton import singleton
+from czmq import Zsys
+
+import traceback
+
 class DeploService(object):
     '''
     Deployment service main class. Each RIAPS mode runs a copy of the Deployment Service, which is
     responsible for starting and managing all RIAPS processes. 
     '''
-    def __init__(self, host,port):
+    def __init__(self,host,port):
+        self.logger = logging.getLogger(__name__)
         '''
         Initialize the service with the host:port of the controller node (if provided)
+        Note: if the Python implementation of the discovery service and/or actor is used, the corresponding
+        script must be in the path. One way to achieve this is to run this script in the same folder 
         '''
+        self.riapsApps = os.getenv('RIAPSAPPS', './')
+        self.logger.info("Starting with apps in %s" % self.riapsApps)
+        if os.getuid() != 0:
+            self.logger.warning("running in unprivileged mode, some functions may fail")
+
         self.ctrlrHost = host 
         self.ctrlrPort = port
         self.conn = None
         self.bgsrv = None
-        self.context = zmq.Context()
-        self.launchMap = { }            # Map of launched actors
-        self.riapsApps = os.getenv('RIAPSAPPS', './')
+        # self.context = zmq.Context() - Use czmq's context (see fm / zyre socket)
+        czmq_ctx = Zsys.init()
+        self.context = zmq.Context.shadow(czmq_ctx.value)
+        Zsys.handler_reset()            # Reset previous signal 
+        self.setupIfaces()
+        self.suffix = self.macAddress
+        singleton('riaps_deplo',self.suffix)
+        self.depmCommandEndpoint = 'inproc://depm-command'
+        # self.devmCommandEndpoint = 'inproc://devm-command'
+        self.procMonEndpoint = 'inproc://procmon'
+        self.resm = ResourceManager(self.context)
+        self.fm = FaultManager(self,self.context)
+        # self.devm = DeviceManager(self)
+        self.depm = DeploymentManager(self,self.resm,self.fm)   
 
     def setupIfaces(self):
         '''
         Find the IP addresses of the (host-)local and network(-global) interfaces
         '''
-        (globalIPs,globalMACs,localIP) = getNetworkInterfaces()
-        assert len(globalIPs) > 0 and len(globalMACs) > 0
+        (globalIPs,globalMACs,globalNames,_localIP) = getNetworkInterfaces()
+        try:
+            assert len(globalIPs) > 0 and len(globalMACs) > 0
+        except:
+            self.logger.error("Error: no active network interface")
+            raise
         globalIP = globalIPs[0]
         globalMAC = globalMACs[0]
+        if Config.NIC_NAME == None:
+            Config.NIC_NAME = globalNames[0]
         self.hostAddress = globalIP
         self.macAddress = globalMAC
         self.nodeName = str(self.hostAddress)
-        self.conn = None
-        self.bgsrv = None
-        self.dbaseHost = None
-        self.dbasePort = None
            
     def login(self,retry = True):
         '''
@@ -56,108 +88,67 @@ class DeploService(object):
         '''
         while True:
             try:
-                self.conn = rpyc.connect_by_service(const.ctrlServiceName)
+                self.conn = rpyc.connect_by_service(const.ctrlServiceName,config = {"allow_public_attrs" : True})
                 break
             except:
                 try:  
-                    self.conn = rpyc.connect(self.ctrlrHost,self.ctrlrPort)
+                    self.conn = rpyc.connect(self.ctrlrHost,self.ctrlrPort,config = {"allow_public_attrs" : True})
                     break
                 except:
                     if retry == False:
-                        return
+                        return False
                     time.sleep(5)
                     continue
         self.bgsrv = rpyc.BgServingThread(self.conn,self.handleBgServingThreadException)       
         resp = self.conn.root.login(self.hostAddress,self.callback,self.riapsApps)
-        if type(resp) == tuple:             # Expected response: (redis) database host:port pair
-            if resp[0] == 'dbase':
-                (_,host,port) = resp
-                self.dbaseHost = host
-                self.dbasePort = port
-            else:
-                pass
+        if type(resp) == tuple and resp[0] == 'dbase':   # Expected response: (redis) database host:port pair
+            if self.depm != None:
+                self.depm.doCommand(('setDisco',) + resp[1:])
+            return True
         else:
-            pass
-            
-            
-    def startDisco(self):
-        '''
-        Start the Discovery Service process 
-        '''
-        riaps_folder = os.getenv('RIAPSHOME', './')
-        disco_mod = join(riaps_folder,'disco.py')
-        disco_arg1 = '--database'
-        disco_arg2 = '%s:%s' % (self.dbaseHost,self.dbasePort)
-        try: 
-            self.disco = subprocess.Popen(['python3',disco_mod,disco_arg1,disco_arg2])
-        except:
-            print ("Error:", sys.exc_info()[0])
-            raise
-    
-    def startActor(self,appName,appModel,actorName,actorArgs):
-        '''
-        Start an actor of an application 
-        '''
-        
-        riaps_folder = os.getenv('RIAPSHOME', './')
-        riaps_mod = join(riaps_folder,'riaps.py')
-        
-        appFolder = join(self.riapsApps,appName)
-        appModelPath = join(appFolder,appModel)
-        riaps_arg1 = appName 
-        riaps_arg2 = appModelPath
-        riaps_arg3 = actorName
-        command = ['python3',riaps_mod,riaps_arg1,riaps_arg2,riaps_arg3]
-        for arg in actorArgs:
-            command.append(arg)
-        try: 
-            logging.info("Launching %s " % str(command[2:]))
-            proc = subprocess.Popen(command,cwd=appFolder)
-            key = str(appName) + "." + str(actorName)
-            # ADD HERE: build comm channel to the actor for control purposes
-            self.launchMap[key] = proc
-        except:
-            print ("Error:", sys.exc_info()[0])
-            raise
-    
-    def haltActor(self,appName,actorName):
-        '''
-        Halt (terminate) the actor of an application  
-        '''
-        key = str(appName) + "." + str(actorName)
-        if key in self.launchMap:
-            proc = self.launchMap[key]
-            proc.terminate()                             # Should check for errors
-            del self.launchMap[key]
-
+            pass    # Ignore any other response
+            return False
         
     def setup(self):
         '''
-        Set up the discovery service
+        Start device and deployment managers
         '''
-        self.setupIfaces()
+#         try:
+#             self.devm.start()
+#         except:
+#             self.logger.error("Error while starting devm: %s" % sys.exc_info()[0])
+#             raise    
+        try:
+            self.depm.start()
+        except:
+            self.logger.error("Error while starting depm: %s" % sys.exc_info()[0])
+            raise
         self.login()
-        if self.dbaseHost != None and self.dbasePort != None:
-            self.startDisco()
-            
     
     def run(self):
         '''
         Main loop of the Deployment Service 
         '''
         self.poller = zmq.Poller()
+        self.killed = False
+        ok = True
         while True:     # Placeholder code
             time.sleep(1.0)
             # Poll controlled actors for messages
-#             sockets = dict(self.poller.poll(1000.0))
-#             if len(sockets) == 0:
-#                 pass
-#             else:
-#                 pass
+            #             sockets = dict(self.poller.poll(1000.0))
+            #             if len(sockets) == 0:
+            #                 pass
+            #             else:
+            #                 pass
+            if self.killed:
+                time.sleep(0.1)
+                break
             # If background server 
             if self.bgsrv == None and self.conn == None: 
-                print("CTRL conn lost - retrying")
-                self.login(retry=False)
+                if ok: 
+                    self.logger.info("Connection to controller lost - retrying")
+                ok = self.login(retry=False)
+        self.terminate()
 
     def handleBgServingThreadException(self):
         '''
@@ -170,23 +161,40 @@ class DeploService(object):
         
     def callback(self,msg):
         '''
-        Callback from server - runs in the the background server thread
-        NOTE: This will likely change as the startActor/haltActor has to create/manage ZMQ
-        sockets to connect to the actor (and that should happen in the main thread). Possible
-        solution: push the command into a message queue that is read by the main thread.   
+        Callback from server - runs in the the background server thread  
         '''
         assert type(msg) == tuple
-        cmd = msg[0]
-        if cmd == 'launch':             # Launch an actor
-            appName = msg[1]
-            appModelName = msg[2]
-            actorName = msg[3]
-            actorArgs = msg[4]
-            self.startActor(appName,appModelName,actorName,actorArgs)
-        elif cmd == "halt":
-            appName = msg[1]
-            actorName = msg[2]
-            self.haltActor(appName,actorName)
-        else:
-            pass                # Should flag an error
+        reply = None
+        try: 
+            cmd = msg[0]
+            if cmd in ('launch','halt','setupApp','cleanupApp','cleanupApps'):
+                self.depm.doCommand(msg)
+            elif cmd in ('query','reclaim'):
+                reply = self.depm.callCommand(msg)
+            elif cmd == "kill":
+                self.killed = True
+            else:
+                self.logger.error("unknown callback from control: %s" % str(msg))
+                pass                # Should flag an error
+        except BuildError as buildError:
+            self.logger.error(str(buildError.args))
+            raise
+        except:
+            info = sys.exc_info()
+            self.logger.error("Error in callback '%s': %s %s" % (cmd, info[0], info[1]))
+            traceback.print_exc()
+            raise
+        return reply
 
+    def terminate(self):
+        self.logger.info("terminating")
+        self.resm.terminate()   # Terminate resource manager
+        self.depm.terminate()   # Terminate deployment manager
+        self.depm.join() 
+        self.fm.terminate()     # Terminate fault manager
+        # self.context.destroy()
+        time.sleep(0.1)
+        self.logger.info("terminated")
+        os._exit(0)
+        
+        

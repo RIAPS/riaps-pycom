@@ -1,0 +1,3 @@
+app DistributedAveragerIO {
+	on all Averager;
+}

@@ -1,9 +1,0 @@
-#!/bin/sh
-# Starts up the RIAPS controller on the host computer
-# To be run on the 'lead' node
-
-# Start registry - start it on one node only
-/usr/local/bin/rpyc_registry.py &
-
-# Change to (non-privileged) user
-echo "source setup; python3 src/ctrl.py" | sudo -s -u riaps 

@@ -1,0 +1,10 @@
+# RIAPS Control command file for Limits
+e Testing Limits
+w 5
+f /home/riaps/workspace/RIAPS/tests/Limits
+m limits.riaps
+d limits.depl
+l Limits
+w 30
+h Limits
+q

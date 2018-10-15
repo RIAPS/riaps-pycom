@@ -1,0 +1,50 @@
+// RIAPS resource limiter test
+
+app Limits {
+	message Dummy;
+	
+	// CPULimit test component
+    component CPULimit {
+      timer ticker 1000; 
+    }
+
+	// MemLimit test component
+    component MemLimit {
+      timer ticker 1000; 
+    }
+    
+    // SpcLimit test component
+    component SpcLimit {
+      timer ticker 1000; 
+    }
+    
+    component NetProducerLimit {
+      timer ticker 1000;
+      pub produce : Dummy;
+     }
+    
+    component NetConsumer {
+      sub consume : Dummy;
+    }
+
+    // LimitActor
+    actor LimitActor {
+    	uses {
+			// cpu max 10 % over 1;		// Hard limit, w/o 'max' = soft limit
+			// mem 200 mb;					// Mem limit
+			// space 10 mb;				// File space limit
+			net rate 10 kbps ceil 12 kbps burst 1.2 k; // Net limits
+		}
+      	{
+          // cpuLimited: CPULimit;
+          // memLimited : MemLimit;
+          // spcLimited : SpcLimit;
+          netLimited : NetProducerLimit;
+       	}
+   	 }
+    actor Sink {
+     	{
+     		consumer : NetConsumer;
+   		}
+	}
+}

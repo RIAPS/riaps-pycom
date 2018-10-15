@@ -1,0 +1,3 @@
+app EchoIO {
+	on all EchoIO(port=9876);
+}

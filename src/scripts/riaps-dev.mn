@@ -1,0 +1,10 @@
+#!/bin/sh
+# For the riaps app developer:
+# Start mininet with a single,4 topology and sshd running on each host
+# The environment variables RIAPSHOME and RIAPSAPPS must be set and the PATH 
+# must allow access to RIAPS scripts. 
+
+[ -z "$RIAPSHOME" ] && echo "Need to set RIAPSHOME" && exit 1;
+[ -z "$RIAPSAPPS" ] && echo "Need to set RIAPSAPPS" && exit 1;
+
+sudo -E `which sshd.py`

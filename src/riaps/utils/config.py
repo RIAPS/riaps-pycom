@@ -8,30 +8,60 @@ import configparser
 import os
 from os.path import join
 import logging
+import logging.config
 
 class Config(object):
     '''
     Configuration database for RIAPS tools
+    Including logging configuration
     '''
-    USER = 'riaps-user'
+    TARGET_USER = 'riaps'
+    SEND_TIMEOUT = -1
+    RECV_TIMEOUT = -1
+    NIC_NAME = None
+    NIC_RATE = '118kbps'   # 90% of 1 gigabits per sec
+    NIC_CEIL = '131kbps'   # 1 gigabits per sec
+    CTRL_DEBUG_SERVER = ''
+    DEPLO_DEBUG_SERVER = ''
+    DISCO_DEBUG_SERVER = ''
+    ACTOR_DEBUG_SERVER = ''
+    DEVICE_DEBUG_SERVER = ''
+    APP_LOGS = ''
     
     def __init__(self):
         '''
-        Constructor
+        Construct the configuration object that configures the logger and various system parameters. 
+        The logger and system configuration are set according to the content of the files $RIAPSHOME/etc/riaps-log.conf
+        and $RIAPSHOME/etc/riaps.conf 
         '''
-        riaps_folder = os.getenv('RIAPSHOME', './')
-        riaps_conf = join(riaps_folder,'riaps/etc/riaps.conf')
+        riaps_folder = os.getenv('RIAPSHOME')
         
+        if riaps_folder == None:
+            print("RIAPS Configuration - RIAPSHOME is not set, using ./")
+            riaps_folder = './'
+        
+        riaps_logconf = join(riaps_folder,'etc/riaps-log.conf')
+        
+        try:
+            logging.config.fileConfig(riaps_logconf)
+        except Exception as e:
+            logging.warning(' Log configuration file %s has a problem: %s.' % (riaps_logconf, str(e)))
+            pass
+
+        
+        logger = logging.getLogger(__name__)
+        
+        riaps_conf = join(riaps_folder,'etc/riaps.conf')
         c_parse = configparser.ConfigParser()
     
         try:
             files = c_parse.read(riaps_conf)
-        except:
-            logging.info(' Configuration file %s not found.' % (riaps_conf))
+        except Exception as e:
+            logger.warning(' System configuration file %s has a problem: %s.' % (riaps_conf, str(e)))
             return 
         
         if files == [] or not c_parse.has_section('RIAPS'):
-            logging.info(' Configuration file %s not found or invalid file.' % (riaps_conf))
+            logger.warning(' System configuration file %s not found or invalid file.' % (riaps_conf))
             return 
         
         try: 
@@ -40,8 +70,23 @@ class Config(object):
                 opt = item[0].upper()
             
                 if hasattr(Config,opt):
-                    setattr(Config,opt,arg)
+                    optType = type(getattr(Config,opt))
+                    try:
+                        if optType == str:
+                            optValue = str(arg)
+                        elif optType == int:
+                            optValue = int(arg)
+                        elif optType == bool:
+                            optValue = bool(arg)
+                        elif optType == float:
+                            optValue = float(arg)
+                        else:
+                            optValue = arg
+                        setattr(Config,opt,optValue)
+                    except:
+                        logger.warning('Formal and actual type of configuration argument %s differ %s - ignored'
+                                       % (str(opt), str(optType)))
         except:
-            logging.info(' Error reading configuration file %s.' % (riaps_conf))
+            logger.warning(' Error reading configuration file %s.' % (riaps_conf))
             return 
 
