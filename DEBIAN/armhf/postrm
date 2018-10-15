@@ -1,6 +1,10 @@
 mkdir -p /etc/riaps
+rm -f /etc/riaps/redis.conf  /etc/riaps/riaps.conf  /etc/riaps/riaps-ctrl.glade
+
 for i in `ls /usr/local/riaps/etc`; do rm -f /etc/riaps/$i ;done
 rmdir /etc/riaps || true
+
+
 
 pip3 uninstall -y riaps-pycom || true
 

@@ -11,14 +11,14 @@ setup(name='riaps-pycom',
       package_data = {
         # If any package contains *.txt or *.rst files, include them:
         '': ['*.capnp']},
-      data_files=[('riaps/etc', ['riaps/etc/riaps.conf',  'riaps/etc/riaps-log.conf']),
-                  ('riaps/lang',['riaps/lang/riaps.tx', 'riaps/lang/depl.tx']),
-                  ('riaps/etc',['riaps/etc/redis.conf']),
-                  ('riaps/etc',['riaps/etc/riaps-ctrl.glade']),
-                  ('riaps/keys',['riaps/keys/id_rsa.key','riaps/keys/id_rsa.pub'])
-               ],
+      #data_files=[('riaps/etc', ['riaps/etc/riaps.conf',  'riaps/etc/riaps-log.conf']),
+      #            ('riaps/lang',['riaps/lang/riaps.tx', 'riaps/lang/depl.tx']),
+      #            ('riaps/etc',['riaps/etc/redis.conf']),
+      #            ('riaps/etc',['riaps/etc/riaps-ctrl.glade']),
+      #            ('riaps/keys',['riaps/keys/id_rsa.key','riaps/keys/id_rsa.pub'])
+      #         ],
       scripts = [
-        "scripts/riaps_actor", "scripts/riaps_ctrl", "scripts/riaps_deplo", "scripts/riaps_disco", "scripts/riaps_lang", "scripts/riaps_depll", "scripts/riaps_device", "scripts/riaps_gviz"
+        "scripts/riaps_actor", "scripts/riaps_ctrl", "scripts/riaps_deplo", "scripts/riaps_disco", "scripts/riaps_lang", "scripts/riaps_depll", "scripts/riaps_device", "scripts/riaps_gviz", "scripts/riaps_ctrl_host"
 
      ],
 
