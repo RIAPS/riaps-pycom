@@ -1,16 +1,31 @@
 set -e
-
 pip3 install /opt/riaps-pycom/src --verbose
-
 mkdir -p /etc/riaps
+#delete and create links again
 for i in `ls /usr/local/riaps/etc`; do rm -f /etc/riaps/$i;ln -s  /usr/local/riaps/etc/$i /etc/riaps/$i ;done
 
+
+if [ -f /etc/riaps.conf ]; then
+    rm /etc/riaps.conf.new
+else
+   mv /etc/riaps.conf.new /etc/riaps.conf 
+fi
+
+if [ -f /etc/riaps-log.conf ]; then
+    rm /etc/riaps-log.conf.new
+else
+   mv /etc/riaps-log.conf.new /etc/riaps-log.conf 
+fi
+
 mkdir -p /usr/local/riaps/etc
+rm -f /usr/local/riaps/etc/riaps.conf
+rm -f /usr/local/riaps/etc/riaps-log.conf
+
 ln -s /etc/riaps.conf /usr/local/riaps/etc/riaps.conf
 ln -s /etc/riaps-log.conf /usr/local/riaps/etc/riaps-log.conf
 
 #Create soft link from rdiscoveryd to run as default
 mv /usr/local/bin/riaps_disco /usr/local/bin/riaps_disco_redis
-ln -s /opt/riaps/armhf/bin/rdiscoveryd /usr/local/bin/riaps_disco
+ln -s /opt/riaps/amd64/bin/rdiscoveryd /usr/local/bin/riaps_disco
 
 rm -rf /opt/riaps-pycom/
