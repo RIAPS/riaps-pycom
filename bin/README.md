@@ -11,8 +11,11 @@ fab help
 
 - To setup a list of host nodes that are to be controlled by the fab command, edit the **fabfile/riaps_hosts.py** and update the **env.hosts** information. Notice that these can be either IP addresses or hostnames.
 ```
-# List of roles and hosts -- EDIT HERE --
-env.hosts = ['192.168.1.2','192.168.1.3','ubuntu.local','bbb-ef9e.local']
+  # ---- START OF EDIT HERE ----
+  # List of bbb hosts
+  # BBBs can be addressed by their IP address or the hostname.local (found at the command prompt on the BBB)
+  env.hosts = ['192.168.1.2','192.168.1.3','ubuntu.local','bbb-ef9e.local']
+  # ----  END OF EDIT HERE  ----
 ```
 - Hosts can additionally be specified explicitly with a command. This can be useful for debugging individual hosts
 ```
