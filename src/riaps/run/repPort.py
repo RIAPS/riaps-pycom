@@ -48,7 +48,6 @@ class RepPort(Port):
         return self.info
     
     def reset(self):
-        AAAA
         pass
     
     def getSocket(self):
