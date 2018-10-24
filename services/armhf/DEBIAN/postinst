@@ -5,5 +5,7 @@ systemctl enable riaps-rm-quota.service
 systemctl start riaps-rm-quota.service
 systemctl enable riaps-deplo.service
 systemctl start riaps-deplo.service
+systemctl enable sethostname.service
+systemctl start sethostname.service
 
 ldconfig
