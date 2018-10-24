@@ -20,18 +20,18 @@ def checkPTP():
 
 @task
 def config(mode=''):
-    """Change tsman configuration:[mode]"""
-    sudo("/opt/riaps/armhf/bin/tsman config " + mode)
+    """Change timesync configuration:[mode]"""
+    sudo("timesyncctl config " + mode)
 
 @task
 def status():
-    """Get tsman status"""
-    sudo("/opt/riaps/armhf/bin/tsman status")
+    """Get timesync status"""
+    sudo("timesyncctl status")
 
 @task
 def restart():
-    """Restart tsman"""
-    sudo("/opt/riaps/armhf/bin/tsman restart")
+    """Restart timesync"""
+    sudo("timesyncctl restart")
 
 @task
 def date():
