@@ -40,3 +40,4 @@ if __name__ == '__main__':
 
         hosts_lines.append(mark_text)
         hosts_lines.append('\n127.0.0.1\t{}\n'.format(hostname))
+        h.writelines(hosts_lines)
