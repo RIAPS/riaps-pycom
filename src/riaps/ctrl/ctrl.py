@@ -18,9 +18,19 @@ from threading import Timer
 import functools
 import logging
 import json
+import git
+from git import Repo
+import datetime
+import yaml
+import ipaddress
+import tempfile
+from Crypto.PublicKey import RSA
+from Crypto.Signature import PKCS1_v1_5
+from Crypto.Hash import SHA256
 from riaps.consts.defs import *
 from riaps.utils.ifaces import getNetworkInterfaces
 from riaps.utils.config import Config 
+from riaps.utils.origin import Origin
 from riaps.ctrl.ctrlsrv import ServiceThread, ServiceClient
 from riaps.ctrl.ctrlgui import ControlGUIClient
 from riaps.ctrl.ctrlcli import ControlCLIClient
@@ -29,6 +39,7 @@ from riaps.lang.lang import compileModel
 from riaps.lang.depl import DeploymentModel
 
 import gi
+import tarfile
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
 
@@ -304,7 +315,49 @@ class Controller(object):
             except:
                 return None
             
-    def downloadAppToClient(self,files,libraries,client,appName):
+    def signPackage(self,keyName, dataName):
+        with open(keyName, 'rb') as f: key = f.read()
+        with open(dataName, 'rb') as f: data = f.read()
+        rsakey = RSA.importKey(key)
+        signer = PKCS1_v1_5.new(rsakey)
+        digest = SHA256.new()
+        digest.update(data)
+        return signer.sign(digest)
+            
+    def buildPackage(self,appName,files,libraries):
+        ''' Build a download package in a temporary folder.
+        The package contains a tgz file with all the artifacts to be downloaded
+        and a signature file.
+        '''
+        tempDir = tempfile.mkdtemp()                        # Temp folder
+        tgz_file = os.path.join(tempDir,appName + '.tgz')   # Construct tgz file
+        with tarfile.open(tgz_file,"w:gz") as tar:
+            os.chdir(os.path.join(self.riaps_appFolder,'..'))
+            for f in files: tar.add(os.path.join(appName,f))
+            for l in libraries: tar.add(os.path.join(appName,l))
+        os.chdir(self.riaps_appFolder)
+        # Sign package
+        rsa_private_key = join(self.riaps_Folder,"keys/" + str(const.ctrlPrivateKey))
+        sign = self.signPackage(rsa_private_key, tgz_file)
+        sha_file = tgz_file + '.sha256'
+        with open(sha_file,'wb') as f: f.write(sign)
+        return (tgz_file, sha_file)
+
+    def installClientComplete(self,client,appName,res):
+        if not res or res.error:
+            self.log('? Install on %s failed' % client.name)
+            return
+        if res.ready:
+            return
+        else:
+            exe = functools.partial(self.installClientComplete,  # Keep waiting if result not ready yet
+                                    client=client,appName=appName,res=res)
+            timeout = const.ctrlDeploDelay/1000.0
+            Timer(timeout, exe).start()
+            
+    def downloadAppToClient(self,appName,tgz_file,sha_file,client,resList):
+
+        # Transfer package
         transport = self.startClientSession(client)
         if transport == None:
             return False
@@ -314,40 +367,52 @@ class Controller(object):
             
             appFolder = self.riaps_appInfoDict[appName]['riaps_appFolder']
             dirRemote = os.path.join(client.appFolder,appName)
-
-            sftpClient.mkdir(dirRemote,ignore_existing=True)
-
-            for fileName in files:
-                isUptodate = False
-                #localFile = os.path.join(self.riaps_appFolder,fileName)
-                localFile = os.path.join(appFolder, fileName)
-                remoteFile = dirRemote + '/' + os.path.basename(fileName)
-
-                #if remote file exists
-                try:
-                    if sftpClient.stat(remoteFile):
-                        localFileData = open(localFile, "rb").read()
-                        remoteFileData = sftpClient.open(remoteFile).read()
-                        md1 = hashlib.md5(localFileData).digest()
-                        md2 = hashlib.md5(remoteFileData).digest()
-                        if md1 == md2:
-                            isUptodate = True
-                            self.logger.info ("Unchanged: %s" % os.path.basename(fileName))
-                        else:
-                            self.logger.info ("Modified: %s" % os.path.basename(fileName))
-                except:
-                    self.logger.info ("New: %s" % os.path.basename(fileName))
-
-                if not isUptodate:
-                    self.logger.info ('Copying' + str(localFile) + ' to ' + str(remoteFile))
-                    sftpClient.put(localFile, remoteFile)
-
-            for libraryName in libraries:
-                localDir = os.path.join(self.riaps_appFolder,libraryName)
-                remoteDir = os.path.join(dirRemote,libraryName)
-                sftpClient.mkdir(remoteDir,ignore_existing=True)
-                self.logger.info ('Copying' + str(localDir) + ' to ' + str(remoteDir))
-                sftpClient.put_dir(localDir,remoteDir)
+           
+            appFolderRemote = client.appFolder # os.path.join(client,appFolder)
+            for fileName in [tgz_file,sha_file]:
+                localFile = fileName
+                remoteFile = os.path.join(appFolderRemote, os.path.basename(fileName))                
+                self.logger.info ('Copying' + str(localFile) + ' to ' + str(remoteFile))
+                sftpClient.put(localFile, remoteFile)
+            res = client.install(appName)
+            self.installClientComplete(client, appName, res)
+            resList += [res]
+            
+            # Old method = transfer files one by one
+#             sftpClient.mkdir(dirRemote,ignore_existing=True)
+# 
+#             for fileName in files:
+#                 isUptodate = False
+#                 #localFile = os.path.join(self.riaps_appFolder,fileName)
+#                 localFile = os.path.join(appFolder, fileName)
+#                 remoteFile = dirRemote + '/' + os.path.basename(fileName)
+# 
+#                 #if remote file exists
+#                 try:
+#                     if sftpClient.stat(remoteFile):
+#                         localFileData = open(localFile, "rb").read()
+#                         remoteFileData = sftpClient.open(remoteFile).read()
+#                         md1 = hashlib.md5(localFileData).digest()
+#                         md2 = hashlib.md5(remoteFileData).digest()
+#                         if md1 == md2:
+#                             isUptodate = True
+#                             self.logger.info ("Unchanged: %s" % os.path.basename(fileName))
+#                         else:
+#                             self.logger.info ("Modified: %s" % os.path.basename(fileName))
+#                 except:
+#                     self.logger.info ("New: %s" % os.path.basename(fileName))
+# 
+#                 if not isUptodate:
+#                     self.logger.info ('Copying' + str(localFile) + ' to ' + str(remoteFile))
+#                     sftpClient.put(localFile, remoteFile)
+# 
+#             for libraryName in libraries:
+#                 localDir = os.path.join(self.riaps_appFolder,libraryName)
+#                 remoteDir = os.path.join(dirRemote,libraryName)
+#                 sftpClient.mkdir(remoteDir,ignore_existing=True)
+#                 self.logger.info ('Copying' + str(localDir) + ' to ' + str(remoteDir))
+#                 sftpClient.put_dir(localDir,remoteDir)
+            # End old method
 
             transport.close()
             return True
@@ -361,15 +426,26 @@ class Controller(object):
             return False
 
     def downloadApp(self,files,libraries,clients,appName):
+        result = True
+        (tgz_file, sha_file) = self.buildPackage(appName,files,libraries)
         with ctrlLock:
+            resList = []
             for client in clients:
                 if client.stale:
                     self.log('S %s',client.name)    # Stale client, we don't deploy
                 else:
-                    ok = self.downloadAppToClient(files,libraries,client,appName)
-                    if not ok:
-                        return False
-        return True
+                    ok = self.downloadAppToClient(appName,tgz_file,sha_file,client,resList)
+                    result = result and ok
+            for res in resList:
+                while not res.ready: time.sleep(0.5)
+                value = res.value
+                if value == True:
+                    self.log('I %s %s' % (client.name,appName))
+                else:
+                    self.log('? %s on %s: %s' % (appName,client.name,str(value)))
+        os.remove(tgz_file)
+        os.remove(sha_file)
+        return result
                     
     def findClient(self,clientName):
         '''
@@ -390,6 +466,9 @@ class Controller(object):
                 return None
             
     def buildArgs(self,actuals):
+        '''
+        Build argument list from actual list
+        '''
         res = []
         for actual in actuals:
             argName = '--' + str(actual["name"])
@@ -398,7 +477,42 @@ class Controller(object):
             res.append(argValue)
         return res
     
+    def buildSignature(self):
+        ''' Build a 'signature' file for the app that is being downloaded
+        and record the download event in the git repository the app has
+        come from (if at all).   
+        '''
+        url = 'file:///' + os.getcwd()
+        mac = self.macAddress
+        sha = mac
+        host = str(int(ipaddress.IPv4Address(self.hostAddress)))
+        dateTime = datetime.datetime.now().isoformat() 
+        try:
+            repo = Repo(os.getcwd())
+            for r in repo.remotes:  # find 1st remote url
+                for u in r.urls:
+                    url = str(u)
+                    break
+                break
+            commit = repo.head.commit   # find last commit
+            sha = commit.hexsha         # use its hash
+            # tag last commit as 'deployed'
+            path = host + '.' + mac
+            ref = commit                # tag refers to last commit
+            try:                        # delete old tag (if any)
+                repo.delete_tag(repo.tags[path])
+            except:
+                pass
+            _tag = repo.create_tag(path, ref, 'riaps deplo @ %s' % dateTime)
+        except git.exc.InvalidGitRepositoryError:
+            pass
+        with open(const.sigFile,'w') as f:
+            yaml.dump(Origin(url,host,mac,sha),f)
+        
     def buildDownload(self, appName):
+        '''
+        Build a download package for the application.
+        '''
         noresult = ([],[],[],[])
         download = []
         if appName not in self.riaps_appInfoDict:
@@ -415,6 +529,10 @@ class Controller(object):
             return noresult
         else:
             download.append(appNameJSON)
+            
+        self.buildSignature()               # Add signature 
+        download.append(const.sigFile)
+        
         appObj = appInfoDict['riaps_model'][appName]
         depls = appInfoDict['riaps_depl'].getDeployments()
         # Check the all actors are present in the model
@@ -553,12 +671,18 @@ class Controller(object):
         self.launchList.append([client,appName,actorName])
     
     def isdir(self,sftp,path):
+        '''
+        Return True  if a remote folder path points to a directory
+        '''
         try:
             return S_ISDIR(sftp.stat(path).st_mode)
         except IOError:
             return False
 
     def rm(self,sftp,path,top=True):
+        '''
+        Recursively remove the content of a remote directory.  
+        '''
         files = sftp.listdir(path)
 
         for f in files:
@@ -591,9 +715,35 @@ class Controller(object):
                 pass
             return False
 
-
+    def removeSignature(self):
+        '''
+        Remove a 'signature' file from the current app folder,
+        and remove the corresponding tag from the git repository 
+        of the app (if it came from one).  
+        '''
+        obj = None
+        try:
+            with open(const.sigFile,'r') as f:
+                obj = yaml.load(f)
+        except:
+            pass
+        if obj == None: return
+        if not obj.url.startswith('file:///'):
+            host,mac = obj.host,obj.mac
+            try:
+                repo = Repo(os.getcwd())
+                path = host + '.' + mac
+                try:                        # delete old tag (if any)
+                    repo.delete_tag(repo.tags[path])
+                except:
+                    pass
+            except:
+                pass
+        os.remove(const.sigFile)
+            
     def removeApp(self, appName):
         files, libraries, clients, depls = self.buildDownload(appName)
+        self.removeSignature()
         with ctrlLock:
             for client in clients:
                 if client.stale:

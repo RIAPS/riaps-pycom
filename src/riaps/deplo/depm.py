@@ -20,6 +20,8 @@ import traceback
 import psutil
 import pwd
 import functools
+import tarfile
+
 import capnp
 from concurrent.futures.thread import ThreadPoolExecutor
 from _thread import RLock
@@ -33,6 +35,10 @@ try:
 except:
     cPickle = None
     import pickle
+
+from Crypto.PublicKey import RSA
+from Crypto.Signature import PKCS1_v1_5
+from Crypto.Hash import SHA256
 
 from riaps.consts.defs import *
 from riaps.utils.sudo import is_su
@@ -72,6 +78,7 @@ class DeploymentManager(threading.Thread):
         self.macAddress = parent.macAddress
         self.suffix = self.macAddress
         self.riapsApps = parent.riapsApps
+        self.riapsHome = parent.riapsHome
         self.launchMap = { }            # Map of launched actors
         self.launchRefs = { }           # Reference count for device actors
         self.mapLock = RLock()          # Lock to protect launchMap
@@ -284,6 +291,52 @@ class DeploymentManager(threading.Thread):
         self.appUser[appName] = userName
         self.setupUser(userName)
         self.appDbase.addApp(appName)
+        
+    def verifyPackage(self,keyName,sigName,dataName):
+        with open(keyName, 'rb') as f: key = f.read()
+        with open(sigName,'rb') as f: sig = f.read()
+        with open(dataName, 'rb') as f: data = f.read()
+        rsakey = RSA.importKey(key)
+        signer = PKCS1_v1_5.new(rsakey)
+        digest = SHA256.new()
+        digest.update(data)
+        return signer.verify(digest, sig)
+    
+    def installPackage(self,msg):
+        '''
+        Install a downloaded app package
+        '''
+        assert type(msg) == tuple and len(msg) == 1
+        (appName,) = msg
+        res = None
+        try:
+            tgz_file = join(self.riapsApps,appName + '.tgz')
+            sha_file = tgz_file + '.sha256'
+            rsa_public_key = join(self.riapsHome,"keys/" + str(const.ctrlPublicKey))
+            res = self.verifyPackage(rsa_public_key,sha_file,tgz_file)
+        except:
+            return "Error while verifying app '%s'" % appName
+        
+        if not res:
+            return '%s:Signature verification failed' % appName
+    
+        try:
+            with tarfile.open(tgz_file, "r:gz") as tar:
+                tar.extractall(self.riapsApps+'/')
+        except:
+            return 'Content extraction failed' 
+
+        try:
+            os.remove(tgz_file)
+            os.remove(sha_file)
+        except:
+            return 'App package removal failed'
+        
+        return True
+    
+    def installApp(self,msg):
+        reply = self.installPackage(msg)
+        self.ctrl.send_pyobj(reply)
         
     def cleanupApp(self,msg):
         ''' Clean up everything related to an app'''
@@ -624,6 +677,8 @@ class DeploymentManager(threading.Thread):
                 self.queryApps()
             elif cmd == "reclaim":          # Reclaim app files (for riaps)
                 self.reclaimApp(msg[1:])
+            elif cmd == "install":          # Install downloaded package
+                self.installApp(msg[1:])
             else:
                 pass
         except: 
