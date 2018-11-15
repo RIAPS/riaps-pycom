@@ -186,7 +186,7 @@ RateUnit:
 
 
 BurstUnit:
-	'k' | 'kb'
+	'kb' | 'k'
 ;
 
 NetUsage:
