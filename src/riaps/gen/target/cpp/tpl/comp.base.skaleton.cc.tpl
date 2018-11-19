@@ -20,7 +20,7 @@ using namespace std;
             auto conf = PyConfigConverter::convert(type_spec, actor_spec);
             conf.component_name = name;
             conf.component_type = type_name;
-            conf.isDevice=false;
+            conf.is_device=false;
             set_config(conf);
         }
 
@@ -29,7 +29,7 @@ using namespace std;
 {% block sendfuncs %} {% endblock %}
 
         void {{baseclassname}}::DispatchMessage(riaps::ports::PortBase* port) {
-            auto port_name = port->GetPortName();
+            auto port_name = port->port_name();
 {% for port_type, value in element.ports.items() %}
 {% if value %}
 {% if port_type in macros.handler_ports %}
