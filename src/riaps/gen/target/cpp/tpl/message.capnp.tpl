@@ -4,11 +4,11 @@ using Cxx = import "/capnp/c++.capnp";
 $Cxx.namespace("{{element.name|lower}}::messages");
 
 {% for message in element.messages %}
-# <<riaps:keep_{{message.name|lower}}--
+# riaps:keep_{{message.name|lower}}:begin
 struct {{message.name}} {
 
 
 }
-# --riaps:keep_{{message.name|lower}}>>
+# riaps:keep_{{message.name|lower}}:end
 
 {% endfor %}

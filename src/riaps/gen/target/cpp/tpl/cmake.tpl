@@ -42,9 +42,9 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG ${CMAKE_HOME_DIRECTORY})
 include_directories(include)
 include_directories(/usr/include/python3.6m/)
 
-# <<riaps:keep_cmake--
+# riaps:keep_cmake:begin
 
-# --riaps:keep_cmake>>
+# riaps:keep_cmake:end
 
 
 add_custom_command(
@@ -56,7 +56,7 @@ add_custom_command(
 )
 
 {% for component_name in element['components'] %}
-# <<riaps:keep_{{component_name|lower}}--
+# riaps:keep_{{component_name|lower}}:begin
 add_library({{component_name|lower}}
         src/{{component_name}}.cc
         src/base/{{component_name}}Base.cc
@@ -66,7 +66,7 @@ add_library({{component_name|lower}}
         )
 target_link_libraries({{component_name|lower}} PRIVATE czmq riaps dl capnp kj)
 set_target_properties({{component_name|lower}} PROPERTIES PREFIX lib SUFFIX .so)
-# --riaps:keep_{{component_name|lower}}>>
+# riaps:keep_{{component_name|lower}}:end
 
 {% endfor %}
 

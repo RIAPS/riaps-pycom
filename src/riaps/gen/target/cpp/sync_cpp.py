@@ -21,7 +21,7 @@ class FileSync:
         new_path = os.path.join(os.path.dirname(__file__), f'{output_dir}/include/messages/{self.model["name"].lower()}.capnp')
 
         for message in self.model['messages']:
-            capnp_regex = r"(?:# <<riaps:keep_{}--)(.+)(?:# --riaps:keep_{}>>)".format(message['name'].lower(), message['name'].lower())
+            capnp_regex = r"(?:# riaps:keep_{}:begin)(.+)(?:# riaps:keep_{}:end)".format(message['name'].lower(), message['name'].lower())
             self.capnp_rules.append(capnp_regex)
         self.apply_capnp_rules(old_path, new_path)
 
@@ -37,7 +37,7 @@ class FileSync:
 
         self.cmake_rules = base_cmake_rules.copy()
         for component_name, component_params in self.model['components'].items():
-            cmake_regex = r"(?:# <<riaps:keep_{}--)(.+)(?:# --riaps:keep_{}>>)".format(component_name.lower(), component_name.lower())
+            cmake_regex = r"(?:# riaps:keep_{}:begin)(.+)(?:# riaps:keep_{}:end)".format(component_name.lower(), component_name.lower())
             self.cmake_rules.append(cmake_regex)
         self.apply_cmake_rules(old_path, new_path)
 
@@ -46,12 +46,12 @@ class FileSync:
         cpp_markers   = ['keep_header', 'keep_decl', 'keep_impl', 'keep_construct', 'keep_destruct']
 
         for h_marker in h_markers:
-            new_rule = rf"(?:// <<riaps:{h_marker}--)(.+)(?:// --riaps:{h_marker}>>)"
+            new_rule = rf"(?:// riaps:{h_marker}:begin)(.+)(?:// riaps:{h_marker}:end)"
             self.h_rules.append(new_rule)
 
         base_cpp_rules = []
         for cpp_marker in cpp_markers:
-            new_rule = rf"(?:// <<riaps:{cpp_marker}--)(.+)(?:// --riaps:{cpp_marker}>>)"
+            new_rule = rf"(?:// riaps:{cpp_marker}:begin)(.+)(?:// riaps:{cpp_marker}:end)"
             base_cpp_rules.append(new_rule)
 
 
@@ -59,7 +59,7 @@ class FileSync:
             self.cpp_rules = base_cpp_rules.copy()
             for port_type, port_params in component_params['ports'].items():
                 for port_name in port_params.keys():
-                    handlerregex = r"(?:// <<riaps:keep_{}--)(.+)(?:// --riaps:keep_{}>>)".format(
+                    handlerregex = r"(?:// riaps:keep_{}:begin)(.+)(?:// riaps:keep_{}:end)".format(
                     ccfilters.handler_name(port_name).lower(), ccfilters.handler_name(port_name).lower())
                     self.cpp_rules.append(handlerregex)
 

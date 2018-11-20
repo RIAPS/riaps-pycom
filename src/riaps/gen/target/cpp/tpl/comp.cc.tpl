@@ -2,14 +2,14 @@
 
 {% block includes %}
 #include <{{classname}}.h>
-// <<riaps:keep_header--
+// riaps:keep_header:begin
 
-// --riaps:keep_header>>
+// riaps:keep_header:end
 {% endblock includes %}
 
 {% block component %}
 
-        // <<riaps:keep_construct--
+        // riaps:keep_construct:begin
         {{classname}}::{{classname}}(const py::object*  parent_actor     ,
                       const py::dict     actor_spec       ,
                       const py::dict     type_spec        ,
@@ -21,17 +21,17 @@
             : {{baseclassname}}(parent_actor, actor_spec, type_spec, name, type_name, args, application_name, actor_name) {
 
         }
-        // --riaps:keep_construct>>
+        // riaps:keep_construct:end
 
 {% for port_type, value in element.ports.items() %}
 {% if value %}
 {% if port_type in macros.handler_ports %}
 {% for port_name, port_params in value.items() %}
         void {{classname}}::{{ port_name|handlername }}() {
-            // <<riaps:keep_{{port_name|handlername|lower}}--
+            // riaps:keep_{{port_name|handlername|lower}}:begin
             auto msg = Recv{{port_name|capitalize}}();
 
-            // --riaps:keep_{{port_name|handlername|lower}}>>
+            // riaps:keep_{{port_name|handlername|lower}}:end
         }
 
 {% endfor %}
@@ -39,15 +39,15 @@
 {% endif %}
 {% endfor %}
 
-        // <<riaps:keep_impl--
+        // riaps:keep_impl:begin
 
-        // --riaps:keep_impl>>
+        // riaps:keep_impl:end
 
-        // <<riaps:keep_destruct--
+        // riaps:keep_destruct:begin
         {{classname}}::~{{classname}}() {
 
         }
-        // --riaps:keep_destruct>>
+        // riaps:keep_destruct:end
 
 {% endblock component %}
 

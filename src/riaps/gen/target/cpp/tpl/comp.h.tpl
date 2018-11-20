@@ -7,9 +7,9 @@
 
 {% block includes %}
 #include <base/{{baseclassname}}.h>
-// <<riaps:keep_header--
+// riaps:keep_header:begin
 
-// --riaps:keep_header>>
+// riaps:keep_header:end>>
 {% endblock includes %}
 
 {% block component %}
@@ -37,9 +37,9 @@
 
             virtual ~{{classname}}();
 
-            // <<riaps:keep_decl--
+            // riaps:keep_decl:begin
 
-            // --riaps:keep_decl>>
+            // riaps:keep_decl:end
         };
 {% endblock component %}
 

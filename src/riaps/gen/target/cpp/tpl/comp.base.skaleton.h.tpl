@@ -9,6 +9,7 @@
 #include <pybind11/stl.h>
 #include <pybind11/pybind11.h>
 #include <componentmodel/r_componentbase.h>
+#include <componentmodel/r_messagebuilder.h>
 #include <messages/{{element.appname|lower}}.capnp.h>
 
 namespace py = pybind11;
