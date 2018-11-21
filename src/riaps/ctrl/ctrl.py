@@ -332,10 +332,8 @@ class Controller(object):
         tempDir = tempfile.mkdtemp()                        # Temp folder
         tgz_file = os.path.join(tempDir,appName + '.tgz')   # Construct tgz file
         with tarfile.open(tgz_file,"w:gz") as tar:
-            os.chdir(os.path.join(self.riaps_appFolder,'..'))
-            for f in files: tar.add(os.path.join(appName,f))
-            for l in libraries: tar.add(os.path.join(appName,l))
-        os.chdir(self.riaps_appFolder)
+            for f in files: tar.add(f,os.path.join(appName,f))
+            for l in libraries: tar.add(l,os.path.join(appName,l))
         # Sign package
         rsa_private_key = join(self.riaps_Folder,"keys/" + str(const.ctrlPrivateKey))
         sign = self.signPackage(rsa_private_key, tgz_file)
