@@ -58,7 +58,7 @@ add_custom_command(
 
 {% for component_name in element['components'] %}
 # riaps:keep_{{component_name|lower}}:begin
-add_library({{component_name|lower}}
+add_library({{component_name|lower}} SHARED
         src/{{component_name}}.cc
         src/base/{{component_name}}Base.cc
         include/base/{{component_name}}Base.h
