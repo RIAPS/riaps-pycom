@@ -8,18 +8,18 @@ class FileSync:
         self.model     = model
 
     def sync_code(self, output_dir):
-        py_markers     = ['keep_import', 'keep_impl']
+        py_markers     = ['keep_import', 'keep_impl', 'keep_constr']
         base_py_rules = []
 
         for py_marker in py_markers:
-            new_rule = rf"(?:# <<riaps:{py_marker}--)(.+)(?:# --riaps:{py_marker}>>)"
+            new_rule = rf"(?:# riaps:{py_marker}:begin)(.+)(?:# riaps:{py_marker}:end)"
             base_py_rules.append(new_rule)
 
         for component_name, component_params in self.model['components'].items():
             self.py_rules = base_py_rules.copy()
             for port_type, port_params in component_params['ports'].items():
                 for port_name in port_params.keys():
-                    handlerregex = r"(?:# <<riaps:keep_{}--)(.+)(?:# --riaps:keep_{}>>)".format(port_name, port_name)
+                    handlerregex = r"(?:# riaps:keep_{}:begin)(.+)(?:# riaps:keep_{}:end)".format(port_name, port_name)
                     self.py_rules.append(handlerregex)
 
             old_path = os.path.join(os.path.dirname(__file__), f'{output_dir}_bak/{component_name}.py')
@@ -31,7 +31,6 @@ class FileSync:
             return
 
         rules = self.py_rules
-
         orig_content = open(orig_filepath, "r+").read()
 
         with open(new_filepath, "r+") as f:
