@@ -29,8 +29,11 @@
 {% for port_name, port_params in value.items() %}
         void {{classname}}::{{ port_name|handlername }}() {
             // riaps:keep_{{port_name|handlername|lower}}:begin
+{% if port_type == 'tims' %}
+            auto msg = Recv{{port_name|capitalize}}();
+{% else %}
             auto [msg, err] = Recv{{port_name|capitalize}}();
-
+{% endif %}
             // riaps:keep_{{port_name|handlername|lower}}:end
         }
 
@@ -38,7 +41,6 @@
 {% endif %}
 {% endif %}
 {% endfor %}
-
         // riaps:keep_impl:begin
 
         // riaps:keep_impl:end
