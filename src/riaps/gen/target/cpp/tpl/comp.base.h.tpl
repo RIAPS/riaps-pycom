@@ -16,9 +16,10 @@
 {% if value and  port_type in macros.recv_ports %}
 {% for port_name, port_params in value.items() %}
 {% if port_type == 'tims' %}
-            virtual std::string Recv{{port_name|capitalize}}() final;
+            virtual timespec Recv{{port_name|capitalize}}() final;
 {% else %}
-            virtual {{port_params|recvreturntype(port_type)}} Recv{{port_name|capitalize}}() final;
+
+            virtual std::tuple<MessageReader<messages::{{port_params|recvmessagetype(port_type)}}>, riaps::ports::PortError> Recv{{port_name|capitalize}}() final;
 {% endif %}
 {% endfor %}
 {% endif %}

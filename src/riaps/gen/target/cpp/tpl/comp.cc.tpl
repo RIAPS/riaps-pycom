@@ -29,7 +29,7 @@
 {% for port_name, port_params in value.items() %}
         void {{classname}}::{{ port_name|handlername }}() {
             // riaps:keep_{{port_name|handlername|lower}}:begin
-            auto msg = Recv{{port_name|capitalize}}();
+            auto [msg, err] = Recv{{port_name|capitalize}}();
 
             // riaps:keep_{{port_name|handlername|lower}}:end
         }
