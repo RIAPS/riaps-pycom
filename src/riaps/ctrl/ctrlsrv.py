@@ -53,61 +53,77 @@ class ServiceClient(object):
         Sets up an app on the client: it calls the Deployment service's callback running on the
         node. 
         ''' 
+        res = None
         if self.callback != None:
             res = self.callback(('setupApp',appName,appNameJSON))
-            return res
+        return res
             
     def cleanupApp(self,appName):
         '''
         Removes an app from the client: it calls the Deployment service's callback running on the
         node. 
         ''' 
+        res = None
         if self.callback != None:
             res = self.callback(('cleanupApp',appName))
-            return res
+        return res
     
     def cleanupApps(self):
         '''
         Removes all apps from the client: it calls the Deployment service's callback running on the
         node. 
         ''' 
+        res = None 
         if self.callback != None:
             res = self.callback(('cleanupApps',))
-            return res
+        return res
             
     def launch(self,appName,appNameJSON,actorName,actuals):
         '''
         Launches an app actor on the client: it calls the Deployment service's callback running on the
         node. 
         ''' 
+        res = None
         if self.callback != None:
             res = self.callback(('launch',appName,appNameJSON,actorName,actuals))
-            return res
+        return res
+    
+    def install(self,appName):
+        '''
+        Installs the downloaded package on the client.
+        '''
+        res = None
+        if self.callback != None:
+            res = self.callback(('install',appName))
+        return res
     
     def halt(self,appName,actorName):
         '''
         Halts an app actor on the client: it calls the Deployment service's callback running on the
         node. 
         ''' 
+        res = None 
         if self.callback != None:
             res = self.callback(('halt',appName,actorName))
-            return res
+        return res
         
     def clean(self):
         '''
         Clean the riaps_deplo app folder
         '''
+        res = None 
         if self.callback != None:
             res = self.callback(('clean',))
-            return res
+        return res
         
     def kill(self):
         '''
         Kill the riaps_deplo 
         '''
+        res = None
         if self.callback != None:
             res = self.callback(('kill',))
-            return res
+        return res
     
     def query(self):
         '''

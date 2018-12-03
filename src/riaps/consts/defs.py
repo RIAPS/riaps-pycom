@@ -45,6 +45,8 @@ const.ctrlPort = 8888
 const.ctrlServiceName = 'RIAPSControl'
 # Name of private key file
 const.ctrlPrivateKey = 'id_rsa.key'
+const.ctrlPublicKey = 'id_rsa.pub'
+
 # SSH port
 const.ctrlSSHPort = 22
 # Control/deplo delay (in msec) - time allowed for recovered apps to start
@@ -64,3 +66,5 @@ const.peerExpiredTimeout = 5000
 const.appDb = 'riaps-apps.lmdb'     # Under RIAPSAPPS
 const.appDbSize = 16                # Mbytes 
 
+# Signature file name
+const.sigFile = 'riaps.yaml'
