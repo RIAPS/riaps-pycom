@@ -4,8 +4,8 @@
 #include <componentmodel/r_pyconfigconverter.h>
 #include <base/{{baseclassname}}.h>
 
-
 using namespace std;
+using namespace riaps::ports;
 {% endblock %}
 
 {% block component %}

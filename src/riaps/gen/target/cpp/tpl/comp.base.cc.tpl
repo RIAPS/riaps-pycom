@@ -5,15 +5,16 @@
 {% if value and  port_type in macros.recv_ports %}
 {% for port_name, port_params in value.items() %}
 {% if port_type == 'tims' %}
-        string {{baseclassname}}::Recv{{port_name|capitalize}}() {
+        timespec {{baseclassname}}::Recv{{port_name|capitalize}}() {
             auto port = GetPortAs<riaps::ports::{{port_type|cppporttype}}>({{port_name|portmacro(port_type)}});
             return port->Recv();
         }
 {% else %}
-        messages::{{port_params|recvmessagetype(port_type)}}::Reader {{baseclassname}}::Recv{{port_name|capitalize}}() {
+        tuple<MessageReader<messages::{{port_params|recvmessagetype(port_type)}}>, PortError> {{baseclassname}}::Recv{{port_name|capitalize}}() {
             auto port = GetPortAs<riaps::ports::{{port_type|cppporttype}}>({{port_name|portmacro(port_type)}});
-            auto reader = port->Recv();
-            return reader->getRoot<messages::{{port_params|recvmessagetype(port_type)}}>();
+            auto [msg_bytes, error] = port->Recv();
+            MessageReader<messages::{{port_params|recvmessagetype(port_type)}}> reader(msg_bytes);
+            return make_tuple(reader, error);
         }
 
 {% endif %}
