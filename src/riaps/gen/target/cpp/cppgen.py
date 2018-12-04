@@ -1,6 +1,6 @@
 import os
 from multigen.jinja import JinjaTask, JinjaGenerator
-from . import ccfilters
+from riaps.gen.target.cpp import ccfilters
 
 class CompHppBaseTask(JinjaTask):
     template_name = 'comp.base.h.tpl'

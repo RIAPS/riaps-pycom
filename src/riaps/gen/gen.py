@@ -3,8 +3,8 @@ import os
 import argparse
 import shutil
 import json
-from .target.cpp import cppgen, sync_cpp
-from .target.python import pygen, sync_python
+from riaps.gen.target.cpp import cppgen, sync_cpp
+from riaps.gen.target.python import pygen, sync_python
 
 from multigen.jinja import JinjaTask, JinjaGenerator
 
