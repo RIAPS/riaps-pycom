@@ -10,7 +10,9 @@ setup(name='riaps-pycom',
       packages=find_packages(),
       package_data = {
         # If any package contains *.txt or *.rst files, include them:
-        '': ['*.capnp']},
+        '': ['*.capnp'],
+        'riaps.gen.target.cpp' : ['tpl/*'],
+        'riaps.gen.target.python' : ['tpl/*']},
       #data_files=[('riaps/etc', ['riaps/etc/riaps.conf',  'riaps/etc/riaps-log.conf']),
       #            ('riaps/lang',['riaps/lang/riaps.tx', 'riaps/lang/depl.tx']),
       #            ('riaps/etc',['riaps/etc/redis.conf']),

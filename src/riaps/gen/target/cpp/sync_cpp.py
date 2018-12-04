@@ -1,6 +1,6 @@
 import os
 import re
-from . import ccfilters
+from riaps.gen.target.cpp import ccfilters
 
 class FileSync:
 
