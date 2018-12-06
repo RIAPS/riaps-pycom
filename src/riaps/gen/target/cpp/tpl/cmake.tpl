@@ -70,6 +70,20 @@ set_target_properties({{component_name|lower}} PROPERTIES PREFIX lib SUFFIX .so)
 # riaps:keep_{{component_name|lower}}:end
 
 {% endfor %}
+{% for component_name in element['devices'] %}
+# riaps:keep_{{component_name|lower}}:begin
+add_library({{component_name|lower}} SHARED
+        src/{{component_name}}.cc
+        src/base/{{component_name}}Base.cc
+        include/base/{{component_name}}Base.h
+        include/{{component_name}}.h
+        include/messages/{{appname|lower}}.capnp.c++
+        )
+target_link_libraries({{component_name|lower}} PRIVATE czmq riaps dl capnp kj)
+set_target_properties({{component_name|lower}} PROPERTIES PREFIX lib SUFFIX .so)
+# riaps:keep_{{component_name|lower}}:end
+
+{% endfor %}
 
 
 
