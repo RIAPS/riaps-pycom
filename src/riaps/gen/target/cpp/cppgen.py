@@ -7,15 +7,8 @@ from riaps.gen.target.cpp import ccfilters
 class CompHppBaseTask(JinjaTask):
     template_name = 'comp.base.h.tpl'
 
-    def __init__(self, part):
-        super(CompHppBaseTask, self).__init__()
-        self.part = part
-
     def filtered_elements(self, model):
-        components = model[self.part].values()
-        for item in components:
-            item.update({"appname": model['name']})
-        return components
+        return model
 
     def relative_path_for_element(self, element):
         output_file = os.path.join("include/base/", f'{element["name"]}Base.h')
@@ -24,15 +17,8 @@ class CompHppBaseTask(JinjaTask):
 class CompCppBaseTask(JinjaTask):
     template_name = 'comp.base.cc.tpl'
 
-    def __init__(self, part):
-        super(CompCppBaseTask, self).__init__()
-        self.part = part
-
     def filtered_elements(self, model):
-        components = model[self.part].values()
-        for item in components:
-            item.update({"appname": model['name']})
-        return components
+        return model
 
     def relative_path_for_element(self, element):
         output_file = os.path.join("src/base/", f'{element["name"]}Base.cc')
@@ -41,12 +27,8 @@ class CompCppBaseTask(JinjaTask):
 class CompHppTask(JinjaTask):
     template_name = 'comp.h.tpl'
 
-    def __init__(self, part):
-        super(CompHppTask, self).__init__()
-        self.part = part
-
     def filtered_elements(self, model):
-        return model[self.part].values()
+        return model
 
     def relative_path_for_element(self, element):
         output_file = os.path.join("include", f'{element["name"]}.h')
@@ -55,12 +37,8 @@ class CompHppTask(JinjaTask):
 class CompCppTask(JinjaTask):
     template_name = 'comp.cc.tpl'
 
-    def __init__(self, part):
-        super(CompCppTask, self).__init__()
-        self.part = part
-
     def filtered_elements(self, model):
-        return model[self.part].values()
+        return model
 
     def relative_path_for_element(self, element):
         output_file = os.path.join("src", f'{element["name"]}.cc')
@@ -96,14 +74,10 @@ class CompGenerator(JinjaGenerator):
     )
 
     tasks = [
-        CompHppBaseTask('components'),
-        CompCppBaseTask('components'),
-        CompHppTask('components'),
-        CompCppTask('components'),
-        CompHppBaseTask('devices'),
-        CompCppBaseTask('devices'),
-        CompHppTask('devices'),
-        CompCppTask('devices'),
+        CompHppBaseTask(),
+        CompCppBaseTask(),
+        CompHppTask(),
+        CompCppTask(),
         CmakeTask(),
         CapnpTask()
     ]
