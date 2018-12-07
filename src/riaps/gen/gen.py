@@ -8,6 +8,21 @@ from riaps.gen.target.python import pygen, sync_python
 
 from multigen.jinja import JinjaTask, JinjaGenerator
 
+def preprocess(model):
+    items = {}
+
+    for key, value in model['components'].items():
+        items[key] = value
+        items[key]['is_device'] = False
+        items[key]['appname'] = model['name']
+
+    for key, value in model['devices'].items():
+        items[key] = value
+        items[key]['is_device'] = True
+        items[key]['appname'] = model['name']
+
+
+    return items
 
 
 def main():
@@ -32,6 +47,8 @@ def main():
     except:
         print("Unexpected error:", sys.exc_info()[0])
         os._exit(1)
+
+    model = preprocess(model)
 
     # C++ with pickle is not implemented
     if args.lang == "c++" and args.ser == "pickle":
