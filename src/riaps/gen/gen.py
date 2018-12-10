@@ -29,17 +29,6 @@ def preprocess(model, cppcomponents, pycomponents):
             else:
                 print("Language not specified for component: ".format(comp_name))
                 os._exit(1)
-
-
-
-    # for cppcomponent in cppcomponents:
-    #     part = 'components'
-    #     if cppcomponent in model['components']:
-    #         items[cppcomponent] = model[part][cppcomponent]
-    #     elif cppcomponent in model['devices']:
-    #         items[cppcomponent] = model['devices'][cppcomponent]
-
-
     return items
 
 
@@ -50,7 +39,6 @@ def main():
 
     parser.add_argument("-m", "--model", help="Model file path.",required=True)
     parser.add_argument("-o", "--output", help="Output directory. Default is the directory of the model file.")
-    #parser.add_argument("-l", "--lang", help="Target language.", default='c++', choices=['c++', 'python'])
     parser.add_argument("-cpp", "--cpp", help="List of components, where the target language is c++", nargs="*")
     parser.add_argument("-py", "--python", help="List of components, where the target language is python", nargs="*")
     parser.add_argument("-s", "--ser", help="Message serializer to be used.", default="capnp", choices=["capnp", "pickle"])
