@@ -5,14 +5,16 @@ import shutil
 import json
 from riaps.gen.target.cpp import cppgen, sync_cpp
 from riaps.gen.target.python import pygen, sync_python
+from riaps.gen.target.capnp import capnpgen, sync_capnp
 
 from multigen.jinja import JinjaTask, JinjaGenerator
 
 def preprocess(model, cppcomponents, pycomponents):
     items={
+        "appname"  : model['name'],
         "py"       : [],
         "cpp"      : [],
-        #"messages" : model['messages']
+        "messages" : [m['name'] for m in model['messages']]
     }
 
     for part in ['components', 'devices']:
@@ -92,17 +94,24 @@ def main():
 
     if cppcomponents:
         gen = cppgen.CompGenerator()
-        gen.generate(model['cpp'], output_dir)
-        # sync the generated code with the previous implementations
-        #if not args.overwrite:
-        #    sync = sync_cpp.FileSync(model)
-        #    sync.sync_all(output_dir)
-    elif pycomponents:
+        gen.generate(model, output_dir)
+        if not args.overwrite:
+            sync = sync_cpp.FileSync(model['cpp'])
+            sync.sync_all(output_dir)
+
+    if pycomponents:
         gen = pygen.CompGenerator(args.ser == "capnp")
-        gen.generate(model['py'], output_dir)
-        #if not args.overwrite:
-        #    sync = sync_python.FileSync(model)
-        #    sync.sync_code(output_dir)
+        gen.generate(model, output_dir)
+        if not args.overwrite:
+            sync = sync_python.FileSync(model['py'])
+            sync.sync_code(output_dir)
+
+    if args.ser == 'capnp':
+        gen = capnpgen.CapnpGenerator()
+        gen.generate(model, output_dir)
+        if not args.overwrite:
+            sync = sync_capnp.FileSync(model)
+            sync.sync_capnp(output_dir)
 
 if __name__ == '__main__':
     main()
