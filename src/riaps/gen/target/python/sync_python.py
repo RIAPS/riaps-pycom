@@ -15,7 +15,15 @@ class FileSync:
             new_rule = rf"(?:# riaps:{py_marker}:begin)(.+)(?:# riaps:{py_marker}:end)"
             base_py_rules.append(new_rule)
 
-        for component_name, component_params in self.model['components'].items():
+        items = {}
+
+        for key, value in self.model['components'].items():
+            items[key] = value
+
+        for key, value in self.model['devices'].items():
+            items[key] = value
+
+        for component_name, component_params in items.items():
             self.py_rules = base_py_rules.copy()
             for port_type, port_params in component_params['ports'].items():
                 for port_name in port_params.keys():
