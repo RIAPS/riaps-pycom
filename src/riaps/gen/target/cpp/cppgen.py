@@ -48,9 +48,10 @@ class CmakeTask(JinjaTask):
     template_name = 'cmake.tpl'
 
     def filtered_elements(self, model):
-        model = {'cmake' : model['cpp']}
-        return model.values()
-        #return model['cpp'].values()
+        return [{
+            'model'   : model['cpp'],
+            'appname' : model['appname']
+        }]
 
     def relative_path_for_element(self, element):
         output_file = os.path.join('CMakeLists.txt')

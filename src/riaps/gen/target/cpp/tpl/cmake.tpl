@@ -1,4 +1,4 @@
-{% set appname = element['name'] %}
+{% set appname = element['appname'] %}
 cmake_minimum_required(VERSION 3.10)
 project({{appname}})
 
@@ -56,7 +56,7 @@ add_custom_command(
         COMMENT "=== Generating capnp ==="
 )
 
-{% for component in element %}
+{% for component in element.model %}
 # riaps:keep_{{component.name|lower}}:begin
 add_library({{component.name|lower}} SHARED
         src/{{component.name}}.cc
