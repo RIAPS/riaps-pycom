@@ -2,8 +2,14 @@ import os
 from multigen.jinja import JinjaTask, JinjaGenerator
 from riaps.gen.target.cpp import ccfilters
 
+
+
 class CompHppBaseTask(JinjaTask):
     template_name = 'comp.base.h.tpl'
+
+    def __init__(self, part):
+        super(CompHppBaseTask, self).__init__()
+        self.part = part
 
     def filtered_elements(self, model):
         return model['cpp']
@@ -15,6 +21,10 @@ class CompHppBaseTask(JinjaTask):
 class CompCppBaseTask(JinjaTask):
     template_name = 'comp.base.cc.tpl'
 
+    def __init__(self, part):
+        super(CompCppBaseTask, self).__init__()
+        self.part = part
+
     def filtered_elements(self, model):
         return model['cpp']
 
@@ -25,6 +35,10 @@ class CompCppBaseTask(JinjaTask):
 class CompHppTask(JinjaTask):
     template_name = 'comp.h.tpl'
 
+    def __init__(self, part):
+        super(CompHppTask, self).__init__()
+        self.part = part
+
     def filtered_elements(self, model):
         return model['cpp']
 
@@ -34,6 +48,10 @@ class CompHppTask(JinjaTask):
 
 class CompCppTask(JinjaTask):
     template_name = 'comp.cc.tpl'
+
+    def __init__(self, part):
+        super(CompCppTask, self).__init__()
+        self.part = part
 
     def filtered_elements(self, model):
         return model['cpp']
@@ -62,10 +80,14 @@ class CompGenerator(JinjaGenerator):
     )
 
     tasks = [
-        CompHppBaseTask(),
-        CompCppBaseTask(),
-        CompHppTask(),
-        CompCppTask(),
+        CompHppBaseTask('components'),
+        CompCppBaseTask('components'),
+        CompHppTask('components'),
+        CompCppTask('components'),
+        CompHppBaseTask('devices'),
+        CompCppBaseTask('devices'),
+        CompHppTask('devices'),
+        CompCppTask('devices'),
         CmakeTask(),
     ]
 

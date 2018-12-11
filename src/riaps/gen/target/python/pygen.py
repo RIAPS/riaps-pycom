@@ -4,6 +4,10 @@ from multigen.jinja import JinjaTask, JinjaGenerator
 class CompPyTask(JinjaTask):
     template_name = 'comp.py.tpl'
 
+    def __init__(self, part):
+        super(CompPyTask, self).__init__()
+        self.part = part
+
     def filtered_elements(self, model):
         return model['py']
 
@@ -19,7 +23,8 @@ class CompGenerator(JinjaGenerator):
         )
 
         self.tasks = [
-            CompPyTask(),
+            CompPyTask('components'),
+            CompPyTask('devices')
         ]
 
         super(CompGenerator, self).__init__()

@@ -43,6 +43,7 @@ class FileSync:
             new_rule = rf"(?:// riaps:{cpp_marker}:begin)(.+)(?:// riaps:{cpp_marker}:end)"
             base_cpp_rules.append(new_rule)
 
+        items = {}
 
         for component in self.model:
             self.cpp_rules = base_cpp_rules.copy()
