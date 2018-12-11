@@ -1,4 +1,4 @@
-{% set appname = element['name'] %}
+{% set appname = element['appname'] %}
 cmake_minimum_required(VERSION 3.10)
 project({{appname}})
 
@@ -50,24 +50,24 @@ include_directories(/usr/include/python3.6m/)
 
 add_custom_command(
         OUTPUT  "${CMAKE_SOURCE_DIR}/include/messages/{{appname|lower}}.capnp.c++"
-        DEPENDS "${CMAKE_SOURCE_DIR}/include/messages/{{appname|lower}}.capnp"
-        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/include/messages"
-        COMMAND /opt/riaps/amd64/bin/capnp compile {{appname|lower}}.capnp -oc++:./
+        DEPENDS "${CMAKE_SOURCE_DIR}/{{appname|lower}}.capnp"
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+        COMMAND /opt/riaps/amd64/bin/capnp compile ./{{appname|lower}}.capnp -oc++:./include/messages/
         COMMENT "=== Generating capnp ==="
 )
 
-{% for component_name in element['components'] %}
-# riaps:keep_{{component_name|lower}}:begin
-add_library({{component_name|lower}} SHARED
-        src/{{component_name}}.cc
-        src/base/{{component_name}}Base.cc
-        include/base/{{component_name}}Base.h
-        include/{{component_name}}.h
+{% for component in element.model %}
+# riaps:keep_{{component.name|lower}}:begin
+add_library({{component.name|lower}} SHARED
+        src/{{component.name}}.cc
+        src/base/{{component.name}}Base.cc
+        include/base/{{component.name}}Base.h
+        include/{{component.name}}.h
         include/messages/{{appname|lower}}.capnp.c++
         )
-target_link_libraries({{component_name|lower}} PRIVATE czmq riaps dl capnp kj)
-set_target_properties({{component_name|lower}} PROPERTIES PREFIX lib SUFFIX .so)
-# riaps:keep_{{component_name|lower}}:end
+target_link_libraries({{component.name|lower}} PRIVATE czmq riaps dl capnp kj)
+set_target_properties({{component.name|lower}} PROPERTIES PREFIX lib SUFFIX .so)
+# riaps:keep_{{component.name|lower}}:end
 
 {% endfor %}
 {% for component_name in element['devices'] %}
@@ -84,6 +84,7 @@ set_target_properties({{component_name|lower}} PROPERTIES PREFIX lib SUFFIX .so)
 # riaps:keep_{{component_name|lower}}:end
 
 {% endfor %}
+
 
 
 

@@ -12,10 +12,7 @@ class CompHppBaseTask(JinjaTask):
         self.part = part
 
     def filtered_elements(self, model):
-        components = model[self.part].values()
-        for item in components:
-            item.update({"appname": model['name']})
-        return components
+        return model['cpp']
 
     def relative_path_for_element(self, element):
         output_file = os.path.join("include/base/", f'{element["name"]}Base.h')
@@ -29,10 +26,7 @@ class CompCppBaseTask(JinjaTask):
         self.part = part
 
     def filtered_elements(self, model):
-        components = model[self.part].values()
-        for item in components:
-            item.update({"appname": model['name']})
-        return components
+        return model['cpp']
 
     def relative_path_for_element(self, element):
         output_file = os.path.join("src/base/", f'{element["name"]}Base.cc')
@@ -46,7 +40,7 @@ class CompHppTask(JinjaTask):
         self.part = part
 
     def filtered_elements(self, model):
-        return model[self.part].values()
+        return model['cpp']
 
     def relative_path_for_element(self, element):
         output_file = os.path.join("include", f'{element["name"]}.h')
@@ -60,7 +54,7 @@ class CompCppTask(JinjaTask):
         self.part = part
 
     def filtered_elements(self, model):
-        return model[self.part].values()
+        return model['cpp']
 
     def relative_path_for_element(self, element):
         output_file = os.path.join("src", f'{element["name"]}.cc')
@@ -70,23 +64,13 @@ class CmakeTask(JinjaTask):
     template_name = 'cmake.tpl'
 
     def filtered_elements(self, model):
-        model = {'cmake' : model}
-        return model.values()
+        return [{
+            'model'   : model['cpp'],
+            'appname' : model['appname']
+        }]
 
     def relative_path_for_element(self, element):
         output_file = os.path.join('CMakeLists.txt')
-        return output_file
-
-
-class CapnpTask(JinjaTask):
-    template_name = 'message.capnp.tpl'
-
-    def filtered_elements(self, model):
-        model = {'capnp' : model}
-        return model.values()
-
-    def relative_path_for_element(self, element):
-        output_file = os.path.join('include/messages', f'{element["name"].lower()}.capnp')
         return output_file
 
 class CompGenerator(JinjaGenerator):
@@ -105,9 +89,7 @@ class CompGenerator(JinjaGenerator):
         CompHppTask('devices'),
         CompCppTask('devices'),
         CmakeTask(),
-        CapnpTask()
     ]
-
 
     def create_environment(self, **kwargs):
         environment = super().create_environment(**kwargs)
@@ -116,7 +98,6 @@ class CompGenerator(JinjaGenerator):
         environment.filters['sendername'        ] = ccfilters.sender_name
         environment.filters['recvreturntype'    ] = ccfilters.recv_return_type
         environment.filters['portmacro'         ] = ccfilters.port_macro
-        environment.filters['generateid'        ] = ccfilters.generate_capnp_id
         environment.filters['recvmessagetype'   ] = ccfilters.recv_message_type
         environment.filters['sendermessagetype' ] = ccfilters.sender_message_type
         environment.filters['cppporttype'       ] = ccfilters.cpp_port_type

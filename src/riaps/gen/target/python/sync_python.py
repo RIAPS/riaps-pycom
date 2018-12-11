@@ -15,23 +15,15 @@ class FileSync:
             new_rule = rf"(?:# riaps:{py_marker}:begin)(.+)(?:# riaps:{py_marker}:end)"
             base_py_rules.append(new_rule)
 
-        items = {}
-
-        for key, value in self.model['components'].items():
-            items[key] = value
-
-        for key, value in self.model['devices'].items():
-            items[key] = value
-
-        for component_name, component_params in items.items():
+        for component in self.model:
             self.py_rules = base_py_rules.copy()
-            for port_type, port_params in component_params['ports'].items():
+            for port_type, port_params in component['ports'].items():
                 for port_name in port_params.keys():
-                    handlerregex = r"(?:# riaps:keep_{}:begin)(.+)(?:# riaps:keep_{}:end)".format(port_name, port_name)
+                    handlerregex = r"(?:# riaps:keep_{}:begin)(.+)(?:# riaps:keep_{}:end)".format(port_name.lower(), port_name.lower())
                     self.py_rules.append(handlerregex)
 
-            old_path = os.path.join(os.path.dirname(__file__), f'{output_dir}_bak/{component_name}.py')
-            new_path = os.path.join(os.path.dirname(__file__), f'{output_dir}/{component_name}.py')
+            old_path = os.path.join(os.path.dirname(__file__), f'{output_dir}_bak/{component["name"]}.py')
+            new_path = os.path.join(os.path.dirname(__file__), f'{output_dir}/{component["name"]}.py')
             self.apply_py_rules(old_path, new_path)
 
     def apply_py_rules(self, orig_filepath, new_filepath):

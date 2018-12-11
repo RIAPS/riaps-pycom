@@ -1,5 +1,3 @@
-import subprocess
-
 def port_macro(value, port_type):
     if port_type == 'tims':
         return f"PORT_TIMER_{value.upper()}"
@@ -10,11 +8,6 @@ def handler_name(value):
 
 def sender_name(value):
     return f"Send{value.capitalize()}"
-
-def generate_capnp_id(value):
-    cmd = ['capnp', 'id']
-    id = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0]
-    return id.decode("utf-8").rstrip()
 
 def recv_message_type(value, port_type):
     type_name = 'type'
