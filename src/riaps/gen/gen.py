@@ -95,7 +95,7 @@ def main():
             sync.sync_code(output_dir)
 
     if args.ser == 'capnp':
-        gen = capnpgen.CapnpGenerator()
+        gen = capnpgen.CapnpGenerator(cppcomponents, output_dir)
         gen.generate(model, output_dir)
         if not args.overwrite:
             sync = sync_capnp.FileSync(model)

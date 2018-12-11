@@ -2,8 +2,6 @@ import os
 from multigen.jinja import JinjaTask, JinjaGenerator
 from riaps.gen.target.cpp import ccfilters
 
-
-
 class CompHppBaseTask(JinjaTask):
     template_name = 'comp.base.h.tpl'
 
@@ -70,7 +68,6 @@ class CompGenerator(JinjaGenerator):
         CompCppTask(),
         CmakeTask(),
     ]
-
 
     def create_environment(self, **kwargs):
         environment = super().create_environment(**kwargs)

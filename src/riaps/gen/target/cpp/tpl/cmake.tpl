@@ -52,7 +52,7 @@ add_custom_command(
         OUTPUT  "${CMAKE_SOURCE_DIR}/include/messages/{{appname|lower}}.capnp.c++"
         DEPENDS "${CMAKE_SOURCE_DIR}/{{appname|lower}}.capnp"
         WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
-        COMMAND /opt/riaps/amd64/bin/capnp compile {{appname|lower}}.capnp -oc++:${CMAKE_SOURCE_DIR}/include/messages/
+        COMMAND /opt/riaps/amd64/bin/capnp compile ./{{appname|lower}}.capnp -oc++:./include/messages/
         COMMENT "=== Generating capnp ==="
 )
 
