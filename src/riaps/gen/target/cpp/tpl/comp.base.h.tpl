@@ -30,7 +30,7 @@
 {% for port_type, value in element.ports.items() %}
 {% if value and  port_type in macros.sender_ports %}
 {% for port_name, port_params in value.items() %}
-            virtual bool Send{{port_name|capitalize}}(MessageBuilder<messages::{{port_params|sendermessagetype(port_type)}}>& message) final;
+            virtual riaps::ports::PortError Send{{port_name|capitalize}}(MessageBuilder<messages::{{port_params|sendermessagetype(port_type)}}>& message) final;
 {% endfor %}
 {% endif %}
 {% endfor %}

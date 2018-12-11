@@ -27,7 +27,7 @@
 {% for port_type, value in element.ports.items() %}
 {% if value and port_type in macros.sender_ports%}
 {% for port_name, port_params in value.items() %}
-        bool {{baseclassname}}::{{ port_name|sendername }}(MessageBuilder<messages::{{port_params|sendermessagetype(port_type)}}>& message) {
+        riaps::ports::PortError {{baseclassname}}::{{ port_name|sendername }}(MessageBuilder<messages::{{port_params|sendermessagetype(port_type)}}>& message) {
             return SendMessageOnPort(message.capnp_builder(), {{ port_name|portmacro(port_type) }});
         }
 
