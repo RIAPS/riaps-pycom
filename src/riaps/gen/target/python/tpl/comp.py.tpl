@@ -22,11 +22,7 @@ class {{element.name}}(Component):
 {% for port_name, port_params in value.items() %}
 # riaps:keep_{{port_name|lower}}:begin
     def on_{{port_name|lower}}(self):
-{% if use_capnp and port_type !='tims' %}
-        msg = self.{{port_name|lower}}.recv()
-{% else %}
-        msg = self.{{port_name|lower}}.recv_pyobj()
-{% endif %}
+        pass
 # riaps:keep_{{port_name|lower}}:end
 
 {% endfor %}
