@@ -27,12 +27,15 @@ def preprocess(model, cppcomponents, pycomponents):
             elif pycomponents!=None and comp_name in pycomponents:
                 items['py'].append(newitem)
             else:
-                print("Language not specified for component: ".format(comp_name))
+                print("Language not specified for component: {}".format(comp_name))
                 os._exit(1)
     return items
 
 
 def main():
+    if sys.version_info[0] < 3 or sys.version_info[0] == 3 and sys.version_info[1]<6:
+        print("riaps_gen requires python3.6 or above")
+
     model = {}
     parser = argparse.ArgumentParser()
     output_dir = ""
