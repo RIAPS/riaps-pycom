@@ -75,7 +75,7 @@ class RiapsModel2JSON(object):
     def getImpl(self,comp):
         l = comp.language
         if l == None:
-            return "all"
+            return "default"
         elif l.pyImpl:
             return "py"
         elif l.cppImpl:
