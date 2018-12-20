@@ -68,7 +68,7 @@ class Peripheral(object):
         self.logger.info("setting up device component")
         # Ask parent actor to contact devm to start our dca
         msg = (self.typeName,self.args)
-        resp = self.parent.registerDevice(msg)
+        _resp = self.parent.registerDevice(msg)
 
         self.state = Peripheral.State.Ready
         
@@ -89,7 +89,6 @@ class Peripheral(object):
  
         self.state = Peripheral.State.Active
 
-            
     def deactivate(self):
         if self.state != Peripheral.State.Active:
             raise StateError("Invalid state %s in deactivate()" % self.state)
@@ -117,6 +116,9 @@ class Peripheral(object):
         if self.state == Peripheral.State.Destroyed:
             raise StateError("Invalid state %s in destroy()" % self.state)
         # Destroy thread
+        
+    def handleReinstate(self):
+        pass
     
     def handleCPULimit(self):
         # Peripheral devices are just placeholders 
