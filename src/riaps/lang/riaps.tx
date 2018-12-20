@@ -34,7 +34,7 @@ CppImpl:
 
 // Component implementation language - Python
 PyImpl:
-	('py' | 'Python' | 'python') 
+	( 'Python' | 'python' | 'py' ) 
 ;
 
 // Component implementation language
