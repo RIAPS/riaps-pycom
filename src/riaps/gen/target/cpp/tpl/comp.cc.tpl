@@ -83,6 +83,7 @@ PYBIND11_MODULE(lib{{classname|lower}}, m) {
     testClass.def("handleNetLimit"        , &{{classname_full}}::HandleNetLimit);
     testClass.def("handleNICStateChange"  , &{{classname_full}}::HandleNICStateChange);
     testClass.def("handlePeerStateChange" , &{{classname_full}}::HandlePeerStateChange);
+    testClass.def("handleReinstate"       , &{{classname_full}}::HandleReinstate);
 
     m.def("create_component_py", &create_component_py, "Instantiates the component from python configuration");
 }
