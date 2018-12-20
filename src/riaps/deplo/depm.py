@@ -21,6 +21,7 @@ import psutil
 import pwd
 import functools
 import tarfile
+import yaml
 
 import capnp
 from concurrent.futures.thread import ThreadPoolExecutor
@@ -52,7 +53,7 @@ from riaps.deplo.appdb import AppDbase
 from riaps.utils.names import *
 
 # Record of the app
-DeploAppRecord = namedtuple('DeploAppRecord', 'model hash file')
+DeploAppRecord = namedtuple('DeploAppRecord', 'model hash file home')
 # Record of a user
 DeploUserRecord = namedtuple('DeploUserRecord', 'name home uid gid')
 # Record of an actor
@@ -394,7 +395,14 @@ class DeploymentManager(threading.Thread):
         except:
             self.logger.error("Unexpected error:", sys.exc_info()[0])
             raise
-        self.appModels[appName] = DeploAppRecord(hash=fileHash, model=model, file=modelFileName)
+        home = ''
+        try:
+            with open(os.path.join(os.path.dirname(modelFileName),const.sigFile),'r') as f:
+                org = yaml.load(f)
+                home = org.home
+        except:
+            pass
+        self.appModels[appName] = DeploAppRecord(hash=fileHash, model=model, file=modelFileName, home=home)
         fp.close()
     
     def getAppRecord(self,appName):
@@ -404,6 +412,9 @@ class DeploymentManager(threading.Thread):
     
     def getAppModel(self,appName):
         return self.getAppRecord(appName).model
+    
+    def getAppHome(self,appName):
+        return self.getAppRecord(appName).home
         
     def startActor(self,msg):
         '''
@@ -411,7 +422,9 @@ class DeploymentManager(threading.Thread):
         '''
         assert type(msg) == tuple and len(msg) == 4
         appName,appModel,actorName,actorArgs = msg
-                
+        
+        appHome = self.getAppHome(appName)
+        
         # Starter
         riaps_prog = 'riaps_actor'
 
@@ -441,6 +454,9 @@ class DeploymentManager(threading.Thread):
         user_record = self.users[userName]
         user_ld_libs = self.getAppLibs(appName)
         user_env = self.makeUserEnv(userName,user_ld_libs)
+        
+        user_env['PATHS_FROM_ECLIPSE_TO_PYTHON'] = '[[\"%s\",\"%s\"]]' %(appHome,appFolder)
+        
         user_uid = user_record.uid
         user_gid = user_record.gid
         user_cwd = appFolder
@@ -1030,6 +1046,8 @@ class DeploymentManager(threading.Thread):
                 self.launchRefs[key] += 1 
                 return
         
+        appHome = self.getAppHome(appName)
+        
         # Starter 
         riaps_prog = 'riaps_device'      #
         
@@ -1054,7 +1072,10 @@ class DeploymentManager(threading.Thread):
         self.resm.addActor(appName, actorName, self.getActorModel(appName, actorName))
         self.fm.addActor(appName, actorName, self.getActorModel(appName, actorName))
         
-        dev_env = os.environ.copy()             
+        dev_env = os.environ.copy()          
+        
+        dev_env['PATHS_FROM_ECLIPSE_TO_PYTHON'] = '[[\"%s\",\"%s\"]]' %(appHome,appFolder)
+           
         app_libs = self.getAppLibs(appName)
         self.makeLdLibEnv(dev_env,app_libs)
         
