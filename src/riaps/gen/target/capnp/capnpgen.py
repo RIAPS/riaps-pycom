@@ -23,12 +23,12 @@ class CapnpGenerator(JinjaGenerator):
         CapnpTask(),
     ]
 
-    def __init__(self, cppcomponents, output_dir):
+    def __init__(self, cppmodel, output_dir):
         super(CapnpGenerator, self).__init__()
 
         # Creating directory for the c++ header/source
         cpp_msgdir = os.path.join(output_dir, "include/messages")
-        if cppcomponents and not os.path.isdir(cpp_msgdir):
+        if cppmodel and not os.path.isdir(cpp_msgdir):
             os.makedirs(cpp_msgdir, exist_ok=True)
 
 

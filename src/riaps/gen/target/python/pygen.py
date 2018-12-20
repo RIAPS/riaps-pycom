@@ -15,8 +15,8 @@ class CompPyTask(JinjaTask):
         return f'{element["name"]}.py'
 
 class CompGenerator(JinjaGenerator):
-    def __init__(self, use_capnp):
-        self.use_capnp = use_capnp
+    def __init__(self):
+        self.use_capnp = True
         self.templates_path = os.path.join(
             os.path.abspath(os.path.dirname(__file__)),
             'tpl'
