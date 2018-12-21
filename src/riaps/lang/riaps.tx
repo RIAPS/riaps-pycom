@@ -26,11 +26,27 @@ Message:
 Library:
   'library' ( name=ID | name=STRING) ';'
 ;
- 
+
+// Component implementation language - C++
+CppImpl: 
+	('c++' | 'cpp' | 'C++') 
+;
+
+// Component implementation language - Python
+PyImpl:
+	( 'Python' | 'python' | 'py' ) 
+;
+
+// Component implementation language
+Language:
+	cppImpl ?= CppImpl | pyImpl ?=  PyImpl
+; 
+	
 // Component types used in the application
 Component:
  ( appComponent?='component' | ioComponent?='device') name=ID 
    ( '(' formals*=Formal[','] ')' )? 
+   ( 'in' language=Language )?
   '{'
      ports*=Port
   '}'
@@ -186,7 +202,7 @@ RateUnit:
 
 
 BurstUnit:
-	'k' | 'kb'
+	'kb' | 'k'
 ;
 
 NetUsage:

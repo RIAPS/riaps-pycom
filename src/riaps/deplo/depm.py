@@ -20,6 +20,9 @@ import traceback
 import psutil
 import pwd
 import functools
+import tarfile
+import yaml
+
 import capnp
 from concurrent.futures.thread import ThreadPoolExecutor
 from _thread import RLock
@@ -34,6 +37,10 @@ except:
     cPickle = None
     import pickle
 
+from Crypto.PublicKey import RSA
+from Crypto.Signature import PKCS1_v1_5
+from Crypto.Hash import SHA256
+
 from riaps.consts.defs import *
 from riaps.utils.sudo import is_su
 from riaps.utils.config import Config
@@ -46,7 +53,7 @@ from riaps.deplo.appdb import AppDbase
 from riaps.utils.names import *
 
 # Record of the app
-DeploAppRecord = namedtuple('DeploAppRecord', 'model hash file')
+DeploAppRecord = namedtuple('DeploAppRecord', 'model hash file home')
 # Record of a user
 DeploUserRecord = namedtuple('DeploUserRecord', 'name home uid gid')
 # Record of an actor
@@ -72,6 +79,7 @@ class DeploymentManager(threading.Thread):
         self.macAddress = parent.macAddress
         self.suffix = self.macAddress
         self.riapsApps = parent.riapsApps
+        self.riapsHome = parent.riapsHome
         self.launchMap = { }            # Map of launched actors
         self.launchRefs = { }           # Reference count for device actors
         self.mapLock = RLock()          # Lock to protect launchMap
@@ -285,6 +293,52 @@ class DeploymentManager(threading.Thread):
         self.setupUser(userName)
         self.appDbase.addApp(appName)
         
+    def verifyPackage(self,keyName,sigName,dataName):
+        with open(keyName, 'rb') as f: key = f.read()
+        with open(sigName,'rb') as f: sig = f.read()
+        with open(dataName, 'rb') as f: data = f.read()
+        rsakey = RSA.importKey(key)
+        signer = PKCS1_v1_5.new(rsakey)
+        digest = SHA256.new()
+        digest.update(data)
+        return signer.verify(digest, sig)
+    
+    def installPackage(self,msg):
+        '''
+        Install a downloaded app package
+        '''
+        assert type(msg) == tuple and len(msg) == 1
+        (appName,) = msg
+        res = None
+        try:
+            tgz_file = join(self.riapsApps,appName + '.tgz')
+            sha_file = tgz_file + '.sha256'
+            rsa_public_key = join(self.riapsHome,"keys/" + str(const.ctrlPublicKey))
+            res = self.verifyPackage(rsa_public_key,sha_file,tgz_file)
+        except:
+            return "Error while verifying app '%s'" % appName
+        
+        if not res:
+            return '%s:Signature verification failed' % appName
+    
+        try:
+            with tarfile.open(tgz_file, "r:gz") as tar:
+                tar.extractall(self.riapsApps+'/')
+        except:
+            return 'Content extraction failed' 
+
+        try:
+            os.remove(tgz_file)
+            os.remove(sha_file)
+        except:
+            return 'App package removal failed'
+        
+        return True
+    
+    def installApp(self,msg):
+        reply = self.installPackage(msg)
+        self.ctrl.send_pyobj(reply)
+        
     def cleanupApp(self,msg):
         ''' Clean up everything related to an app'''
         assert type(msg) == tuple and len(msg) == 1
@@ -341,7 +395,14 @@ class DeploymentManager(threading.Thread):
         except:
             self.logger.error("Unexpected error:", sys.exc_info()[0])
             raise
-        self.appModels[appName] = DeploAppRecord(hash=fileHash, model=model, file=modelFileName)
+        home = ''
+        try:
+            with open(os.path.join(os.path.dirname(modelFileName),const.sigFile),'r') as f:
+                org = yaml.load(f)
+                home = org.home
+        except:
+            pass
+        self.appModels[appName] = DeploAppRecord(hash=fileHash, model=model, file=modelFileName, home=home)
         fp.close()
     
     def getAppRecord(self,appName):
@@ -351,6 +412,9 @@ class DeploymentManager(threading.Thread):
     
     def getAppModel(self,appName):
         return self.getAppRecord(appName).model
+    
+    def getAppHome(self,appName):
+        return self.getAppRecord(appName).home
         
     def startActor(self,msg):
         '''
@@ -358,7 +422,9 @@ class DeploymentManager(threading.Thread):
         '''
         assert type(msg) == tuple and len(msg) == 4
         appName,appModel,actorName,actorArgs = msg
-                
+        
+        appHome = self.getAppHome(appName)
+        
         # Starter
         riaps_prog = 'riaps_actor'
 
@@ -388,6 +454,9 @@ class DeploymentManager(threading.Thread):
         user_record = self.users[userName]
         user_ld_libs = self.getAppLibs(appName)
         user_env = self.makeUserEnv(userName,user_ld_libs)
+        
+        user_env['PATHS_FROM_ECLIPSE_TO_PYTHON'] = '[[\"%s\",\"%s\"]]' %(appHome,appFolder)
+        
         user_uid = user_record.uid
         user_gid = user_record.gid
         user_cwd = appFolder
@@ -624,6 +693,8 @@ class DeploymentManager(threading.Thread):
                 self.queryApps()
             elif cmd == "reclaim":          # Reclaim app files (for riaps)
                 self.reclaimApp(msg[1:])
+            elif cmd == "install":          # Install downloaded package
+                self.installApp(msg[1:])
             else:
                 pass
         except: 
@@ -975,6 +1046,8 @@ class DeploymentManager(threading.Thread):
                 self.launchRefs[key] += 1 
                 return
         
+        appHome = self.getAppHome(appName)
+        
         # Starter 
         riaps_prog = 'riaps_device'      #
         
@@ -999,7 +1072,10 @@ class DeploymentManager(threading.Thread):
         self.resm.addActor(appName, actorName, self.getActorModel(appName, actorName))
         self.fm.addActor(appName, actorName, self.getActorModel(appName, actorName))
         
-        dev_env = os.environ.copy()             
+        dev_env = os.environ.copy()          
+        
+        dev_env['PATHS_FROM_ECLIPSE_TO_PYTHON'] = '[[\"%s\",\"%s\"]]' %(appHome,appFolder)
+           
         app_libs = self.getAppLibs(appName)
         self.makeLdLibEnv(dev_env,app_libs)
         

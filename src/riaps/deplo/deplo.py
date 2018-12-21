@@ -39,6 +39,7 @@ class DeploService(object):
         script must be in the path. One way to achieve this is to run this script in the same folder 
         '''
         self.riapsApps = os.getenv('RIAPSAPPS', './')
+        self.riapsHome = os.getenv('RIAPSHOME', './')   
         self.logger.info("Starting with apps in %s" % self.riapsApps)
         if os.getuid() != 0:
             self.logger.warning("running in unprivileged mode, some functions may fail")
@@ -169,7 +170,7 @@ class DeploService(object):
             cmd = msg[0]
             if cmd in ('launch','halt','setupApp','cleanupApp','cleanupApps'):
                 self.depm.doCommand(msg)
-            elif cmd in ('query','reclaim'):
+            elif cmd in ('query','reclaim','install'):
                 reply = self.depm.callCommand(msg)
             elif cmd == "kill":
                 self.killed = True

@@ -72,6 +72,14 @@ class RiapsModel2JSON(object):
                 formalObj["default"] = formal.argDefault.default
             res.append(formalObj)
         return res
+    def getImpl(self,comp):
+        l = comp.language
+        if l == None:
+            return "default"
+        elif l.pyImpl:
+            return "py"
+        elif l.cppImpl:
+            return "cpp" 
     def getIOComponents(self,components):
         res = {}
         for comp in components:
@@ -82,6 +90,7 @@ class RiapsModel2JSON(object):
                 compObj = { }
                 compObj["name"] = comp.name
                 compObj["formals"] = self.getFormals(comp.formals)
+                compObj["language"] = self.getImpl(comp)
                 compObj["ports"] = self.getPorts(comp.ports)
                 res[comp.name] = compObj
         return res
@@ -95,6 +104,7 @@ class RiapsModel2JSON(object):
                 compObj = { }
                 compObj["name"] = comp.name
                 compObj["formals"] = self.getFormals(comp.formals)
+                compObj["language"] = self.getImpl(comp)
                 compObj["ports"] = self.getPorts(comp.ports)
                 res[comp.name] = compObj
         return res
