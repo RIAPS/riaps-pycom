@@ -63,6 +63,9 @@ def main():
     else:
         output_dir = os.path.join(os.path.abspath(os.path.dirname(args.model)), "generated")
 
+    if output_dir == "./" or output_dir == ".":
+        output_dir =  os.path.dirname(os.path.abspath(args.model))
+
     # Backup the source to keep implementation parts
     if not args.overwrite:
         backup_dir = f"{output_dir}_bak"
