@@ -65,7 +65,7 @@ def main():
 
     if output_dir == "./" or output_dir == ".":
         output_dir =  os.path.dirname(os.path.abspath(args.model))
-
+      
     # Backup the source to keep implementation parts
     if not args.overwrite:
         backup_dir = f"{output_dir}_bak"
