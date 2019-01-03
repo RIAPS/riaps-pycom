@@ -504,8 +504,9 @@ class Controller(object):
             _tag = repo.create_tag(path, ref, 'riaps deplo @ %s' % dateTime)
         except git.exc.InvalidGitRepositoryError:
             pass
+        home = os.getcwd()
         with open(const.sigFile,'w') as f:
-            yaml.dump(Origin(url,host,mac,sha),f)
+            yaml.dump(Origin(url,host,mac,sha,home),f)
         
     def buildDownload(self, appName):
         '''
