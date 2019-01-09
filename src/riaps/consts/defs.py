@@ -68,3 +68,8 @@ const.appDbSize = 16                # Mbytes
 
 # Signature file name
 const.sigFile = 'riaps.yaml'
+
+# Log configuration
+const.logConfFile = 'riaps-log.conf'
+
+

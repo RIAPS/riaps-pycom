@@ -12,7 +12,7 @@ class Filter(Component):
         
     def on_ready(self):
         msg = self.ready.recv_pyobj()
-        self.logger.info("on_ready():%s [%d]", msg, self.pid)
+        self.logger.info("on_ready():%s [%d]" % (msg, self.pid))
         sendTime = self.ready.get_sendTime()
         recvTime = self.ready.get_recvTime()
         self.logger.info("SensorReady recv'd @ %f, sent @ %f, diff = %f" 

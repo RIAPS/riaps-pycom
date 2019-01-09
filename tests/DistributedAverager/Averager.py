@@ -22,11 +22,11 @@ class Averager(Component):
         self.sensorValue = 0.0
         self.ownValue = 0.0
         self.sensorUpdate = False
-        self.logger.info("%s - starting",str(self.pid))
+        self.logger.info("%s - starting" % str(self.pid))
 
     def on_sensorReady(self):
         msg = self.sensorReady.recv_pyobj() # Receive (timestamp,value)
-        self.logger.info("on_sensorReady():%s",str(msg[1]))
+        self.logger.info("on_sensorReady():%s" % str(msg[1]))
         self.sensorTime, self.sensorValue = msg
         self.sensorUpdate = True
 
@@ -59,5 +59,8 @@ class Averager(Component):
         
     def handlePeerStateChange(self,state,uuid):
         self.logger.info("peer %s is %s" % (uuid,state))
+        
+    def __destroy__(self):
+        self.logger.info("terminated")
         
         

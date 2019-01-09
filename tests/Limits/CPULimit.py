@@ -10,7 +10,7 @@ import time
 class CPULimit(Component):
     def __init__(self):
         super(CPULimit, self).__init__()
-        self.logger.info('CPULimit[%d]', os.getpid())
+        self.logger.info('CPULimit[%d]' % os.getpid())
         self.limit = 200000 # min, max ~ 215000
             
     def waste(self):

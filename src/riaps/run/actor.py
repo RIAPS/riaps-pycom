@@ -13,7 +13,9 @@ from riaps.run.disco import DiscoClient
 from riaps.run.deplc import DeplClient
 from riaps.proto import disco_capnp
 from riaps.proto import deplo_capnp
+from riaps.consts.defs import *
 from riaps.utils.ifaces import getNetworkInterfaces
+from riaps.utils.spdlog_setup import from_file
 import getopt
 import logging
 import traceback
@@ -23,6 +25,7 @@ import os
 import ipaddress
 import importlib
 from czmq import Zsys
+from riaps.utils import spdlog_setup
 
 class Actor(object):
     '''The actor class implements all the management and control functions over its components
@@ -63,6 +66,13 @@ class Actor(object):
         czmq_ctx = Zsys.init()
         self.context = zmq.Context.shadow(czmq_ctx.value)
         Zsys.handler_reset()                                # Reset previous signal handler
+        
+        try:
+            if os.path.isfile(const.logConfFile) and os.access(const.logConfFile, os.R_OK):
+                spdlog_setup.from_file(const.logConfFile)      
+        except Exception as e:
+            self.logger.error("error while configuring componentLogger: %s" % repr(e))  
+        
         messages = gModel["messages"]                       # Global message types (global on the network)
         self.messageNames = []
         for messageSpec in messages:

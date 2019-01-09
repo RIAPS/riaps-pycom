@@ -9,9 +9,9 @@ class GlobalEstimator(Component):
 
     def on_wakeup(self):
         msg = self.wakeup.recv_pyobj()
-        self.logger.info("on_wakeup():%s",msg)
+        self.logger.info("on_wakeup():%s" % msg)
         
     def on_estimate(self):
         msg = self.estimate.recv_pyobj()
-        self.logger.info("on_estimate():%s",msg)
+        self.logger.info("on_estimate():%s" % msg)
     

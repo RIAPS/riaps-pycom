@@ -11,6 +11,8 @@ import time
 import logging
 import traceback
 from .exc import BuildError
+from riaps.utils import spdlog_setup
+import spdlog
 
 class ComponentThread(threading.Thread):
     '''
@@ -197,14 +199,21 @@ class Component(object):
         class_ = getattr(self,'__class__')
         className = getattr(class_,'__name__')
         self.owner = class_.OWNER                   # This is set in the parent part (temporarily)
-        self.logger = logging.getLogger(className)
-        self.logger.setLevel(logging.INFO)
-        self.logger.propagate=False
-        self.loghandler = logging.StreamHandler()
-        self.loghandler.setLevel(logging.INFO)
-        self.logformatter = logging.Formatter('%(levelname)s:%(asctime)s:[%(process)d]:%(name)s:%(message)s')
-        self.loghandler.setFormatter(self.logformatter)
-        self.logger.addHandler(self.loghandler)
+        #
+#         self.logger = logging.getLogger(className)
+#         self.logger.setLevel(logging.INFO)
+#         self.logger.propagate=False
+#         self.loghandler = logging.StreamHandler()
+#         self.loghandler.setLevel(logging.INFO)
+#         self.logformatter = logging.Formatter('%(levelname)s:%(asctime)s:[%(process)d]:%(name)s:%(message)s')
+#         self.loghandler.setFormatter(self.logformatter)
+#         self.logger.addHandler(self.loghandler)
+        #
+        loggerName = self.owner.getActorName() + '.' + self.owner.getName()
+        self.logger = spdlog_setup.get_logger(loggerName)
+        if self.logger == None:
+            self.logger = spdlog.ConsoleLogger(loggerName,True,True,False)
+            self.logger.set_pattern("[%l]:%H:%M:%S,%e:[%P]:%n:%v")
 #        print  ( "Component() : '%s'" % self )
  
     def getName(self):

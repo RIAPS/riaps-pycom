@@ -9,7 +9,7 @@ class Sensor(Component):
         
     def on_clock(self):
         now = self.clock.recv_pyobj()   # Receive time.time() as float
-        self.logger.info('on_clock(): %s',str(now))
+        self.logger.info('on_clock(): %s' % str(now))
         msg = "data_ready"
         self.ready.send_pyobj(msg)
         self.limit += 1000      # Increase limit, do more cycles
@@ -17,7 +17,7 @@ class Sensor(Component):
     
     def on_request(self):
         req = self.request.recv_pyobj()
-        self.logger.info("on_request():%s", req)
+        self.logger.info("on_request():%s" % req)
         rep = "sensor_rep"
         self.request.send_pyobj(rep)
 

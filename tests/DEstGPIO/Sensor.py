@@ -22,7 +22,7 @@ class Sensor(Component):
 
     def on_request(self):
         msg = self.request.recv_pyobj()
-        self.logger.info("PID (%s) - on_query():%s",str(self.pid),str(msg))
+        self.logger.info("PID (%s) - on_query():%s" % (str(self.pid),str(msg)))
         rep = (msg,self.myValue)        # Send (timestamp,value) 
         self.request.send_pyobj(rep)
 
