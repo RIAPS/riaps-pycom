@@ -49,6 +49,7 @@ class CltPort(Port):
         self.setOwner(owner)
         self.socket = self.context.socket(zmq.REQ)
         self.socket.setsockopt(zmq.SNDTIMEO,self.sendTimeout) 
+        self.setupCurve(False)
         self.host = ''
         if not self.isLocalPort:
             globalHost = self.getGlobalIface()
@@ -71,6 +72,7 @@ class CltPort(Port):
             self.socket.disconnect(srvPort)
         self.owner.replaceSocket(self,newSocket)
         self.socket = newSocket
+        self.setupCurve(False)
         if self.serverHost != None and self.serverPort != None:
             srvPort = "tcp://" + str(self.serverHost) + ":" + str(self.serverPort)
             self.socket.connect(srvPort)

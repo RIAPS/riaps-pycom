@@ -51,7 +51,8 @@ class QryPort(Port):
         self.setOwner(owner)
         self.socket = self.context.socket(zmq.DEALER)
         self.socket.setsockopt_string(zmq.IDENTITY, str(id(self)), 'utf-8')  # FIXME: identity is not unique across nodes
-        self.socket.setsockopt(zmq.SNDTIMEO,self.sendTimeout) 
+        self.socket.setsockopt(zmq.SNDTIMEO,self.sendTimeout)
+        self.setupCurve(False) 
         self.host = ''
         if not self.isLocalPort:
             globalHost = self.getGlobalIface()

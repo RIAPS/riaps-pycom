@@ -37,7 +37,9 @@ class Port(object):
         self.logger = logging.getLogger(__name__)
         self.parent = parentPart
         self.name = portName
-        self.context = parentPart.context
+        self.context = parentPart.appContext
+        (self.public_key,self.private_key) = (parentPart.parent.public_key,parentPart.parent.private_key)
+        self.security = (self.public_key != None) and (self.private_key != None)
         self.localIface = None
         self.globalIface = None
         self.sendTimeout = Config.SEND_TIMEOUT
@@ -50,6 +52,15 @@ class Port(object):
         self.info = None
         self.owner = None
     
+    def setupCurve(self,server):
+        if self.socket and self.security:
+            self.socket.curve_secretkey = self.private_key
+            self.socket.curve_publickey = self.public_key
+            if server:
+                self.socket.curve_server = True
+            else:
+                self.socket.curve_serverkey = self.public_key
+                
     def setupSocket(self,owner):
         ''' Setup the socket. Abstract, subclasses must implement this method.
         

@@ -9,6 +9,7 @@ import rpyc
 import time
 import sys
 import os
+import zmq
 from os.path import join
 from _collections import OrderedDict
 import re
@@ -41,15 +42,21 @@ class ControlCLIClient(object):
         self.logger = logging.getLogger(__name__)
         self.port = port
         self.controller = controller
+        self.context = controller.context
         self.script = script
         self.prompt = '$ '
         (self.stdin,self.echo) = (sys.stdin,False) if self.script == '-' else (open(script,'r'),True)
         self.stdout = sys.stdout
-        self.conn = rpyc.connect(self.controller.hostAddress, port)  # Local connection to the service
-        GLib.io_add_watch(self.conn, 1, GLib.IO_IN, self.bg_server)  # Register the callback with the service
-        GLib.io_add_watch(self.stdin, 1, GLib.IO_IN, self.cmd_server)
-        self.conn.root.login("*gui*", self.on_serverMessage)  # Log in to the service
+#         self.conn = rpyc.connect(self.controller.hostAddress, port)  # Local connection to the service
+#         GLib.io_add_watch(self.conn, 1, GLib.IO_IN, self.bg_server)  # Register the callback with the service
+#         GLib.io_add_watch(self.stdin, 1, GLib.IO_IN, self.cmd_server)
+#         self.conn.root.login("*gui*", self.on_serverMessage)  # Log in to the service
 
+        self.socket = self.context.socket(zmq.PULL)
+        self.socket.bind(self.controller.endpoint)
+        GLib.io_add_watch(self.socket.fileno(), 1, GLib.IO_IN, self.on_serverMessage)
+        GLib.io_add_watch(self.stdin, 1, GLib.IO_IN, self.cmd_server)
+        
         self.appDownLoaded = False
         self.appFolder = None
         self.appName = None
@@ -93,8 +100,14 @@ class ControlCLIClient(object):
             
         def do_w(self,arg):
             '''Wait: w sec'''
-            self.parent.conn.poll_all(int(arg))
-        
+            # self.parent.conn.poll_all(int(arg))
+            #             poller = zmq.Poller()
+            #             poller.register(self.parent.socket, zmq.POLLIN)
+            #             socks = dict(poller.poll(int(arg)))
+            #             if self.parent.socket in socks:
+            #                 self.parent.on_serverMessage()
+            time.sleep(int(arg))
+
         def do_e(self,arg):
             ''' Echo argument: e message'''
             self.stdout.write(arg + '\r\n')
@@ -113,13 +126,13 @@ class ControlCLIClient(object):
         self.shell = self.CtrlCmdShell(self)
         self.loop.run()
     
-    def bg_server(self, source=None, cond=None):
-        '''Check if there is something pending from the server thread.'''
-        if self.conn:
-            self.conn.poll_all()
-            return True
-        else:
-            return False
+#     def bg_server(self, source=None, cond=None):
+#         '''Check if there is something pending from the server thread.'''
+#         if self.conn:
+#             self.conn.poll_all()
+#             return True
+#         else:
+#             return False
     
     def do_prompt(self):
         if not self.echo:
@@ -151,7 +164,7 @@ class ControlCLIClient(object):
 
             self.shell.onecmd(line)
             
-    def cmd_server(self, source=None, cond=None):
+    def cmd_server(self, source=None, _cond=None):
         if source == None: return
         line = source.readline()
         if not len(line):
@@ -171,15 +184,23 @@ class ControlCLIClient(object):
             self.do_prompt()
         return True
 
-    
-    def on_serverMessage(self, text):
-        '''
-        Callback used by the service thread(s): it prints a log message.
-        '''
+    def log(self,text):
         global cmdLock
         with cmdLock:
             text = '\n> ' + text + '\n'
             print(text)
+        
+    def on_serverMessage(self, _channel=None, _cond=None):
+        '''
+        Callback used by the service thread(s): it prints a log message.
+        '''
+        while True:
+            try:
+                text = self.socket.recv_pyobj(flags=zmq.NOBLOCK)
+                self.log(text)
+            except zmq.error.ZMQError:
+                break
+        return True
 
     def isAppOK(self):
         aName = self.appName
@@ -221,7 +242,8 @@ class ControlCLIClient(object):
         '''
         Quit the app. Forces a return from the CMD loop
         '''
-        self.conn.close()
+        # self.conn.close()
+        self.socket.close()
         self.loop.quit()   
 
     def cmdLaunchApp(self,appSelected):

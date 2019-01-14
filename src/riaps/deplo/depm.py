@@ -37,9 +37,9 @@ except:
     cPickle = None
     import pickle
 
-from Crypto.PublicKey import RSA
-from Crypto.Signature import PKCS1_v1_5
-from Crypto.Hash import SHA256
+from Cryptodome.PublicKey import RSA
+from Cryptodome.Signature import PKCS1_v1_5
+from Cryptodome.Hash import SHA256
 
 from riaps.consts.defs import *
 from riaps.utils.sudo import is_su
@@ -397,7 +397,7 @@ class DeploymentManager(threading.Thread):
             raise
         home = ''
         try:
-            with open(os.path.join(os.path.dirname(modelFileName),const.sigFile),'r') as f:
+            with open(os.path.join(os.path.dirname(modelFileName),const.appDescFile),'r') as f:
                 org = yaml.load(f)
                 home = org.home
         except:

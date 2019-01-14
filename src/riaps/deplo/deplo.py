@@ -9,8 +9,11 @@ import time
 import sys
 import os
 import logging
+import socket
 import zmq
 import rpyc
+import rpyc.utils
+from rpyc.utils.factory import DiscoveryError
 rpyc.core.protocol.DEFAULT_CONFIG['allow_pickle'] = True
 
 from riaps.consts.defs import *
@@ -43,7 +46,11 @@ class DeploService(object):
         self.logger.info("Starting with apps in %s" % self.riapsApps)
         if os.getuid() != 0:
             self.logger.warning("running in unprivileged mode, some functions may fail")
-
+        if Config.SECURITY:
+            self.keyFile = os.path.join(self.riapsHome,"keys/" + str(const.ctrlPrivateKey))
+            self.certFile = os.path.join(self.riapsHome,"keys/" + str(const.ctrlCertificate))
+        else:
+            self.keyFile = self.certFile = None 
         self.ctrlrHost = host 
         self.ctrlrPort = port
         self.conn = None
@@ -88,20 +95,47 @@ class DeploService(object):
         little and try again. 
         '''
         while True:
+            self.conn = None
             try:
-                self.conn = rpyc.connect_by_service(const.ctrlServiceName,config = {"allow_public_attrs" : True})
-                break
-            except:
-                try:  
-                    self.conn = rpyc.connect(self.ctrlrHost,self.ctrlrPort,config = {"allow_public_attrs" : True})
-                    break
-                except:
-                    if retry == False:
-                        return False
-                    time.sleep(5)
-                    continue
-        self.bgsrv = rpyc.BgServingThread(self.conn,self.handleBgServingThreadException)       
-        resp = self.conn.root.login(self.hostAddress,self.callback,self.riapsApps)
+                addrs = rpyc.utils.factory.discover(const.ctrlServiceName)
+                for host,port in addrs:
+                    try:
+                        if Config.SECURITY:
+                            self.conn = rpyc.ssl_connect(host,port,
+                                                         keyfile = self.keyFile, certfile = self.certFile,
+                                                         config = {"allow_public_attrs" : True})
+                        else:
+                            self.conn = rpyc.connect(host,port,
+                                                     config = {"allow_public_attrs" : True})
+                    except socket.error:
+                        pass
+                    if self.conn: break
+            except DiscoveryError:
+                pass
+            if self.conn: break
+            if self.ctrlrHost and self.ctrlrPort:
+                try:
+                    if Config.SECURITY:
+                        self.conn = rpyc.ssl_connect(self.ctrlrHost,self.ctrlrPort,
+                                                     keyfile = self.keyFile, certfile = self.certFile,
+                                                     config = {"allow_public_attrs" : True})
+                    else:
+                        self.conn = rpyc.connect(self.ctrlrHost,self.ctrlrPort,
+                                                 config = {"allow_public_attrs" : True})
+                except socket.error:
+                    pass
+            if self.conn: break
+            if retry == False:
+                return False
+            else:
+                time.sleep(5)
+                continue
+        self.bgsrv = rpyc.BgServingThread(self.conn,self.handleBgServingThreadException)
+        resp = None
+        try:       
+            resp = self.conn.root.login(self.hostAddress,self.callback,self.riapsApps)
+        except:
+            pass
         if type(resp) == tuple and resp[0] == 'dbase':   # Expected response: (redis) database host:port pair
             if self.depm != None:
                 self.depm.doCommand(('setDisco',) + resp[1:])
