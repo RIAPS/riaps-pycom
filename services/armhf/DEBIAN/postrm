@@ -1,8 +1,1 @@
 systemctl daemon-reload
-
-mv /etc/network/interfaces.preriaps  /etc/network/interfaces || true
-echo "reset old  network interfaces"
-mv  /etc/resolv.conf.preriaps  /etc/resolv.conf || true
-echo "reset old resolv.conf"
-
-
