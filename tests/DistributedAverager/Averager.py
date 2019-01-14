@@ -7,9 +7,9 @@ import os
 
 # Averager algorithm
 # Continuous time update equation (for node i)
-# dx_i/dt = - Sum_{j} a_{ij} (x_{i} - x_{j} 
+# dx_i/dt = - Sum_{j} a_{ij} (x_{i} - x_{j}
 # Discretized
-# x_{i,k+1} = x_{i,k} - (1 / T_{S}) Sum_{j} a_{ij} (x_{i,k} - x_{j,k})  
+# x_{i,k+1} = x_{i,k} - (1 / T_{S}) Sum_{j} a_{ij} (x_{i,k} - x_{j,k})
 
 class Averager(Component):
     def __init__(self,Ts):
@@ -32,14 +32,14 @@ class Averager(Component):
 
     def on_nodeReady(self):
         msg = self.nodeReady.recv_pyobj()  # Receive (actorID,timestamp,value)
-        # self.logger.info("on_otherReady():%s",str(msg[2]))
+        # self.logger.info("on_otherReady():%s" % str(msg[2]))
         otherId,otherTimestamp,otherValue = msg
         if otherId != self.uuid:
             self.dataValues[otherId] = otherValue
-    
+
     def on_update(self):
-        msg = self.update.recv_pyobj()      # Receive timestamp 
-        # self.logger.info("on_update():%s",str(msg))
+        msg = self.update.recv_pyobj()      # Receive timestamp
+        # self.logger.info("on_update():%s" % str(msg))
         if self.sensorUpdate:
             self.ownValue = self.sensorValue
             self.sensorUpdate = False
@@ -51,16 +51,14 @@ class Averager(Component):
             self.ownValue -= der
         now = time.time()
         msg = (self.uuid,now,self.ownValue)
-        self.thisReady.send_pyobj(msg)        
+        self.thisReady.send_pyobj(msg)
 
     def on_display(self):
         msg = self.display.recv_pyobj()
         self.logger.info('[%s]:%f' % (str(self.pid),self.ownValue))
-        
+
     def handlePeerStateChange(self,state,uuid):
         self.logger.info("peer %s is %s" % (uuid,state))
-        
+
     def __destroy__(self):
         self.logger.info("terminated")
-        
-        
