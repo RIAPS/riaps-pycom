@@ -9,7 +9,7 @@ class GlobalEstimator(Component):
     def __init__(self):
         super(GlobalEstimator, self).__init__()
         self.pid = os.getpid()
-        self.logger.info("(PID %s) - starting GlobalEstimator()",str(self.pid))
+        self.logger.info("(PID %s) - starting GlobalEstimator()" % str(self.pid))
         
 #         ''' Enable GPIO '''
 #         self.pinName = 'USR3'
@@ -25,7 +25,7 @@ class GlobalEstimator(Component):
 
     def on_estimate(self):
         msg = self.estimate.recv_pyobj()
-        self.logger.info("PID (%s) - on_estimate():%s",str(self.pid), str(msg))
+        self.logger.info("PID (%s) - on_estimate():%s" % (str(self.pid), str(msg)))
         (estPid,sTime,sensorVal) = msg
         self.runningSum += sensorVal
         self.availNumEst += 1
@@ -38,7 +38,7 @@ class GlobalEstimator(Component):
         ''' Average existing estimate '''
         if self.availNumEst != 0:
             averageEst = self.runningSum / self.availNumEst
-            self.logger.info("global_est(value=%s)",averageEst)
+            self.logger.info("global_est(value=%s)" % averageEst)
         
 #             ''' Toggle GPIO '''
 #             GPIO.output(self.pinName, self.gpioOn)
@@ -47,5 +47,5 @@ class GlobalEstimator(Component):
    
     
     def __destroy__(self):
-        self.logger.info("(PID %s) - stopping GlobalEstimator",str(self.pid))  
+        self.logger.info("(PID %s) - stopping GlobalEstimator" % str(self.pid))  
 #         GPIO.cleanup(self.pinName) 	        	        

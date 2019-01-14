@@ -43,7 +43,7 @@ class Sensor(Component):
         super(Sensor, self).__init__()
         self.pid = os.getpid()
         self.myValue = (10.0 * random.random()) - 5.0
-        self.logger.info("Sensor(rate=%d)[%d]",rate,self.pid)
+        self.logger.info("Sensor(rate=%d)[%d]"% (rate,self.pid))
         self.sensorThread = None                    # Cannot manipulat ports in constructr or start threads 
 
     def on_clock(self):
@@ -52,7 +52,7 @@ class Sensor(Component):
             self.sensorThread.start()
             self.trigger.activate()
         now = self.clock.recv_pyobj()   # Receive time (as float)
-        self.logger.info('on_clock():%s',now)
+        self.logger.info('on_clock():%s' % str(now))
         msg = (now,self.myValue)        # Send (timestamp,value) 
         self.sensorReady.send_pyobj(msg)
 
@@ -61,4 +61,4 @@ class Sensor(Component):
         
     def on_trigger(self):                   # Internally triggered op
         now = self.trigger.recv_pyobj()     # Receive time (as float)
-        self.logger.info('on_trigger():%s',now)
+        self.logger.info('on_trigger():%s' % str(now))

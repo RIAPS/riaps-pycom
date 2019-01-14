@@ -59,6 +59,7 @@ class IODeviceThread(threading.Thread):
         self.logger.info('IODeviceThread deactivated')
     
     def terminate(self):
+        self.active.set()
         self.terminated.set()
         self.logger.info('IODeviceThread terminating')
 
@@ -87,10 +88,10 @@ class IODevice(Component):
         
     def on_trigger(self):                       # Internally triggered operation (
         msg = self.trigger.recv_pyobj()         # Receive message from internal thread
-        self.logger.info('on_trigger():%s',msg)
+        self.logger.info('on_trigger():%s' % msg)
         self.echo.send_pyobj(msg)               # Send it to the echo server
         
     def on_echo(self):
         msg = self.echo.recv_pyobj()            # Receive response from echo server
-        self.logger.info('on_echo():%s',msg)
+        self.logger.info('on_echo():%s' % msg)
         self.trigger.send_pyobj(msg)            # Send it to the internal thread
