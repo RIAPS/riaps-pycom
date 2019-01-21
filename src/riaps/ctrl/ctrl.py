@@ -7,7 +7,7 @@ Created on Nov 10, 2016
 
 import os
 import sys
-from stat import *
+import stat
 import time
 import hashlib
 import paramiko
@@ -482,7 +482,7 @@ class Controller(object):
             res.append(argValue)
         return res
     
-    def buildAppDescriptor(self,hosts):
+    def buildAppDescriptor(self,hosts, network):
         ''' Build an app descriptor file for the app that is being downloaded
         and record the download event in the git repository the app has
         come from (if there is a git repo).
@@ -515,7 +515,7 @@ class Controller(object):
         home = os.getcwd()
 
         with open(const.appDescFile,'w') as f:
-            yaml.dump(AppDescriptor(url,host,mac,sha,home,hosts),f)
+            yaml.dump(AppDescriptor(url,host,mac,sha,home,hosts,network),f)
         
     def buildDownload(self, appName):
         '''
@@ -543,6 +543,8 @@ class Controller(object):
         
         appObj = appInfoDict['riaps_model'][appName]
         depls = appInfoDict['riaps_depl'].getDeployments()
+        #  Network: (ip|'[]') -> [] | [ ('dns' | ip) ]+  
+        network = appInfoDict['riaps_depl'].getNetwork()
         
         hosts = []          # List of IP addresses of hosts used by the app
         # Check the all actors are present in the model
@@ -553,6 +555,7 @@ class Controller(object):
                 if actorName not in appObj['actors']:
                     self.log("Error: Actor '%s' not found in model" % actorName)
                     return noresult
+                
         # Collect all app components (python and c++)
         for component in appObj["components"]:
             pyComponentFile = str(component) + ".py"
@@ -581,7 +584,8 @@ class Controller(object):
         for library in appObj["libraries"]:
             libraryName = library["name"]
             libraries.append(libraryName)
-        # Process the deployment and download app
+            
+        # Process the deployment and download app #  (ip|[]) -> 'any' | [ ('dns' | ip) ]+  
         clients = set()
         for depl in depls:
             targets = depl['target']
@@ -599,15 +603,17 @@ class Controller(object):
                         else:
                             self.log('? %s ' % target)
         
+        # Hosts on internal network
         for c in clients:
-            hosts.append(socket.gethostbyname(c.name))                    
-        self.buildAppDescriptor(hosts)                      # Add app descriptor 
+            hosts.append(socket.gethostbyname(c.name))
+            
+        self.buildAppDescriptor(hosts,network)                      # Add app descriptor 
         download.append(const.appDescFile)
-        
+        os.chmod(const.appDescFile,stat.S_IRUSR|stat.S_IWUSR|stat.S_IRGRP|stat.S_IROTH)
         _public,cert = zmq.auth.create_certificates('.', "riaps")   # Add certs
         shutil.move(cert,const.appCertFile)
         download.append(const.appCertFile)
-        
+        os.chmod(const.appCertFile,stat.S_IRUSR)
         return (download,libraries,clients,depls)
 
     def launchByName(self, appName):

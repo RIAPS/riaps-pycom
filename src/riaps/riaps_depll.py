@@ -1,16 +1,18 @@
 #!/usr/bin/python3
-'''
-Top-level script to start the language processor ('depl') for deployment models
-Created on Oct 15, 2016
+'''Top-level script of the deployment language processor
+
+Example:
+    ``riaps_depll model [-v | --verbose] [-g|--generate]``
 
 Arguments:
-  model        : Name of model file to be processed
-  --verbose    : Turns on printing the resulting JSON file on the console 
+    - ``model``: name of model file to be processed
+    - ``-v|--verbose``: print the resulting JSON file on the console
+    - ``-g``: generate a JSON file  
 
-@author: riaps
 '''
+
 from riaps.lang.depl import main
 
 if __name__ == '__main__':
-    main()
+    main(True)
     

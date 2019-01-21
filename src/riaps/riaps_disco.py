@@ -1,15 +1,16 @@
 #!/usr/bin/python3
-'''
-Top-level script to start the discovery service (disco)
-Created on Oct 20, 2016
+'''Top-level script to start the discovery service (disco)
+
+Example:
+    ``riaps_disco [-d|--database location] [-t|--trace host:port]``
+
+The discovery service is started by the deployment manager. 
 
 Arguments:
- --database DatabaseLocation
- DatabaseLocation is a string used to contact the shared database used to store and lookup port registrations.
- For redis, it is hostName:portNumber pair
-s
-@author: riaps
+    - ``-d|--database location`` : location of the discovery service database. Fore the redis-based implementation this is of the form ``host:port``. 
+    - ``-t|--trace host:port`` : starts the service in trace mode; it connects to a debug server running on the host and listening on the port.
 '''
+
 import riaps.discd.main
 
 if __name__ == '__main__':
