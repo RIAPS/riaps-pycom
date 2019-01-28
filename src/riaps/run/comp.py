@@ -213,7 +213,7 @@ class Component(object):
         self.logger = spdlog_setup.get_logger(loggerName)
         if self.logger == None:
             self.logger = spdlog.ConsoleLogger(loggerName,True,True,False)
-            self.logger.set_pattern("[%l]:%H:%M:%S,%e:[%P]:%n:%v")
+            self.logger.set_pattern(spdlog_setup.global_pattern)
 #        print  ( "Component() : '%s'" % self )
  
     def getName(self):
