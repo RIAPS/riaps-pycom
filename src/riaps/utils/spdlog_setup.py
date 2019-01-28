@@ -8,7 +8,7 @@ import toml
 import spdlog
 import os
 
-global_pattern = "[%l]:%H:%M:%S,%e:[%P]:%n:%v"
+global_pattern = "[%l]:[%m-%d-%Y %H:%M:%s.%e]:[%P]:%n:%v"
 sinks = { }
 patterns = { }
 loggers = {}
