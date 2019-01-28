@@ -27,6 +27,6 @@ profile @{RIAPSEXEC}/riaps_actor flags=(complain) {
     network inet tcp,
 
     @{RIAPSHOME}/** r, 				# RIAPSHOME
-    @{RIAPSAPPS}/** rw,				# RIAPSAPPS 
+    owner @{RIAPSAPPS}/** rw,				# RIAPSAPPS 
   }
 }
