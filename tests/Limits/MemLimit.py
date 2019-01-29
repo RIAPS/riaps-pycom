@@ -10,7 +10,7 @@ import time
 class MemLimit(Component):
     def __init__(self):
         super(MemLimit, self).__init__()
-        self.logger.info('MemLimit[%d]', os.getpid())
+        self.logger.info('MemLimit[%d]' % os.getpid())
         self.chain = []
         self.delta = 64 * 1024 * 1024 # 64MB
             

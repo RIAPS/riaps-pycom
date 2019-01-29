@@ -22,24 +22,24 @@ class Averager(Component):
         self.sensorValue = 0.0
         self.ownValue = 0.0
         self.sensorUpdate = False
-        self.logger.info("%s - starting",str(self.pid))
+        self.logger.info("%s - starting" % str(self.pid))
 
     def on_sensorReady(self):
         msg = self.sensorReady.recv_pyobj() # Receive (timestamp,value)
-        self.logger.info("on_sensorReady():%s",str(msg[1]))
+        self.logger.info("on_sensorReady():%s" % str(msg[1]))
         self.sensorTime, self.sensorValue = msg
         self.sensorUpdate = True
 
     def on_nodeReady(self):
         msg = self.nodeReady.recv_pyobj()  # Receive (actorID,timestamp,value)
-        # self.logger.info("on_otherReady():%s",str(msg[2]))
+        # self.logger.info("on_otherReady():%s" % str(msg[2]))
         otherId,otherTimestamp,otherValue = msg
         if otherId != self.uuid:
             self.dataValues[otherId] = otherValue
     
     def on_update(self):
         msg = self.update.recv_pyobj()      # Receive timestamp 
-        # self.logger.info("on_update():%s",str(msg))
+        # self.logger.info("on_update():%s" % str(msg))
         if self.sensorUpdate:
             self.ownValue = self.sensorValue
             self.sensorUpdate = False

@@ -17,4 +17,4 @@ class Echo(Component):
 
     def on_clock(self):
         msg = self.clock.recv_pyobj()      # Receive timestamp 
-        self.logger.info("on_clock():%s",str(msg))   
+        self.logger.info("on_clock():%s" % str(msg))   

@@ -14,7 +14,7 @@ def randomword(length):
 class SpcLimit(Component):
     def __init__(self):
         super(SpcLimit, self).__init__()
-        self.logger.info('SpcLimit[%d]', os.getpid())
+        self.logger.info('SpcLimit[%d]' % os.getpid())
         self.chain = []
         self.delta = 1 # 1 MB
         self.size = self.delta
@@ -32,7 +32,7 @@ class SpcLimit(Component):
     def on_ticker(self):
         trg = self.ticker.recv_pyobj()              # Receive time (as float)
         now = time.time() 
-        self.logger.info('on_ticker():%s at %s, waste = %d' % (trg,now,self.size))
+        self.logger.info('on_ticker():%s at %s, waste = %d' % (trg,str(now),self.size))
         self.waste()
         
     def handleSpcLimit(self):

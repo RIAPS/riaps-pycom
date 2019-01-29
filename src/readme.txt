@@ -20,14 +20,14 @@ version = xenial (16.04LTS)
 
 #Other Packages Required
 
-textX >= 1.5.1
+textX >= 1.7.1
 redis >= 2.10.5
 hiredis >= 0.2.0
 pyzmq >= 16
 pycapnp >= 0.5.12
-netifaces >= 0.10.6
-paramiko >= 2.2.1
-cryptography >= 1.9
+netifaces >= 0.10.7
+paramiko >= 2.4.1
+cryptography >= 2.3.1
 python-magic >= 0.4.13
 cgroups >= 0.1.0
 cgroupspy >= 0.1.6
@@ -36,9 +36,16 @@ pydot >= 1.2.4
 butter >= 0.12.6
 lmdb >= 0.94
 fabric3 >= 1.14.post1
-pyroute2 >= 0.5.0
+pyroute2 >= 0.5.2
 czmq >= 0.1 (git tag v4.1.1)
 zyre >= 0.1 (git commit#7b27a42ed490e20b39a8be0bc7b84151483d7d9d)
+graphviz >= 0.5.2
+gitpython >= 2.1.11
+pymultigen >= 0.2.0
+Jinja2 >= 2.10
+pybind11 >= 2.2.4
+toml >= 0.10.0
+pycryptodome >= 3.7.2
 
 use: apt install python3-pip python3-dev libhiredis-dev libcapnp-dev libssl-dev libffi-dev glade python3-gi
 

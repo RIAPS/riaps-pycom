@@ -9,7 +9,7 @@ class Client(Component):
     def __init__(self):
         super(Client, self).__init__()
         self.pid = os.getpid()
-    
+
     def handleActivate(self):
         self.cltReqPort.set_recv_timeout(1.0)
         self.cltReqPort.set_send_timeout(1.0)
@@ -19,7 +19,7 @@ class Client(Component):
 
     def on_clock(self):
         now = self.clock.recv_pyobj()   # Receive time.time() as float
-        self.logger.info('on_clock(): %s',str(now))
+        self.logger.info('on_clock(): %s' % str(now))
         msg = "clt_req: %d" % self.pid
         self.logger.info('[%d] send req: %s' % (self.pid,msg))
         try:
@@ -30,7 +30,7 @@ class Client(Component):
                 self.logger.info("on_clock: resetting socket (send)")
                 self.cltReqPort.reset()
         # This is is not supposed to be done here
-        # Rather the on_cltReqPort() handler should check if too much time has elapsed 
+        # Rather the on_cltReqPort() handler should check if too much time has elapsed
         try:
             rep = self.cltReqPort.recv_pyobj()
         except PortError as e:
@@ -41,7 +41,7 @@ class Client(Component):
                 self.cltReqPort.reset()
         self.logger.info('[%d]on_clock: recv rep: %s' % (self.pid,rep))
         # End of receive
-        
+
     def on_cltReqPort(self):
         self.logger.info("on_cltReqPort()")
         try:
@@ -56,4 +56,3 @@ class Client(Component):
 
     def __destroy__(self):
         self.logger.info("[%d] destroyed" % self.pid)
-
