@@ -2,9 +2,10 @@
 from . import deplo
 from .sys import run, sudo, put, get, arch
 from fabric.api import env, task, hosts, local
+import os
 
 # Prevent namespace errors by explicitly defining which tasks belong to this file
-__all__ = ['update','updateKey','install','uninstall','kill','getLogs','setup_cython', 'ctrl', 'configRouting']
+__all__ = ['update','updateKey','install','uninstall','kill','updateConfig','updateLogConfig','getLogs','setup_cython', 'ctrl', 'configRouting']
 
 # RIAPS packages
 packages = [ 
@@ -82,14 +83,36 @@ def kill():
         if app != 'riaps-apps.lmdb':
             sudo('userdel ' + app.lower() + host_last_4)
 
+@task
+def updateConfig():
+    """"Place local riaps.conf on all remote hosts"""
+    if(os.path.isfile(os.path.join(os.getcwd(), "riaps.conf"))):
+        put('riaps.conf')
+        sudo('cp riaps.conf /usr/local/riaps/etc/')
+        sudo('chown root:root /usr/local/riaps/etc/riaps.conf')
+        sudo('rm riaps.conf')
+    else:
+        print("Local riaps.conf doesn't exist!")
+
+@task
+def updateLogConfig():
+    """"Places local riaps-log.conf on all remote hosts"""
+    if(os.path.isfile(os.path.join(os.getcwd(), "riaps-log.conf"))):
+        put('riaps-log.conf')
+        sudo('cp riaps-log.conf /usr/local/riaps/etc/')
+        sudo('chown root:root /usr/local/riaps/etc/riaps-log.conf')
+        sudo('rm riaps-log.conf')
+    else:
+        print("Local riaps-log.conf doesn't exist!")
+
 # If using riaps-deplo.service, the log data is being recorded in a system journal.
 # This function pulls that data from the system journal and places them in a log file
 @task
 def getLogs():
-    """Get deployment log"""
+    """Get deployment logs and save them to logs/"""
     hostname = env.host_string
     sudo('journalctl -u riaps-deplo.service --since today > riaps-deplo-' + hostname + '.log')
-    get('riaps-deplo-' + hostname + '.log','logs/riaps-deplo-' + hostname + '.log')
+    get('riaps-deplo-' + hostname + '.log','logs/')
 
 @task
 def setup_cython():
@@ -100,7 +123,7 @@ def setup_cython():
 @task
 @hosts('localhost')
 def ctrl():
-    """launch RIAPS controller"""
+    """Launch RIAPS controller"""
     local('riaps_ctrl')
 
 # Find IP address of primary network interface
@@ -120,7 +143,7 @@ def get_ip():
 # Setup hosts routing, if needed.  Configure to your system's setup
 @task
 def configRouting():
-    """Configure routing"""
+    """Configure BBBs to use this host as their default gateway"""
     env.warn_only = True
     # ---- EDIT HERE ----
     hostIP = get_ip()
