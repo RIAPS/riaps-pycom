@@ -1,5 +1,5 @@
 # Fabric commands for performing system tasks
-from fabric import api
+from fabric import api, operations
 from fabric.api import task, env, settings
 from fabric.context_managers import hide
 
@@ -56,16 +56,18 @@ def sudo(command):
         return result
 
 @task
-def get(fileName,localPrefix=''):
-    """Download file from host:<file name>,[local prefix]"""
-    api.get(env.nodePath + fileName, env.localPath+localPrefix+fileName)
+def get(fileName, local_path='', use_sudo=False):
+    """Download file from host:<file name>,[local path],[use sudo]"""
+    use_sudo = use_sudo in ['True', 'true', 'Yes', 'yes', 'y']
+    operations.get(local_path=local_path, remote_path=fileName, use_sudo=use_sudo)
 
 # If transferring to a RIAPS account directory, use_sudo=False. 
 # If transferring to a system location, use_sudo=True
 @task
-def put(fileName, localPrefix='', use_sudo=False):
-    """Upload file to hosts:<file name>,[local prefix],[use sudo]"""
-    api.put(env.localPath + localPrefix + fileName, env.nodePath + fileName, use_sudo)
+def put(fileName, remote_path='', use_sudo=False):
+    """Upload file to hosts:<file name>,[remote path],[use sudo]"""
+    use_sudo = use_sudo in ['True', 'true', 'Yes', 'yes', 'y']
+    operations.put(local_path=fileName, remote_path=remote_path, use_sudo=use_sudo)
 
 @task
 def arch():
