@@ -34,6 +34,7 @@ class SrvPort(Port):
         self.setOwner(owner)
         self.socket = self.context.socket(zmq.REP)
         self.socket.setsockopt(zmq.SNDTIMEO,self.sendTimeout)
+        self.setupCurve(True)
         self.host = ''
         if not self.isLocalPort:
             globalHost = self.getGlobalIface()

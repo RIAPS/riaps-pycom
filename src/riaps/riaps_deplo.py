@@ -1,16 +1,20 @@
 #!/usr/bin/python3
-'''
-Top level script to start the deployment manager
-It connects to the RIAPSCONTROL service, either through the service registry or through the specified 
-node and port
+'''Top level script to start the deployment manager (deplo)
 
-Created on Nov 4, 2016
+Example:
 
-Arguments
--p (or --port) Port number for the RIAPSCONTROL service
--n (or --node) Host IP address of the controller node
+    ``riaps_deplo [-p|--port port] [-n|--node node] [-t|--trace host:port]``
 
-@author: riaps
+The deployment manager runs on each target nodes and it manages all actors and services.
+Unless the ``port`` and ``node`` are specified, the rpyc_registry service must 
+be running somewhere on the subnet accessible to both the controller and 
+the target nodes.
+
+Arguments:
+    - ``-p|--port port``: Port number for the controller node (if no registry)
+    - ``-n|--node node``: Host name for the controller node (if no registry)
+    - ``-t|--trace host:port`` : starts the manager in trace mode; it connects to a debug server running on the host and listening on the port. 
+
 '''
 
 import riaps.deplo.main

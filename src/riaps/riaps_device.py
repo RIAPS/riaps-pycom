@@ -1,15 +1,21 @@
 #!/usr/bin/python3
-'''
-Top level script to start the run-time system for a device actor
-Created on Oct 15, 2016
+'''Top level script to start a device actor
 
-  app   : Name of parent app
-  model : Name of processed (JSON) model file
-  actor : Name of specific actor from the model this process will run
-  args  : List of arguments for the actor of the form: --argName argValue
+Example:
 
-@author: riaps
+    ``riaps_device app model actor args [-t|--trace host:port]``
+    
+The device actor is started and terminated by the deployment manager. 
+    
+Arguments:
+    - ``app``:    Name of application
+    - ``model``:  Name of .json model file
+    - ``actor``:  Name of actor
+    - ``args``:   List of arguments of the form: -keyword value
+    - ``-t|--trace host:port`` : starts the device actor in trace mode; it connects to a debug server running on the host and listening on the port. 
+
 '''
+
 import riaps.run.dmain
 
 if __name__ == '__main__':

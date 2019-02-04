@@ -20,6 +20,8 @@ cp -r src/riaps/lang/depl.tx package/riaps-pycom-amd64/usr/local/riaps/lang/.
 
 cp -r src/riaps/keys/id_rsa.key package/riaps-pycom-amd64/usr/local/riaps/keys/.
 cp -r src/riaps/keys/id_rsa.pub package/riaps-pycom-amd64/usr/local/riaps/keys/.
+cp -r src/riaps/keys/riaps-sys.cert package/riaps-pycom-amd64/usr/local/riaps/keys/.
+cp -r src/riaps/keys/x509.pem package/riaps-pycom-amd64/usr/local/riaps/keys/.
 
 sed s/@version@/$pycomversion/g -i package/riaps-pycom-amd64/DEBIAN/control
 sed s/@version@/$pycomversion/g -i package/riaps-pycom-amd64/opt/riaps-pycom/src/setup.py
@@ -47,6 +49,8 @@ cp -r src/riaps/lang/depl.tx package/riaps-pycom-armhf/usr/local/riaps/lang/.
 
 cp -r src/riaps/keys/id_rsa.key package/riaps-pycom-armhf/usr/local/riaps/keys/.
 cp -r src/riaps/keys/id_rsa.pub package/riaps-pycom-armhf/usr/local/riaps/keys/.
+cp -r src/riaps/keys/riaps-sys.cert package/riaps-pycom-armhf/usr/local/riaps/keys/.
+cp -r src/riaps/keys/x509.pem package/riaps-pycom-armhf/usr/local/riaps/keys/.
 
 sed s/@version@/$pycomversion/g -i package/riaps-pycom-armhf/DEBIAN/control
 sed s/@version@/$pycomversion/g -i package/riaps-pycom-armhf/opt/riaps-pycom/src/setup.py

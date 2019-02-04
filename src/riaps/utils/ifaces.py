@@ -6,6 +6,7 @@ Created on Nov 4, 2016
 '''
 
 import netifaces
+import socket
 from riaps.utils.config import Config
 
 def getNetworkInterfaces(nicName=None):
@@ -39,3 +40,31 @@ def getNetworkInterfaces(nicName=None):
                     break
     return (ipAddressList,macAddressList,ifNameList,local)
 
+def is_valid_ipv4_address(address):
+    ''' Determine if the argument is a valid IP address
+    '''
+    try:
+        socket.inet_pton(socket.AF_INET, address)
+    except AttributeError:  # no inet_pton here, sorry
+        try:
+            socket.inet_aton(address)
+        except socket.error:
+            return False
+        return address.count('.') == 3
+    except socket.error:  # not a valid address
+        return False
+    return True
+
+def get_unix_dns_ips():
+    ''' Retrieve the IP address(es) of dns servers used by this host
+    '''
+    dns_ips = []
+
+    with open('/etc/resolv.conf') as fp:
+        for _cnt, line in enumerate(fp):
+            columns = line.split()
+            if len(columns) > 0 and columns[0] == 'nameserver':
+                ip = columns[1:][0]
+                if is_valid_ipv4_address(ip):
+                    dns_ips.append(ip)
+    return dns_ips

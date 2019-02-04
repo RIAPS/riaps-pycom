@@ -15,7 +15,7 @@ from riaps.proto import disco_capnp
 from riaps.proto import deplo_capnp
 from riaps.consts.defs import *
 from riaps.utils.ifaces import getNetworkInterfaces
-from riaps.utils.spdlog_setup import from_file
+from riaps.utils.appdesc import AppDescriptor
 import getopt
 import logging
 import traceback
@@ -24,8 +24,12 @@ import re
 import os
 import ipaddress
 import importlib
+import yaml
 from czmq import Zsys
 from riaps.utils import spdlog_setup
+from riaps.utils.config import Config
+import zmq.auth
+from zmq.auth.thread import ThreadAuthenticator
 
 class Actor(object):
     '''The actor class implements all the management and control functions over its components
@@ -62,11 +66,33 @@ class Actor(object):
         self.INT_RE = re.compile(r"^[-]?\d+$")
         self.parseParams(sysArgv)
         
-        # self.context = zmq.Context() - Use czmq's context
+        # Use czmq's context
         czmq_ctx = Zsys.init()
         self.context = zmq.Context.shadow(czmq_ctx.value)
         Zsys.handler_reset()                                # Reset previous signal handler
         
+        # Context for app sockets
+        self.appContext = zmq.Context()
+        
+        if Config.SECURITY:
+            (self.public_key,self.private_key) = zmq.auth.load_certificate(const.appCertFile)
+            hosts = ['127.0.0.1']
+            try:
+                with open(const.appDescFile,'r') as f:
+                    content = yaml.load(f)
+                    hosts += content.hosts
+            except:
+                pass
+
+            self.auth = ThreadAuthenticator(self.appContext)
+            self.auth.start()
+            self.auth.allow(*hosts)
+            self.auth.configure_curve(domain='*', location=zmq.auth.CURVE_ALLOW_ANY)
+        else:
+            (self.public_key,self.private_key) = (None,None)
+            self.auth = None
+            self.appContext = self.context
+
         try:
             if os.path.isfile(const.logConfFile) and os.access(const.logConfFile, os.R_OK):
                 spdlog_setup.from_file(const.logConfFile)      
@@ -560,7 +586,7 @@ class Actor(object):
         '''
         partName = part.getName()
         typeName = part.getTypeName() 
-        bundle = (partName,typeName,) + msg
+        bundle = (partName,typeName,) + (msg,)
         self.deplc.reportEvent(bundle)
             
     def terminate(self):
@@ -575,6 +601,8 @@ class Actor(object):
         time.sleep(1.0)
         self.deplc.terminate()
         self.disco.terminate()
+        if self.auth:
+            self.auth.stop()
         # Clean up everything
         # self.context.destroy()
         # time.sleep(1.0)

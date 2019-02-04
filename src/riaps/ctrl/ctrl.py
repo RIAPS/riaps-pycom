@@ -7,7 +7,7 @@ Created on Nov 10, 2016
 
 import os
 import sys
-from stat import *
+import stat
 import time
 import hashlib
 import paramiko
@@ -24,19 +24,22 @@ import datetime
 import yaml
 import ipaddress
 import tempfile
-from Crypto.PublicKey import RSA
-from Crypto.Signature import PKCS1_v1_5
-from Crypto.Hash import SHA256
+import shutil
+from Cryptodome.PublicKey import RSA
+from Cryptodome.Signature import PKCS1_v1_5
+from Cryptodome.Hash import SHA256
 from riaps.consts.defs import *
 from riaps.utils.ifaces import getNetworkInterfaces
 from riaps.utils.config import Config 
-from riaps.utils.origin import Origin
+from riaps.utils.appdesc import AppDescriptor
 from riaps.ctrl.ctrlsrv import ServiceThread, ServiceClient
 from riaps.ctrl.ctrlgui import ControlGUIClient
 from riaps.ctrl.ctrlcli import ControlCLIClient
 from threading import RLock
 from riaps.lang.lang import compileModel
 from riaps.lang.depl import DeploymentModel
+import zmq
+import zmq.auth
 
 import gi
 import tarfile
@@ -83,9 +86,13 @@ class Controller(object):
         self.setupIfaces()
         self.port = port
         self.script = script
+        self.context = zmq.Context()
+        self.endpoint = "inproc://riaps-ctrl"
         self.gui = None
         self.clientMap = { }        # Maps hostIP -> ServiceClient 
-        self.riaps_Folder = os.getenv('RIAPSHOME', './')        
+        self.riaps_Folder = os.getenv('RIAPSHOME', './')
+        self.keyFile = os.path.join(self.riaps_Folder,"keys/" + str(const.ctrlPrivateKey))
+        self.certFile = os.path.join(self.riaps_Folder,"keys/" + str(const.ctrlCertificate))
         self.riaps_appName = None   # App name
         self.riaps_model = None     # App model to be launched
         self.riaps_depl = None      # App deployment model to be launched
@@ -147,9 +154,9 @@ class Controller(object):
         '''
         Start up everything in the controller
         '''
-        self.startService()
         self.startDbase()
         self.startUI()
+        self.startService()
         
     def run(self):
         '''
@@ -162,7 +169,7 @@ class Controller(object):
         Log a message on the GUI
         '''
         if self.gui:
-            self.gui.on_serverMessage(msg)
+            self.gui.log(msg)
         else:
             print(msg)
         
@@ -475,10 +482,11 @@ class Controller(object):
             res.append(argValue)
         return res
     
-    def buildSignature(self):
-        ''' Build a 'signature' file for the app that is being downloaded
+    def buildAppDescriptor(self,hosts, network):
+        ''' Build an app descriptor file for the app that is being downloaded
         and record the download event in the git repository the app has
-        come from (if at all).   
+        come from (if there is a git repo).
+        Generate certs for the app.    
         '''
         url = 'file:///' + os.getcwd()
         mac = self.macAddress
@@ -505,8 +513,9 @@ class Controller(object):
         except git.exc.InvalidGitRepositoryError:
             pass
         home = os.getcwd()
-        with open(const.sigFile,'w') as f:
-            yaml.dump(Origin(url,host,mac,sha,home),f)
+
+        with open(const.appDescFile,'w') as f:
+            yaml.dump(AppDescriptor(url,host,mac,sha,home,hosts,network),f)
         
     def buildDownload(self, appName):
         '''
@@ -528,15 +537,16 @@ class Controller(object):
             return noresult
         else:
             download.append(appNameJSON)
-            
-        self.buildSignature()               # Add signature 
-        download.append(const.sigFile)
         
         if os.path.isfile(const.logConfFile) and os.access(const.logConfFile, os.R_OK):
             download.append(const.logConfFile)
         
         appObj = appInfoDict['riaps_model'][appName]
         depls = appInfoDict['riaps_depl'].getDeployments()
+        #  Network: (ip|'[]') -> [] | [ ('dns' | ip) ]+  
+        network = appInfoDict['riaps_depl'].getNetwork()
+        
+        hosts = []          # List of IP addresses of hosts used by the app
         # Check the all actors are present in the model
         for depl in depls:
             actors = depl['actors']
@@ -545,6 +555,7 @@ class Controller(object):
                 if actorName not in appObj['actors']:
                     self.log("Error: Actor '%s' not found in model" % actorName)
                     return noresult
+                
         # Collect all app components (python and c++)
         for component in appObj["components"]:
             pyComponentFile = str(component) + ".py"
@@ -573,7 +584,8 @@ class Controller(object):
         for library in appObj["libraries"]:
             libraryName = library["name"]
             libraries.append(libraryName)
-        # Process the deployment and download app
+            
+        # Process the deployment and download app #  (ip|[]) -> 'any' | [ ('dns' | ip) ]+  
         clients = set()
         for depl in depls:
             targets = depl['target']
@@ -590,6 +602,18 @@ class Controller(object):
                             clients.add(client)
                         else:
                             self.log('? %s ' % target)
+        
+        # Hosts on internal network
+        for c in clients:
+            hosts.append(socket.gethostbyname(c.name))
+            
+        self.buildAppDescriptor(hosts,network)                      # Add app descriptor 
+        download.append(const.appDescFile)
+        os.chmod(const.appDescFile,stat.S_IRUSR|stat.S_IWUSR|stat.S_IRGRP|stat.S_IROTH)
+        _public,cert = zmq.auth.create_certificates('.', "riaps")   # Add certs
+        shutil.move(cert,const.appCertFile)
+        download.append(const.appCertFile)
+        os.chmod(const.appCertFile,stat.S_IRUSR)
         return (download,libraries,clients,depls)
 
     def launchByName(self, appName):

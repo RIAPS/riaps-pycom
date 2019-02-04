@@ -4,12 +4,13 @@
  */
 AppDeployment:
   'app' name=ID '{'
+  ( hostDeployments += HostDeployment )?
     actorDeployments += ActorDeployment
  '}'
 ;
 
 ActorDeployment:
-  'on' location=Location actors+=Actor[','] ';'
+ 	'on' location=Location actors+=Actor[','] ';'
 ;
 
 Actor:
@@ -20,10 +21,31 @@ Location:
 	all='all' | ( '(' hosts+=Host[','] ')' )
 ;
 
+HostDeployment:
+	'host' (all='all' | host=Host) 
+	  ( '{'
+	       ('network' hostNet = HostNetwork)?
+	    '}' 
+	  )? | 
+	  ';'
+;  
+
+HostNetwork:
+	(any='any' | access+=Host_DNS[',']) ';'
+	;
+
+Host_DNS:
+	dns='dns' | host=Host
+	;
+	
 Host:
 	name=/[\w\.-]+/
 ;
 
+Service:
+	'dns'
+	;
+	
 Actual:
   argName=ID '=' argValue=ActualValue 
 ;

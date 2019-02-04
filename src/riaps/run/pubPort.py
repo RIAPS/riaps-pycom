@@ -40,7 +40,8 @@ class PubPort(Port):
         self.socket = self.context.socket(zmq.PUB)
         self.socket.setsockopt(zmq.SNDTIMEO,self.sendTimeout) 
         self.host = ''
-        self.portNum = -1 
+        self.portNum = -1
+        self.setupCurve(True) 
         if not self.isLocalPort:
             globalHost = self.getGlobalIface()
             self.portNum = self.socket.bind_to_random_port("tcp://" + globalHost)

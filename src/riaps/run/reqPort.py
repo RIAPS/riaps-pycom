@@ -36,7 +36,8 @@ class ReqPort(Port):
     def setupSocket(self,owner):
         self.setOwner(owner)
         self.socket = self.context.socket(zmq.REQ)
-        self.socket.setsockopt(zmq.SNDTIMEO,self.sendTimeout)   
+        self.socket.setsockopt(zmq.SNDTIMEO,self.sendTimeout)
+        self.setupCurve(False)   
         self.host = ''
         if not self.isLocalPort:
             globalHost = self.getGlobalIface()
@@ -59,6 +60,7 @@ class ReqPort(Port):
             self.socket.disconnect(repPort)
         self.owner.replaceSocket(self,newSocket)
         self.socket = newSocket
+        self.setupCurve(False)
         if self.replyHost != None and self.replyPort != None:
             repPort = "tcp://" + str(self.replyHost) + ":" + str(self.replyPort)
             self.socket.connect(repPort)

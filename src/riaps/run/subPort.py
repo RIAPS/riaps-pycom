@@ -41,6 +41,7 @@ class SubPort(Port):
         self.setOwner(owner)
         self.socket = self.context.socket(zmq.SUB)
         self.socket.setsockopt_string(zmq.SUBSCRIBE, '')
+        self.setupCurve(False)
         self.host = ''
         if not self.isLocalPort:
             globalHost = self.getGlobalIface()

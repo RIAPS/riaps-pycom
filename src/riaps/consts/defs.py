@@ -43,9 +43,13 @@ const.ctrlPort = 8888
 
 # Control service name
 const.ctrlServiceName = 'RIAPSControl'
-# Name of private key file
+
+# Keys and cert for ctrl/deplo connection
 const.ctrlPrivateKey = 'id_rsa.key'
 const.ctrlPublicKey = 'id_rsa.pub'
+const.ctrlCertificate = 'x509.pem'
+# ZMQ cert for deplo comm (zyre group)
+const.zmqCertificate = 'riaps-sys.cert'
 
 # SSH port
 const.ctrlSSHPort = 22
@@ -66,8 +70,11 @@ const.peerExpiredTimeout = 5000
 const.appDb = 'riaps-apps.lmdb'     # Under RIAPSAPPS
 const.appDbSize = 16                # Mbytes 
 
-# Signature file name
-const.sigFile = 'riaps.yaml'
+# App descriptor file name
+const.appDescFile = 'riaps.yaml'
+
+# ZMQ cert for app comms
+const.appCertFile = 'riaps-app.cert'
 
 # Log configuration
 const.logConfFile = 'riaps-log.conf'

@@ -1,16 +1,21 @@
 #!/usr/bin/python3
-'''
-Top level script to start the run-time system: an actor
-Created on Oct 15, 2016
+'''Top level wrapper script for a RIAPS actor.
 
-Arguments
-  app   : Name of parent app
-  model : Name of processed (JSON) model file
-  actor : Name of specific actor from the model this process will run
-  args  : List of arguments for the actor of the form: --argName argValue
+Example:
 
-@author: riaps
+    ``riaps_actor app model actor args [-t|--trace host:port]``
+    
+The actor is started and terminated by the deployment manager. 
+    
+Arguments:
+    - ``app``:    Name of application
+    - ``model``:  Name of .json model file
+    - ``actor``:  Name of actor
+    - ``args``:   List of arguments of the form: -keyword value
+    - ``-t|--trace host:port`` : starts the actor in trace mode; it connects to a debug server running on the host and listening on the port. 
+
 '''
+
 import riaps.run.main
 
 if __name__ == '__main__':
