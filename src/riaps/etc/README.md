@@ -79,7 +79,7 @@ the file is located.
 
 ### Application Logs
 
-Log statements from the framework and application component code are provided on the stdout by default.  The component information can be logged to a file on the deployed target node by setting **app_logs = log*** on that node.  The log file will be saved in ```~/riaps_apps/<app name>/<actor name>.log```.
+Log statements from the framework and application component code are provided on the stdout by default.  The component information can be logged to a file on the deployed target node by setting **app_logs = log** on that node.  The log file will be saved in ```~/riaps_apps/<app name>/<actor name>.log```.
 
 ## RIAPS Logging Configuration File (riaps-log.conf)
 
