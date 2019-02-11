@@ -24,7 +24,7 @@ cp -r src/riaps/keys/id_rsa.pub package/riaps-pycom-amd64/usr/local/riaps/keys/.
 cp -r src/riaps/keys/riaps-sys.cert package/riaps-pycom-amd64/usr/local/riaps/keys/.
 cp -r src/riaps/keys/x509.pem package/riaps-pycom-amd64/usr/local/riaps/keys/.
 
-cp -r bin/fabfile package/riaps-pycom-amd64/usr/local/riaps/etc/
+cp -r bin/fabfile package/riaps-pycom-amd64/usr/local/riaps/
 
 sed s/@version@/$pycomversion/g -i package/riaps-pycom-amd64/DEBIAN/control
 sed s/@version@/$pycomversion/g -i package/riaps-pycom-amd64/opt/riaps-pycom/src/setup.py
