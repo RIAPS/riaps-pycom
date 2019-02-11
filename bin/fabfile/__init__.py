@@ -3,10 +3,7 @@
 #
 from fabric.api import env
 from os import getcwd
-
-
-# Import user hosts file
-from . import riaps_hosts
+from riaps.utils.config import Config
 
 # Universal utilities
 from . import sys
@@ -35,3 +32,8 @@ env.nodePath = '/home/riaps/'  # Path on target
 env.riapsHome = '/usr/local/riaps'
 env.riapsApps = '/home/riaps/riaps_apps'
 env.riapsLib = '/opt/riaps/armhf/lib:/usr/local/lib'
+
+# If a no commandline roles or hosts are passed (i.e. -R or -H), only then use listed hosts
+# Allows for passing of individual hosts or roles on which to run tasks
+if not env.roles and not env.hosts:
+    env.hosts = Config.HOSTS
