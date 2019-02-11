@@ -36,4 +36,4 @@ env.riapsLib = '/opt/riaps/armhf/lib:/usr/local/lib'
 # If a no commandline roles or hosts are passed (i.e. -R or -H), only then use listed hosts
 # Allows for passing of individual hosts or roles on which to run tasks
 if not env.roles and not env.hosts:
-    env.hosts = Config.HOSTS
+    env.hosts = Config().HOSTS
