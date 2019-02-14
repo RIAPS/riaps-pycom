@@ -1,13 +1,8 @@
 # RIAPS Code Generation Tool
 
-This tool (**riaps_gen**) provides skeleton RIAPS Component code based on information from a user defined RIAPS application model file (**.riaps**).  
+This tool (**riaps_gen**) generates skeleton code for RIAPS components of an application based on information from a user-defined RIAPS application model file (**.riaps**). The tool uses a **json** representatio of the model that can be produced from the **riaps** file using the **riaps_lang** tool. 
 
-The model file used is the compiled **json** version, which can be created running
-**riaps_lang** in the folder with the application model file (**.riaps** ).
-
-The component target language is determined by specifications in the model file
-(i.e. **in C++** or **Python**). If no specification is provided, Python is used
-as the target language.  
+The component's implementation language is specified in the model file using the clauses **in C++** or **in Python** in the component definition. If no specification is provided, Python is the target language.  
 
 >Note: Python components are written using Python 3.6, while C++ components use STL C++17.
 
@@ -20,9 +15,9 @@ Arguments:
 
 The default output directory is a **generated** directory located with the model file folder.  Use ```-o .``` to place the files in the same directory as the model file.
 
-Communication of messages between C++ components and also from Python to C++ components are handled using [Cap'n Proto](https://capnproto.org/).  The skeleton **.capnp** file will be made available for definition of the message structures.  Python only applications do not utilize this file, so this file can be ignore.
+Communication of messages between C++ components and also between Python and C++ components are handled using [Cap'n Proto](https://capnproto.org/).  The skeleton **.capnp** file will be made available for definition of the message structures.  Python only applications do not utilize this file, so this file can be ignore.
 
-The code created will include code protection markers to allow preservation of user generated code if this tool is rerun.  Below is an example of a marker set. User code is inserted between the **begin** and **end** markers of the appropriate code section.
+The code created will include code *protection markers* to allow preservation of user-provided code if the generator is executed again.  Below is an example that shows how the markers look like. User code is inserted between the **riaps:....:begin** and **riaps:....:end** markers of the appropriate code sections.
 
 ````
 # riaps:keep_import:begin
