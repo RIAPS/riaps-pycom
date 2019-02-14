@@ -1,31 +1,44 @@
 set -e
 pip3 install /opt/riaps-pycom/src --verbose
 mkdir -p /etc/riaps
-#delete and create links again
+
+#Delete and create links again
 for i in `ls /usr/local/riaps/etc`; do rm -f /etc/riaps/$i;ln -s  /usr/local/riaps/etc/$i /etc/riaps/$i ;done
 
-
+#Remove previous riaps conf files, moving to newer location
 if [ -f /etc/riaps.conf ]; then
-    rm /etc/riaps.conf.new
-else
-   mv /etc/riaps.conf.new /etc/riaps.conf 
+    rm /etc/riaps.conf
 fi
 
 if [ -f /etc/riaps-log.conf ]; then
-    rm /etc/riaps-log.conf.new
+    rm /etc/riaps-log.conf
+fi
+
+#Preserve user configurations
+if [ -f /etc/riaps/riaps.conf ]; then
+    rm /etc/riaps/riaps.conf.new
 else
-   mv /etc/riaps-log.conf.new /etc/riaps-log.conf 
+   mv /etc/riaps/riaps.conf.new /etc/riaps/riaps.conf
+fi
+
+if [ -f /etc/riaps/riaps-log.conf ]; then
+    rm /etc/riaps/riaps-log.conf.new
+else
+   mv /etc/riaps/riaps-log.conf.new /etc/riaps/riaps-log.conf
 fi
 
 mkdir -p /usr/local/riaps/etc
 rm -f /usr/local/riaps/etc/riaps.conf
 rm -f /usr/local/riaps/etc/riaps-log.conf
 
-ln -s /etc/riaps.conf /usr/local/riaps/etc/riaps.conf
-ln -s /etc/riaps-log.conf /usr/local/riaps/etc/riaps-log.conf
+ln -s /etc/riaps/riaps.conf /usr/local/riaps/etc/riaps.conf
+ln -s /etc/riaps/riaps-log.conf /usr/local/riaps/etc/riaps-log.conf
 
 #Create soft link from rdiscoveryd to run as default
 mv /usr/local/bin/riaps_disco /usr/local/bin/riaps_disco_redis
 ln -s /opt/riaps/armhf/bin/rdiscoveryd /usr/local/bin/riaps_disco
+
+#Security configuration
+ln -s /etc/riaps/usr.local.bin.riaps_actor /etc/apparmor.d/usr.local.bin.riaps_actor
 
 rm -rf /opt/riaps-pycom/

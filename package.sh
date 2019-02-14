@@ -10,14 +10,14 @@ mkdir -p package/riaps-pycom-amd64/usr/local/riaps/keys/
 cp -r DEBIAN/amd64/* package/riaps-pycom-amd64/DEBIAN/.
 cp -r src package/riaps-pycom-amd64/opt/riaps-pycom/.
 
-cp -r src/riaps/etc/riaps.conf package/riaps-pycom-amd64/etc/riaps.conf.new
-cp -r src/riaps/etc/riaps-log.conf package/riaps-pycom-amd64/etc/riaps-log.conf.new
+cp -r src/riaps/etc/riaps.conf package/riaps-pycom-amd64/etc/riaps/riaps.conf.new
+cp -r src/riaps/etc/riaps-log.conf package/riaps-pycom-amd64/etc/riaps/riaps-log.conf.new
 
 cp -r src/riaps/etc/redis.conf package/riaps-pycom-amd64/usr/local/riaps/etc/.
 cp -r src/riaps/etc/riaps-ctrl.glade package/riaps-pycom-amd64/usr/local/riaps/etc/.
 cp -r src/riaps/lang/riaps.tx package/riaps-pycom-amd64/usr/local/riaps/lang/.
 cp -r src/riaps/lang/depl.tx package/riaps-pycom-amd64/usr/local/riaps/lang/.
-cp -r src/riaps/etc/usr.local.bin.riaps_actor package/riaps-pycom-amd64/etc/apparmor.d/.
+cp -r src/riaps/etc/usr.local.bin.riaps_actor package/riaps-pycom-amd64/etc/riaps/.
 
 cp -r src/riaps/keys/id_rsa.key package/riaps-pycom-amd64/usr/local/riaps/keys/.
 cp -r src/riaps/keys/id_rsa.pub package/riaps-pycom-amd64/usr/local/riaps/keys/.
@@ -41,13 +41,13 @@ mkdir -p package/riaps-pycom-armhf/usr/local/riaps/keys/
 
 cp -r DEBIAN/armhf/* package/riaps-pycom-armhf/DEBIAN/.
 cp -r src package/riaps-pycom-armhf/opt/riaps-pycom/.
-cp -r src/riaps/etc/riaps.conf package/riaps-pycom-armhf/etc/riaps.conf.new
-cp -r src/riaps/etc/riaps-log.conf package/riaps-pycom-armhf/etc/riaps-log.conf.new
+cp -r src/riaps/etc/riaps.conf package/riaps-pycom-armhf/etc/riaps/riaps.conf.new
+cp -r src/riaps/etc/riaps-log.conf package/riaps-pycom-armhf/etc/riaps/riaps-log.conf.new
 cp -r src/riaps/etc/redis.conf package/riaps-pycom-armhf/usr/local/riaps/etc/.
 cp -r src/riaps/etc/riaps-ctrl.glade package/riaps-pycom-armhf/usr/local/riaps/etc/.
 cp -r src/riaps/lang/riaps.tx package/riaps-pycom-armhf/usr/local/riaps/lang/.
 cp -r src/riaps/lang/depl.tx package/riaps-pycom-armhf/usr/local/riaps/lang/.
-cp -r src/riaps/etc/usr.local.bin.riaps_actor package/riaps-pycom-armhf/etc/apparmor.d/.
+cp -r src/riaps/etc/usr.local.bin.riaps_actor package/riaps-pycom-armhf/etc/riaps/.
 
 cp -r src/riaps/keys/id_rsa.key package/riaps-pycom-armhf/usr/local/riaps/keys/.
 cp -r src/riaps/keys/id_rsa.pub package/riaps-pycom-armhf/usr/local/riaps/keys/.
