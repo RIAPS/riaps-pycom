@@ -12,4 +12,6 @@ rmdir /etc/riaps || true
 pip3 uninstall -y riaps-pycom || true
 
 rm -f /usr/local/bin/riaps_disco_redis
-rmdir /usr/local/riaps
+
+rmdir /usr/local/riaps/etc || true
+rmdir /usr/local/riaps || true
