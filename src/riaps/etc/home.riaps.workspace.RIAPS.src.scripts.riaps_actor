@@ -1,0 +1,32 @@
+# Last Modified: Sun Jan 27 19:04:31 2019
+# Initial AppArmor security profile for RIAPS actors
+# To install: 
+# - Edit the 3 variables at the top for the final installation
+# - For strict enforcement change the 'complain' flags to 'enforce'    
+# - Rename the file corresponding to the value of @{RIAPSEXEC}/riaps_actor
+#   According to the AppArmor spec, all '/' must be replace with '.' , except the first on
+# - Copy the resulting file into /etc/apparmor.d, or load it into the kernel using apparmor_parser
+
+#include <tunables/global>
+
+@{RIAPSHOME}=/home/riaps/workspace/RIAPS/src/riaps		# Location of RIAPS data files
+@{RIAPSAPPS}=/home/riaps/workspace/RIAPS/tmp			# Location of folder for RIAPS applications 
+@{RIAPSEXEC}=/home/riaps/workspace/RIAPS/scripts		# Location of RIAPS scripts (i.e riaps_actor)
+
+profile @{RIAPSEXEC}/riaps_actor flags=(complain) {
+  #include <abstractions/base>
+ 
+  @{RIAPSEXEC}/riaps_actor r,		# Script file
+  /lib/x86_64-linux-gnu/ld-*.so mr,
+  /usr/bin/python3.6 Cx -> trusted_domain,
+
+  profile trusted_domain flags=(complain) {
+    #include <abstractions/python>
+
+    network inet udp,				# Networking
+    network inet tcp,
+
+    @{RIAPSHOME}/** r, 				# RIAPSHOME
+    owner @{RIAPSAPPS}/** rw,				# RIAPSAPPS 
+  }
+}
