@@ -61,7 +61,6 @@ if not env.roles and not env.hosts:
             found = True
             # Parse hosts config as multi line csv
             lines = arg.replace('\'','"').split('\n')
-            print("lines=%s"%lines)
             parser = csv.reader(lines) # Parse commas and quotations
             hosts = list(itertools.chain.from_iterable(parser)) # Combine lines
             env.hosts = list(filter(None, hosts)) # Filter out any empty strings
