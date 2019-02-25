@@ -53,12 +53,19 @@ if not env.roles and not env.hosts:
     riaps_section = 'RIAPS'
     if settings == [] or not config.has_section(riaps_section):
         print('System configuration file %s not found or invalid file.' % (riaps_conf))
-    elif 'hosts' not in config.items(riaps_section):
-        print('Failed to find "hosts" key in hosts file %s' % riaps_conf)
-    else:
-        # Parse hosts config as multi line csv
-        lines = config.items(riaps_section)['hosts'].split('\n')
-        parser = csv.reader(lines) # Parse commas and quotations
-        hosts = itertools.chain.from_iterable(parser) # Combine lines
-        optValue = list(filter(None, hosts)) # Filter out any empty strings
-        env.hosts = hosts
+
+    found = False
+    for item in config.items(riaps_section):
+        key,arg = item
+        if key == 'hosts':
+            found = True
+            # Parse hosts config as multi line csv
+            lines = arg.replace('\'','"').split('\n')
+            print("lines=%s"%lines)
+            parser = csv.reader(lines) # Parse commas and quotations
+            hosts = list(itertools.chain.from_iterable(parser)) # Combine lines
+            env.hosts = list(filter(None, hosts)) # Filter out any empty strings
+        else:
+            print("Unrecognized key in %s: %s" % (riaps_conf,key))  
+        if not found:
+            print('Failed to find "hosts" key in hosts file %s' % riaps_conf)
