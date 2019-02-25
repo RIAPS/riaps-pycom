@@ -5,7 +5,7 @@ from fabric.api import env, task, hosts, local
 import os
 
 # Prevent namespace errors by explicitly defining which tasks belong to this file
-__all__ = ['update','updateKey','install','uninstall','kill','updateConfig','updateLogConfig','getLogs','setup_cython', 'ctrl', 'configRouting']
+__all__ = ['update','updateKey','updateAptKey','install','uninstall','kill','updateConfig','updateLogConfig','getLogs','setup_cython', 'ctrl', 'configRouting']
 
 # RIAPS packages
 packages = [ 
@@ -28,7 +28,17 @@ def update():
         sudo('apt-get install ' + package + ' -y')
 
 @task
-def updateKey():
+def updateKey(old_priv_key,new_priv_key,new_pub_key):
+    """Rekey the BBBs:<old private key>,<new private key>,<new public key>"""
+    env.key_filename = old_priv_key
+    put(new_priv_key,'.ssh/id_rsa.key')
+    put(new_pub_key,'.ssh/id_rsa.pub')
+    run('cp .ssh/authorized_keys .ssh/authorized_keys.bak')
+    run('cp .ssh/id_rsa.pub .ssh/authorized_keys')
+    run('chmod 600 .ssh/id_rsa.key .ssh/id_rsa.pub .ssh/authorized_keys')
+
+@task
+def updateAptKey():
     """Update RIAPS apt key"""
     sudo('wget -qO - https://riaps.isis.vanderbilt.edu/keys/riapspublic.key | apt-key add -')
 
