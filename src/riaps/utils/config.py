@@ -5,9 +5,6 @@ Created on Nov 23, 2016
 '''
 
 import configparser
-import csv
-import itertools
-import traceback
 import os
 from os.path import join
 import logging
@@ -31,7 +28,6 @@ class Config(object):
     DEVICE_DEBUG_SERVER = ''
     APP_LOGS = ''
     SECURITY = True
-    HOSTS = []
     
     def __init__(self):
         '''
@@ -79,13 +75,7 @@ class Config(object):
                     optType = type(getattr(Config,opt))
                     optValue = getattr(Config,opt)
                     try:
-                        if opt == 'HOSTS':
-                            # Parse hosts config as multi line csv
-                            lines = arg.split('\n')
-                            parser = csv.reader(lines)
-                            hosts = itertools.chain.from_iterable(parser)
-                            optValue = list(filter(None, hosts)) # Filter out any empty strings
-                        elif optType == str:
+                        if optType == str:
                             optValue = str(arg)
                         elif optType == int:
                             optValue = int(arg)

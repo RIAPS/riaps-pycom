@@ -12,6 +12,7 @@ cp -r src package/riaps-pycom-amd64/opt/riaps-pycom/.
 
 cp -r src/riaps/etc/riaps.conf package/riaps-pycom-amd64/etc/riaps.conf.new
 cp -r src/riaps/etc/riaps-log.conf package/riaps-pycom-amd64/etc/riaps-log.conf.new
+cp -r src/riaps/etc/riaps-hosts.conf package/riaps-pycom-amd64/etc/riaps-hosts.conf.new
 
 cp -r src/riaps/etc/redis.conf package/riaps-pycom-amd64/usr/local/riaps/etc/.
 cp -r src/riaps/etc/riaps-ctrl.glade package/riaps-pycom-amd64/usr/local/riaps/etc/.

@@ -2,8 +2,8 @@
 # fabfile for RIAPS tasks
 #
 from fabric.api import env
-from os import getcwd
-from riaps.utils.config import Config
+from riaps.consts.defs import *
+import os,csv,itertools,configparser
 
 # Universal utilities
 from . import sys
@@ -25,15 +25,40 @@ env.user = 'riaps'
 env.sudo_password = 'riaps'
 
 # File transfer directories 
-env.localPath = getcwd() + '/' # Path on localhost
+env.localPath = os.getcwd() + '/' # Path on localhost
 env.nodePath = '/home/riaps/'  # Path on target
 
 # RIAPS directories
-env.riapsHome = '/usr/local/riaps'
+env.riapsHome = riaps_folder = os.getenv('RIAPSHOME')
+if riaps_folder == None:
+        print("RIAPS Configuration - RIAPSHOME is not set, using ./")
+        env.riapsHome = './'
 env.riapsApps = '/home/riaps/riaps_apps'
 env.riapsLib = '/opt/riaps/armhf/lib:/usr/local/lib'
+
+# Use RIAPS SSH key
+env.key_filename = os.path.join(env.riapsHome,"keys/" + str(const.ctrlPrivateKey))
 
 # If a no commandline roles or hosts are passed (i.e. -R or -H), only then use listed hosts
 # Allows for passing of individual hosts or roles on which to run tasks
 if not env.roles and not env.hosts:
-    env.hosts = Config().HOSTS
+    riaps_conf = os.path.join(env.riapsHome,'etc/riaps-hosts.conf')
+    try:
+        config = configparser.ConfigParser()
+        settings = config.read(riaps_conf)
+    except Exception as e:
+        print(' Hosts configuration file %s has a problem: %s.' % (riaps_conf, str(e)))
+        pass
+
+    riaps_section = 'RIAPS'
+    if settings == [] or not config.has_section(riaps_section):
+        print('System configuration file %s not found or invalid file.' % (riaps_conf))
+    elif 'hosts' not in config.items(riaps_section):
+        print('Failed to find "hosts" key in hosts file %s' % riaps_conf)
+    else:
+        # Parse hosts config as multi line csv
+        lines = config.items(riaps_section)['hosts'].split('\n')
+        parser = csv.reader(lines) # Parse commas and quotations
+        hosts = itertools.chain.from_iterable(parser) # Combine lines
+        optValue = list(filter(None, hosts)) # Filter out any empty strings
+        env.hosts = hosts
