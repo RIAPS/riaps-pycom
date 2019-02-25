@@ -1,11 +1,17 @@
 mkdir -p /etc/riaps
-rm -f /etc/riaps/redis.conf  /etc/riaps/riaps.conf  /etc/riaps/riaps-ctrl.glade
+
+rm -f /etc/riaps/redis.conf  /etc/riaps/riaps-ctrl.glade
+rm -f /usr/local/riaps/etc/riaps.conf  /usr/local/riaps/etc/riaps-log.conf
+
+#needed to address past release removal
+rm -f /etc/riaps/riaps.conf  /etc/riaps/riaps-log.conf
 
 for i in `ls /usr/local/riaps/etc`; do rm -f /etc/riaps/$i ;done
 rmdir /etc/riaps || true
 
-
-
 pip3 uninstall -y riaps-pycom || true
 
 rm -f /usr/local/bin/riaps_disco_redis
+
+rmdir /usr/local/riaps/etc || true
+rmdir /usr/local/riaps || true
