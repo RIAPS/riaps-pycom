@@ -3,7 +3,7 @@
 #
 from fabric.api import env
 from riaps.consts.defs import *
-import os,csv,itertools,configparser
+import os
 
 # Universal utilities
 from . import sys
@@ -41,30 +41,6 @@ env.key_filename = os.path.join(env.riapsHome,"keys/" + str(const.ctrlPrivateKey
 
 # If a no commandline roles or hosts are passed (i.e. -R or -H), only then use listed hosts
 # Allows for passing of individual hosts or roles on which to run tasks
-if not env.roles and not env.hosts:
+if not env.roles and not env.hosts and not [s for s in env.tasks if 'sys.hosts' in s]:
     riaps_conf = os.path.join(env.riapsHome,'etc/riaps-hosts.conf')
-    try:
-        config = configparser.ConfigParser()
-        settings = config.read(riaps_conf)
-    except Exception as e:
-        print(' Hosts configuration file %s has a problem: %s.' % (riaps_conf, str(e)))
-        pass
-
-    riaps_section = 'RIAPS'
-    if settings == [] or not config.has_section(riaps_section):
-        print('System configuration file %s not found or invalid file.' % (riaps_conf))
-
-    found = False
-    for item in config.items(riaps_section):
-        key,arg = item
-        if key == 'hosts':
-            found = True
-            # Parse hosts config as multi line csv
-            lines = arg.replace('\'','"').split('\n')
-            parser = csv.reader(lines) # Parse commas and quotations
-            hosts = list(itertools.chain.from_iterable(parser)) # Combine lines
-            env.hosts = list(filter(None, hosts)) # Filter out any empty strings
-        else:
-            print("Unrecognized key in %s: %s" % (riaps_conf,key))  
-        if not found:
-            print('Failed to find "hosts" key in hosts file %s' % riaps_conf)
+    sys.hosts(riaps_conf)

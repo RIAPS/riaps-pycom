@@ -2,9 +2,10 @@
 from fabric import api, operations
 from fabric.api import task, env, settings
 from fabric.context_managers import hide
+import os,csv,itertools,configparser
 
 # Prevent namespace errors by explicitly defining which tasks belong to this file
-__all__ = ['check', 'shutdown', 'reboot', 'clearJournal', 'run', 'sudo', 'get', 'put', 'arch']
+__all__ = ['check', 'shutdown', 'reboot', 'clearJournal', 'run', 'sudo', 'hosts', 'get', 'put', 'arch']
 
 # Check that all BBBs are communicating
 @task
@@ -54,6 +55,40 @@ def sudo(command):
         if result != '':
             print(result)
         return result
+
+@task
+@api.hosts('localhost')
+def hosts(hosts_file):
+    """Load hosts from file:<file name>"""
+    if not os.path.isfile(hosts_file):
+        print('Hosts configuration file doesn\'t exist: %s' % hosts_file)
+        return
+    try:
+        config = configparser.ConfigParser()
+        settings = config.read(hosts_file)
+    except Exception as e:
+        print(' Hosts configuration file %s has a problem: %s.' % (hosts_file, str(e)))
+        return
+
+    riaps_section = 'RIAPS'
+    if settings == [] or not config.has_section(riaps_section):
+        print('Hosts configuration file %s is missing [RIAPS] section.' % (hosts_file))
+        return
+
+    found = False
+    for item in config.items(riaps_section):
+        key,arg = item
+        if key == 'hosts':
+            found = True
+            # Parse hosts config as multi line csv
+            lines = arg.replace('\'','"').split('\n')
+            parser = csv.reader(lines) # Parse commas and quotations
+            hosts = list(itertools.chain.from_iterable(parser)) # Combine lines
+            env.hosts = list(filter(None, hosts)) # Filter out any empty strings
+        else:
+            print("Unrecognized key in %s: %s" % (hosts_file,key))  
+        if not found:
+            print('Failed to find "hosts" key in hosts file %s' % hosts_file)
 
 @task
 def get(fileName, local_path='', use_sudo=False):
