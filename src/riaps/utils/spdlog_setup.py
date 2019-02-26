@@ -132,7 +132,7 @@ types = {
         }
     
 def from_file(fname):
-    global global_pattern, sinks,patterms,loggers,levels
+    global global_pattern,sinks,patterns,loggers,levels
     d = toml.load(fname)
     if 'global_pattern' in d.keys():
         global_pattern = d['global_pattern']
