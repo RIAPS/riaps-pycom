@@ -1,0 +1,4 @@
+// 
+app GroupApp {
+	on all GroupActor;
+}

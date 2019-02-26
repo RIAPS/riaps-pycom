@@ -123,14 +123,7 @@ class DeploymentManager(threading.Thread):
             self.riaps_disco_file = riaps.riaps_disco.__file__
         except:
             pass
-        
-        self.riaps_device_file = 'riaps_device'       # Default name for the executable riaps device shell
-        try:
-            import riaps.riaps_device          # We try to import the python riaps_device first so that we know is correct file name
-            self.riaps_device_file = riaps.riaps_device.__file__
-        except:
-            pass
-        
+
         self.depmCommandEndpoint = parent.depmCommandEndpoint
         # self.devmCommandEndpoint = parent.devmCommandEndpoint
         self.procMonEndpoint = parent.procMonEndpoint
@@ -494,7 +487,8 @@ class DeploymentManager(threading.Thread):
     
         componentTypes = self.getComponentTypes(appName, actorName)
         if len(componentTypes) == 0:
-            raise BuildError('Actor has no components: %s.%s.' % (appName,actorName))
+            self.logger.warning('Actor has no components: %s.%s.' % (appName,actorName))
+            # raise BuildError('Actor has no components: %s.%s.' % (appName,actorName))
         for componentType in componentTypes:
             # Look up the Python version first
             pyFilePath = join(appFolder, componentType + '.py')
@@ -640,7 +634,10 @@ class DeploymentManager(threading.Thread):
         qualName = str(appName) + "." + str(actorName)
         proc = None
         with self.mapLock:
-            assert qualName in self.launchMap
+            # assert qualName in self.launchMap
+            if qualName not in self.launchMap:
+                self.logger.error('Actor %s has not been started' % qualName)
+                return
             proc = self.launchMap[qualName]
             del self.launchMap[qualName]
         if proc != None:

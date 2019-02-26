@@ -37,6 +37,7 @@ class RiapsModel2JSON(object):
             appObj = {}
             appObj['name'] = app.name
             appObj['messages'] = self.getMessages(app.messages)
+            appObj['groups'] = self.getGroups(app.groups)
             appObj['libraries'] = self.getLibraries(app.libraries)
             appObj['devices'] = self.getIOComponents(app.components)
             appObj['components'] = self.getComponents(app.components)
@@ -48,6 +49,20 @@ class RiapsModel2JSON(object):
             msgObj = { } 
             msgObj["name"] = msg.name
             res.append(msgObj)
+        return res
+    def getGroups(self,groups):
+        res = []
+        for group in groups:
+            groupObj = { }
+            groupObj["name"] = group.name
+            groupObj["kind"] = group.kind.kind if group.kind else 'default'
+            msgs = []
+            for msg in group.messages:
+                msgObj = {}
+                msgObj["type"] = msg.name
+                msgs.append(msgObj)
+            groupObj['messages'] = msgs
+            res.append(groupObj)
         return res
     def getLibraries(self,libraries):
         res = []
