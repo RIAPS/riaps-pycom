@@ -1149,7 +1149,8 @@ class DeploymentManager(threading.Thread):
             logFile = None
         self.logger.info("Launching %s " % str(command))
         try:
-            proc = psutil.Popen(command,cwd=appFolder,env=dev_env)
+            proc = psutil.Popen(command,cwd=appFolder,env=dev_env, 
+                                stdout=logFile, stderr=subprocess.STDOUT)
         except FileNotFoundError:
             try:
                 command = ['python3',riaps_mod] + command[1:]
