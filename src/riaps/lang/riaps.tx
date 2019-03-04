@@ -11,6 +11,7 @@ RIAPSModel:
 App:
  'app' name=ID '{'
      messages*=Message
+     groups*=Group
      libraries*=Library
      components+=Component
      actors+=Actor
@@ -22,6 +23,16 @@ Message:
   'message' name=ID ';'
 ;
 
+// Groups used in the application
+Group:
+  'group' name=ID (kind=GroupKind)?
+  		  'using' messages*=[Message][','] ';' 
+;
+ 
+ GroupKind:
+   'with' (kind='leader' | kind='consensus')
+ ;
+    
 // Libraries used in the app
 Library:
   'library' ( name=ID | name=STRING) ';'

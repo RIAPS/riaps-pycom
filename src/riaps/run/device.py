@@ -26,6 +26,7 @@ import importlib
 import traceback
 from .actor import Actor
 from czmq import Zsys
+from riaps.utils import spdlog_setup
 import yaml
 import zmq.auth
 from zmq.auth.thread import ThreadAuthenticator

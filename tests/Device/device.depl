@@ -1,0 +1,4 @@
+// 
+app DeviceApp {
+	on all DeviceActor;
+}

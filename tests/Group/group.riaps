@@ -1,0 +1,22 @@
+// RIAPS Group 
+
+app GroupApp {
+	// Message types used in the app
+    message Msg;
+    
+    group Grouper with leader using Msg; 
+      
+	// Component
+    component Groupie {
+      timer clock 1000; 							
+    }
+    
+     
+    // Actor
+    actor GroupActor {
+       local Msg; 
+       {  
+          groupie : Groupie;
+       }
+    }
+}
