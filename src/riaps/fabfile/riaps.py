@@ -5,10 +5,10 @@ from fabric.api import env, task, hosts, local
 import os
 
 # Prevent namespace errors by explicitly defining which tasks belong to this file
-__all__ = ['update','updateKey','updateAptKey','install','uninstall','kill','updateConfig','updateLogConfig','getLogs','setup_cython', 'ctrl', 'configRouting']
+__all__ = ['update','updateKey','updateAptKey','install','uninstall','kill','updateConfig','updateLogConfig','getLogs','ctrl', 'configRouting']
 
 # RIAPS packages
-packages = [ 
+packages = [
             'riaps-externals-',
             'riaps-core-',
             'riaps-pycom-',
@@ -42,7 +42,7 @@ def updateAptKey():
     """Update RIAPS apt key"""
     sudo('wget -qO - https://riaps.isis.vanderbilt.edu/keys/riapspublic.key | apt-key add -')
 
-# RIAPS install (from local host) 
+# RIAPS install (from local host)
 @task
 def install():
     """Install RIAPS packages from development host"""
@@ -71,11 +71,11 @@ def kill():
     pgrepResult = run('pgrep \'riaps_\' -l')
     pgrepEntries = pgrepResult.rsplit('\n')
     processList = []
- 
+
     for process in pgrepEntries:
         if process != "":
             processList.append(process.split()[1])
- 
+
     for process in processList:
         sudo('pkill -SIGKILL '+process)
 
@@ -86,7 +86,7 @@ def kill():
     else:
         vm_mac = run('ip link show enp0s8 | awk \'/ether/ {print $2}\'')
         host_last_4 = vm_mac[-5:-3] + vm_mac[-2:]
- 
+
     apps = run('\ls ' + env.riapsApps).split() # \ls bypasses alias to ls with color formatting
     for app in apps:
         sudo('rm -R /home/riaps/riaps_apps/'+app+'/')
@@ -123,12 +123,6 @@ def getLogs():
     hostname = env.host_string
     sudo('journalctl -u riaps-deplo.service --since today > riaps-deplo-' + hostname + '.log')
     get('riaps-deplo-' + hostname + '.log','logs/')
-
-@task
-def setup_cython():
-    """Fix 'Debugger speedups using cython not found' warnings"""
-    sudo('wget https://raw.githubusercontent.com/fabioz/PyDev.Debugger/master/setup_cython.py -P /usr/local/lib/python3.5/dist-packages/')
-    sudo('python3 /usr/local/lib/python3.5/dist-packages/setup_cython.py build_ext --inplace')
 
 @task
 @hosts('localhost')

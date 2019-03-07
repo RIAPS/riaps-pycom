@@ -5,31 +5,31 @@ from fabric.context_managers import hide
 import os,csv,itertools,configparser
 
 # Prevent namespace errors by explicitly defining which tasks belong to this file
-__all__ = ['check', 'shutdown', 'reboot', 'clearJournal', 'run', 'sudo', 'hosts', 'get', 'put', 'arch']
+__all__ = ['check', 'shutdown', 'reboot', 'clearJournal', 'run', 'sudo', 'hosts', 'get', 'put', 'arch', 'setup_cython']
 
 # Check that all BBBs are communicating
 @task
 def check():
-    """test that hosts are communicating"""
+    """Test that hosts are communicating"""
     run('hostname && uname -a')
 
 # Shutdown the hosts
 # Note: must be used prior to powering down the hosts
 @task
 def shutdown(when='now', why=''):
-    """shutdown the hosts:[when],[why]"""
+    """Shutdown the hosts:[when],[why]"""
     sudo('shutdown ' + when + ' ' + why)
 
 # Reboot the hosts
 @task
 def reboot():
-    """reboot the hosts"""
+    """Reboot the hosts"""
     sudo('reboot &')
 
 # The system journal run continuously with no regard to login session. So to isolate testing data, the system journal can be cleared.
 @task
 def clearJournal():
-    """clear system journal"""
+    """Clear system journal"""
     sudo('rm -rf  /run/log/journal/*')
     sudo('systemctl restart systemd-journald')
 
@@ -86,7 +86,7 @@ def hosts(hosts_file):
             hosts = list(itertools.chain.from_iterable(parser)) # Combine lines
             env.hosts = list(filter(None, hosts)) # Filter out any empty strings
         else:
-            print("Unrecognized key in %s: %s" % (hosts_file,key))  
+            print("Unrecognized key in %s: %s" % (hosts_file,key))
         if not found:
             print('Failed to find "hosts" key in hosts file %s' % hosts_file)
 
@@ -96,7 +96,7 @@ def get(fileName, local_path='', use_sudo=False):
     use_sudo = use_sudo in ['True', 'true', 'Yes', 'yes', 'y']
     operations.get(local_path=local_path, remote_path=fileName, use_sudo=use_sudo)
 
-# If transferring to a RIAPS account directory, use_sudo=False. 
+# If transferring to a RIAPS account directory, use_sudo=False.
 # If transferring to a system location, use_sudo=True
 @task
 def put(fileName, remote_path='', use_sudo=False):
@@ -108,3 +108,9 @@ def put(fileName, remote_path='', use_sudo=False):
 def arch():
     """Detect architecture of host"""
     return run("dpkg --print-architecture ")
+
+@task
+def setup_cython():
+    """Fix 'Debugger speedups using cython not found' warnings"""
+    sudo('wget https://raw.githubusercontent.com/fabioz/PyDev.Debugger/master/setup_cython.py -P /usr/local/lib/python3.5/dist-packages/')
+    sudo('python3 /usr/local/lib/python3.5/dist-packages/setup_cython.py build_ext --inplace')
