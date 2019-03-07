@@ -8,13 +8,13 @@ __all__ = ['start', 'startSlow', 'startManual', 'restart', 'stop', 'enable', 'di
 
 @task
 def start():
-    """start service"""
+    """Start service"""
     sudo('systemctl start riaps-deplo.service')
 
 @serial
 @task
 def startSlow(delay=1):
-    """start service serially with delay:[delay]"""
+    """Start service serially with delay:[delay]"""
     time.sleep(delay)
     sudo('systemctl start riaps-deplo.service')
 
@@ -28,22 +28,22 @@ def startManual():
 
 @task
 def restart():
-    """restart service"""
+    """Restart service"""
     sudo('systemctl restart riaps-deplo.service')
 
 @task
 def stop():
-    """stop service"""
+    """Stop service"""
     sudo('systemctl stop riaps-deplo.service')
 
 @task
 def enable():
-    """enable service"""
+    """Enable service"""
     sudo('systemctl enable riaps-deplo.service')
 
 @task
 def disable():
-    """disable service"""
+    """Disable service"""
     sudo('systemctl disable riaps-deplo.service')
 
 @task
