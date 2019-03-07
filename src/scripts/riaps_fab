@@ -1,0 +1,42 @@
+#!/usr/bin/python3
+'''
+Top level script to start fabric file for handling multiple BBB setup
+
+Created on March 6, 2019
+
+Arguments:
+    - ``fabcmd``:    fabric command desired
+
+    optional argument:
+    - ``-H | --hosts hostnames``:  list of hostnames (comma separated)
+
+If specific hostnames are not given, the command will be called for all hosts
+listed in /usr/local/riaps/etc/riaps_hosts.conf
+
+@author: riaps
+'''
+
+import os
+import argparse
+import subprocess
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("fabcmd", help="fabric command")             # Desired fabric command
+    parser.add_argument("-H", "--hosts", default="", help="list of hostnames, comma separated")    # List of hostnames to used instead of system configured file
+    args = parser.parse_args()
+
+    fcmd = "fab"
+    fflag = "-f"
+    fpath = "/usr/local/lib/python3.6/dist-packages/riaps/fabfile/"
+    fhost = "-H"
+
+#    sys.path.append(os.getcwd())   # Ensure load_module works from current directory
+    if os.path.isdir(fpath):
+        if args.hosts:
+            subprocess.run([fcmd, fflag, fpath, args.fabcmd, fhost, args.hosts])
+        else:
+            subprocess.run([fcmd, fflag, fpath, args.fabcmd])
+    else:
+        print('RIAPS Fabfile is not install, please update the riaps-pycom installation.')

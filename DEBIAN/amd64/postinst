@@ -5,25 +5,6 @@ mkdir -p /etc/riaps
 #Delete and create links again
 for i in `ls /usr/local/riaps/etc`; do rm -f /etc/riaps/$i;ln -s  /usr/local/riaps/etc/$i /etc/riaps/$i ;done
 
-#Preserve user configurations
-#if [ -f /etc/riaps.conf ]; then
-#    rm /etc/riaps.conf.new
-#else
-#   mv /etc/riaps.conf.new /etc/riaps.conf
-#fi
-
-#if [ -f /etc/riaps-log.conf ]; then
-#    rm /etc/riaps-log.conf.new
-#else
-#   mv /etc/riaps-log.conf.new /etc/riaps-log.conf
-#fi
-
-#if [ -f /etc/riaps-hosts.conf ]; then
-#   rm /etc/riaps-hosts.conf.new
-#else
-#   mv /etc/riaps-hosts.conf.new /etc/riaps-hosts.conf 
-#fi
-
 mkdir -p /usr/local/riaps/etc
 rm -f /usr/local/riaps/etc/riaps.conf
 rm -f /usr/local/riaps/etc/riaps-log.conf

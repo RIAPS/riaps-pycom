@@ -13,6 +13,7 @@ from . import riaps
 from . import deplo
 from . import time
 
+
 # Standard fabric configuration
 env.shell = "/bin/bash -l -i -c"
 env.parallel = True            # Changes default behavior to parallel
@@ -24,7 +25,7 @@ env.password = 'riaps'
 env.user = 'riaps'
 env.sudo_password = 'riaps'
 
-# File transfer directories 
+# File transfer directories
 env.localPath = os.getcwd() + '/' # Path on localhost
 env.nodePath = '/home/riaps/'  # Path on target
 
