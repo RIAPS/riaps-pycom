@@ -2,33 +2,34 @@
 from fabric import api, operations
 from fabric.api import task, env, settings
 from fabric.context_managers import hide
+import os,csv,itertools,configparser
 
 # Prevent namespace errors by explicitly defining which tasks belong to this file
-__all__ = ['check', 'shutdown', 'reboot', 'clearJournal', 'run', 'sudo', 'get', 'put', 'arch']
+__all__ = ['check', 'shutdown', 'reboot', 'clearJournal', 'run', 'sudo', 'hosts', 'get', 'put', 'arch', 'setup_cython']
 
 # Check that all BBBs are communicating
 @task
 def check():
-    """test that hosts are communicating"""
+    """Test that hosts are communicating"""
     run('hostname && uname -a')
 
 # Shutdown the hosts
 # Note: must be used prior to powering down the hosts
 @task
 def shutdown(when='now', why=''):
-    """shutdown the hosts:[when],[why]"""
+    """Shutdown the hosts:[when],[why]"""
     sudo('shutdown ' + when + ' ' + why)
 
 # Reboot the hosts
 @task
 def reboot():
-    """reboot the hosts"""
+    """Reboot the hosts"""
     sudo('reboot &')
 
 # The system journal run continuously with no regard to login session. So to isolate testing data, the system journal can be cleared.
 @task
 def clearJournal():
-    """clear system journal"""
+    """Clear system journal"""
     sudo('rm -rf  /run/log/journal/*')
     sudo('systemctl restart systemd-journald')
 
@@ -56,12 +57,46 @@ def sudo(command):
         return result
 
 @task
+@api.hosts('localhost')
+def hosts(hosts_file):
+    """Load hosts from file:<file name>"""
+    if not os.path.isfile(hosts_file):
+        print('Hosts configuration file doesn\'t exist: %s' % hosts_file)
+        return
+    try:
+        config = configparser.ConfigParser()
+        settings = config.read(hosts_file)
+    except Exception as e:
+        print(' Hosts configuration file %s has a problem: %s.' % (hosts_file, str(e)))
+        return
+
+    riaps_section = 'RIAPS'
+    if settings == [] or not config.has_section(riaps_section):
+        print('Hosts configuration file %s is missing [RIAPS] section.' % (hosts_file))
+        return
+
+    found = False
+    for item in config.items(riaps_section):
+        key,arg = item
+        if key == 'hosts':
+            found = True
+            # Parse hosts config as multi line csv
+            lines = arg.replace('\'','"').split('\n')
+            parser = csv.reader(lines) # Parse commas and quotations
+            hosts = list(itertools.chain.from_iterable(parser)) # Combine lines
+            env.hosts = list(filter(None, hosts)) # Filter out any empty strings
+        else:
+            print("Unrecognized key in %s: %s" % (hosts_file,key))
+        if not found:
+            print('Failed to find "hosts" key in hosts file %s' % hosts_file)
+
+@task
 def get(fileName, local_path='', use_sudo=False):
     """Download file from host:<file name>,[local path],[use sudo]"""
     use_sudo = use_sudo in ['True', 'true', 'Yes', 'yes', 'y']
     operations.get(local_path=local_path, remote_path=fileName, use_sudo=use_sudo)
 
-# If transferring to a RIAPS account directory, use_sudo=False. 
+# If transferring to a RIAPS account directory, use_sudo=False.
 # If transferring to a system location, use_sudo=True
 @task
 def put(fileName, remote_path='', use_sudo=False):
@@ -73,3 +108,9 @@ def put(fileName, remote_path='', use_sudo=False):
 def arch():
     """Detect architecture of host"""
     return run("dpkg --print-architecture ")
+
+@task
+def setup_cython():
+    """Fix 'Debugger speedups using cython not found' warnings"""
+    sudo('wget https://raw.githubusercontent.com/fabioz/PyDev.Debugger/master/setup_cython.py -P /usr/local/lib/python3.5/dist-packages/')
+    sudo('python3 /usr/local/lib/python3.5/dist-packages/setup_cython.py build_ext --inplace')
