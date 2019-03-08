@@ -21,9 +21,7 @@ env.use_ssh_config = True      # Tells fabric to use the user's ssh config
 env.disable_known_hosts = True # Ignore warnings about known_hosts
 
 # Standard riaps setup
-env.password = 'riaps'
 env.user = 'riaps'
-env.sudo_password = 'riaps'
 
 # File transfer directories
 env.localPath = os.getcwd() + '/' # Path on localhost
@@ -38,7 +36,7 @@ env.riapsApps = '/home/riaps/riaps_apps'
 env.riapsLib = '/opt/riaps/armhf/lib:/usr/local/lib'
 
 # Use RIAPS SSH key
-env.key_filename = os.path.join(env.riapsHome,"keys/" + str(const.ctrlPrivateKey))
+#env.key_filename = os.path.join(env.riapsHome,"keys/" + str(const.ctrlPrivateKey))
 
 # If a no commandline roles or hosts are passed (i.e. -R or -H), only then use listed hosts
 # Allows for passing of individual hosts or roles on which to run tasks

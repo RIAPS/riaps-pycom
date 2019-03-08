@@ -5,7 +5,7 @@ from fabric.api import env, task, hosts, local
 import os
 
 # Prevent namespace errors by explicitly defining which tasks belong to this file
-__all__ = ['update','updateKey','updateAptKey','install','uninstall','kill','updateConfig','updateLogConfig','getLogs','ctrl', 'configRouting']
+__all__ = ['update','updateBBBKey','updateAptKey','install','uninstall','kill','updateConfig','updateLogConfig','getLogs','ctrl', 'configRouting']
 
 # RIAPS packages
 packages = [
@@ -28,14 +28,21 @@ def update():
         sudo('apt-get install ' + package + ' -y')
 
 @task
-def updateKey(old_priv_key,new_priv_key,new_pub_key):
-    """Rekey the BBBs:<old private key>,<new private key>,<new public key>"""
-    env.key_filename = old_priv_key
-    put(new_priv_key,'.ssh/id_rsa.key')
-    put(new_pub_key,'.ssh/id_rsa.pub')
+def updateBBBKey():
+    """Rekey the BBBs with new generated keys"""
+    key_path = os.path.join(env.riapsHome,"keys/")
+    pubkey_name = ".ssh/" + str(const.ctrlPublicKey)
+    cert_name = ".ssh/" + str(const.ctrlCertificate))
+    zmqcert_name = ".ssh/" + str(const.zmqCertificate))
+    put(pubkey_name,'.ssh')
+    put(pubkey_name,key_path,True)
+    put(cert_name,key_path,True)
+    put(zmqcert_name,key_path,True)
     run('cp .ssh/authorized_keys .ssh/authorized_keys.bak')
     run('cp .ssh/id_rsa.pub .ssh/authorized_keys')
-    run('chmod 600 .ssh/id_rsa.key .ssh/id_rsa.pub .ssh/authorized_keys')
+    run('chmod 600 .ssh/authorized_keys')
+    run('rm .ssh/id_rsa.pub')
+    sudo('passwd -q -d riaps')
 
 @task
 def updateAptKey():

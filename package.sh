@@ -52,7 +52,7 @@ cp -r src/riaps/lang/riaps.tx package/riaps-pycom-armhf/usr/local/riaps/lang/.
 cp -r src/riaps/lang/depl.tx package/riaps-pycom-armhf/usr/local/riaps/lang/.
 cp -r src/riaps/etc/usr.local.bin.riaps_actor package/riaps-pycom-armhf/etc/apparmor.d/.
 
-cp -r src/riaps/keys/id_rsa.key package/riaps-pycom-armhf/usr/local/riaps/keys/.
+#cp -r src/riaps/keys/id_rsa.key package/riaps-pycom-armhf/usr/local/riaps/keys/.
 cp -r src/riaps/keys/id_rsa.pub package/riaps-pycom-armhf/usr/local/riaps/keys/.
 cp -r src/riaps/keys/riaps-sys.cert package/riaps-pycom-armhf/usr/local/riaps/keys/.
 cp -r src/riaps/keys/x509.pem package/riaps-pycom-armhf/usr/local/riaps/keys/.
