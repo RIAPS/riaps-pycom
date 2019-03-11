@@ -3,6 +3,7 @@ from . import deplo
 from .sys import run, sudo, put, get, arch
 from fabric.api import env, task, hosts, local
 import os
+from riaps.consts.defs import *
 
 # Prevent namespace errors by explicitly defining which tasks belong to this file
 __all__ = ['update','updateBBBKey','updateAptKey','install','uninstall','kill','updateConfig','updateLogConfig','getLogs','ctrl', 'configRouting']
@@ -31,17 +32,38 @@ def update():
 def updateBBBKey():
     """Rekey the BBBs with new generated keys"""
     key_path = os.path.join(env.riapsHome,"keys/")
-    pubkey_name = ".ssh/" + str(const.ctrlPublicKey)
-    cert_name = ".ssh/" + str(const.ctrlCertificate))
-    zmqcert_name = ".ssh/" + str(const.zmqCertificate))
-    put(pubkey_name,'.ssh')
-    put(pubkey_name,key_path,True)
-    put(cert_name,key_path,True)
-    put(zmqcert_name,key_path,True)
+    ssh_pubkey_name = "/home/riaps/.ssh/" + str(const.ctrlPublicKey)
+    ssh_privatekey_name = "/home/riaps/.ssh/" + str(const.ctrlPrivateKey)
+    ssh_cert_name = "/home/riaps/.ssh/" + str(const.ctrlCertificate)
+    ssh_zmqcert_name = "/home/riaps/.ssh/" + str(const.zmqCertificate)
+    riaps_pubkey_name = os.path.join(key_path,str(const.ctrlPublicKey))
+    riaps_privatekey_name = os.path.join(key_path,str(const.ctrlPrivateKey))
+    riaps_cert_name = os.path.join(key_path,str(const.ctrlCertificate))
+    riaps_zmqcert_name = os.path.join(key_path,str(const.zmqCertificate))
+
+    put(ssh_pubkey_name,'.ssh')
+    sudo('cp ' + ssh_pubkey_name + ' ' + riaps_pubkey_name)
+    sudo('chmod 600 ' + riaps_pubkey_name)
     run('cp .ssh/authorized_keys .ssh/authorized_keys.bak')
-    run('cp .ssh/id_rsa.pub .ssh/authorized_keys')
+    run('cp ' + ssh_pubkey_name + ' .ssh/authorized_keys')
     run('chmod 600 .ssh/authorized_keys')
-    run('rm .ssh/id_rsa.pub')
+    run('rm ' + ssh_pubkey_name)
+
+    put(ssh_privatekey_name,'.ssh')
+    sudo('cp ' + ssh_privatekey_name + ' ' + riaps_privatekey_name)
+    sudo('chmod 600 ' + riaps_privatekey_name)
+    run('rm ' + ssh_privatekey_name)
+
+    put(ssh_cert_name,'.ssh')
+    sudo('cp ' + ssh_cert_name + ' ' + riaps_cert_name)
+    sudo('chmod 600 ' + riaps_cert_name)
+    run('rm ' + ssh_cert_name)
+
+    put(ssh_zmqcert_name,'.ssh')
+    sudo('cp ' + ssh_zmqcert_name + ' ' + riaps_zmqcert_name)
+    sudo('chmod 600 ' + riaps_zmqcert_name)
+    run('rm ' + ssh_zmqcert_name)
+
     sudo('passwd -q -d riaps')
 
 @task

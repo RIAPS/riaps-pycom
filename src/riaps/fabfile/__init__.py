@@ -17,7 +17,7 @@ from . import time
 # Standard fabric configuration
 env.shell = "/bin/bash -l -i -c"
 env.parallel = True            # Changes default behavior to parallel
-env.use_ssh_config = True      # Tells fabric to use the user's ssh config
+env.use_ssh_config = False     # Tells fabric to use the user's ssh config
 env.disable_known_hosts = True # Ignore warnings about known_hosts
 
 # Standard riaps setup
