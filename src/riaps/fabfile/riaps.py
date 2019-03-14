@@ -41,27 +41,29 @@ def updateBBBKey():
     riaps_cert_name = os.path.join(key_path,str(const.ctrlCertificate))
     riaps_zmqcert_name = os.path.join(key_path,str(const.zmqCertificate))
 
-    put(ssh_pubkey_name,'.ssh')
-    sudo('cp ' + ssh_pubkey_name + ' ' + riaps_pubkey_name)
-    sudo('chmod 600 ' + riaps_pubkey_name)
-    run('cp .ssh/authorized_keys .ssh/authorized_keys.bak')
-    run('cp ' + ssh_pubkey_name + ' .ssh/authorized_keys')
-    run('chmod 600 .ssh/authorized_keys')
-    run('rm ' + ssh_pubkey_name)
-
     put(ssh_privatekey_name,'.ssh')
     sudo('cp ' + ssh_privatekey_name + ' ' + riaps_privatekey_name)
-    sudo('chmod 600 ' + riaps_privatekey_name)
-    run('rm ' + ssh_privatekey_name)
+    sudo('chown root:riaps ' + riaps_privatekey_name)
+    sudo('chmod 440 ' + riaps_privatekey_name)
+
+    #create public key from private key to get openSSH formatting
+    run('chmod 400 ' + ssh_privatekey_name)
+    run('ssh-keygen -y -f ' + ssh_privatekey_name + ' > authorized_keys')
+    sudo('cp authorized_keys ' + riaps_pubkey_name)
+    sudo('chown root:riaps ' + riaps_pubkey_name)
+    sudo('chmod 440 ' + riaps_pubkey_name)
+    sudo('rm ' + ssh_privatekey_name)
 
     put(ssh_cert_name,'.ssh')
     sudo('cp ' + ssh_cert_name + ' ' + riaps_cert_name)
-    sudo('chmod 600 ' + riaps_cert_name)
+    sudo('chown root:riaps ' + riaps_cert_name)
+    sudo('chmod 440 ' + riaps_cert_name)
     run('rm ' + ssh_cert_name)
 
     put(ssh_zmqcert_name,'.ssh')
     sudo('cp ' + ssh_zmqcert_name + ' ' + riaps_zmqcert_name)
-    sudo('chmod 600 ' + riaps_zmqcert_name)
+    sudo('chown root:riaps ' + riaps_zmqcert_name)
+    sudo('chmod 440 ' + riaps_zmqcert_name)
     run('rm ' + ssh_zmqcert_name)
 
     sudo('passwd -q -d riaps')
