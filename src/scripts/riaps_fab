@@ -25,6 +25,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("fabcmd", help="fabric command")             # Desired fabric command
     parser.add_argument("-H", "--hosts", default="", help="list of hostnames, comma separated")    # List of hostnames to used instead of system configured file
+    parser.add_argument("-f", dest='hostsFile', help="abs. path to riaps-hosts.conf")
     args = parser.parse_args()
 
     fcmd = "fab"
@@ -36,7 +37,9 @@ if __name__ == '__main__':
     if os.path.isdir(fpath):
         if args.hosts:
             subprocess.run([fcmd, fflag, fpath, args.fabcmd, fhost, args.hosts])
+        else if args.hostsFile:
+            subprocess.run([fcmd, ("--set hostsFile="+args.hostsFile), fflag, fpath, args.fabcmd])
         else:
             subprocess.run([fcmd, fflag, fpath, args.fabcmd])
     else:
-        print('RIAPS Fabfile is not install, please update the riaps-pycom installation.')
+        print('RIAPS Fabfile is not installed, please update the riaps-pycom installation.')

@@ -40,6 +40,9 @@ env.riapsLib = '/opt/riaps/armhf/lib:/usr/local/lib'
 
 # If a no commandline roles or hosts are passed (i.e. -R or -H), only then use listed hosts
 # Allows for passing of individual hosts or roles on which to run tasks
-if not env.roles and not env.hosts and not [s for s in env.tasks if 'sys.hosts' in s]:
+if env.hostsFile:
+    if os.path.isfile(env.hostsFile):
+        sys.hosts(env.hostsFile)
+else if not env.roles and not env.hosts and not [s for s in env.tasks if 'sys.hosts' in s]:
     riaps_conf = os.path.join(env.riapsHome,'etc/riaps-hosts.conf')
     sys.hosts(riaps_conf)
