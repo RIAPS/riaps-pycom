@@ -43,6 +43,6 @@ env.riapsLib = '/opt/riaps/armhf/lib:/usr/local/lib'
 if env.hostsFile:
     if os.path.isfile(env.hostsFile):
         sys.hosts(env.hostsFile)
-else if not env.roles and not env.hosts and not [s for s in env.tasks if 'sys.hosts' in s]:
+elif not env.roles and not env.hosts and not [s for s in env.tasks if 'sys.hosts' in s]:
     riaps_conf = os.path.join(env.riapsHome,'etc/riaps-hosts.conf')
     sys.hosts(riaps_conf)

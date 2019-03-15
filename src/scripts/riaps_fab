@@ -25,20 +25,22 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("fabcmd", help="fabric command")             # Desired fabric command
     parser.add_argument("-H", "--hosts", default="", help="list of hostnames, comma separated")    # List of hostnames to used instead of system configured file
-    parser.add_argument("-f", dest='hostsFile', help="abs. path to riaps-hosts.conf")
+    parser.add_argument("-f", dest='hostsFile', help="absolute path to riaps-hosts.conf")
     args = parser.parse_args()
 
     fcmd = "fab"
     fflag = "-f"
     fpath = "/usr/local/lib/python3.6/dist-packages/riaps/fabfile/"
     fhost = "-H"
+    fset = "--set"
+    fenvVar = "hostsFile="+args.hostsFile
 
 #    sys.path.append(os.getcwd())   # Ensure load_module works from current directory
     if os.path.isdir(fpath):
         if args.hosts:
             subprocess.run([fcmd, fflag, fpath, args.fabcmd, fhost, args.hosts])
-        else if args.hostsFile:
-            subprocess.run([fcmd, ("--set hostsFile="+args.hostsFile), fflag, fpath, args.fabcmd])
+        elif args.hostsFile:
+            subprocess.run([fcmd, fset, fenvVar, fflag, fpath, args.fabcmd])
         else:
             subprocess.run([fcmd, fflag, fpath, args.fabcmd])
     else:
