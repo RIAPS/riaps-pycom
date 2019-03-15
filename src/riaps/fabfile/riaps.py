@@ -48,8 +48,8 @@ def updateBBBKey():
 
     #create public key from private key to get openSSH formatting
     run('chmod 400 ' + ssh_privatekey_name)
-    run('ssh-keygen -y -f ' + ssh_privatekey_name + ' > authorized_keys')
-    sudo('cp authorized_keys ' + riaps_pubkey_name)
+    sudo('ssh-keygen -y -f ' + ssh_privatekey_name + ' > /home/riaps/.ssh/authorized_keys')
+    sudo('cp /home/riaps/.ssh/authorized_keys ' + riaps_pubkey_name)
     sudo('chown root:riaps ' + riaps_pubkey_name)
     sudo('chmod 440 ' + riaps_pubkey_name)
     sudo('rm ' + ssh_privatekey_name)
