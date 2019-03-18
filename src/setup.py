@@ -14,14 +14,16 @@ setup(name='riaps-pycom',
         'riaps.gen.target.cpp' : ['tpl/*'],
         'riaps.gen.target.python' : ['tpl/*'],
         'riaps.gen.target.capnp' : ['tpl/*']},
-      #data_files=[('riaps/etc', ['riaps/etc/riaps.conf',  'riaps/etc/riaps-log.conf']),
+      #data_files=[('riaps/etc', ['riaps/etc/riaps.conf',  'riaps/etc/riaps-log.conf', 'riaps/etc/riaps-hosts.conf']),
       #            ('riaps/lang',['riaps/lang/riaps.tx', 'riaps/lang/depl.tx']),
       #            ('riaps/etc',['riaps/etc/redis.conf']),
       #            ('riaps/etc',['riaps/etc/riaps-ctrl.glade']),
       #            ('riaps/keys',['riaps/keys/id_rsa.key','riaps/keys/id_rsa.pub'])
       #         ],
       scripts = [
-        "scripts/riaps_actor", "scripts/riaps_ctrl", "scripts/riaps_deplo", "scripts/riaps_disco", "scripts/riaps_lang", "scripts/riaps_depll", "scripts/riaps_device", "scripts/riaps_gviz", "scripts/riaps_ctrl_host", "scripts/riaps_gen"
+        "scripts/riaps_actor", "scripts/riaps_ctrl", "scripts/riaps_ctrl_host", "scripts/riaps_depll",
+        "scripts/riaps_deplo", "scripts/riaps_device", "scripts/riaps_disco", "scripts/riaps_gen",
+        "scripts/riaps_gen_cert", "scripts/riaps_gviz", "scripts/riaps_lang", "scripts/riaps_fab"
 
      ],
 

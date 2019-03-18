@@ -13,6 +13,7 @@ import time
 from riaps.run.disco import DiscoClient
 from riaps.run.deplc import DeplClient
 from riaps.proto import disco_capnp
+from riaps.consts.defs import *
 from riaps.utils.ifaces import getNetworkInterfaces
 from riaps.utils.config import Config
 import getopt
@@ -25,6 +26,10 @@ import importlib
 import traceback
 from .actor import Actor
 from czmq import Zsys
+from riaps.utils import spdlog_setup
+import yaml
+import zmq.auth
+from zmq.auth.thread import ThreadAuthenticator
 
 class Device(Actor):
     '''
@@ -69,10 +74,38 @@ class Device(Actor):
         self.INT_RE = re.compile(r"^[-]?\d+$")
         self.parseParams(sysArgv)
         
-        # self.context = zmq.Context() - Use czmq's context
+        # Use czmq's context
         czmq_ctx = Zsys.init()
         self.context = zmq.Context.shadow(czmq_ctx.value)
         Zsys.handler_reset()            # Reset previous signal 
+        
+        # Context for app sockets
+        self.appContext = zmq.Context()
+        
+        if Config.SECURITY:
+            (self.public_key,self.private_key) = zmq.auth.load_certificate(const.appCertFile)
+            hosts = ['127.0.0.1']
+            try:
+                with open(const.appDescFile,'r') as f:
+                    content = yaml.load(f)
+                    hosts += content.hosts
+            except:
+                pass
+
+            self.auth = ThreadAuthenticator(self.appContext)
+            self.auth.start()
+            self.auth.allow(*hosts)
+            self.auth.configure_curve(domain='*', location=zmq.auth.CURVE_ALLOW_ANY)
+        else:
+            (self.public_key,self.private_key) = (None,None)
+            self.auth = None
+            self.appContext = self.context
+        
+        try:
+            if os.path.isfile(const.logConfFile) and os.access(const.logConfFile, os.R_OK):
+                spdlog_setup.from_file(const.logConfFile)      
+        except Exception as e:
+            self.logger.error("error while configuring componentLogger: %s" % repr(e))  
         
         messages = gModel["messages"]              # Global message types (global on the network)
         self.messageNames = []
@@ -139,93 +172,93 @@ class Device(Actor):
         self.getPortMessageTypes(ports,"anss",["req_type","rep_type"],res)
         return res
         
-    def getParameterValueType(self,param,defaultType):
-        paramValue, paramType = None, None
-        if defaultType != None:
-            if defaultType == str:
-                paramValue, paramType = param, str
-            elif defaultType == int:
-                paramValue, paramType = int(param),int
-            elif defaultType == float:
-                paramValue, paramType = float(param),float
-            elif defaultType == bool:
-                paramType = bool
-                paramValue = False if param == "False" else True if param == "True" else None
-                paramValue, paramType = bool(param),float
-        else:
-            if param == 'True':
-                paramValue, paramType = True, bool
-            elif param == 'False':
-                paramValue, paramType = True, bool
-            elif self.INT_RE.match(param) is not None:
-                paramValue, paramType = int(param),int
-            else:
-                try:
-                    paramValue, paramType = float(param),float
-                except:
-                    paramValue,paramType = str(param), str
-        return (paramValue,paramType)
+#     def getParameterValueType(self,param,defaultType):
+#         paramValue, paramType = None, None
+#         if defaultType != None:
+#             if defaultType == str:
+#                 paramValue, paramType = param, str
+#             elif defaultType == int:
+#                 paramValue, paramType = int(param),int
+#             elif defaultType == float:
+#                 paramValue, paramType = float(param),float
+#             elif defaultType == bool:
+#                 paramType = bool
+#                 paramValue = False if param == "False" else True if param == "True" else None
+#                 paramValue, paramType = bool(param),float
+#         else:
+#             if param == 'True':
+#                 paramValue, paramType = True, bool
+#             elif param == 'False':
+#                 paramValue, paramType = True, bool
+#             elif self.INT_RE.match(param) is not None:
+#                 paramValue, paramType = int(param),int
+#             else:
+#                 try:
+#                     paramValue, paramType = float(param),float
+#                 except:
+#                     paramValue,paramType = str(param), str
+#         return (paramValue,paramType)
 
-    def parseParams(self,sysArgv):
-        self.params = { } 
-        formals = self.model["formals"]
-        optList = []
-        for formal in formals:
-            key = formal["name"]
-            default = None if "default" not in formal else formal["default"]
-            self.params[key] = default
-            optList.append("%s=" % key) 
-        try:
-            opts,args = getopt.getopt(sysArgv, '', optList)
-        except:
-            self.logger.info("Error parsing actor options %s" % str(sysArgv))
-            return
-#        try:
-        for opt in opts:
-            optName2,optValue = opt 
-            optName = optName2[2:] # Drop two leading dashes 
-            if optName in self.params:
-                defaultType = None if self.params[optName] == None else type(self.params[optName])
-                paramValue,paramType = self.getParameterValueType(optValue,defaultType)
-                if self.params[optName] != None:
-                    if paramType != type(self.params[optName]):
-                        raise BuildError("Type of default value does not match type of argument %s" 
-                                         % str((optName,optValue)))
-                self.params[optName] = paramValue
-            else:
-                self.logger.info("Unknown argument %s - ignored" % optName)
-        for param in self.params:
-            if self.params[param] == None:
-                raise BuildError("Required parameter %s missing" % param) 
+#     def parseParams(self,sysArgv):
+#         self.params = { } 
+#         formals = self.model["formals"]
+#         optList = []
+#         for formal in formals:
+#             key = formal["name"]
+#             default = None if "default" not in formal else formal["default"]
+#             self.params[key] = default
+#             optList.append("%s=" % key) 
+#         try:
+#             opts,args = getopt.getopt(sysArgv, '', optList)
+#         except:
+#             self.logger.info("Error parsing actor options %s" % str(sysArgv))
+#             return
+# #        try:
+#         for opt in opts:
+#             optName2,optValue = opt 
+#             optName = optName2[2:] # Drop two leading dashes 
+#             if optName in self.params:
+#                 defaultType = None if self.params[optName] == None else type(self.params[optName])
+#                 paramValue,paramType = self.getParameterValueType(optValue,defaultType)
+#                 if self.params[optName] != None:
+#                     if paramType != type(self.params[optName]):
+#                         raise BuildError("Type of default value does not match type of argument %s" 
+#                                          % str((optName,optValue)))
+#                 self.params[optName] = paramValue
+#             else:
+#                 self.logger.info("Unknown argument %s - ignored" % optName)
+#         for param in self.params:
+#             if self.params[param] == None:
+#                 raise BuildError("Required parameter %s missing" % param) 
 
-    def buildInstArgs(self,instName,formals,actuals):
-        args = {}
-        for formal in formals:
-            argName = formal['name']
-            argValue = None
-            actual = next((actual for actual in actuals if actual['name'] == argName), None)
-            defaultValue = None
-            if 'default' in formal:
-                defaultValue = formal['default'] 
-            if actual != None:
-                assert(actual['name'] == argName)
-                if 'param'in actual:
-                    paramName = actual['param']
-                    if paramName in self.params:
-                        argValue = self.params[paramName]
-                    else:
-                        raise BuildError("Unspecified parameter %s referenced in %s" 
-                                         %(paramName,instName))
-                elif 'value' in actual:
-                    argValue = actual['value']
-                else:
-                    raise BuildError("Actual parameter %s has no value" % argName)
-            elif defaultValue != None:
-                argValue = defaultValue
-            else:
-                raise BuildError("Argument %s in %s has no defined value" % (argName,instName))
-            args[argName] = argValue
-        return args
+#     def buildInstArgs(self,instName,formals,actuals):
+#         args = {}
+#         for formal in formals:
+#             argName = formal['name']
+#             argValue = None
+#             actual = next((actual for actual in actuals if actual['name'] == argName), None)
+#             defaultValue = None
+#             if 'default' in formal:
+#                 defaultValue = formal['default'] 
+#             if actual != None:
+#                 assert(actual['name'] == argName)
+#                 if 'param'in actual:
+#                     paramName = actual['param']
+#                     if paramName in self.params:
+#                         argValue = self.params[paramName]
+#                     else:
+#                         raise BuildError("Unspecified parameter %s referenced in %s" 
+#                                          %(paramName,instName))
+#                 elif 'value' in actual:
+#                     argValue = actual['value']
+#                 else:
+#                     raise BuildError("Actual parameter %s has no value" % argName)
+#             elif defaultValue != None:
+#                 argValue = defaultValue
+#             else:
+#                 raise BuildError("Argument %s in %s has no defined value" % (argName,instName))
+#             args[argName] = argValue
+#         return args
     
 #     def isLocalMessage(self,msgTypeName):
 #         '''

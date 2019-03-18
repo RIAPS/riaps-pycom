@@ -45,7 +45,7 @@ pymultigen >= 0.2.0
 Jinja2 >= 2.10
 pybind11 >= 2.2.4
 toml >= 0.10.0
-pycryptodome >= 3.7.2
+pycryptodomex >= 3.7.3 (python3-crypto and python3-keyrings.alt must be removed)
 
 use: apt install python3-pip python3-dev libhiredis-dev libcapnp-dev libssl-dev libffi-dev glade python3-gi
 

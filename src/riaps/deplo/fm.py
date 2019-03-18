@@ -12,8 +12,9 @@ import time
 from pyroute2 import IPRSocket
 from pyroute2.netlink import rtnl 
 
-import zmq
-from czmq import Zpoller,Zsys
+import ctypes
+import os
+import czmq
 import zyre
 from zyre import Zyre, ZyreEvent
 
@@ -24,11 +25,12 @@ from riaps.utils.config import Config
 import traceback
 
 class FMMonitor(threading.Thread):
-    def __init__(self,context,hostAddress):
+    def __init__(self,context,hostAddress,riapsHome):
         threading.Thread.__init__(self)
         self.logger = logging.getLogger(__name__)
         self.context = context
         self.hostAddress = hostAddress
+        self.riapsHome = riapsHome
         self.control = None
         self.peers  = { }   # uuid : address - all peers
         self.groups = { }   # groupName : { peers* } - peers in group    
@@ -87,7 +89,11 @@ class FMMonitor(threading.Thread):
             # Zsys.set_logsystem(0)
             pass
         self.uuid = self.zyre.uuid()
-        self.zyre.set_interface(Config.NIC_NAME.encode('utf-8')) 
+        self.zyre.set_interface(Config.NIC_NAME.encode('utf-8'))
+        if Config.SECURITY:
+            certFile = os.path.join(self.riapsHome,"keys",const.zmqCertificate)
+            cert = czmq.Zcert.load(ctypes.c_char_p(certFile.encode('utf-8')))
+            self.zyre.set_zcert(cert) 
         self.zyre.set_evasive_timeout(const.peerEvasiveTimeout)
         self.zyre.set_expired_timeout(const.peerExpiredTimeout)
         self.zyre.set_header(b'riaps@' + self.hostAddress.encode('utf-8'),
@@ -97,7 +103,7 @@ class FMMonitor(threading.Thread):
         self.zyre.start()
         self.zyre.join(b'riaps')
         self.zyreSocket = self.zyre.socket()
-        self.poller = Zpoller(zyre.c_void_p(self.command.underlying),self.zyreSocket,0)
+        self.poller = czmq.Zpoller(zyre.c_void_p(self.command.underlying),self.zyreSocket,0)
         while True:
             reader = self.poller.wait(-1)   # Wait forever
             if self.poller.terminated():
@@ -397,7 +403,9 @@ class FaultManager(object):
         self.nicMonitor.start()
         # Fault monitor
         hostAddress = self.parent.hostAddress
-        self.fmMonitor = FMMonitor(context,hostAddress)
+        # Home
+        riapsHome = self.parent.riapsHome
+        self.fmMonitor = FMMonitor(context,hostAddress,riapsHome)
         self.fmMonitor.start()
         # 
         self.logger.info("__init__ed")

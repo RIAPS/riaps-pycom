@@ -1,0 +1,15 @@
+// This is a comment
+app App {
+	host all { 
+		network dns; 
+	} 
+	host 192.168.1.1 {
+		network www.ibm.com;
+	}
+	host 192.168.1.2 {
+		network any;
+	}
+	on all ActorAll;
+	on (127.0.0.1,192.168.1.1) ActorPair;
+	on (192.168.1.2) ActorNetwork;
+}

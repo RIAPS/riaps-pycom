@@ -32,6 +32,7 @@ sizes = {
     }
 
 def file_size(num):
+    global sizes
     try:
         if type(num) == int:
             return num
@@ -131,6 +132,7 @@ types = {
         }
     
 def from_file(fname):
+    global global_pattern,sinks,patterns,loggers,levels
     d = toml.load(fname)
     if 'global_pattern' in d.keys():
         global_pattern = d['global_pattern']
@@ -164,6 +166,7 @@ def from_file(fname):
             loggers[name] = logger
 
 def get_logger(name):
+    global loggers
     if name in loggers.keys():
         return loggers[name]
     else:
@@ -293,6 +296,7 @@ pattern = "succient"
         f.write(test)
         
     from_file('test.toml')
+
     for l in loggers.keys():
         logger = spdlog.get(l)
         logger.trace('trace')

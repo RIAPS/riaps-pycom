@@ -27,6 +27,7 @@ class Config(object):
     ACTOR_DEBUG_SERVER = ''
     DEVICE_DEBUG_SERVER = ''
     APP_LOGS = ''
+    SECURITY = True
     
     def __init__(self):
         '''
@@ -60,30 +61,37 @@ class Config(object):
             logger.warning(' System configuration file %s has a problem: %s.' % (riaps_conf, str(e)))
             return 
         
-        if files == [] or not c_parse.has_section('RIAPS'):
+        riaps_section = 'RIAPS'
+        if files == [] or not c_parse.has_section(riaps_section):
             logger.warning(' System configuration file %s not found or invalid file.' % (riaps_conf))
             return 
         
         try: 
-            for item in c_parse.items('RIAPS'):
-                arg = item[1]
-                opt = item[0].upper()
+            for item in c_parse.items(riaps_section):
+                key,arg = item
+                opt = key.upper()
             
                 if hasattr(Config,opt):
                     optType = type(getattr(Config,opt))
+                    optValue = getattr(Config,opt)
                     try:
                         if optType == str:
                             optValue = str(arg)
                         elif optType == int:
                             optValue = int(arg)
                         elif optType == bool:
-                            optValue = bool(arg)
+                            try:
+                                optValue = c_parse.getboolean(riaps_section,key)
+                            except:
+                                print (1)
+                                pass
                         elif optType == float:
                             optValue = float(arg)
                         else:
                             optValue = arg
                         setattr(Config,opt,optValue)
                     except:
+                        print(2)
                         logger.warning('Formal and actual type of configuration argument %s differ %s - ignored'
                                        % (str(opt), str(optType)))
         except:

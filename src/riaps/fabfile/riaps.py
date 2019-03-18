@@ -2,12 +2,14 @@
 from . import deplo
 from .sys import run, sudo, put, get, arch
 from fabric.api import env, task, hosts, local
+import os
+from riaps.consts.defs import *
 
 # Prevent namespace errors by explicitly defining which tasks belong to this file
-__all__ = ['update','updateKey','install','uninstall','kill','getLogs','setup_cython', 'ctrl', 'configRouting']
+__all__ = ['update','updateBBBKey','updateAptKey','install','uninstall','kill','updateConfig','updateLogConfig','getLogs','ctrl', 'configRouting']
 
 # RIAPS packages
-packages = [ 
+packages = [
             'riaps-externals-',
             'riaps-core-',
             'riaps-pycom-',
@@ -27,11 +29,51 @@ def update():
         sudo('apt-get install ' + package + ' -y')
 
 @task
-def updateKey():
+def updateBBBKey():
+    """Rekey the BBBs with new generated keys"""
+    key_path = os.path.join(env.riapsHome,"keys/")
+    ssh_pubkey_name = "/home/riaps/.ssh/" + str(const.ctrlPublicKey)
+    ssh_privatekey_name = "/home/riaps/.ssh/" + str(const.ctrlPrivateKey)
+    ssh_cert_name = "/home/riaps/.ssh/" + str(const.ctrlCertificate)
+    ssh_zmqcert_name = "/home/riaps/.ssh/" + str(const.zmqCertificate)
+    riaps_pubkey_name = os.path.join(key_path,str(const.ctrlPublicKey))
+    riaps_privatekey_name = os.path.join(key_path,str(const.ctrlPrivateKey))
+    riaps_cert_name = os.path.join(key_path,str(const.ctrlCertificate))
+    riaps_zmqcert_name = os.path.join(key_path,str(const.zmqCertificate))
+
+    put(ssh_privatekey_name,'.ssh')
+    sudo('cp ' + ssh_privatekey_name + ' ' + riaps_privatekey_name)
+    sudo('chown root:riaps ' + riaps_privatekey_name)
+    sudo('chmod 440 ' + riaps_privatekey_name)
+
+    #create public key from private key to get openSSH formatting
+    run('chmod 400 ' + ssh_privatekey_name)
+    sudo('ssh-keygen -y -f ' + ssh_privatekey_name + ' > /home/riaps/.ssh/authorized_keys')
+    sudo('cp /home/riaps/.ssh/authorized_keys ' + riaps_pubkey_name)
+    sudo('chown root:riaps ' + riaps_pubkey_name)
+    sudo('chmod 440 ' + riaps_pubkey_name)
+    sudo('rm ' + ssh_privatekey_name)
+
+    put(ssh_cert_name,'.ssh')
+    sudo('cp ' + ssh_cert_name + ' ' + riaps_cert_name)
+    sudo('chown root:riaps ' + riaps_cert_name)
+    sudo('chmod 440 ' + riaps_cert_name)
+    run('rm ' + ssh_cert_name)
+
+    put(ssh_zmqcert_name,'.ssh')
+    sudo('cp ' + ssh_zmqcert_name + ' ' + riaps_zmqcert_name)
+    sudo('chown root:riaps ' + riaps_zmqcert_name)
+    sudo('chmod 440 ' + riaps_zmqcert_name)
+    run('rm ' + ssh_zmqcert_name)
+
+    sudo('passwd -q -d riaps')
+
+@task
+def updateAptKey():
     """Update RIAPS apt key"""
     sudo('wget -qO - https://riaps.isis.vanderbilt.edu/keys/riapspublic.key | apt-key add -')
 
-# RIAPS install (from local host) 
+# RIAPS install (from local host)
 @task
 def install():
     """Install RIAPS packages from development host"""
@@ -60,11 +102,11 @@ def kill():
     pgrepResult = run('pgrep \'riaps_\' -l')
     pgrepEntries = pgrepResult.rsplit('\n')
     processList = []
- 
+
     for process in pgrepEntries:
         if process != "":
             processList.append(process.split()[1])
- 
+
     for process in processList:
         sudo('pkill -SIGKILL '+process)
 
@@ -75,32 +117,48 @@ def kill():
     else:
         vm_mac = run('ip link show enp0s8 | awk \'/ether/ {print $2}\'')
         host_last_4 = vm_mac[-5:-3] + vm_mac[-2:]
- 
+
     apps = run('\ls ' + env.riapsApps).split() # \ls bypasses alias to ls with color formatting
     for app in apps:
         sudo('rm -R /home/riaps/riaps_apps/'+app+'/')
         if app != 'riaps-apps.lmdb':
             sudo('userdel ' + app.lower() + host_last_4)
 
+@task
+def updateConfig():
+    """"Place local riaps.conf on all remote hosts"""
+    if(os.path.isfile(os.path.join(os.getcwd(), "riaps.conf"))):
+        put('riaps.conf')
+        sudo('cp riaps.conf /usr/local/riaps/etc/')
+        sudo('chown root:root /usr/local/riaps/etc/riaps.conf')
+        sudo('rm riaps.conf')
+    else:
+        print("Local riaps.conf doesn't exist!")
+
+@task
+def updateLogConfig():
+    """"Places local riaps-log.conf on all remote hosts"""
+    if(os.path.isfile(os.path.join(os.getcwd(), "riaps-log.conf"))):
+        put('riaps-log.conf')
+        sudo('cp riaps-log.conf /usr/local/riaps/etc/')
+        sudo('chown root:root /usr/local/riaps/etc/riaps-log.conf')
+        sudo('rm riaps-log.conf')
+    else:
+        print("Local riaps-log.conf doesn't exist!")
+
 # If using riaps-deplo.service, the log data is being recorded in a system journal.
 # This function pulls that data from the system journal and places them in a log file
 @task
 def getLogs():
-    """Get deployment log"""
+    """Get deployment logs and save them to logs/"""
     hostname = env.host_string
     sudo('journalctl -u riaps-deplo.service --since today > riaps-deplo-' + hostname + '.log')
-    get('riaps-deplo-' + hostname + '.log','logs/riaps-deplo-' + hostname + '.log')
-
-@task
-def setup_cython():
-    """Fix 'Debugger speedups using cython not found' warnings"""
-    sudo('wget https://raw.githubusercontent.com/fabioz/PyDev.Debugger/master/setup_cython.py -P /usr/local/lib/python3.5/dist-packages/')
-    sudo('python3 /usr/local/lib/python3.5/dist-packages/setup_cython.py build_ext --inplace')
+    get('riaps-deplo-' + hostname + '.log','logs/')
 
 @task
 @hosts('localhost')
 def ctrl():
-    """launch RIAPS controller"""
+    """Launch RIAPS controller"""
     local('riaps_ctrl')
 
 # Find IP address of primary network interface
@@ -120,7 +178,7 @@ def get_ip():
 # Setup hosts routing, if needed.  Configure to your system's setup
 @task
 def configRouting():
-    """Configure routing"""
+    """Configure BBBs to use this host as their default gateway"""
     env.warn_only = True
     # ---- EDIT HERE ----
     hostIP = get_ip()

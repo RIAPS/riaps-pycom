@@ -22,6 +22,7 @@ import pwd
 import functools
 import tarfile
 import yaml
+import socket
 
 import capnp
 from concurrent.futures.thread import ThreadPoolExecutor
@@ -37,12 +38,12 @@ except:
     cPickle = None
     import pickle
 
-from Crypto.PublicKey import RSA
-from Crypto.Signature import PKCS1_v1_5
-from Crypto.Hash import SHA256
+from Cryptodome.PublicKey import RSA
+from Cryptodome.Signature import PKCS1_v1_5
+from Cryptodome.Hash import SHA256
 
 from riaps.consts.defs import *
-from riaps.utils.sudo import is_su
+from riaps.utils.sudo import riaps_sudo,is_su
 from riaps.utils.config import Config
 from riaps.proto import deplo_capnp
 from riaps.proto import disco_capnp
@@ -50,10 +51,11 @@ from riaps.run.exc import BuildError
 from riaps.deplo.resm import ResourceManager
 from riaps.deplo.procm import ProcessManager
 from riaps.deplo.appdb import AppDbase
-from riaps.utils.names import *
+from riaps.utils.ifaces import get_unix_dns_ips
+from riaps.utils.names import actorIdentity
 
 # Record of the app
-DeploAppRecord = namedtuple('DeploAppRecord', 'model hash file home')
+DeploAppRecord = namedtuple('DeploAppRecord', 'model hash file home hosts network')
 # Record of a user
 DeploUserRecord = namedtuple('DeploUserRecord', 'name home uid gid')
 # Record of an actor
@@ -121,14 +123,7 @@ class DeploymentManager(threading.Thread):
             self.riaps_disco_file = riaps.riaps_disco.__file__
         except:
             pass
-        
-        self.riaps_device_file = 'riaps_device'       # Default name for the executable riaps device shell
-        try:
-            import riaps.riaps_device          # We try to import the python riaps_device first so that we know is correct file name
-            self.riaps_device_file = riaps.riaps_device.__file__
-        except:
-            pass
-        
+
         self.depmCommandEndpoint = parent.depmCommandEndpoint
         # self.devmCommandEndpoint = parent.devmCommandEndpoint
         self.procMonEndpoint = parent.procMonEndpoint
@@ -145,6 +140,14 @@ class DeploymentManager(threading.Thread):
         self.uuid = None
         self.started = False
         self.pendingCall = False
+        if Config.SECURITY:
+            riaps_sudo('iptables -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT')  # track conn's
+            riaps_sudo('iptables -A INPUT -m conntrack --ctstate INVALID -j DROP')                # drop invalid state packets
+            riaps_sudo('iptables -A INPUT -i lo -j ACCEPT')                                       # accept lo
+            self.dns_ips = get_unix_dns_ips()
+        else:
+            self.dns_ips = []
+
 
     def doCommand(self,cmd):
         self.logger.info("doCommand: %s" % str(cmd))
@@ -396,13 +399,18 @@ class DeploymentManager(threading.Thread):
             self.logger.error("Unexpected error:", sys.exc_info()[0])
             raise
         home = ''
+        network = { }
         try:
-            with open(os.path.join(os.path.dirname(modelFileName),const.sigFile),'r') as f:
+            with open(os.path.join(os.path.dirname(modelFileName),const.appDescFile),'r') as f:
                 org = yaml.load(f)
                 home = org.home
+                network = org.network
+                hosts = org.hosts
         except:
             pass
-        self.appModels[appName] = DeploAppRecord(hash=fileHash, model=model, file=modelFileName, home=home)
+        self.appModels[appName] = DeploAppRecord(hash=fileHash, model=model, 
+                                                 file=modelFileName, home=home,
+                                                 hosts=hosts, network=network)
         fp.close()
     
     def getAppRecord(self,appName):
@@ -415,7 +423,50 @@ class DeploymentManager(threading.Thread):
     
     def getAppHome(self,appName):
         return self.getAppRecord(appName).home
-        
+    
+    def getAppHosts(self,appName):
+        return self.getAppRecord(appName).hosts
+    
+    def getAppNetwork(self,appName):
+        return self.getAppRecord(appName).network
+    
+    def setupAppSite(self,site,user_name,done):
+        if site in done: return 
+        try:
+            host = socket.gethostbyname(site) 
+            riaps_sudo("iptables -A OUTPUT -d %s -m owner --uid-owner %s -j ACCEPT" % (host,user_name))
+        except:
+            raise BuildError('Error in setting up access to %s for %s' % (site,user_name))
+    
+    def setupAppDNS (self,user_name,done):
+        for dns_ip in get_unix_dns_ips():  
+            self.setupAppSite(dns_ip,user_name,done)
+    
+    def setupAppNetworkSites(self,sites,user_name,done):
+        if sites is not None:
+            if len(sites) == 0: return True  # Node can access any network
+            for site in sites:
+                if site == 'dns':
+                    self.setupAppDNS(user_name, done)
+                else:
+                    self.setupAppSite(site,user_name,done)
+        return False     
+                    
+    def setupAppNetwork(self,appName,user_name):
+        if not Config.SECURITY: return              # No security
+        if user_name == Config.TARGET_USER: return  # Don't restrict default target user 
+        done = set()
+        self.setupAppSite('127.0.0.1',user_name,done)   # ACCEPT localhost
+        sites = self.getAppHosts(appName)               # ACCEPT riaps peers
+        self.setupAppNetworkSites(sites, user_name, done)
+        network = self.getAppNetwork(appName)
+        sites = network['[]'] if '[]' in network.keys() else None   # Sites from global list
+        if self.setupAppNetworkSites(sites, user_name, done): return   # Access to any network
+        sites = network[self.hostAddress] if self.hostAddress in network.keys() else None
+        if self.setupAppNetworkSites(sites, user_name, done): return   # Access to any network
+        host = '0.0.0.0/0'                                 # deny access to all others
+        riaps_sudo("iptables -A OUTPUT -d %s -m owner --uid-owner %s -j DROP" % (host,user_name))
+    
     def startActor(self,msg):
         '''
         Start an actor of an application 
@@ -436,7 +487,8 @@ class DeploymentManager(threading.Thread):
     
         componentTypes = self.getComponentTypes(appName, actorName)
         if len(componentTypes) == 0:
-            raise BuildError('Actor has no components: %s.%s.' % (appName,actorName))
+            self.logger.warning('Actor has no components: %s.%s.' % (appName,actorName))
+            # raise BuildError('Actor has no components: %s.%s.' % (appName,actorName))
         for componentType in componentTypes:
             # Look up the Python version first
             pyFilePath = join(appFolder, componentType + '.py')
@@ -460,6 +512,8 @@ class DeploymentManager(threading.Thread):
         user_uid = user_record.uid
         user_gid = user_record.gid
         user_cwd = appFolder
+        
+        self.setupAppNetwork(appName,userName)
         
         riaps_arg1 = appName
         riaps_arg2 = appModelPath
@@ -580,7 +634,10 @@ class DeploymentManager(threading.Thread):
         qualName = str(appName) + "." + str(actorName)
         proc = None
         with self.mapLock:
-            assert qualName in self.launchMap
+            # assert qualName in self.launchMap
+            if qualName not in self.launchMap:
+                self.logger.error('Actor %s has not been started' % qualName)
+                return
             proc = self.launchMap[qualName]
             del self.launchMap[qualName]
         if proc != None:
@@ -1092,7 +1149,8 @@ class DeploymentManager(threading.Thread):
             logFile = None
         self.logger.info("Launching %s " % str(command))
         try:
-            proc = psutil.Popen(command,cwd=appFolder,env=dev_env)
+            proc = psutil.Popen(command,cwd=appFolder,env=dev_env, 
+                                stdout=logFile, stderr=subprocess.STDOUT)
         except FileNotFoundError:
             try:
                 command = ['python3',riaps_mod] + command[1:]

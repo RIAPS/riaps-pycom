@@ -4,18 +4,23 @@ Created on Nov 6, 2016
 
 @author: riaps
 '''
-import rpyc
+import os
 import time
+import threading
+import logging
+import zmq
+import rpyc
 from rpyc import async
 from rpyc.utils.server import ThreadedServer
+from rpyc.utils.authenticators import SSLAuthenticator
+from riaps.utils.config import Config
+
 rpyc.core.protocol.DEFAULT_CONFIG['allow_pickle'] = True
 
 from riaps.consts.defs import *
-import threading
-import logging
 
 theController = None
-guiClient = None
+# guiClient = None
 
 class ServiceClient(object):
     '''
@@ -27,6 +32,8 @@ class ServiceClient(object):
         self.callback = callback
         self.parent = parent
         self.appFolder = appFolder
+        self.socket = theController.context.socket(zmq.PUSH)
+        self.socket.connect(theController.endpoint)
         self.log("+ %s" %(self.name,))
 
     def exposed_logout(self):
@@ -37,16 +44,17 @@ class ServiceClient(object):
             return
         self.stale = True
         self.callback = None
-        if self.name != "*gui*":
-            self.log("- %s " % (self.name,))
+        self.log("- %s " % (self.name,))    
+        self.socket.close()
                 
     def log(self, text):
         '''
         Adds a log message to the GUI
         '''
-        global guiClient
-        if guiClient != None:
-            guiClient.callback(text)
+        self.socket.send_pyobj(text)
+#         global guiClient
+#         if guiClient != None:
+#             guiClient.callback(text)
     
     def setupApp(self,appName,appNameJSON):
         '''
@@ -159,6 +167,7 @@ class ControllerService(rpyc.Service):
         if ControllerService.STOPPING: return
         self.client = None
         self.logger = logging.getLogger('riapsCtrl')
+        self.socket = None
 
     def on_disconnect(self,_conn = None):
         '''
@@ -168,29 +177,29 @@ class ControllerService(rpyc.Service):
         if self.client:
             self.client.exposed_logout()
             theController.delClient(self.client.name)
-    
+
     def exposed_login(self,clientName,callback,appFolder=None):
         '''
         Log into the service. 
         '''
         if ControllerService.STOPPING: return
-        global theController,ctrlLock,guiClient
-        if clientName == "*gui*":       # NOTE: the GUI is client of the service
-            assert self.client == None and guiClient == None
-            guiClient = ServiceClient(clientName,async(callback),self,None)
-            return ()
-        else:                           # RIAPS node client
-            assert (appFolder != None)
-            if (self.client and not self.client.stale) or theController.isClient(clientName):
-                # raise ValueError("already logged in")
-                oldClient = theController.getClient(clientName)
-                oldClient.exposed_logout()
-                theController.delClient(clientName)
-            self.client = ServiceClient(clientName, async(callback),self,appFolder)   # Register client's callback
-            theController.addClient(clientName,self.client)
-            dbaseNode = theController.nodeName      # The (redis) database is running on this same node
-            dbasePort = const.discoRedisPort        
-            return ('dbase',str(dbaseNode),str(dbasePort))  # Reply to the client
+        global theController,ctrlLock # ,guiClient
+        #         if clientName == "*gui*":       # NOTE: the GUI is client of the service
+        #             assert self.client == None and guiClient == None
+        #             guiClient = ServiceClient(clientName,async(callback),self,None)
+        #             return ()
+        #         else:                           # RIAPS node client
+        assert (appFolder != None)
+        if (self.client and not self.client.stale) or theController.isClient(clientName):
+            # raise ValueError("already logged in")
+            oldClient = theController.getClient(clientName)
+            oldClient.exposed_logout()
+            theController.delClient(clientName)
+        self.client = ServiceClient(clientName, async(callback),self,appFolder)   # Register client's callback
+        theController.addClient(clientName,self.client)
+        dbaseNode = theController.nodeName      # The (redis) database is running on this same node
+        dbasePort = const.discoRedisPort        
+        return ('dbase',str(dbaseNode),str(dbasePort))  # Reply to the client
 
 class ServiceThread(threading.Thread):
     '''
@@ -215,7 +224,10 @@ class ServiceThread(threading.Thread):
         '''
         global theController
         host = theController.hostAddress
+        self.auth = SSLAuthenticator(theController.keyFile, theController.certFile) \
+                        if Config.SECURITY else None
         self.server = ThreadedServer(ControllerService,hostname=host, port=self.port,
+                                     authenticator = self.auth,
                                      auto_register=True,
                                      protocol_config = {"allow_public_attrs" : True})
         self.server.start()

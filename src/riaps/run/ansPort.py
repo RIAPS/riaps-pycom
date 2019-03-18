@@ -43,6 +43,7 @@ class AnsPort(Port):
         self.setOwner(owner)
         self.socket = self.context.socket(zmq.ROUTER)
         self.socket.setsockopt(zmq.SNDTIMEO,self.sendTimeout)
+        self.setupCurve(True)
         self.host = ''
         if not self.isLocalPort:
             globalHost = self.getGlobalIface()

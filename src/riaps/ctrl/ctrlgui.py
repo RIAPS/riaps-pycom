@@ -9,6 +9,7 @@ import rpyc
 import time
 import sys
 import os
+import zmq
 from os.path import join
 from _collections import OrderedDict
 import re
@@ -41,6 +42,7 @@ class ControlGUIClient(object):
         self.logger = logging.getLogger(__name__)
         self.port = port
         self.controller = controller
+        self.context = controller.context
         self.builder = Gtk.Builder()
         riaps_folder = os.getenv('RIAPSHOME', './')
         try:
@@ -60,9 +62,15 @@ class ControlGUIClient(object):
                                       "onViewApplication": self.on_ViewApplication
                                       })
 
-        self.conn = rpyc.connect(self.controller.hostAddress, port)  # Local connection to the service
-        GLib.io_add_watch(self.conn, 1, GLib.IO_IN, self.bg_server)  # Register the callback with the service
-        self.conn.root.login("*gui*", self.on_serverMessage)  # Log in to the service
+        #keyFile = controller.keyFile
+        #certFile = controller.certFile
+        self.socket = self.context.socket(zmq.PULL)
+        self.socket.bind(self.controller.endpoint)
+        GLib.io_add_watch(self.socket.fileno(), 1, GLib.IO_IN, self.on_serverMessage)
+        
+        # self.conn = rpyc.connect(self.controller.hostAddress, port)  # Local connection to the service
+        # GLib.io_add_watch(self.conn, 1, GLib.IO_IN, self.bg_server)  # Register the callback with the service
+        # self.conn.root.login("*gui*", self.on_serverMessage)  # Log in to the service
 
         self.mainWindow = self.builder.get_object("window1")
         self.messages = self.builder.get_object("messageTextBuffer")
@@ -99,28 +107,36 @@ class ControlGUIClient(object):
     def run(self):
         Gtk.main()
     
-    def bg_server(self, source=None, cond=None):
-        '''
-        Check if there is something pending from the server thread. Called by the main GUI loop
-        '''
-        if self.conn:
-            self.conn.poll_all()
-            return True
-        else:
-            return False
+#     def bg_server(self, source=None, cond=None):
+#         '''
+#         Check if there is something pending from the server thread. Called by the main GUI loop
+#         '''
+#         if self.conn:
+#             self.conn.poll_all()
+#             return True
+#         else:
+#             return False
 
-    def on_serverMessage(self, text):
-        '''
-        Callback used by the service thread(s): it prints a log message.
-        '''
+    def log(self,text):
         global guiLock
         with guiLock:
             end = self.messages.get_end_iter()
             text = '> ' + text + '\n'
             self.messages.insert(end, text)
         self.check_server_msg(text)
-
-
+    
+    def on_serverMessage(self,_channel=None, _cond=None):
+        '''
+        Callback used by the service thread(s): it prints a log message.
+        '''
+        while True:
+            try:
+                text = self.socket.recv_pyobj(flags=zmq.NOBLOCK)
+                self.log(text)
+            except zmq.error.ZMQError:
+                break
+        return True
+            
     def on_ConsoleEntry(self, *args):
         '''
         Called when the console entry receives an 'activate' event
@@ -244,7 +260,8 @@ class ControlGUIClient(object):
         '''
         Quit the app. Forces a return from the GUI loop
         '''
-        self.conn.close()
+        # self.conn.close()
+        self.socket.close()
         Gtk.main_quit()
 
     """

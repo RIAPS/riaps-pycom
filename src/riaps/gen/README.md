@@ -1,6 +1,15 @@
 # RIAPS Code Generation Tool
 
-This tool (**riaps_gen**) generates skeleton code for RIAPS components of an application based on information from a user-defined RIAPS application model file (**.riaps**). The tool uses a **json** representation of the model that can be produced from the **riaps** file using the **riaps_lang** tool. 
+This tool (**riaps_gen**) provides skeleton RIAPS Component code based on information from a user defined RIAPS application model file (**.riaps**).  
+
+The model file used is the compiled **json** version, which can be created running
+**riaps_lang** in the folder with the application model file (**.riaps** ).
+
+The component target language is determined by specifications in the model file
+(i.e. **in C++** or **Python**). If no specification is provided, Python is used
+as the target language.  
+
+>Note: Python components are written using Python 3.6, while C++ components use STL C++17.
 
 ```
 Arguments:

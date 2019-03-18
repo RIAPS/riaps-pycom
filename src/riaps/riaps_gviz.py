@@ -1,17 +1,21 @@
 #!/usr/bin/python3
-'''
-Top-level script to start the graphic visualization processor ('gviz')
-Created on Oct 15, 2016
+''' Top-level script to start the graphic visualization processor ('gviz')
+
+Example:
+
+    ``riaps_gviz model deplo [-v|--verbose]``
+
+The script generates a .dot file shown the allocation of components and actors 
+to target nodes based on the model and deployment files. 
 
 Arguments:
-  model        : Name of model file to be processed
-  deplo        : Name of deplo file to be processed
-  --verbose    : Turns on printing the resulting JSON file on the console 
-
-Output:
-    APPNAME.dot 
+    -``model``: name of application model file to be processed
+    - ``deplo``: name of deployment model file to be processed
+    - ``-v|--verbose``: prints the JSON produced from the deployment model
     
-@author: riaps
+Output:
+    - ``appname.dot`` : graphviz-style dot file for the name application (based on the model)  
+    
 '''
 from riaps.lang.gviz import main
 
