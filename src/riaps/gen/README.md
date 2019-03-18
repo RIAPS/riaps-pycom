@@ -18,11 +18,21 @@ Arguments:
   -w,   --overwrite    : Overwrite existing code (no sync)
 ```
 
+The [component's implementation language](https://github.com/RIAPS/riaps.github.io/blob/master/tutorials/models.md#component-definitions) is specified in the model file using the clauses **in C++** or **in Python** in the component definition. If no specification is provided, Python is the target language.  Here is an example component definition:
+
+```
+Component1 () in C++ {
+
+    }
+```
+
+>Note: Python components are written using Python 3.6, while C++ components use STL C++17.
+
 The default output directory is a **generated** directory located with the model file folder.  Use ```-o .``` to place the files in the same directory as the model file.
 
-Communication of messages between C++ components and also from Python to C++ components are handled using [Cap'n Proto](https://capnproto.org/).  The skeleton **.capnp** file will be made available for definition of the message structures.  Python only applications do not utilize this file, so this file can be ignore.
+Communication of messages between C++ components and also between Python and C++ components are handled using [Cap'n Proto](https://capnproto.org/).  The skeleton **.capnp** file will be made available for definition of the message structures.  Python only applications do not utilize this file, so this file can be ignore.
 
-The code created will include code protection markers to allow preservation of user generated code if this tool is rerun.  Below is an example of a marker set. User code is inserted between the **begin** and **end** markers of the appropriate code section.
+The code created will include code *protection markers* to allow preservation of user-provided code if the generator is executed again.  Below is an example that shows how the markers look like. User code is inserted between the **riaps:....:begin** and **riaps:....:end** markers of the appropriate code sections.
 
 ````
 # riaps:keep_import:begin

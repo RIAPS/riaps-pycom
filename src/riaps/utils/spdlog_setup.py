@@ -296,7 +296,7 @@ pattern = "succient"
         f.write(test)
         
     from_file('test.toml')
-    
+
     for l in loggers.keys():
         logger = spdlog.get(l)
         logger.trace('trace')

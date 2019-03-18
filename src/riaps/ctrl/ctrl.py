@@ -541,6 +541,9 @@ class Controller(object):
         if os.path.isfile(const.logConfFile) and os.access(const.logConfFile, os.R_OK):
             download.append(const.logConfFile)
         
+        if os.path.isfile(const.logConfFile) and os.access(const.logConfFile, os.R_OK):
+            download.append(const.logConfFile)
+        
         appObj = appInfoDict['riaps_model'][appName]
         depls = appInfoDict['riaps_depl'].getDeployments()
         #  Network: (ip|'[]') -> [] | [ ('dns' | ip) ]+  
