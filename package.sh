@@ -35,7 +35,7 @@ cp package/riaps-pycom-amd64.deb .
 
 source version.sh
 mkdir -p package/riaps-pycom-armhf/DEBIAN
-mkdir  -p package/riaps-pycom-armhf/etc/
+mkdir -p package/riaps-pycom-armhf/etc/
 mkdir -p package/riaps-pycom-armhf/etc/apparmor.d/
 mkdir -p package/riaps-pycom-armhf/opt/riaps-pycom/
 mkdir -p package/riaps-pycom-armhf/opt/riaps-pycom/
