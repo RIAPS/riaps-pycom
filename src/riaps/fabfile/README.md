@@ -10,15 +10,17 @@ riaps_fab <command_name>
 riaps_fab help
 ```
 
-- To setup a list of host nodes that are to be controlled by the fab command, edit the **/usr/local/riaps/etc/riaps-hosts.conf** and update the **env.hosts** information. Notice that these can be either IP addresses or hostnames.  Also, the hostnames are within single quotes and are a comma separated list without spaces.
+- To setup a list of host nodes that are to be controlled by the fab command, edit the **/usr/local/riaps/etc/riaps-hosts.conf** and update the **env.hosts** information. Notice that these can be either IP addresses or hostnames.  Also, the hostnames are within double quotes and is a comma separated list without spaces.
 ```
-  # ---- START OF EDIT HERE ----
-  # List of bbb hosts
+  # This is the hosts configuration file for the RIAPS fabfile
+  [RIAPS]
+
+  # List of bbb hosts for Fabric
   # BBBs can be addressed by their IP address or the hostname.local (found at the command prompt on the BBB)
-  env.hosts = ['192.168.1.2','192.168.1.3','ubuntu.local','bbb-ef9e.local']
-  # ----  END OF EDIT HERE  ----
+  hosts = "192.168.1.2","192.168.1.3",
+          "ubuntu.local","bbb-ef9e.local"
 ```
-- Hosts can additionally be specified explicitly with a flag (**'-H'**) followed by the list of hosts. This can be useful for debugging individual hosts or indicating the development machine (localhost).  Like the riaps-hosts.conf file, the hostnames are listed within single quotes and comma separated (without spaces).
+- Hosts can additionally be specified explicitly with a flag (**'-H'**) followed by the list of hosts. This can be useful for debugging individual hosts or indicating the development machine (localhost).  Like the riaps-hosts.conf file, the hostnames are listed within double quotes and comma separated (without spaces).
 ```
 riaps_fab <command_name> -H <comma_separated_host_list>
 ```
