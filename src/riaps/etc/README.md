@@ -1,8 +1,8 @@
 # RIAPS Configuration Files
 
-This folder contains configuration files used by the RIAPS framework.  Some configuration files (such as redis.conf and riaps-ctl.glade) are specific to the RIAPS framework and are not expected to be modified by users.  But others (such as riaps.conf and riaps-log.conf) allow the user to configure the specific instance of the RIAPS framework to met the needs of their current activity.  Users can customize these files on specific platforms (i.e. the host machine and/or specific target nodes) by modifying the files located in **/usr/local/riaps/etc**.
+This folder contains configuration files used by the RIAPS framework.  Some configuration files (such as redis.conf and riaps-ctl.glade) are specific to the RIAPS framework and are not expected to be modified by users.  But others (such as riaps.conf and riaps-log.conf) allow the user to configure the specific instance of the RIAPS framework to met the needs of their current activity.  The riaps-hosts.conf file will allow the user to indicate the RIAPS host nodes that are available in their system by indicating their hostnames.  This file is available for use when an action is needed on all hosts.  Users can customize these files on specific platforms (i.e. the host machine and/or specific target nodes) by modifying the files located in **/usr/local/riaps/etc**.
 
-> Note:  User changes made to riaps.conf and riaps-log.conf will be preserved when the platform is updated (i.e. new version installed).  But the redis.conf and riaps-ctl.glade will be overwritten during the RIAPS update process.
+> Note:  User changes made to riaps.conf, riaps-log.conf, riaps-hosts.conf will be preserved when the platform is updated (i.e. new version installed).  But the redis.conf and riaps-ctl.glade will be overwritten during the RIAPS update process.
 
 ## RIAPS Platform Configuration File (riaps.conf)
 
@@ -84,3 +84,7 @@ Log statements from the framework and application component code are provided on
 ## RIAPS Logging Configuration File (riaps-log.conf)
 
 This file allows configuration of the RIAPS Framework logging output to indicate what information will be available (loggers), how it will be displayed (handlers), and general output format (formatters).  The default configuration will output framework warnings (root).  If more information is needed to debug an issue, additional module information can be added by including the desired module (such as riaps.deplo.depm) in the comma separated **keys** list.  
+
+## RIAPS Host Definition File (riaps-hosts.conf)
+
+This file is used by **riaps_fab** to know which hosts to interact with when using riaps_fab commands.  This file should be configured when setting up a system or when hosts are added or removed.  Hostnames can either be specified as the IP address or the hostname seen when logging into the node.  The RIAPS configured Beaglebone Bones will have hostnames with a format of 'bbb-xxxx.local', where xxxx is that last four digits of the host's MAC address.  It is not recommended to put the VM hostname (localhost) into this file since most system actions will be directed to the deployment nodes which are typically external to the control node.  The hostnames are enclosed in single quotes and comma separated without spaces.
