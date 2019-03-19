@@ -10,7 +10,7 @@ riaps_fab <command_name>
 riaps_fab help
 ```
 
-- To setup a list of host nodes that are to be controlled by the fab command, edit the **/usr/local/riaps/etc/riaps-hosts.conf** and update the **env.hosts** information. Notice that these can be either IP addresses or hostnames.
+- To setup a list of host nodes that are to be controlled by the fab command, edit the **/usr/local/riaps/etc/riaps-hosts.conf** and update the **env.hosts** information. Notice that these can be either IP addresses or hostnames.  Also, the hostnames are within single quotes and are a comma separated list without spaces.
 ```
   # ---- START OF EDIT HERE ----
   # List of bbb hosts
@@ -18,11 +18,11 @@ riaps_fab help
   env.hosts = ['192.168.1.2','192.168.1.3','ubuntu.local','bbb-ef9e.local']
   # ----  END OF EDIT HERE  ----
 ```
-- Hosts can additionally be specified explicitly with a flag (**'-H'**) followed by the list of hosts. This can be useful for debugging individual hosts or indicating the development machine (localhost).
+- Hosts can additionally be specified explicitly with a flag (**'-H'**) followed by the list of hosts. This can be useful for debugging individual hosts or indicating the development machine (localhost).  Like the riaps-hosts.conf file, the hostnames are listed within single quotes and comma separated (without spaces).
 ```
 riaps_fab <command_name> -H <comma_separated_host_list>
 ```
-- Also, a locally stored riaps-hosts.conf file (of any name) can be used to configure the list of hosts.  This file can be utilized by using the **-f** followed by the absolute path and name of the host file.  This file will be used instead of the default one in **/usr/local/riaps/etc/**
+- Also, a locally stored riaps-hosts.conf file (or any name) can be used to configure the list of hosts.  This file can be utilized by using the **-f** followed by the absolute path and name of the host file.  This file will be used instead of the default one in **/usr/local/riaps/etc/**
 ```
 riaps_fab <command_name> -f <absolute path and filename of host file>
 ```
@@ -52,7 +52,7 @@ riaps_fab riaps.kill
 ```
 riaps_fab sys.put <fileName>
 ```
-- Get files from all or specific hosts. This example shows how to grab application saved log files from the application deployment folder (the folder is protected, so sudo=true) 
+- Get files from all or specific hosts. This example shows how to grab application saved log files from the application deployment folder (the folder is protected, so sudo=true)
 ```
 riaps_fab sys.get:riaps_apps/<appname>/log/*,.,true -H <hostname>
 ```
