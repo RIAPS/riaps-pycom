@@ -19,9 +19,14 @@ listed in /usr/local/riaps/etc/riaps_hosts.conf
 '''
 
 import os
+import sys
+import shlex
 import argparse
 import subprocess
 
+def bash(cmd):
+    print("=== "+cmd)
+    subprocess.run(shlex.split(cmd))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -50,10 +55,11 @@ if __name__ == '__main__':
 #    sys.path.append(os.getcwd())   # Ensure load_module works from current directory
     if os.path.isdir(fpath):
         if args.hosts:
-            subprocess.run([fcmd, fflag, fpath, args.fabcmd, fhost, args.hosts, fident, args.privateKeyPath])
+            cmd = str.join(' ',(fcmd, fflag, fpath, args.fabcmd, fhost, args.hosts, fident))
         elif args.hostsFile:
-            subprocess.run([fcmd, fset, fenvVar, fflag, fpath, args.fabcmd, fident, args.privateKeyPath])
+            cmd = str.join(' ',(fcmd, fset, fenvVar, fflag, fpath, args.fabcmd, fident))
         else:
-            subprocess.run([fcmd, fflag, fpath, args.fabcmd, fident, args.privateKeyPath])
+            cmd = str.join(' ',(fcmd, fflag, fpath, args.fabcmd, fident))
+        bash(cmd)
     else:
         print('RIAPS Fabfile is not installed, please update the riaps-pycom installation.')
