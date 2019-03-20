@@ -7,8 +7,10 @@ Created on March 6, 2019
 Arguments:
     - ``fabcmd``:    fabric command desired
 
-    optional argument:
+    optional arguments:
     - ``-H | --hosts hostnames``:  list of hostnames (comma separated)
+    - ``-f hostfilename``       :  absolute path to local host file
+    - ``-i ssh private key``    :  relative or absolute path to specific private key
 
 If specific hostnames are not given, the command will be called for all hosts
 listed in /usr/local/riaps/etc/riaps_hosts.conf
@@ -25,13 +27,15 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("fabcmd", help="fabric command")             # Desired fabric command
     parser.add_argument("-H", "--hosts", default="", help="list of hostnames, comma separated")    # List of hostnames to used instead of system configured file
-    parser.add_argument("-f", dest='hostsFile', help="absolute path to riaps-hosts.conf")
+    parser.add_argument("-f", dest='hostsFile', help="absolute path to user defined host file")
+    parser.add_argument("-i", dest='privateKeyPath', help="relative or absolute path to specific private key")
     args = parser.parse_args()
 
     fcmd = "fab"
     fflag = "-f"
     fpath = "/usr/local/lib/python3.6/dist-packages/riaps/fabfile/"
     fhost = "-H"
+    fident = "-i"
     fset = "--set"
     if args.hostsFile is not None:
         fenvVar = "hostsFile="+args.hostsFile
@@ -39,9 +43,15 @@ if __name__ == '__main__':
 #    sys.path.append(os.getcwd())   # Ensure load_module works from current directory
     if os.path.isdir(fpath):
         if args.hosts:
-            subprocess.run([fcmd, fflag, fpath, args.fabcmd, fhost, args.hosts])
+            if args.privateKeyPath is not None:
+                subprocess.run([fcmd, fflag, fpath, args.fabcmd, fhost, args.hosts, fident, args.privateKeyPath])
+            else:
+                subprocess.run([fcmd, fflag, fpath, args.fabcmd, fhost, args.hosts])
         elif args.hostsFile:
-            subprocess.run([fcmd, fset, fenvVar, fflag, fpath, args.fabcmd])
+            if args.privateKeyPath is not None:
+                subprocess.run([fcmd, fset, fenvVar, fflag, fpath, args.fabcmd, fident, args.privateKeyPath])
+            else:
+                subprocess.run([fcmd, fset, fenvVar, fflag, fpath, args.fabcmd])
         else:
             subprocess.run([fcmd, fflag, fpath, args.fabcmd])
     else:
