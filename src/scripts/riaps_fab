@@ -35,24 +35,25 @@ if __name__ == '__main__':
     fflag = "-f"
     fpath = "/usr/local/lib/python3.6/dist-packages/riaps/fabfile/"
     fhost = "-H"
-    fident = "-i"
+    fident = ""
     fset = "--set"
     if args.hostsFile is not None:
         fenvVar = "hostsFile="+args.hostsFile
 
+    if args.privateKeyPath:
+        if os.path.isfile(args.privateKeyPath):
+            fident = "-i "+args.privateKeyPath
+        else:
+            print("Given private key does not exist, exiting...")
+            sys.exit(-1)
+
 #    sys.path.append(os.getcwd())   # Ensure load_module works from current directory
     if os.path.isdir(fpath):
         if args.hosts:
-            if args.privateKeyPath is not None:
-                subprocess.run([fcmd, fflag, fpath, args.fabcmd, fhost, args.hosts, fident, args.privateKeyPath])
-            else:
-                subprocess.run([fcmd, fflag, fpath, args.fabcmd, fhost, args.hosts])
+            subprocess.run([fcmd, fflag, fpath, args.fabcmd, fhost, args.hosts, fident, args.privateKeyPath])
         elif args.hostsFile:
-            if args.privateKeyPath is not None:
-                subprocess.run([fcmd, fset, fenvVar, fflag, fpath, args.fabcmd, fident, args.privateKeyPath])
-            else:
-                subprocess.run([fcmd, fset, fenvVar, fflag, fpath, args.fabcmd])
+            subprocess.run([fcmd, fset, fenvVar, fflag, fpath, args.fabcmd, fident, args.privateKeyPath])
         else:
-            subprocess.run([fcmd, fflag, fpath, args.fabcmd])
+            subprocess.run([fcmd, fflag, fpath, args.fabcmd, fident, args.privateKeyPath])
     else:
         print('RIAPS Fabfile is not installed, please update the riaps-pycom installation.')
