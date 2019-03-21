@@ -72,7 +72,7 @@ def generate_self_signed_cert(cert_dir,key):
                 .public_key(key.public_key())\
                 .serial_number(x509.random_serial_number())\
                 .not_valid_before(datetime.datetime.utcnow())\
-                .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=30))\
+                .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=999))\
                 .add_extension(x509.SubjectAlternativeName([x509.DNSName(u"localhost")]),critical=False)\
                 .sign(key, hashes.SHA256(), default_backend())
     with open(join(cert_dir, CERT_FILE), "wb") as f:
