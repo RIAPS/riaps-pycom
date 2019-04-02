@@ -58,7 +58,11 @@ riaps_fab sys.put <fileName>
 ```
 riaps_fab sys.get:riaps_apps/<appname>/log/*,.,true -H <hostname>
 ```
-- Running system commands can be done by providing the command desired after the fab command ```sys.run:<command>```.  If the command is multiworded, the command should be wrapped in both single and then double quotes.  Single word commands do not need any quotes.  The sudo command is the same.
+- Running system commands can be done by providing the command desired after the fab command </br>
+```sys.run:<command>```.  
+  - If the command is multiworded, the command should be wrapped in both single and then double quotes.  
+  - Single word commands do not need any quotes. 
+  - The sudo command is the same.
 ```
 riaps_fab sys.run:'"cat riaps_install_bbb.sh"'
 riaps_fab sys.run:lsb_release
