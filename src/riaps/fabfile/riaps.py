@@ -63,7 +63,7 @@ def updateBBBKey():
     put(ssh_zmqcert_name,'.ssh')
     sudo('cp ' + ssh_zmqcert_name + ' ' + riaps_zmqcert_name)
     sudo('chown root:riaps ' + riaps_zmqcert_name)
-    sudo('chmod 440 ' + riaps_zmqcert_name)
+    sudo('chmod 444 ' + riaps_zmqcert_name)
     run('rm ' + ssh_zmqcert_name)
 
     sudo('passwd -q -d riaps')
