@@ -127,15 +127,6 @@ class Device(Actor):
         for messageSpec in internals:
             self.internalNames.append(messageSpec["type"])
             
-        groups = gModel["groups"]
-        self.groupTypes = {} 
-        for group in groups:
-            self.groupTypes[group["name"]] = { 
-                "kind" : group["kind"],
-                "message" :  group["message"],
-                "timed" : group["timed"]
-            }
-            
         self.components = {}
         instSpecs = self.model["instances"]
         compSpecs = gModel["components"]
