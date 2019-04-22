@@ -9,9 +9,12 @@
 
 #include <tunables/global>
 
-@{RIAPSHOME}=/usr/local/riaps       # Location of RIAPS data files
-@{RIAPSAPPS}=/home/riaps/riaps_apps # Location of folder for RIAPS applications
-@{RIAPSEXEC}=/usr/local/bin         # Location of RIAPS scripts (i.e riaps_actor)
+# Location of RIAPS data files
+@{RIAPSHOME}=/usr/local/riaps
+# Location of folder for RIAPS applications
+@{RIAPSAPPS}=/home/riaps/riaps_apps
+# Location of RIAPS scripts (i.e riaps_actor)
+@{RIAPSEXEC}=/usr/local/bin
 
 profile @{RIAPSEXEC}/riaps_actor flags=(complain) {
   #include <abstractions/base>
