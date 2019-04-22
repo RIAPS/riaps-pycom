@@ -22,6 +22,7 @@ from builtins import int, str
 import re
 import sys
 import os
+import ipaddress
 import importlib
 import traceback
 from .actor import Actor
@@ -45,7 +46,11 @@ class Device(Actor):
         self.modelName = gModelName
         self.name = dName
         self.pid = os.getpid()
+        self.uuid = None
         self.suffix = ""
+        self.setupIfaces()
+        # Assumption : pid is a 4 byte int
+        self.actorID = ipaddress.IPv4Address(self.globalHost).packed + self.pid.to_bytes(4,'big')
         if dName not in gModel["devices"]:
             raise BuildError('Device "%s" unknown' % dName)
        
@@ -121,6 +126,15 @@ class Device(Actor):
         self.internalNames = []
         for messageSpec in internals:
             self.internalNames.append(messageSpec["type"])
+            
+        groups = gModel["groups"]
+        self.groupTypes = {} 
+        for group in groups:
+            self.groupTypes[group["name"]] = { 
+                "kind" : group["kind"],
+                "message" :  group["message"],
+                "timed" : group["timed"]
+            }
             
         self.components = {}
         instSpecs = self.model["instances"]
@@ -295,7 +309,7 @@ class Device(Actor):
         Perform a setup operation on the actor (after  the initial construction but before the activation of parts)
         '''
         self.logger.info("setup")
-        self.setupIfaces()
+        # self.setupIfaces()
         self.suffix = self.macAddress
         self.disco = DiscoClient(self,self.suffix)
         self.disco.start()                  # Start the discovery service client
