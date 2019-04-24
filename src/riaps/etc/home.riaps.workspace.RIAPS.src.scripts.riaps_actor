@@ -1,32 +1,52 @@
-# Last Modified: Sun Jan 27 19:04:31 2019
+# Last Modified: Apr 23 2019
 # Initial AppArmor security profile for RIAPS actors
 # To install: 
 # - Edit the 3 variables at the top for the final installation
-# - For strict enforcement change the 'complain' flags to 'enforce'    
+# - Edit the main profile name (s.t. it refers to the riaps_actor executable script)   
 # - Rename the file corresponding to the value of @{RIAPSEXEC}/riaps_actor
-#   According to the AppArmor spec, all '/' must be replace with '.' , except the first on
+#   According to the AppArmor spec, all '/' must be replace with '.' , except the first one
 # - Copy the resulting file into /etc/apparmor.d, or load it into the kernel using apparmor_parser
+
+# Location of RIAPS data files
+@{RIAPSHOME}=/home/riaps/workspace/RIAPS/src
+# Location of folder for RIAPS applications 
+@{RIAPSAPPS}=/home/riaps/workspace/RIAPS/tmp			
+# Location of RIAPS scripts (i.e riaps_actor)
+@{RIAPSEXEC}=/home/riaps/workspace/RIAPS/src/scripts	
 
 #include <tunables/global>
 
-@{RIAPSHOME}=/home/riaps/workspace/RIAPS/src/riaps		# Location of RIAPS data files
-@{RIAPSAPPS}=/home/riaps/workspace/RIAPS/tmp			# Location of folder for RIAPS applications 
-@{RIAPSEXEC}=/home/riaps/workspace/RIAPS/scripts		# Location of RIAPS scripts (i.e riaps_actor)
+# Profile name must NOT have a variable
+profile /home/riaps/workspace/RIAPS/src/scripts/riaps_actor {
 
-profile @{RIAPSEXEC}/riaps_actor flags=(complain) {
   #include <abstractions/base>
- 
-  @{RIAPSEXEC}/riaps_actor r,		# Script file
-  /lib/x86_64-linux-gnu/ld-*.so mr,
-  /usr/bin/python3.6 Cx -> trusted_domain,
+  #include <abstractions/user-tmp>
+  #include <abstractions/python>
 
-  profile trusted_domain flags=(complain) {
+  network raw,
+  network inet udp,
+  network inet tcp,
+
+  @{RIAPSHOME}/** mr,
+  @{RIAPSHOME}/ r,
+  @{RIAPSEXEC}/ r,
+  /sbin/ldconfig ix,
+
+  /etc/** r,
+  owner /proc/** rw,
+  /usr/local/lib/** mr,
+  /usr/local/lib/python3.6/dist-packages/** mr,
+  /usr/share/dpkg/** mr,
+  
+  # Script file
+  /home/riaps/workspace/RIAPS/src/scripts/riaps_actor r,
+  owner @{RIAPSAPPS}/** mrw,
+
+  /lib/x86_64-linux-gnu/ld-*.so* mr,
+
+  /usr/bin/python3 Cx -> trusted_domain,
+
+  profile trusted_domain {
     #include <abstractions/python>
-
-    network inet udp,				# Networking
-    network inet tcp,
-
-    @{RIAPSHOME}/** r, 				# RIAPSHOME
-    owner @{RIAPSAPPS}/** rw,		# RIAPSAPPS 
-  }
+}
 }

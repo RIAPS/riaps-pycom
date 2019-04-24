@@ -24,6 +24,9 @@ import json
 import logging
 import traceback 
 
+from apparmor_monkeys import patch_modules
+patch_modules()
+
 from riaps.utils.config import Config
 from riaps.utils.trace import riaps_trace
 

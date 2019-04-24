@@ -356,7 +356,7 @@ class AppResourceManager(object):
                 self.uid = os.getuid()
         _res = riaps_sudo('chown -R %s:%s %s' % (self.userName,self.userName,self.appFolder))
         _res = riaps_sudo('chmod o-rwx %s' % self.appFolder)
-        _res = riaps_sudo('chown %s %s/%s' % (Config.TARGET_USER,self.appFolder,const.appDescFile))
+        # _res = riaps_sudo('chown %s %s/%s' % (Config.TARGET_USER,self.appFolder,const.appDescFile))
         self.spcUsage = 0
         self.spcMonitor = self.parent.spcMonitor
         # Set up the net limits for the app
@@ -442,7 +442,7 @@ class AppResourceManager(object):
     def claimApp(self):
         try:
             _res = riaps_sudo('chown -R %s:%s %s' % (self.userName,self.userName,self.appFolder))
-            _res = riaps_sudo('chown %s %s/%s' % (Config.TARGET_USER,self.appFolder,const.appDescFile))
+            # _res = riaps_sudo('chown %s %s/%s' % (Config.TARGET_USER,self.appFolder,const.appDescFile))
         except:
             # traceback.print_exc()
             self.logger.warning('claiming app for user %s failed' % (self.userName))
