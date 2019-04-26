@@ -435,19 +435,21 @@ class Controller(object):
         (tgz_file, sha_file) = self.buildPackage(appName,files,libraries)
         with ctrlLock:
             resList = []
+            cltList = []
             for client in clients:
                 if client.stale:
                     self.log('S %s',client.name)    # Stale client, we don't deploy
                 else:
                     ok = self.downloadAppToClient(appName,tgz_file,sha_file,client,resList)
+                    if ok: cltList += [client.name]
                     result = result and ok
-            for res in resList:
+            for res,clt in zip(resList,cltList):
                 while not res.ready: time.sleep(0.5)
                 value = res.value
                 if value == True:
-                    self.log('I %s %s' % (client.name,appName))
+                    self.log('I %s %s' % (clt,appName))
                 else:
-                    self.log('? %s on %s: %s' % (appName,client.name,str(value)))
+                    self.log('? %s on %s: %s' % (appName,clt,str(value)))
         os.remove(tgz_file)
         os.remove(sha_file)
         return result
@@ -537,9 +539,6 @@ class Controller(object):
             return noresult
         else:
             download.append(appNameJSON)
-        
-        if os.path.isfile(const.logConfFile) and os.access(const.logConfFile, os.R_OK):
-            download.append(const.logConfFile)
         
         if os.path.isfile(const.logConfFile) and os.access(const.logConfFile, os.R_OK):
             download.append(const.logConfFile)
@@ -824,6 +823,10 @@ class Controller(object):
                 return None
             if appNameKey not in self.riaps_appInfoDict:
                 self.riaps_appInfoDict[appNameKey] = dict()
+            else:
+                self.log("Application %s already deployed" % appModelName)
+                self.gui.clearApplication()
+                return None
             self.riaps_appInfoDict[appNameKey]['riaps_model'] = appInfo
             self.riaps_appInfoDict[appNameKey]['riaps_appFolder'] = appFolder
             return appNameKey
@@ -848,7 +851,9 @@ class Controller(object):
                 return None
             appNameKey = depInfo.appName
             if appNameKey not in self.riaps_appInfoDict:
-                self.riaps_appInfoDict[appNameKey] = dict()
+                self.log("Application model for %s missing" % depInfo.appName)
+                self.gui.clearDeployment()
+                return None
             self.riaps_appInfoDict[appNameKey]['riaps_depl'] = depInfo
             #print(self.riaps_appInfoDict)
             return appNameKey

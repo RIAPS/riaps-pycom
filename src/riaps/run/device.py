@@ -89,6 +89,10 @@ class Device(Actor):
         
         if Config.SECURITY:
             (self.public_key,self.private_key) = zmq.auth.load_certificate(const.appCertFile)
+            _public = zmq.curve_public(self.private_key)
+            if(self.public_key != _public):
+                self.logger.error("bad security key(s)")
+                raise BuildError("invalid security key(s)")
             hosts = ['127.0.0.1']
             try:
                 with open(const.appDescFile,'r') as f:
