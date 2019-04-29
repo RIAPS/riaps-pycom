@@ -1,4 +1,3 @@
-# MUST BE UPDATED
 # Last Modified: Apr 29, 2019
 # Initial AppArmor security profile for RIAPS actors
 # To install:
@@ -15,6 +14,8 @@
 @{RIAPSAPPS}=/home/riaps/riaps_apps
 # Location of RIAPS scripts (i.e riaps_actor)
 @{RIAPSEXEC}=/usr/local/bin
+# Location of RIAPS externals
+@{RIAPSEXTERNALS}=/opt/riaps/armhf
 
 #include <tunables/global>
 
@@ -32,6 +33,7 @@ profile /usr/local/bin/riaps_actor {
   @{RIAPSHOME}/** mr,
   @{RIAPSHOME}/ r,
   @{RIAPSEXEC}/ r,
+  @{RIAPSEXTERNALS}/** mr,
   /sbin/ldconfig ix,
 
   /etc/** r,
