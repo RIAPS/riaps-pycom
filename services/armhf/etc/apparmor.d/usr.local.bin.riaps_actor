@@ -1,0 +1,54 @@
+# MUST BE UPDATED
+# Last Modified: Apr 29, 2019
+# Initial AppArmor security profile for RIAPS actors
+# To install:
+# - Edit the 3 variables at the top for the final installation
+# - Edit the main profile name (s.t. it refers to the riaps_actor executable script)
+# - For strict enforcement change the 'complain' flags to 'enforce'
+# - Rename the file corresponding to the value of @{RIAPSEXEC}/riaps_actor
+#   According to the AppArmor spec, all '/' must be replace with '.' , except the first one
+# - Copy the resulting file into /etc/apparmor.d, or load it into the kernel using apparmor_parser
+
+# Location of RIAPS data files
+@{RIAPSHOME}=/usr/local/riaps
+# Location of folder for RIAPS applications
+@{RIAPSAPPS}=/home/riaps/riaps_apps
+# Location of RIAPS scripts (i.e riaps_actor)
+@{RIAPSEXEC}=/usr/local/bin
+
+#include <tunables/global>
+
+# Profile name must NOT have a variable
+profile /usr/local/bin/riaps_actor {
+
+  #include <abstractions/base>
+  #include <abstractions/user-tmp>
+  #include <abstractions/python>
+
+  network raw,
+  network inet udp,
+  network inet  tcp,
+
+  @{RIAPSHOME}/** mr,
+  @{RIAPSHOME}/ r,
+  @{RIAPSEXEC}/ r,
+  /sbin/ldconfig ix,
+
+  /etc/** r,
+  owner /proc/** rw,
+  /usr/local/lib/** mr,
+  /usr/local/lib/python3.6/dist-packages/** mr,
+  /usr/share/dpkg/** mr,
+
+   # Script file
+  /usr/local/bin/riaps_actor r,
+  owner @{RIAPSAPPS}/** mrw,
+
+  /lib/arm-linux-gnueabihf/ld-*.so* mr,
+
+  /usr/bin/python3 Cx -> trusted_domain,
+
+  profile trusted_domain {
+    #include <abstractions/python>
+  }
+}
