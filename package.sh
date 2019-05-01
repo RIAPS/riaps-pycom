@@ -2,7 +2,6 @@ rm -rf package
 source version.sh
 mkdir -p package/riaps-pycom-amd64/DEBIAN
 mkdir -p package/riaps-pycom-amd64/etc/
-#mkdir -p package/riaps-pycom-amd64/etc/apparmor.d/
 mkdir -p package/riaps-pycom-amd64/opt/riaps-pycom/
 mkdir -p package/riaps-pycom-amd64/usr/local/riaps/etc/
 mkdir -p package/riaps-pycom-amd64/usr/local/riaps/lang/
@@ -18,7 +17,6 @@ cp -r src/riaps/etc/redis.conf package/riaps-pycom-amd64/usr/local/riaps/etc/.
 cp -r src/riaps/etc/riaps-ctrl.glade package/riaps-pycom-amd64/usr/local/riaps/etc/.
 cp -r src/riaps/lang/riaps.tx package/riaps-pycom-amd64/usr/local/riaps/lang/.
 cp -r src/riaps/lang/depl.tx package/riaps-pycom-amd64/usr/local/riaps/lang/.
-#cp -r src/riaps/etc/usr.local.bin.riaps_actor package/riaps-pycom-amd64/etc/apparmor.d/.
 
 cp -r src/riaps/keys/id_rsa.key package/riaps-pycom-amd64/usr/local/riaps/keys/.
 cp -r src/riaps/keys/id_rsa.pub package/riaps-pycom-amd64/usr/local/riaps/keys/.
@@ -36,7 +34,6 @@ cp package/riaps-pycom-amd64.deb .
 source version.sh
 mkdir -p package/riaps-pycom-armhf/DEBIAN
 mkdir -p package/riaps-pycom-armhf/etc/
-#mkdir -p package/riaps-pycom-armhf/etc/apparmor.d/
 mkdir -p package/riaps-pycom-armhf/opt/riaps-pycom/
 mkdir -p package/riaps-pycom-armhf/opt/riaps-pycom/
 mkdir -p package/riaps-pycom-armhf/usr/local/riaps/etc/
@@ -50,7 +47,6 @@ cp -r src/riaps/etc/riaps-log.conf package/riaps-pycom-armhf/etc/.
 cp -r src/riaps/etc/redis.conf package/riaps-pycom-armhf/usr/local/riaps/etc/.
 cp -r src/riaps/lang/riaps.tx package/riaps-pycom-armhf/usr/local/riaps/lang/.
 cp -r src/riaps/lang/depl.tx package/riaps-pycom-armhf/usr/local/riaps/lang/.
-#cp -r src/riaps/etc/usr.local.bin.riaps_actor package/riaps-pycom-armhf/etc/apparmor.d/.
 
 cp -r src/riaps/keys/id_rsa.key package/riaps-pycom-armhf/usr/local/riaps/keys/.
 cp -r src/riaps/keys/id_rsa.pub package/riaps-pycom-armhf/usr/local/riaps/keys/.
