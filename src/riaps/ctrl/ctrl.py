@@ -25,9 +25,15 @@ import yaml
 import ipaddress
 import tempfile
 import shutil
+from collections import namedtuple
 from Cryptodome.PublicKey import RSA
 from Cryptodome.Signature import PKCS1_v1_5
 from Cryptodome.Hash import SHA256
+import zmq
+import zmq.auth
+from threading import RLock
+from enum import Enum, auto, unique 
+
 from riaps.consts.defs import *
 from riaps.utils.ifaces import getNetworkInterfaces
 from riaps.utils.config import Config 
@@ -35,17 +41,30 @@ from riaps.utils.appdesc import AppDescriptor
 from riaps.ctrl.ctrlsrv import ServiceThread, ServiceClient
 from riaps.ctrl.ctrlgui import ControlGUIClient
 from riaps.ctrl.ctrlcli import ControlCLIClient
-from threading import RLock
 from riaps.lang.lang import compileModel
 from riaps.lang.depl import DeploymentModel
-import zmq
-import zmq.auth
 
 import gi
 import tarfile
+
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
 
+# App status
+@unique
+class AppStatus(Enum):
+    Unknown = auto()
+    NotLoaded = auto()
+    Loaded = auto()
+    Recovered = auto()
+
+class AppInfo(object):
+    def __init__(self,appFolder,model,depl,status):
+        self.appFolder = appFolder
+        self.model = model
+        self.depl= depl
+        self.status = status
+    
 ctrlLock = RLock()
 
 class RSFTPClient(paramiko.SFTPClient):
@@ -93,15 +112,13 @@ class Controller(object):
         self.riaps_Folder = os.getenv('RIAPSHOME', './')
         self.keyFile = os.path.join(self.riaps_Folder,"keys/" + str(const.ctrlPrivateKey))
         self.certFile = os.path.join(self.riaps_Folder,"keys/" + str(const.ctrlCertificate))
-        self.riaps_appName = None   # App name
-        self.riaps_model = None     # App model to be launched
-        self.riaps_depl = None      # App deployment model to be launched
+#         self.riaps_appName = None   # App name
+#         self.riaps_model = None     # App model to be launched
+#         self.riaps_depl = None      # App deployment model to be launched
+        self.appInfo = {}           # Info about apps 
         self.launchList = []        # List of launch operations
         self.setupHostKeys()
 
-        # (DY) 2-18-2017:
-        self.riaps_appInfoDict = dict()     # appName: {appFolder, model, depl}
-        
     def setupIfaces(self):
         '''
         Find the IP addresses of the (host-)local and network(-global) interfaces
@@ -191,6 +208,7 @@ class Controller(object):
         if res.ready:
             value = res.value
             if not value: return
+            self.addRecoveredAppInfo(value)
             self.gui.update_node_apps(clientName,value)
         else:
             exe = functools.partial(self.updateClient,  # Keep waiting if result not ready yet
@@ -351,6 +369,7 @@ class Controller(object):
     def installClientComplete(self,client,appName,res):
         if not res or res.error:
             self.log('? Install on %s failed' % client.name)
+            res.value = False
             return
         if res.ready:
             return
@@ -370,7 +389,7 @@ class Controller(object):
             sftpSession = transport.open_session()
             sftpClient = RSFTPClient.from_transport(transport)
             
-            appFolder = self.riaps_appInfoDict[appName]['riaps_appFolder']
+            appFolder = self.appInfo[appName].appFolder
             dirRemote = os.path.join(client.appFolder,appName)
            
             appFolderRemote = client.appFolder # os.path.join(client,appFolder)
@@ -450,6 +469,7 @@ class Controller(object):
                     self.log('I %s %s' % (clt,appName))
                 else:
                     self.log('? %s on %s: %s' % (appName,clt,str(value)))
+                    result = False
         os.remove(tgz_file)
         os.remove(sha_file)
         return result
@@ -525,16 +545,16 @@ class Controller(object):
         '''
         noresult = ([],[],[],[])
         download = []
-        if appName not in self.riaps_appInfoDict:
+        if appName not in self.appInfo:
             return noresult
-        appInfoDict = self.riaps_appInfoDict[appName]
+        appInfo = self.appInfo[appName]
         appNameJSON = appName + ".json"
         
-        if ('riaps_model' not in appInfoDict) or ('riaps_depl' not in appInfoDict):
+        if (appInfo.model == None) or (appInfo.depl == None):
             self.log("Error: Mismatched model or deployment for app '%s'" % appName)
             return noresult
         
-        if appName not in appInfoDict['riaps_model']:
+        if appName not in appInfo.model:
             self.log("Error: App '%s' not found in model" % appName)
             return noresult
         else:
@@ -543,10 +563,10 @@ class Controller(object):
         if os.path.isfile(const.logConfFile) and os.access(const.logConfFile, os.R_OK):
             download.append(const.logConfFile)
         
-        appObj = appInfoDict['riaps_model'][appName]
-        depls = appInfoDict['riaps_depl'].getDeployments()
+        appObj = appInfo.model[appName]
+        depls = appInfo.depl.getDeployments()
         #  Network: (ip|'[]') -> [] | [ ('dns' | ip) ]+  
-        network = appInfoDict['riaps_depl'].getNetwork()
+        network = appInfo.depl.getNetwork()
         
         hosts = []          # List of IP addresses of hosts used by the app
         # Check the all actors are present in the model
@@ -620,16 +640,28 @@ class Controller(object):
 
     def launchByName(self, appName):
         '''
-        Launch an app. The model of the app is in self.riaps_model, and the corresponding deployment
-        is in self.riaps_depl.
+        Launch an app. The appInfo record holds information about the model and deployment.
         '''
-        download,libraries,clients,depls = self.buildDownload(appName)
-        if download == []:
-            self.log("* Nothing to download")
+        
+        status = self.appInfo[appName].status if appName in self.appInfo else AppStatus.NotLoaded
+        if status == AppStatus.NotLoaded: 
+            download,libraries,clients,depls = self.buildDownload(appName)
+            if download == []:
+                self.log("* Nothing to download")
+                return False
+            ok = self.downloadApp(download,libraries,clients,appName)
+            if not ok:
+                self.log("* App download fault")
+                return False
+            self.appInfo[appName].status = AppStatus.Loaded
+        elif status == AppStatus.Loaded:
+            depls = self.appInfo[appName].depl.getDeployments() if appName in self.appInfo else []
+        elif status == AppStatus.Recovered:
+            self.log("* App recovered - remove/deploy/launch again")
+            depls = []                  # TODO: recover actor parameter
             return False
-        ok = self.downloadApp(download,libraries,clients,appName)
-        if not ok:
-            self.log("* App download fault")
+        else: 
+            self.log("* App launch fault")
             return False
         # Process the deployment and launch all actors.
         appNameJSON = appName + ".json"
@@ -703,7 +735,7 @@ class Controller(object):
         Return True  if a remote folder path points to a directory
         '''
         try:
-            return S_ISDIR(sftp.stat(path).st_mode)
+            return stat.S_ISDIR(sftp.stat(path).st_mode)
         except IOError:
             return False
 
@@ -722,8 +754,9 @@ class Controller(object):
         if top == True:                 # Remove top dir?
             sftp.rmdir(path)
     
-    def removeAppFromClient(self,client,appName,files=[],libraries=[]):
+    def removeAppFromClient(self,client,appName,_files=[],_libraries=[]):
         transport = self.startClientSession(client)
+        dirRemote = ''
         if transport == None:
             return False
         try:
@@ -736,7 +769,7 @@ class Controller(object):
             transport.close()
             return True
         except Exception as e:
-            self.logger.warning('Caught exception: %s: %s' % (e.__class__, e))
+            self.logger.warning('Caught exception: %s: %s %s' % (e.__class__,e,dirRemote))
             try:
                 transport.close()
             except:
@@ -770,7 +803,7 @@ class Controller(object):
         os.remove(const.sigFile)
             
     def removeApp(self, appName):
-        files, libraries, clients, depls = self.buildDownload(appName)
+        files, libraries, clients, _depls = self.buildDownload(appName)
         self.removeSignature()
         with ctrlLock:
             for client in clients:
@@ -786,16 +819,23 @@ class Controller(object):
 
     def removeAppByName(self, appName):
         ok = self.removeApp(appName)
-        if ok:
-            self.log("R %s " % appName)
-        else:
-            self.log("? %s " % appName)
-        del self.riaps_appInfoDict[appName]     # remove app info
+        if not ok: self.log("? %s " % appName)  # Flag a problem (redundant) 
+        self.log("R %s " % appName)             # Make gui update
+        del self.appInfo[appName]               # remove app info
 
     def setAppFolder(self,appFolderPath):
         self.riaps_appFolder = appFolderPath
         os.chdir(appFolderPath)
-        
+    
+    def addRecoveredAppInfo(self,value):
+        for appName in value.keys():
+            actors = value[appName]
+            if appName not in self.appInfo:
+                self.appInfo[appName] = AppInfo(model=None,depl=None,appFolder=None,status = AppStatus.Recovered)
+                # TODO: Attempt to locate app folder, model, depl; update record
+            else:
+                self.appInfo[appName] = AppStatus.Loaded
+    
     def compileApplication(self,appModelName,appFolder):
         '''
         Compile an application model (create both the JSON file and the data structure)
@@ -805,30 +845,30 @@ class Controller(object):
         try:
             if appModelName.endswith('.riaps'):
                 self.log("Compiling app: %s" % appModelName)
-                appInfo = compileModel(appModelName)
-                if len(appInfo) < 1:        # empty
+                appModel = compileModel(appModelName)
+                if len(appModel) < 1:        # empty
                     return None
-                appNameKey = list(appInfo.keys())[0]    # Load the first app only
+                appNameKey = list(appModel.keys())[0]    # Load the first app only
             elif appModelName.endswith('.json'):
                 self.log("Loading app model: %s" % appModelName)
                 # TODO: Validate that this is a correct RIAPS model file
                 fp = open(appModelName,'r')             # Load model file (one app)
                 jsonModel = json.load(fp)
                 appNameKey = jsonModel['name']
-                appInfo = {}
-                appInfo[appNameKey] = jsonModel
+                appModel = {}
+                appModel[appNameKey] = jsonModel
             else:
                 self.log("Must be .riaps or .json: '%s'" % (appModelName))
                 self.gui.clearApplication()
                 return None
-            if appNameKey not in self.riaps_appInfoDict:
-                self.riaps_appInfoDict[appNameKey] = dict()
-            else:
+            if appNameKey not in self.appInfo:
+                self.appInfo[appNameKey] = AppInfo(model=None,depl=None,appFolder=None,status=AppStatus.NotLoaded)
+            elif self.appInfo[appNameKey].status != AppStatus.NotLoaded:
                 self.log("Application %s already deployed" % appModelName)
                 self.gui.clearApplication()
                 return None
-            self.riaps_appInfoDict[appNameKey]['riaps_model'] = appInfo
-            self.riaps_appInfoDict[appNameKey]['riaps_appFolder'] = appFolder
+            self.appInfo[appNameKey].model = appModel
+            self.appInfo[appNameKey].appFolder = appFolder
             return appNameKey
         except Exception as e:
             self.log("Error while processing '%s':\n%s" % (appModelName,e.args[0]))
@@ -850,12 +890,12 @@ class Controller(object):
             if depInfo is None:
                 return None
             appNameKey = depInfo.appName
-            if appNameKey not in self.riaps_appInfoDict:
+            if appNameKey not in self.appInfo:
                 self.log("Application model for %s missing" % depInfo.appName)
                 self.gui.clearDeployment()
                 return None
-            self.riaps_appInfoDict[appNameKey]['riaps_depl'] = depInfo
-            #print(self.riaps_appInfoDict)
+            self.appInfo[appNameKey].depl = depInfo
+            #print(self.appInfo)
             return appNameKey
         except Exception as e:
             self.log("Error in compiling depl '%s':\n%s" % (depModelName,e.args[0]))

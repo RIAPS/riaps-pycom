@@ -192,11 +192,21 @@ class AppDbase(object):
             pass
         return actList
 
+    def getAppActor(self,appName,actorName):
+        res = None
+        try:
+            actList = self.getKeyValue(appName,[])
+            actList = [ a for a in actList if a.actor == actorName ]
+            res = actList[0]
+        except:
+            pass
+        return res
+    
     def delAppActor(self,appName,actorName):
         ok = False
         try:
             actList = self.getKeyValue(appName,[])
-            actList = [ a for a in actList if actList.actor != actorName ]
+            actList = [ a for a in actList if a.actor != actorName ]
             self.replaceKeyValue(appName, actList)
             ok = True
         except:
