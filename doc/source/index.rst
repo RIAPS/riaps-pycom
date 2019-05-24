@@ -3,8 +3,13 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to RIAPS's documentation!
-=================================
+Welcome to riaps-pycom documentation!
+=====================================
+
+This documents the APIs for RIAPS application management (riaps_ctrl and riaps_deplo),
+Python component framework (riaps_actor and riaps_device), node management tool (riaps_fab
+using fabric), code generation tool (riaps_gen) and an alternate discovery service
+(redis-based).
 
 .. toctree::
    :maxdepth: 2
