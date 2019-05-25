@@ -225,7 +225,7 @@ class FMMonitor(threading.Thread):
                                                      % (appName,actorName,str(peer))) 
                                     info = ('peer-', appName, actorName, peer)
                                     self.command.send_pyobj(info)
-                    del self.peers[pUUID]
+                    if pUUID in self.peers: del self.peers[pUUID]
                 elif eType == b'SHOUT' or eType == b'WHISPER':
                     arg = msg.popstr().decode()
                     self.logger.info("FMMon.SHOUT %s = %s " % (str(pUUID), arg))
