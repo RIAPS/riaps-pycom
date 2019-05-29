@@ -1,8 +1,0 @@
-Package: riaps-systemd-amd64
-Architecture: amd64
-Maintainer: Institute for Software Integrated Systems 
-Depends: riaps-pycom-amd64, riaps-core-amd64
-Conflicts: 
-Priority: required
-Version:  @version@
-Description: This configures the required systemd services

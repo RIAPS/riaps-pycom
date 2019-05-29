@@ -2,11 +2,12 @@
 from . import deplo
 from .sys import run, sudo, put, get, arch
 from fabric.api import env, task, hosts, local
+from fabric.contrib.files import sed
 import os
 from riaps.consts.defs import *
 
 # Prevent namespace errors by explicitly defining which tasks belong to this file
-__all__ = ['update','updateBBBKey','updateAptKey','install','uninstall','kill','updateConfig','updateLogConfig','getLogs','ctrl', 'configRouting']
+__all__ = ['update','updateBBBKey','updateAptKey','install','uninstall','kill','updateConfig','updateLogConfig','getLogs','ctrl', 'configRouting', 'resetConfig', 'securityOff', 'securityOn']
 
 # RIAPS packages
 packages = [
@@ -184,3 +185,26 @@ def configRouting():
     hostIP = get_ip()
     # Provide appropriate IP address
     sudo('route add default gw ' + hostIP + 'dev eth0')
+
+# Reset the config files with the install files (include /usr/local/riaps/etc
+# and /usr/local/keys folders)
+@tasks
+def resetConfig():
+    """Reset the Configuration files installed"""
+    architecture = arch()
+    package1 = 'riaps-pycom-' + architecture
+    package2 = 'riaps-systemd-' + architecture
+    sudo('dpkg --purge ' + package1 + package2)
+    sudo('apt-get -o DPkg::options::=--force-confmiss --reinstall install' + package1 + package2)
+
+# Turn off RIAPS security feature
+@tasks
+def securityOff():
+    """Turn RIAPS security feature off
+    sed(/usr/local/riaps/etc/riaps.conf, security = on, security = off, use_sudo=True, backup='.bak', flags='', shell=False)
+
+# Turn on RIAPS security feature
+@tasks
+def securityOn():
+    """Turn RIAPS security feature on
+    sed(/usr/local/riaps/etc/riaps.conf, security = off, security = on, use_sudo=True, backup='.bak', flags='', shell=False)

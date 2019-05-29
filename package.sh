@@ -7,7 +7,7 @@ mkdir -p package/riaps-pycom-amd64/usr/local/riaps/etc/
 mkdir -p package/riaps-pycom-amd64/usr/local/riaps/lang/
 mkdir -p package/riaps-pycom-amd64/usr/local/riaps/keys/
 
-cp -r DEBIAN/amd64/* package/riaps-pycom-amd64/DEBIAN/.
+cp -r amd64/DEBIAN/* package/riaps-pycom-amd64/DEBIAN/.
 cp -r src package/riaps-pycom-amd64/opt/riaps-pycom/.
 
 cp -r src/riaps/etc/riaps.conf package/riaps-pycom-amd64/etc/.
@@ -22,8 +22,6 @@ cp -r src/riaps/keys/id_rsa.key package/riaps-pycom-amd64/usr/local/riaps/keys/.
 cp -r src/riaps/keys/id_rsa.pub package/riaps-pycom-amd64/usr/local/riaps/keys/.
 cp -r src/riaps/keys/riaps-sys.cert package/riaps-pycom-amd64/usr/local/riaps/keys/.
 cp -r src/riaps/keys/x509.pem package/riaps-pycom-amd64/usr/local/riaps/keys/.
-
-cp -r bin/fabfile package/riaps-pycom-amd64/usr/local/riaps/
 
 sed s/@version@/$pycomversion/g -i package/riaps-pycom-amd64/DEBIAN/control
 sed s/@version@/$pycomversion/g -i package/riaps-pycom-amd64/opt/riaps-pycom/src/setup.py
@@ -40,7 +38,7 @@ mkdir -p package/riaps-pycom-armhf/usr/local/riaps/etc/
 mkdir -p package/riaps-pycom-armhf/usr/local/riaps/lang/
 mkdir -p package/riaps-pycom-armhf/usr/local/riaps/keys/
 
-cp -r DEBIAN/armhf/* package/riaps-pycom-armhf/DEBIAN/.
+cp -r armhf/DEBIAN/* package/riaps-pycom-armhf/DEBIAN/.
 cp -r src package/riaps-pycom-armhf/opt/riaps-pycom/.
 cp -r src/riaps/etc/riaps.conf package/riaps-pycom-armhf/etc/.
 cp -r src/riaps/etc/riaps-log.conf package/riaps-pycom-armhf/etc/.
@@ -58,13 +56,3 @@ sed s/@version@/$pycomversion/g -i package/riaps-pycom-armhf/opt/riaps-pycom/src
 fakeroot dpkg-deb --build package/riaps-pycom-armhf
 
 cp package/riaps-pycom-armhf.deb .
-
-
-# services
-cp -r services package/.
-sed s/@version@/$pycomversion/g -i package/services/amd64/DEBIAN/control
-sed s/@version@/$pycomversion/g -i package/services/armhf/DEBIAN/control
-fakeroot dpkg-deb --build package/services/amd64
-fakeroot dpkg-deb --build package/services/armhf
-mv package/services/amd64.deb riaps-systemd-amd64.deb
-mv package/services/armhf.deb riaps-systemd-armhf.deb
