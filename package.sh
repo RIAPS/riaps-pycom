@@ -18,10 +18,10 @@ cp -r src/riaps/etc/riaps-ctrl.glade package/riaps-pycom-amd64/usr/local/riaps/e
 cp -r src/riaps/lang/riaps.tx package/riaps-pycom-amd64/usr/local/riaps/lang/.
 cp -r src/riaps/lang/depl.tx package/riaps-pycom-amd64/usr/local/riaps/lang/.
 
-cp -r src/riaps/keys/id_rsa.key package/riaps-pycom-amd64/usr/local/riaps/keys/.
-cp -r src/riaps/keys/id_rsa.pub package/riaps-pycom-amd64/usr/local/riaps/keys/.
-cp -r src/riaps/keys/riaps-sys.cert package/riaps-pycom-amd64/usr/local/riaps/keys/.
-cp -r src/riaps/keys/x509.pem package/riaps-pycom-amd64/usr/local/riaps/keys/.
+cp -r src/riaps/keys/id_rsa.key package/riaps-pycom-amd64/etc/.
+cp -r src/riaps/keys/id_rsa.pub package/riaps-pycom-amd64/etc/.
+cp -r src/riaps/keys/riaps-sys.cert package/riaps-pycom-amd64/etc/.
+cp -r src/riaps/keys/x509.pem package/riaps-pycom-amd64/etc/.
 
 sed s/@version@/$pycomversion/g -i package/riaps-pycom-amd64/DEBIAN/control
 sed s/@version@/$pycomversion/g -i package/riaps-pycom-amd64/opt/riaps-pycom/src/setup.py
@@ -46,10 +46,10 @@ cp -r src/riaps/etc/redis.conf package/riaps-pycom-armhf/usr/local/riaps/etc/.
 cp -r src/riaps/lang/riaps.tx package/riaps-pycom-armhf/usr/local/riaps/lang/.
 cp -r src/riaps/lang/depl.tx package/riaps-pycom-armhf/usr/local/riaps/lang/.
 
-cp -r src/riaps/keys/id_rsa.key package/riaps-pycom-armhf/usr/local/riaps/keys/.
-cp -r src/riaps/keys/id_rsa.pub package/riaps-pycom-armhf/usr/local/riaps/keys/.
-cp -r src/riaps/keys/riaps-sys.cert package/riaps-pycom-armhf/usr/local/riaps/keys/.
-cp -r src/riaps/keys/x509.pem package/riaps-pycom-armhf/usr/local/riaps/keys/.
+cp -r src/riaps/keys/id_rsa.key package/riaps-pycom-armhf/etc/.
+cp -r src/riaps/keys/id_rsa.pub package/riaps-pycom-armhf/etc/.
+cp -r src/riaps/keys/riaps-sys.cert package/riaps-pycom-armhf/etc/.
+cp -r src/riaps/keys/x509.pem package/riaps-pycom-armhf/etc/.
 
 sed s/@version@/$pycomversion/g -i package/riaps-pycom-armhf/DEBIAN/control
 sed s/@version@/$pycomversion/g -i package/riaps-pycom-armhf/opt/riaps-pycom/src/setup.py
