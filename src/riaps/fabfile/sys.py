@@ -117,5 +117,5 @@ def setup_cython():
 
 @task
 def flushIPTables():
-    """Flush the iptables
+    """Flush the iptables"""
     sudo('iptables --flush')

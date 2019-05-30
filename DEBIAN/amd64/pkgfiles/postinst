@@ -1,6 +1,7 @@
 set -e
 pip3 install /opt/riaps-pycom/src --verbose
-mkdir -p /etc/riaps
+mkdir -p /etc/riaps/
+mkdir -p /usr/local/riaps/keys/
 
 #Delete and create links again
 for i in `ls /usr/local/riaps/etc`; do rm -f /etc/riaps/$i;ln -s  /usr/local/riaps/etc/$i /etc/riaps/$i ;done
@@ -14,6 +15,15 @@ rm -f /usr/local/riaps/keys/id_rsa.key
 rm -f /usr/local/riaps/keys/id_rsa.pub
 rm -f /usr/local/riaps/keys/riaps-sys.cert
 rm -f /usr/local/riaps/keys/x509.pem
+
+chown -f root:riaps /etc/id_rsa.key
+chown -f root:riaps /etc/id_rsa.pub
+chown -f root:riaps /etc/riaps-sys.cert
+chown -f root:riaps /etc/x509.pem
+chmod -f 440 /etc/id_rsa.key
+chmod -f 440 /etc/id_rsa.pub
+chmod -f 444 /etc/riaps-sys.cert
+chmod -f 440 /etc/x509.pem
 
 ln -s /etc/riaps.conf /usr/local/riaps/etc/riaps.conf
 ln -s /etc/riaps-log.conf /usr/local/riaps/etc/riaps-log.conf

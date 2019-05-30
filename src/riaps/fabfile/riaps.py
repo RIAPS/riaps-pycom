@@ -200,11 +200,13 @@ def resetConfig():
 # Turn off RIAPS security feature
 @tasks
 def securityOff():
-    """Turn RIAPS security feature off
-    sed(/usr/local/riaps/etc/riaps.conf, security = on, security = off, use_sudo=True, backup='.bak', flags='', shell=False)
+    """Turn RIAPS security feature off"""
+    riaps_conf_name = os.path.join(env.riapsHome,"etc/riaps.conf")
+    sed(riaps_conf_name, 'security = on', 'security = off', use_sudo=True)
 
 # Turn on RIAPS security feature
 @tasks
 def securityOn():
-    """Turn RIAPS security feature on
-    sed(/usr/local/riaps/etc/riaps.conf, security = off, security = on, use_sudo=True, backup='.bak', flags='', shell=False)
+    """Turn RIAPS security feature on"""
+    riaps_conf_name = os.path.join(env.riapsHome,"etc/riaps.conf")
+    sed(riaps_conf_name, 'security = off', 'security = on', use_sudo=True)
