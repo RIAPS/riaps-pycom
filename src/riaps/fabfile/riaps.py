@@ -188,7 +188,7 @@ def configRouting():
 
 # Reset the config files with the install files (include /usr/local/riaps/etc
 # and /usr/local/keys folders)
-@tasks
+@task
 def resetConfig():
     """Reset the Configuration files installed"""
     architecture = arch()
@@ -198,14 +198,14 @@ def resetConfig():
     sudo('apt-get -o DPkg::options::=--force-confmiss --reinstall install' + package1 + package2)
 
 # Turn off RIAPS security feature
-@tasks
+@task
 def securityOff():
     """Turn RIAPS security feature off"""
     riaps_conf_name = os.path.join(env.riapsHome,"etc/riaps.conf")
     sed(riaps_conf_name, 'security = on', 'security = off', use_sudo=True)
 
 # Turn on RIAPS security feature
-@tasks
+@task
 def securityOn():
     """Turn RIAPS security feature on"""
     riaps_conf_name = os.path.join(env.riapsHome,"etc/riaps.conf")

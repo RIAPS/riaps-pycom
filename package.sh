@@ -30,14 +30,14 @@ cp package/riaps-pycom-amd64.deb .
 source version.sh
 mkdir -p package/riaps-pycom-armhf/DEBIAN
 mkdir -p package/riaps-pycom-armhf/etc/
-mkdir -p package/riaps-pycom-armhf/bin/
 mkdir -p package/riaps-pycom-armhf/opt/riaps-pycom/
+mkdir -p package/riaps-pycom-armhf/usr/bin/
 mkdir -p package/riaps-pycom-armhf/usr/local/riaps/etc/
 mkdir -p package/riaps-pycom-armhf/usr/local/riaps/lang/
 
 cp -r DEBIAN/armhf/pkgfiles/* package/riaps-pycom-armhf/DEBIAN/.
 cp -r DEBIAN/armhf/etc/* package/riaps-pycom-armhf/etc/.
-cp -r DEBIAN/armhf/bin/* package/riaps-pycom-armhf/bin/.
+cp -r DEBIAN/armhf/usr/bin/* package/riaps-pycom-armhf/usr/bin/.
 cp -r src package/riaps-pycom-armhf/opt/riaps-pycom/.
 cp -r src/riaps/etc/riaps.conf package/riaps-pycom-armhf/etc/.
 cp -r src/riaps/etc/riaps-log.conf package/riaps-pycom-armhf/etc/.
