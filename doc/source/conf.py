@@ -74,7 +74,7 @@ pygments_style = 'sphinx'
 import sphinx.ext.apidoc
 
 def setup(app):
-    sphinx.ext.apidoc.main(['-f', '-T', '-e', '-o', 'doc/source', 'src'])
+    sphinx.ext.apidoc.main(['-f', '-T', '-e', '-o', 'doc/source', '../../src'])
     
 # -- Options for HTML output -------------------------------------------------
 
