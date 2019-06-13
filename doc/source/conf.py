@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.abspath('../../src'))
 # -- Project information -----------------------------------------------------
 
 project = 'RIAPS'
-copyright = '2018, RIAPS Team'
+copyright = '2019, Vanderbilt University'
 author = 'RIAPS Team'
 
 # The short X.Y version
@@ -71,7 +71,11 @@ exclude_patterns = []
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
 
+import sphinx.ext.apidoc
 
+def setup(app):
+    sphinx.ext.apidoc.main(['-f', '-T', '-e', '-o', 'doc/source', 'src'])
+    
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
