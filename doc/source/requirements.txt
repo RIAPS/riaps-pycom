@@ -10,7 +10,6 @@ beautifulsoup4==4.6.0
 bleach==1.5.0
 breathe==4.10.0
 butter==0.12.6
-catfish==1.4.4
 certifi==2018.1.18
 cffi==1.11.5
 cgroups==0.1.0
