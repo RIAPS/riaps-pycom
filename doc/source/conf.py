@@ -71,10 +71,11 @@ exclude_patterns = []
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
 
+# The following section runs spinx-apidoc automatically before building the documentation
 import sphinx.ext.apidoc
 
 def setup(app):
-    sphinx.ext.apidoc.main(['-f', '-T', '-e', '-o', 'doc/source', '../../src'])
+    sphinx.ext.apidoc.main(['-f', '-T', '-e', '-o', 'doc/source', 'src'])
     
 # -- Options for HTML output -------------------------------------------------
 
