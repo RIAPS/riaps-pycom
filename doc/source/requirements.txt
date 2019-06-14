@@ -32,6 +32,6 @@ ipaddress==1.0.22
 spdlog==1.0.4
 netifaces==0.10.7
 pydevd==1.4.0
-PyGObject==3.26.1
+PyGObject>=3.26.1
 # czmq==4.2.0
 # zyre==2.0.1
