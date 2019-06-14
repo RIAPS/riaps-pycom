@@ -24,7 +24,7 @@ cplex==12.8.0.0
 cryptography==2.4.2
 cycler==0.10.0
 Cython==0.28.5
-czmq==4.2.0
+
 decorator==4.3.0
 defer==1.0.6
 dnspython==1.16.0
@@ -192,4 +192,7 @@ widgetsnbextension==3.4.0
 xcffib==0.5.1
 xdot==0.9
 xkit==0.0.0
+
+czmq==4.2.0
 zyre==2.0.1
+
