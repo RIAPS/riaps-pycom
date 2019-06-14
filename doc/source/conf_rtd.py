@@ -204,5 +204,5 @@ sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 # The following section runs spinx-apidoc automatically before building the documentation
 def setup(app):
-    sphinx.ext.apidoc.main(['-f', '-T', '-e', '-o', 'doc/source', 'src', 'src/setup.py'])
+    sphinx.ext.apidoc.main(['-f', '-T', '-e', '-o', 'doc/source', '../../src', '../../src/setup.py'])
 
