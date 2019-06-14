@@ -71,6 +71,12 @@ exclude_patterns = []
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
 
+# The following section runs spinx-apidoc automatically before building the documentation
+import sphinx.ext.apidoc
+
+def setup(app):
+    sphinx.ext.apidoc.main(['-f', '-T', '-e', '-o', 'doc/source', '../../src'])
+   
 # Mock-import packages that can have C dependencies
 from unittest.mock import MagicMock
 
@@ -84,12 +90,6 @@ MOCK_MODULES = ['pygtk', 'gtk', 'gobject', 'argparse', 'numpy', 'pandas', 'czmq'
                 'riaps.proto.deplo_capnp' , 'riaps.proto.disco_capnp', 'apparmor_monkeys']
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
-# The following section runs spinx-apidoc automatically before building the documentation
-import sphinx.ext.apidoc
-
-def setup(app):
-    sphinx.ext.apidoc.main(['-f', '-T', '-e', '-o', 'doc/source', '../../src'])
-   
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
