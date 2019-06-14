@@ -20,7 +20,7 @@ cmd2==0.9.4
 lmdb==0.94
 psutil==5.4.2
 # pycapnp==0.6.3
-apparmor-monkeys==0.0.1
+# apparmor-monkeys==0.0.1
 simplejson==3.13.2
 pyroute2==0.5.5
 butter==0.12.6
@@ -31,7 +31,7 @@ textX==1.7.1
 toml==0.10.0
 pydot==1.2.4
 ipaddress==1.0.22
-spdlog==1.0.4
+# spdlog==1.0.4
 netifaces==0.10.7
 pydevd==1.4.0
 # PyGObject>=3.26.1
