@@ -24,15 +24,11 @@ cplex==12.8.0.0
 cryptography==2.4.2
 cycler==0.10.0
 Cython==0.28.5
-
 decorator==4.3.0
-defer==1.0.6
-dnspython==1.16.0
 docutils==0.14
 entrypoints==0.2.3
 enum34==1.1.6
 Fabric3==1.14.post1
-fncs==0.0.0
 future==0.16.0
 gast==0.2.0
 gitdb2==2.0.5
