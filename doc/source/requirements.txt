@@ -19,7 +19,7 @@ cgroupspy==0.1.6
 cmd2==0.9.4
 lmdb==0.94
 psutil==5.4.2
-pycapnp==0.6.3
+# pycapnp==0.6.3
 apparmor-monkeys==0.0.1
 simplejson==3.13.2
 pyroute2==0.5.5

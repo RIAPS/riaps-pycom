@@ -86,7 +86,7 @@ class Mock(MagicMock):
         return MagicMock()
 
 MOCK_MODULES = ['pygtk', 'gtk', 'gobject', 'argparse', 'numpy', 'pandas', 'czmq', 'zyre', 
-                'gi', 'gi.repository', ]
+                'gi', 'gi.repository', 'pycapnp' , 'spdlog' ]
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
     
