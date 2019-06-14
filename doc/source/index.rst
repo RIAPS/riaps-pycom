@@ -10,8 +10,7 @@ Welcome to RIAPS's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-
-   modules
+   riaps
 
 
 Indices and tables
