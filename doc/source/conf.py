@@ -75,7 +75,19 @@ pygments_style = 'sphinx'
 import sphinx.ext.apidoc
 
 def setup(app):
-    sphinx.ext.apidoc.main(['-f', '-T', '-e', '-o', 'doc/source', 'src'])
+    sphinx.ext.apidoc.main(['-f', '-T', '-e', '-o', 'doc/source', '../../src'])
+
+# Mockk-import packages that can have C dependencies
+from unittest.mock import MagicMock
+
+class Mock(MagicMock):
+    @classmethod
+    def __getattr__(cls, name):
+        return MagicMock()
+
+MOCK_MODULES = ['pygtk', 'gtk', 'gobject', 'argparse', 'numpy', 'pandas', 'czmq', 'zyre', 'gi']
+sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
+
     
 # -- Options for HTML output -------------------------------------------------
 
