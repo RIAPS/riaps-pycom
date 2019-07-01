@@ -3,6 +3,7 @@
 # riaps:keep_import:begin
 from riaps.run.comp import Component
 import logging
+import spdlog
 {% if use_capnp %}
 import capnp
 import {{ element.appname|lower }}_capnp
