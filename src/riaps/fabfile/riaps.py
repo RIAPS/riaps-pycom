@@ -7,7 +7,7 @@ import os
 from riaps.consts.defs import *
 
 # Prevent namespace errors by explicitly defining which tasks belong to this file
-__all__ = ['update','updateBBBKey','updateAptKey','install','uninstall','kill','updateConfig','updateLogConfig','getLogs','ctrl', 'configRouting', 'resetConfig', 'securityOff', 'securityOn']
+__all__ = ['update','updateBBBKey','updateAptKey','install','uninstall','kill','updateConfig','updateLogConfig','getLogs','ctrl', 'configRouting', 'securityOff', 'securityOn']
 
 # RIAPS packages
 packages = [
@@ -188,25 +188,31 @@ def configRouting():
 
 # Reset the config files with the install files (include /usr/local/riaps/etc
 # and /usr/local/keys folders)
-@task
-def resetConfig():
-    """Reset the Configuration files installed"""
-    architecture = arch()
-    package1 = 'riaps-pycom-' + architecture
-    package2 = 'riaps-systemd-' + architecture
-    sudo('dpkg --purge ' + package1 + package2)
-    sudo('apt-get -o DPkg::options::=--force-confmiss --reinstall install' + package1 + package2)
+# MM TODO: consider adding in future release
+#@task
+#def resetConfig():
+#    """Reset the Configuration files installed"""
+#    architecture = arch()
+#    package = 'riaps-pycom-' + architecture
+#    deplo.stop
+#    sudo('dpkg --purge ' + package)
+#    sudo('apt-get -o DPkg::options::=--force-confmiss --reinstall install ' + package)
+#    deplo.start
 
 # Turn off RIAPS security feature
 @task
 def securityOff():
     """Turn RIAPS security feature off"""
+    deplo.stop
     riaps_conf_name = os.path.join(env.riapsHome,"etc/riaps.conf")
     sed(riaps_conf_name, 'security = on', 'security = off', use_sudo=True)
+    deplo.start
 
 # Turn on RIAPS security feature
 @task
 def securityOn():
     """Turn RIAPS security feature on"""
+    deplo.stop
     riaps_conf_name = os.path.join(env.riapsHome,"etc/riaps.conf")
     sed(riaps_conf_name, 'security = off', 'security = on', use_sudo=True)
+    deplo.start
