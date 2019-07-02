@@ -293,7 +293,7 @@ class Port(object):
                 sendMsg += [nowFrame]
             self.socket.send_multipart(sendMsg)
         except zmq.error.ZMQError as e:
-            raise PortError("send error (%d)" % e.errno) from e
+            raise PortError("send error (%d)" % e.errno, e.errno) from e
         return True
 
     def port_recv(self,is_pyobj):
