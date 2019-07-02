@@ -1,10 +1,5 @@
 mkdir -p /etc/riaps
 
-rm -f /etc/riaps/redis.conf  /etc/riaps/riaps-ctrl.glade
-
-#needed to address past release removal
-rm -f /etc/riaps/riaps.conf  /etc/riaps/riaps-log.conf
-
 for i in `ls /usr/local/riaps/etc`; do rm -f /etc/riaps/$i ;done
 for i in `ls /usr/local/riaps/keys`; do rm -f /etc/riaps/$i ;done
 rm -f /usr/local/riaps/etc/riaps.conf  /usr/local/riaps/etc/riaps-log.conf
