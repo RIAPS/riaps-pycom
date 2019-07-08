@@ -1,3 +1,3 @@
-export externalsversion="1.1.16rc1"
-export coreversion="1.1.16rc1"
-export pycomversion="1.1.16rc3"
+export externalsversion="1.1.16"
+export coreversion="1.1.16"
+export pycomversion="1.1.16"
