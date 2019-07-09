@@ -5,7 +5,7 @@ from fabric.context_managers import hide
 import os,csv,itertools,configparser
 
 # Prevent namespace errors by explicitly defining which tasks belong to this file
-__all__ = ['check', 'shutdown', 'reboot', 'clearJournal', 'run', 'sudo', 'hosts', 'get', 'put', 'arch', 'setup_cython']
+__all__ = ['check', 'shutdown', 'reboot', 'clearJournal', 'run', 'sudo', 'hosts', 'get', 'put', 'arch', 'setup_cython', 'flushIPTables']
 
 # Check that all BBBs are communicating
 @task
@@ -114,3 +114,8 @@ def setup_cython():
     """Fix 'Debugger speedups using cython not found' warnings"""
     sudo('wget https://raw.githubusercontent.com/fabioz/PyDev.Debugger/master/setup_cython.py -P /usr/local/lib/python3.5/dist-packages/')
     sudo('python3 /usr/local/lib/python3.5/dist-packages/setup_cython.py build_ext --inplace')
+
+@task
+def flushIPTables():
+    """Flush the iptables"""
+    sudo('iptables --flush')

@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.abspath('../../src'))
 # -- Project information -----------------------------------------------------
 
 project = 'RIAPS'
-copyright = '2018, RIAPS Team'
+copyright = '2019, Vanderbilt University'
 author = 'RIAPS Team'
 
 # The short X.Y version
@@ -42,6 +42,7 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.intersphinx',
     'sphinx.ext.viewcode',
+    'readthedocs_ext.readthedocs'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -184,4 +185,27 @@ epub_exclude_files = ['search.html']
 # -- Options for intersphinx extension ---------------------------------------
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'https://docs.python.org/': None}
+intersphinx_mapping = {'https://docs.python.org/3/': None}
+
+# ----------- api doc; readthdocs --------------------------------------------
+import sphinx.ext.apidoc
+
+# The following section runs spinx-apidoc automatically before building the documentation
+def setup(app):
+    sphinx.ext.apidoc.main(['-f', '-T', '-e', '-o', '.', '../../src', '../../src/setup.py'])
+
+# readthedocs: mock-import packages that can have C dependencies
+from unittest.mock import MagicMock
+
+class Mock(MagicMock):
+    @classmethod
+    def __getattr__(cls, name):
+        return MagicMock()
+
+MOCK_MODULES = ['pygtk', 'gtk', 'gobject', 'argparse', 'numpy', 'pandas', 'czmq', 'zyre', 
+                'gi', 'gi.repository', 'pycapnp' , 'spdlog' , 'capnp', 
+                'riaps.proto.deplo_capnp' , 'riaps.proto.disco_capnp', 'apparmor_monkeys']
+sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
+   
+
+

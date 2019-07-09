@@ -61,10 +61,11 @@ def add_color_stdout_sink_mt(_s):
 def add_parent_dir(s):
     if 'create_parent_dir' in s.keys() and s['create_parent_dir']:
         d = os.path.dirname(s['filename'])
-        try:
-            os.mkdir(d)
-        except FileExistsError:
-            pass
+        if d != '':
+            try:
+                os.mkdir(d)
+            except FileExistsError:
+                pass
     
 def add_simple_file_sink_st(s):
     add_parent_dir(s)
@@ -132,7 +133,7 @@ types = {
         }
     
 def from_file(fname):
-    global global_pattern,sinks,patterns,loggers,levels
+    global global_pattern, sinks,patterns,loggers,levels
     d = toml.load(fname)
     if 'global_pattern' in d.keys():
         global_pattern = d['global_pattern']
@@ -296,7 +297,7 @@ pattern = "succient"
         f.write(test)
         
     from_file('test.toml')
-
+    
     for l in loggers.keys():
         logger = spdlog.get(l)
         logger.trace('trace')

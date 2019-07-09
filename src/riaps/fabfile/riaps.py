@@ -2,11 +2,12 @@
 from . import deplo
 from .sys import run, sudo, put, get, arch
 from fabric.api import env, task, hosts, local
+from fabric.contrib.files import sed
 import os
 from riaps.consts.defs import *
 
 # Prevent namespace errors by explicitly defining which tasks belong to this file
-__all__ = ['update','updateBBBKey','updateAptKey','install','uninstall','kill','updateConfig','updateLogConfig','getLogs','ctrl', 'configRouting']
+__all__ = ['update','updateBBBKey','updateAptKey','install','uninstall','kill','updateConfig','updateLogConfig','getLogs','ctrl', 'configRouting', 'securityOff', 'securityOn']
 
 # RIAPS packages
 packages = [
@@ -63,7 +64,7 @@ def updateBBBKey():
     put(ssh_zmqcert_name,'.ssh')
     sudo('cp ' + ssh_zmqcert_name + ' ' + riaps_zmqcert_name)
     sudo('chown root:riaps ' + riaps_zmqcert_name)
-    sudo('chmod 440 ' + riaps_zmqcert_name)
+    sudo('chmod 444 ' + riaps_zmqcert_name)
     run('rm ' + ssh_zmqcert_name)
 
     sudo('passwd -q -d riaps')
@@ -184,3 +185,34 @@ def configRouting():
     hostIP = get_ip()
     # Provide appropriate IP address
     sudo('route add default gw ' + hostIP + 'dev eth0')
+
+# Reset the config files with the install files (include /usr/local/riaps/etc
+# and /usr/local/keys folders)
+# MM TODO: consider adding in future release
+#@task
+#def resetConfig():
+#    """Reset the Configuration files installed"""
+#    architecture = arch()
+#    package = 'riaps-pycom-' + architecture
+#    deplo.stop
+#    sudo('dpkg --purge ' + package)
+#    sudo('apt-get -o DPkg::options::=--force-confmiss --reinstall install ' + package)
+#    deplo.start
+
+# Turn off RIAPS security feature
+@task
+def securityOff():
+    """Turn RIAPS security feature off"""
+    deplo.stop
+    riaps_conf_name = os.path.join(env.riapsHome,"etc/riaps.conf")
+    sed(riaps_conf_name, 'security = on', 'security = off', use_sudo=True)
+    deplo.start
+
+# Turn on RIAPS security feature
+@task
+def securityOn():
+    """Turn RIAPS security feature on"""
+    deplo.stop
+    riaps_conf_name = os.path.join(env.riapsHome,"etc/riaps.conf")
+    sed(riaps_conf_name, 'security = off', 'security = on', use_sudo=True)
+    deplo.start

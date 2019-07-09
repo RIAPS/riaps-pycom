@@ -1,4 +1,6 @@
 '''
+Application descriptor (used as a yaml object)
+
 Created on Oct 29, 2018
 
 @author: riaps
@@ -13,8 +15,7 @@ class AppDescriptor(object):
     sha = SHA of package
     home = local source folder (used in remote debugging)
     hosts = hosts participating in the app
-    network = network access control for nodes
-            (ip|'[]') => [] | [ ('dns' | ip) ]+  
+    network = network access control for nodes, (ip|'[]') => [] | [ ('dns' | ip) ]+  
     '''
     def __init__(self,url,host,mac,sha,home,hosts,network):
         self.url = url

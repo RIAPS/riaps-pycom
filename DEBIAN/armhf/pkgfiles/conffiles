@@ -1,0 +1,6 @@
+/etc/riaps/riaps.conf
+/etc/riaps/riaps-log.conf
+/etc/riaps/id_rsa.key
+/etc/riaps/id_rsa.pub
+/etc/riaps/riaps-sys.cert
+/etc/riaps/x509.pem

@@ -1,23 +1,26 @@
-# Last Modified: Apr 23 2019
+# Last Modified: Apr 29, 2019
 # Initial AppArmor security profile for RIAPS actors
-# To install: 
+# To install:
 # - Edit the 3 variables at the top for the final installation
-# - Edit the main profile name (s.t. it refers to the riaps_actor executable script)   
+# - Edit the main profile name (s.t. it refers to the riaps_actor executable script)
+# - For strict enforcement change the 'complain' flags to 'enforce'
 # - Rename the file corresponding to the value of @{RIAPSEXEC}/riaps_actor
 #   According to the AppArmor spec, all '/' must be replace with '.' , except the first one
 # - Copy the resulting file into /etc/apparmor.d, or load it into the kernel using apparmor_parser
 
 # Location of RIAPS data files
-@{RIAPSHOME}=/home/riaps/workspace/RIAPS/src
-# Location of folder for RIAPS applications 
-@{RIAPSAPPS}=/home/riaps/workspace/RIAPS/tmp			
+@{RIAPSHOME}=/usr/local/riaps
+# Location of folder for RIAPS applications
+@{RIAPSAPPS}=/home/riaps/riaps_apps
 # Location of RIAPS scripts (i.e riaps_actor)
-@{RIAPSEXEC}=/home/riaps/workspace/RIAPS/src/scripts	
+@{RIAPSEXEC}=/usr/local/bin
+# Location of RIAPS externals
+@{RIAPSEXTERNALS}=/opt/riaps/amd64
 
 #include <tunables/global>
 
 # Profile name must NOT have a variable
-profile /home/riaps/workspace/RIAPS/src/scripts/riaps_actor {
+profile /usr/local/bin/riaps_actor {
 
   #include <abstractions/base>
   #include <abstractions/user-tmp>
@@ -25,11 +28,12 @@ profile /home/riaps/workspace/RIAPS/src/scripts/riaps_actor {
 
   network raw,
   network inet udp,
-  network inet tcp,
+  network inet  tcp,
 
   @{RIAPSHOME}/** mr,
   @{RIAPSHOME}/ r,
   @{RIAPSEXEC}/ r,
+  @{RIAPSEXTERNALS}/** mr,
   /sbin/ldconfig ix,
 
   /etc/** r,
@@ -37,9 +41,9 @@ profile /home/riaps/workspace/RIAPS/src/scripts/riaps_actor {
   /usr/local/lib/** mr,
   /usr/local/lib/python3.6/dist-packages/** mr,
   /usr/share/dpkg/** mr,
-  
-  # Script file
-  /home/riaps/workspace/RIAPS/src/scripts/riaps_actor r,
+
+   # Script file
+  /usr/local/bin/riaps_actor r,
   owner @{RIAPSAPPS}/** mrw,
 
   /lib/x86_64-linux-gnu/ld-*.so* mr,
@@ -48,5 +52,5 @@ profile /home/riaps/workspace/RIAPS/src/scripts/riaps_actor {
 
   profile trusted_domain {
     #include <abstractions/python>
-}
+  }
 }

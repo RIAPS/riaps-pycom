@@ -15,8 +15,7 @@ using fabric), code generation tool (riaps_gen) and an alternate discovery servi
    :maxdepth: 2
    :caption: Contents:
 
-
-   modules
+   riaps
 
 
 Indices and tables

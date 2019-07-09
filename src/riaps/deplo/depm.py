@@ -63,7 +63,7 @@ DeploActorRecord = namedtuple('DeploActorRecord', 'app model actor args device c
 # Record of an device actor
 DeviceActorRecord = namedtuple('DeviceActorRecord', 'app model actor args device control monitor')
 # Record of an app actor command 
-DeploActorCommand = namedtuple('DeploActorCommand', 'app model actor args cmd pid')
+DeploActorCommand = namedtuple('DeploActorCommand', 'app model actor args cmd pid firewall')
 # Record of the disco command
 DeploDiscoCommand = namedtuple('DeploDiscoCommand', 'cmd pid')
 
@@ -312,31 +312,30 @@ class DeploymentManager(threading.Thread):
         '''
         assert type(msg) == tuple and len(msg) == 1
         (appName,) = msg
-        res = None
+        ok,err = True,None
         try:
             tgz_file = join(self.riapsApps,appName + '.tgz')
             sha_file = tgz_file + '.sha256'
             rsa_public_key = join(self.riapsHome,"keys/" + str(const.ctrlPublicKey))
-            res = self.verifyPackage(rsa_public_key,sha_file,tgz_file)
+            ok = self.verifyPackage(rsa_public_key,sha_file,tgz_file)
+            assert(ok)
         except:
-            return "Error while verifying app '%s'" % appName
-        
-        if not res:
-            return '%s:Signature verification failed' % appName
+            ok,err = False,"Error while verifying app '%s'" % appName
     
-        try:
-            with tarfile.open(tgz_file, "r:gz") as tar:
-                tar.extractall(self.riapsApps+'/')
-        except:
-            return 'Content extraction failed' 
+        if ok:
+            try:
+                with tarfile.open(tgz_file, "r:gz") as tar:
+                    tar.extractall(self.riapsApps+'/')
+            except:
+                ok, err = False, 'Content extraction failed' 
 
         try:
             os.remove(tgz_file)
             os.remove(sha_file)
         except:
-            return 'App package removal failed'
+            ok, err = False, 'App package removal failed'
         
-        return True
+        return ok if ok else err
     
     def installApp(self,msg):
         reply = self.installPackage(msg)
@@ -430,42 +429,48 @@ class DeploymentManager(threading.Thread):
     def getAppNetwork(self,appName):
         return self.getAppRecord(appName).network
     
-    def setupAppSite(self,site,user_name,done):
+    def setupAppSite(self,site,user_name,done,firewall):
         if site in done: return 
         try:
-            host = socket.gethostbyname(site) 
-            riaps_sudo("iptables -A OUTPUT -d %s -m owner --uid-owner %s -j ACCEPT" % (host,user_name))
+            host = socket.gethostbyname(site)
+            cmd = "OUTPUT -d %s -m owner --uid-owner %s -j ACCEPT" % (host,user_name)
+            riaps_sudo("iptables -A %s" % cmd)
+            firewall += [cmd]
         except:
             raise BuildError('Error in setting up access to %s for %s' % (site,user_name))
     
-    def setupAppDNS (self,user_name,done):
+    def setupAppDNS (self,user_name,done,firewall):
         for dns_ip in get_unix_dns_ips():  
-            self.setupAppSite(dns_ip,user_name,done)
+            self.setupAppSite(dns_ip,user_name,done,firewall)
     
-    def setupAppNetworkSites(self,sites,user_name,done):
+    def setupAppNetworkSites(self,sites,user_name,done,firewall):
         if sites is not None:
             if len(sites) == 0: return True  # Node can access any network
             for site in sites:
                 if site == 'dns':
-                    self.setupAppDNS(user_name, done)
+                    self.setupAppDNS(user_name, done,firewall)
                 else:
-                    self.setupAppSite(site,user_name,done)
-        return False     
+                    self.setupAppSite(site,user_name,done,firewall)
+        return False
                     
     def setupAppNetwork(self,appName,user_name):
-        if not Config.SECURITY: return              # No security
-        if user_name == Config.TARGET_USER: return  # Don't restrict default target user 
+        firewall = []
+        if not Config.SECURITY: return firewall             # No security
+        if user_name == Config.TARGET_USER: return firewall # Don't restrict default target user 
         done = set()
-        self.setupAppSite('127.0.0.1',user_name,done)   # ACCEPT localhost
-        sites = self.getAppHosts(appName)               # ACCEPT riaps peers
-        self.setupAppNetworkSites(sites, user_name, done)
+        self.setupAppSite('127.0.0.1',user_name,done,firewall)       # ACCEPT localhost
+        sites = self.getAppHosts(appName)                            # ACCEPT riaps peers
+        self.setupAppNetworkSites(sites, user_name, done,firewall)
         network = self.getAppNetwork(appName)
         sites = network['[]'] if '[]' in network.keys() else None   # Sites from global list
-        if self.setupAppNetworkSites(sites, user_name, done): return   # Access to any network
+        if self.setupAppNetworkSites(sites, user_name, done,firewall): return firewall     # Access to any network
         sites = network[self.hostAddress] if self.hostAddress in network.keys() else None
-        if self.setupAppNetworkSites(sites, user_name, done): return   # Access to any network
+        if self.setupAppNetworkSites(sites, user_name, done,firewall): return firewall     # Access to any network
         host = '0.0.0.0/0'                                 # deny access to all others
-        riaps_sudo("iptables -A OUTPUT -d %s -m owner --uid-owner %s -j DROP" % (host,user_name))
+        cmd = "OUTPUT -d %s -m owner --uid-owner %s -j DROP" % (host,user_name)
+        riaps_sudo("iptables -A %s" % cmd)
+        firewall += [cmd]
+        return firewall
     
     def startActor(self,msg):
         '''
@@ -513,7 +518,7 @@ class DeploymentManager(threading.Thread):
         user_gid = user_record.gid
         user_cwd = appFolder
         
-        self.setupAppNetwork(appName,userName)
+        firewall = self.setupAppNetwork(appName,userName)
         
         riaps_arg1 = appName
         riaps_arg2 = appModelPath
@@ -565,7 +570,7 @@ class DeploymentManager(threading.Thread):
                                                 device=None, control = None, monitor = None)
             self.peerQueue[key] = [ ]
         self.appDbase.addAppActor(appName, DeploActorCommand(app=appName, model=appModel, actor=actorName,args=actorArgs,
-                                                             cmd=cmdline,pid=pid))
+                                                             cmd=cmdline,pid=pid,firewall=firewall))
         self.procm.monitor(key,proc)
         self.logger.info("Started %s" % key)
 
@@ -627,6 +632,11 @@ class DeploymentManager(threading.Thread):
             except:
                 traceback.print_exc()
     
+    def undoAppNetwork(self,firewall):
+        if not Config.SECURITY: return 
+        for cmd in firewall:
+            riaps_sudo("iptables -D %s" % cmd)
+
     def stopActor(self,appName,actorName):
         '''
         Stop the actor of an application.
@@ -650,14 +660,17 @@ class DeploymentManager(threading.Thread):
             _control = record.control
             _monitor = record.monitor
             # TODO: Stop the zmqdevice, disconnect/destroy sockets
-            device._context.term()          # Terminate context for zmqDevice
+            device._context.term()           # Terminate context for zmqDevice
             device.join()
             # control.close()                # TODO remove sockets from poller
             # monitor.close()                
             del self.actors[qualName]
             self.procm.release(qualName)
+            firewall = self.appDbase.getAppActor(appName, actorName).firewall
+            self.undoAppNetwork(firewall)
             self.appDbase.delAppActor(appName, actorName)
             self.executor.submit(self.terminateActor,proc,appName,actorName)
+            
         self.logger.info("Stopped %s" % qualName)
 
     def haltActor(self,msg):

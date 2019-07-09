@@ -39,15 +39,15 @@ class ServiceClient(object):
 
     def exposed_logout(self):
         '''
-        Logs out a node from service. Called when connection to the deployment service is lost.
+        Logs out a node from service. Called when connection to the deployment service is lost. 
         '''
         if self.stale:
             return
         self.stale = True
         self.callback = None
-        self.log("- %s " % (self.name,))
+        self.log("- %s " % (self.name,))    
         self.socket.close()
-
+                
     def log(self, text):
         '''
         Adds a log message to the GUI
@@ -56,47 +56,47 @@ class ServiceClient(object):
 #         global guiClient
 #         if guiClient != None:
 #             guiClient.callback(text)
-
+    
     def setupApp(self,appName,appNameJSON):
         '''
         Sets up an app on the client: it calls the Deployment service's callback running on the
-        node.
-        '''
+        node. 
+        ''' 
         res = None
         if self.callback != None:
             res = self.callback(('setupApp',appName,appNameJSON))
         return res
-
+            
     def cleanupApp(self,appName):
         '''
         Removes an app from the client: it calls the Deployment service's callback running on the
-        node.
-        '''
+        node. 
+        ''' 
         res = None
         if self.callback != None:
             res = self.callback(('cleanupApp',appName))
         return res
-
+    
     def cleanupApps(self):
         '''
         Removes all apps from the client: it calls the Deployment service's callback running on the
-        node.
-        '''
-        res = None
+        node. 
+        ''' 
+        res = None 
         if self.callback != None:
             res = self.callback(('cleanupApps',))
         return res
-
+            
     def launch(self,appName,appNameJSON,actorName,actuals):
         '''
         Launches an app actor on the client: it calls the Deployment service's callback running on the
-        node.
-        '''
+        node. 
+        ''' 
         res = None
         if self.callback != None:
             res = self.callback(('launch',appName,appNameJSON,actorName,actuals))
         return res
-
+    
     def install(self,appName):
         '''
         Installs the downloaded package on the client.
@@ -105,35 +105,35 @@ class ServiceClient(object):
         if self.callback != None:
             res = self.callback(('install',appName))
         return res
-
+    
     def halt(self,appName,actorName):
         '''
         Halts an app actor on the client: it calls the Deployment service's callback running on the
-        node.
-        '''
-        res = None
+        node. 
+        ''' 
+        res = None 
         if self.callback != None:
             res = self.callback(('halt',appName,actorName))
         return res
-
+        
     def clean(self):
         '''
         Clean the riaps_deplo app folder
         '''
-        res = None
+        res = None 
         if self.callback != None:
             res = self.callback(('clean',))
         return res
-
+        
     def kill(self):
         '''
-        Kill the riaps_deplo
+        Kill the riaps_deplo 
         '''
         res = None
         if self.callback != None:
             res = self.callback(('kill',))
         return res
-
+    
     def query(self):
         '''
         Query client for running apps
@@ -142,28 +142,28 @@ class ServiceClient(object):
         if self.callback != None:
             res = self.callback(('query',))
         return res
-
+    
     def reclaim(self,appName):
         '''
-        Reclaim app files
+        Reclaim app files 
         '''
         res = None
         if self.callback != None:
             res = self.callback(('reclaim',appName))
         return res
-
+            
 class ControllerService(rpyc.Service):
     '''
     Controller Service implementation (rpyc service)
     '''
-
+    
     ALIASES = ["RIAPSCONTROL"]              # Registry name for the service
-
+    
     STOPPING = None
-
+    
     def on_connect(self,_conn = None):
         '''
-        Called when a client connects. Subsequently the client must login.
+        Called when a client connects. Subsequently the client must login. 
         '''
         if ControllerService.STOPPING: return
         self.client = None
@@ -181,7 +181,7 @@ class ControllerService(rpyc.Service):
 
     def exposed_login(self,clientName,callback,appFolder=None):
         '''
-        Log into the service.
+        Log into the service. 
         '''
         if ControllerService.STOPPING: return
         global theController,ctrlLock # ,guiClient
@@ -199,44 +199,47 @@ class ControllerService(rpyc.Service):
         self.client = ServiceClient(clientName, async(callback),self,appFolder)   # Register client's callback
         theController.addClient(clientName,self.client)
         dbaseNode = theController.nodeName      # The (redis) database is running on this same node
-        dbasePort = const.discoRedisPort
+        dbasePort = const.discoRedisPort        
         return ('dbase',str(dbaseNode),str(dbasePort))  # Reply to the client
 
 class ServiceThread(threading.Thread):
     '''
     Control server main execution thread.
-    Note: ThreadedServer launches a new thread for every connection.
+    Note: ThreadedServer launches a new thread for every connection.  
     '''
     def __init__(self,port):
         threading.Thread.__init__(self)
         self.port = port
-
+    
     def setController(self,ctrl):
         '''
-        Set the controller object for the service thread.
+        Set the controller object for the service thread. 
         '''
         global theController
         theController = ctrl
-
+        
     def run(self):
         '''
         Runs the rpyc ThreadedServer with the service implementation.
-        NOTE: it expects a rpyc service registry running
+        NOTE: it expects a rpyc service registry running 
         '''
         global theController
         host = theController.hostAddress
-        self.auth = SSLAuthenticator(theController.keyFile, theController.certFile, cert_reqs=ssl.CERT_REQUIRED, ca_certs=theController.certFile) \
-                        if Config.SECURITY else None
+        self.auth = SSLAuthenticator(theController.keyFile, theController.certFile,
+                                     cert_reqs=ssl.CERT_REQUIRED, ca_certs=theController.certFile,
+                                     ) if Config.SECURITY else None
         self.server = ThreadedServer(ControllerService,hostname=host, port=self.port,
                                      authenticator = self.auth,
                                      auto_register=True,
                                      protocol_config = {"allow_public_attrs" : True})
         self.server.start()
         time.sleep(0.010)
-
+        
     def stop(self):
         '''
-        Terminates the service. Called when the program exits.
+        Terminates the service. Called when the program exits. 
         '''
         ControllerService.STOPPING = True
         self.server.close()
+
+

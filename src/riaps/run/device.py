@@ -22,6 +22,7 @@ from builtins import int, str
 import re
 import sys
 import os
+import ipaddress
 import importlib
 import traceback
 from .actor import Actor
@@ -45,7 +46,11 @@ class Device(Actor):
         self.modelName = gModelName
         self.name = dName
         self.pid = os.getpid()
+        self.uuid = None
         self.suffix = ""
+        self.setupIfaces()
+        # Assumption : pid is a 4 byte int
+        self.actorID = ipaddress.IPv4Address(self.globalHost).packed + self.pid.to_bytes(4,'big')
         if dName not in gModel["devices"]:
             raise BuildError('Device "%s" unknown' % dName)
        
@@ -84,6 +89,10 @@ class Device(Actor):
         
         if Config.SECURITY:
             (self.public_key,self.private_key) = zmq.auth.load_certificate(const.appCertFile)
+            _public = zmq.curve_public(self.private_key)
+            if(self.public_key != _public):
+                self.logger.error("bad security key(s)")
+                raise BuildError("invalid security key(s)")
             hosts = ['127.0.0.1']
             try:
                 with open(const.appDescFile,'r') as f:
@@ -295,7 +304,7 @@ class Device(Actor):
         Perform a setup operation on the actor (after  the initial construction but before the activation of parts)
         '''
         self.logger.info("setup")
-        self.setupIfaces()
+        # self.setupIfaces()
         self.suffix = self.macAddress
         self.disco = DiscoClient(self,self.suffix)
         self.disco.start()                  # Start the discovery service client

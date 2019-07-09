@@ -2,7 +2,7 @@
 
 # riaps:keep_import:begin
 from riaps.run.comp import Component
-import logging
+import spdlog
 {% if use_capnp %}
 import capnp
 import {{ element.appname|lower }}_capnp
@@ -21,7 +21,7 @@ class {{element.name}}(Component):
 {% if value and port_type in macros.handler_ports %}
 {% for port_name, port_params in value.items() %}
 # riaps:keep_{{port_name|lower}}:begin
-    def on_{{port_name|lower}}(self):
+    def on_{{port_name}}(self):
         pass
 # riaps:keep_{{port_name|lower}}:end
 

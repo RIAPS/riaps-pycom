@@ -1,0 +1,40 @@
+sphinx==2.1.1
+paramiko==2.4.1
+gitdb2==2.0.5
+GitPython==2.1.11
+rpyc==4.0.2
+PyYAML==3.12
+ruamel.std.argparse==0.8.1
+ruamel.yaml==0.15.74
+ruamel.yaml.cmd==0.5.3
+ruamel.yaml.convert==0.3.0
+ruamel.yaml.jinja2==0.2.2
+pycryptodomex==3.6.6
+pyzmq==17.1.2
+qredis==0.1.7
+redis==2.10.6
+enum34==1.1.6
+pycairo==1.16.2
+pygraphviz==1.3.1
+cgroupspy==0.1.6
+cmd2==0.9.4
+lmdb==0.94
+psutil==5.4.2
+# pycapnp==0.6.3
+# apparmor-monkeys==0.0.1
+simplejson==3.13.2
+pyroute2==0.5.5
+butter==0.12.6
+Fabric3==1.14.post1
+more-itertools==4.3.0
+pymultigen==0.2.0
+textX==1.7.1
+toml==0.10.0
+pydot==1.2.4
+ipaddress==1.0.22
+# spdlog==1.0.4
+netifaces==0.10.7
+pydevd==1.4.0
+# PyGObject>=3.26.1
+# czmq==4.2.0
+# zyre==2.0.1

@@ -19,6 +19,8 @@ except:
 
 from riaps.consts.defs import *
 from riaps.utils.config import Config
+from riaps.run.exc import BuildError
+
 #from riaps.deplo.depm import DeploActorCommand
 
 # obj <- pickle.loads(bytes)
@@ -48,6 +50,8 @@ class AppDbase(object):
         appFolder = os.getenv('RIAPSAPPS', './')
         dbPath = join(appFolder,const.appDb) 
         mapSize = const.appDbSize * 1024 * 1024
+        if os.path.exists(dbPath) and not os.access(dbPath,os.W_OK):
+            raise BuildError("app database is not writeable")
         while True:
             try:
                 self.dbase = lmdb.open(dbPath,
@@ -188,11 +192,21 @@ class AppDbase(object):
             pass
         return actList
 
+    def getAppActor(self,appName,actorName):
+        res = None
+        try:
+            actList = self.getKeyValue(appName,[])
+            actList = [ a for a in actList if a.actor == actorName ]
+            res = actList[0]
+        except:
+            pass
+        return res
+    
     def delAppActor(self,appName,actorName):
         ok = False
         try:
             actList = self.getKeyValue(appName,[])
-            actList = [ a for a in actList if actList.actor != actorName ]
+            actList = [ a for a in actList if a.actor != actorName ]
             self.replaceKeyValue(appName, actList)
             ok = True
         except:
