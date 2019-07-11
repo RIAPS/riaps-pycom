@@ -1,7 +1,7 @@
 # Fabric commands for managing RIAPS installs and applications
 from . import deplo
 from .sys import run, sudo, put, get, arch
-from fabric.api import env, task, hosts, local
+from fabric.api import env, task, hosts, local, execute
 from fabric.contrib.files import sed
 import os
 from riaps.consts.defs import *
@@ -203,16 +203,16 @@ def configRouting():
 @task
 def securityOff():
     """Turn RIAPS security feature off"""
-    deplo.stop
+    execute(deplo.stop)
     riaps_conf_name = "/etc/riaps/riaps.conf"
     sed(riaps_conf_name, 'security = on', 'security = off', use_sudo=True)
-    deplo.start
+    execute(deplo.start)
 
 # Turn on RIAPS security feature
 @task
 def securityOn():
     """Turn RIAPS security feature on"""
-    deplo.stop
+    execute(deplo.stop)
     riaps_conf_name = "/etc/riaps/riaps.conf"
     sed(riaps_conf_name, 'security = off', 'security = on', use_sudo=True)
-    deplo.start
+    execute(deplo.start)
