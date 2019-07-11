@@ -14,7 +14,6 @@ packages = [
             'riaps-externals-',
             'riaps-core-',
             'riaps-pycom-',
-            'riaps-systemd-',
             'riaps-timesync-'
             ]
 
@@ -32,15 +31,16 @@ def update():
 @task
 def updateBBBKey():
     """Rekey the BBBs with new generated keys"""
-    key_path = os.path.join(env.riapsHome,"keys/")
-    ssh_pubkey_name = "/home/riaps/.ssh/" + str(const.ctrlPublicKey)
-    ssh_privatekey_name = "/home/riaps/.ssh/" + str(const.ctrlPrivateKey)
-    ssh_cert_name = "/home/riaps/.ssh/" + str(const.ctrlCertificate)
-    ssh_zmqcert_name = "/home/riaps/.ssh/" + str(const.zmqCertificate)
-    riaps_pubkey_name = os.path.join(key_path,str(const.ctrlPublicKey))
-    riaps_privatekey_name = os.path.join(key_path,str(const.ctrlPrivateKey))
-    riaps_cert_name = os.path.join(key_path,str(const.ctrlCertificate))
-    riaps_zmqcert_name = os.path.join(key_path,str(const.zmqCertificate))
+    etc_key_path = "/etc/riaps/keys/"
+    ssh_key_path = "/home/riaps/.ssh/"
+    ssh_pubkey_name = os.path.join(ssh_key_path, str(const.ctrlPublicKey))
+    ssh_privatekey_name = os.path.join(ssh_key_path, str(const.ctrlPrivateKey))
+    ssh_cert_name = os.path.join(ssh_key_path, str(const.ctrlCertificate))
+    ssh_zmqcert_name = os.path.join(ssh_key_path, str(const.zmqCertificate))
+    riaps_pubkey_name = os.path.join(etc_key_path, str(const.ctrlPublicKey))
+    riaps_privatekey_name = os.path.join(etc_key_path, str(const.ctrlPrivateKey))
+    riaps_cert_name = os.path.join(etc_key_path, str(const.ctrlCertificate))
+    riaps_zmqcert_name = os.path.join(etc_key_path, str(const.zmqCertificate))
 
     put(ssh_privatekey_name,'.ssh')
     sudo('cp ' + ssh_privatekey_name + ' ' + riaps_privatekey_name)
@@ -130,8 +130,8 @@ def updateConfig():
     """"Place local riaps.conf on all remote hosts"""
     if(os.path.isfile(os.path.join(os.getcwd(), "riaps.conf"))):
         put('riaps.conf')
-        sudo('cp riaps.conf /usr/local/riaps/etc/')
-        sudo('chown root:root /usr/local/riaps/etc/riaps.conf')
+        sudo('cp riaps.conf /etc/riaps/')
+        sudo('chown root:root /etc/riaps/riaps.conf')
         sudo('rm riaps.conf')
     else:
         print("Local riaps.conf doesn't exist!")
@@ -141,8 +141,8 @@ def updateLogConfig():
     """"Places local riaps-log.conf on all remote hosts"""
     if(os.path.isfile(os.path.join(os.getcwd(), "riaps-log.conf"))):
         put('riaps-log.conf')
-        sudo('cp riaps-log.conf /usr/local/riaps/etc/')
-        sudo('chown root:root /usr/local/riaps/etc/riaps-log.conf')
+        sudo('cp riaps-log.conf /etc/riaps/')
+        sudo('chown root:root /etc/riaps/riaps-log.conf')
         sudo('rm riaps-log.conf')
     else:
         print("Local riaps-log.conf doesn't exist!")
@@ -204,7 +204,7 @@ def configRouting():
 def securityOff():
     """Turn RIAPS security feature off"""
     deplo.stop
-    riaps_conf_name = os.path.join(env.riapsHome,"etc/riaps.conf")
+    riaps_conf_name = "/etc/riaps/riaps.conf"
     sed(riaps_conf_name, 'security = on', 'security = off', use_sudo=True)
     deplo.start
 
@@ -213,6 +213,6 @@ def securityOff():
 def securityOn():
     """Turn RIAPS security feature on"""
     deplo.stop
-    riaps_conf_name = os.path.join(env.riapsHome,"etc/riaps.conf")
+    riaps_conf_name = "/etc/riaps/riaps.conf"
     sed(riaps_conf_name, 'security = off', 'security = on', use_sudo=True)
     deplo.start
