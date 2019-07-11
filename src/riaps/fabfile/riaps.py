@@ -31,7 +31,7 @@ def update():
 @task
 def updateBBBKey():
     """Rekey the BBBs with new generated keys"""
-    etc_key_path = "/etc/riaps/keys/"
+    etc_key_path = "/etc/riaps/"
     ssh_key_path = "/home/riaps/.ssh/"
     ssh_pubkey_name = os.path.join(ssh_key_path, str(const.ctrlPublicKey))
     ssh_privatekey_name = os.path.join(ssh_key_path, str(const.ctrlPrivateKey))
