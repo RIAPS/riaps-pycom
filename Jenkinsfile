@@ -22,13 +22,13 @@ pipeline {
           script {
             def user = 'riaps'
             def repo = 'riaps-pycom'
-            def files = ['riaps-pycom-amd64.deb','riaps-pycom-armhf.deb','riaps-systemd-amd64.deb','riaps-systemd-armhf.deb']
+            def files = ['riaps-pycom-amd64.deb','riaps-pycom-armhf.deb']
             // Create release on GitHub, if it doesn't already exist
             sh "${env.WORKSPACE}/go/bin/github-release release --user ${user} --repo ${repo} --tag ${env.TAG_NAME} --name ${env.TAG_NAME} --pre-release || true"
             // Iterate over artifacts and upload them
             for(int i = 0; i < files.size(); i++){
-              sh "${env.WORKSPACE}/go/bin/github-release upload -R --user ${user} --repo ${repo} --tag ${env.TAG_NAME} --name ${files[i]} --file ${files[i]}" 
-            } 
+              sh "${env.WORKSPACE}/go/bin/github-release upload -R --user ${user} --repo ${repo} --tag ${env.TAG_NAME} --name ${files[i]} --file ${files[i]}"
+            }
           }
         }
       }
