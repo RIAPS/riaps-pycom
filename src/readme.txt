@@ -26,8 +26,8 @@ hiredis >= 0.2.0
 pyzmq >= 16
 pycapnp >= 0.5.12
 netifaces >= 0.10.7
-paramiko >= 2.4.1
-cryptography >= 2.3.1
+paramiko >= 2.6.0
+cryptography >= 2.7
 python-magic >= 0.4.13
 cgroups >= 0.1.0
 cgroupspy >= 0.1.6
@@ -46,6 +46,7 @@ Jinja2 >= 2.10
 pybind11 >= 2.2.4
 toml >= 0.10.0
 pycryptodomex >= 3.7.3 (python3-crypto and python3-keyrings.alt must be removed)
+PyYAML>=5.1.1 (must use --ignore-installed since this is upgrading a distribution package which can not be uninstalled)
 
 use: apt install python3-pip python3-dev libhiredis-dev libcapnp-dev libssl-dev libffi-dev glade python3-gi
 

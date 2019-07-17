@@ -3,7 +3,7 @@ paramiko==2.6.0
 gitdb2==2.0.5
 GitPython==2.1.11
 rpyc==4.0.2
-PyYAML==3.12
+PyYAML==5.1.1
 ruamel.std.argparse==0.8.1
 ruamel.yaml==0.15.74
 ruamel.yaml.cmd==0.5.3

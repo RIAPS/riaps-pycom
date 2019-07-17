@@ -186,8 +186,7 @@ def configRouting():
     # Provide appropriate IP address
     sudo('route add default gw ' + hostIP + 'dev eth0')
 
-# Reset the config files with the install files (include /usr/local/riaps/etc
-# and /usr/local/keys folders)
+# Reset the config files with the install files (include /etc/riaps/ folder)
 # MM TODO: consider adding in future release
 #@task
 #def resetConfig():
