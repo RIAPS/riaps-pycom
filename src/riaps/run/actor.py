@@ -28,6 +28,7 @@ import yaml
 from czmq import Zsys
 from riaps.utils import spdlog_setup
 from riaps.utils.config import Config
+from riaps.utils.appdesc import AppDescriptor
 import zmq.auth
 from zmq.auth.thread import ThreadAuthenticator
 
@@ -83,7 +84,7 @@ class Actor(object):
             hosts = ['127.0.0.1']
             try:
                 with open(const.appDescFile,'r') as f:
-                    content = yaml.load(f)
+                    content = yaml.load(f, Loader=yaml.Loader)
                     hosts += content.hosts
             except:
                 pass

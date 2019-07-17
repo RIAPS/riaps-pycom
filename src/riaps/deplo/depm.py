@@ -53,6 +53,7 @@ from riaps.deplo.procm import ProcessManager
 from riaps.deplo.appdb import AppDbase
 from riaps.utils.ifaces import get_unix_dns_ips
 from riaps.utils.names import actorIdentity
+from riaps.utils.appdesc import AppDescriptor
 
 # Record of the app
 DeploAppRecord = namedtuple('DeploAppRecord', 'model hash file home hosts network')
@@ -399,14 +400,15 @@ class DeploymentManager(threading.Thread):
             raise
         home = ''
         network = { }
+        hosts = []
         try:
             with open(os.path.join(os.path.dirname(modelFileName),const.appDescFile),'r') as f:
-                org = yaml.load(f)
+                org = yaml.load(f, Loader=yaml.Loader)
                 home = org.home
                 network = org.network
                 hosts = org.hosts
         except:
-            pass
+            self.logger.error("Error loading app descriptor:%s",str(sys.exc_info()[1]))
         self.appModels[appName] = DeploAppRecord(hash=fileHash, model=model, 
                                                  file=modelFileName, home=home,
                                                  hosts=hosts, network=network)

@@ -16,6 +16,7 @@ from riaps.proto import disco_capnp
 from riaps.consts.defs import *
 from riaps.utils.ifaces import getNetworkInterfaces
 from riaps.utils.config import Config
+from riaps.utils.appdesc import AppDescriptor
 import getopt
 import logging
 from builtins import int, str
@@ -96,7 +97,7 @@ class Device(Actor):
             hosts = ['127.0.0.1']
             try:
                 with open(const.appDescFile,'r') as f:
-                    content = yaml.load(f)
+                    content = yaml.load(f, Loader=yaml.Loader)
                     hosts += content.hosts
             except:
                 pass
