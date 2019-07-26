@@ -23,11 +23,13 @@ setup(name='riaps-pycom',
       scripts = [
         "scripts/riaps_actor", "scripts/riaps_ctrl", "scripts/riaps_ctrl_host", "scripts/riaps_depll",
         "scripts/riaps_deplo", "scripts/riaps_device", "scripts/riaps_disco", "scripts/riaps_gen",
-        "scripts/riaps_gen_cert", "scripts/riaps_gviz", "scripts/riaps_lang", "scripts/riaps_fab"
+        "scripts/riaps_gen_cert", "scripts/riaps_gviz", "scripts/riaps_lang", "scripts/riaps_fab",
+        "scripts/riaps_mn"
 
      ],
 
      # Please see the riaps-externals/DEBIAN/<arch>/postinst file for the PIP package installations needed and RIAPS specific system file placements.
-     # The <arch> is amd64 for the host VM and armhf for the beaglebones.
+     # The <arch> is amd64 for the host VM and armhf for the beaglebones.s
+     
 
       zip_safe=False)

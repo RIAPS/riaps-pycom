@@ -1,0 +1,13 @@
+#!/bin/sh
+# Start mininet with a single-switch/N-node topology and sshd running on each host
+# N is an optional integer command argument, default N=4.
+# Should be used after 'setup' has been sourced (or the RIAPS environment variables set)
+
+# Enable IP forwarding
+sudo sysctl -w net.ipv4.ip_forward=1
+
+[ -z "$RIAPSHOME" ] && echo "Must set RIAPSHOME" && exit 1;
+[ -z "$RIAPSAPPS" ] && echo "Must set RIAPSAPPS" && exit 1;
+
+# Launch mininet and sshd
+sudo -E `which riaps_mn` $1

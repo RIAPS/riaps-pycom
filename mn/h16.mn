@@ -1,0 +1,19 @@
+ h1 xterm -T "Control"  -e ./riaps-mn.ctrl &
+sh sleep 1
+ h1 xterm -T h1 -e ./riaps-mn.node &
+ h2 xterm -T h2 -e ./riaps-mn.node &
+ h3 xterm -T h3 -e ./riaps-mn.node &
+ h4 xterm -T h4 -e ./riaps-mn.node &
+ h5 xterm -T h5 -e ./riaps-mn.node &
+ h6 xterm -T h6 -e ./riaps-mn.node &
+ h7 xterm -T h7 -e ./riaps-mn.node &
+ h8 xterm -T h8 -e ./riaps-mn.node &
+ h9 xterm -T h9 -e ./riaps-mn.node &
+ h10 xterm -T h10 -e ./riaps-mn.node &
+ h11 xterm -T h11 -e ./riaps-mn.node &
+ h12 xterm -T h12 -e ./riaps-mn.node &
+ h13 xterm -T h13 -e ./riaps-mn.node &
+ h14 xterm -T h14 -e ./riaps-mn.node &
+ h15 xterm -T h15 -e ./riaps-mn.node &
+ h16 xterm -T h16 -e ./riaps-mn.node &
+ 

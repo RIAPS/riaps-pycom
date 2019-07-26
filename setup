@@ -1,7 +1,12 @@
 #!/bin/sh
-# Set up basic RIAPS environment
-# Should be sourced on the CTRL node before using any other scripts.
+# For riaps-pycom development
+# Set up basic RIAPS environment for use with 
+# (1) mininet or (2) standalone (riaps_ctrl+riaps_deplo). 
+# For the latter rpyc_registry must be started manually. 
 
+export PATH=$PATH:`pwd`/bin:`pwd`/src/scripts
+export PYTHONPATH=`pwd`/src
 export RIAPSHOME=`pwd`/src/riaps
-export RIAPSAPPS=`pwd`/tests
-export PATH=$PATH:`pwd`/bin
+export RIAPSAPPS=`pwd`/tmp
+export RIAPSDEV=1
+
