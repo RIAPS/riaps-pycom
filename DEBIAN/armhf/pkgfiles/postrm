@@ -15,4 +15,6 @@ rmdir /usr/local/riaps/etc || true
 rmdir /usr/local/riaps/keys || true
 rmdir /usr/local/riaps || true
 
+rm -f /etc/apparmor.d/cache/usr.local.bin.riaps_actor
+
 systemctl daemon-reload
