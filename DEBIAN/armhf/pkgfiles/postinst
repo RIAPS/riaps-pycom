@@ -29,30 +29,9 @@ ln -s /etc/riaps/x509.pem /usr/local/riaps/keys/x509.pem
 
 #Create soft link from rdiscoveryd to run as default
 mv /usr/local/bin/riaps_disco /usr/local/bin/riaps_disco_redis
-ln -s /opt/riaps/armhf/bin/rdiscoveryd /usr/local/bin/riaps_disco   ---- MM TODO:  Need to update location of rdiscoveryd
+ln -s /usr/local/bin/rdiscoveryd /usr/local/bin/riaps_disco   ---- MM TODO:  Need to update location of rdiscoveryd
 
 rm -rf /opt/riaps-pycom/
-
-if ! pip3 list | grep Cython | grep 0.28.5; then
-    echo "Updating Cython to 0.28.5"
-    pip3 install 'git+https://github.com/cython/cython.git@0.28.5'
-fi
-
-rm -rf /tmp/pyzmq
-git clone https://github.com/zeromq/pyzmq.git /tmp/pyzmq
-cd tmp/pyzmq
-git checkout tags/v17.1.2
-python3 setup.py install
-rm -rf /tmp/pyzmq
-
-pip3 install 'Adafruit_BBIO == 1.1.1' 'pydevd==1.4.0' 'rpyc==4.1.0' 'redis==2.10.6' 'hiredis == 0.2.0' 'netifaces==0.10.7' 'paramiko==2.6.0' 'cryptography==2.7' 'cgroups==0.1.0' 'cgroupspy==0.1.6' 'psutil==5.4.2' 'butter==0.12.6' 'lmdb==0.94' 'fabric3==1.14.post1' 'pyroute2==0.5.2' 'minimalmodbus==0.7' 'pyserial==3.4' 'pybind11==2.2.4' 'toml==0.10.0' 'pycryptodomex==3.7.3' --verbose
-pip3 install --ignore-installed 'PyYAML==5.1.1'
-
-rm -rf /tmp/apparmor_monkeys
-git clone https://github.com/RIAPS/apparmor_monkeys.git /tmp/apparmor_monkeys
-cd /tmp/apparmor_monkeys
-python3 setup.py install
-rm -rf /tmp/apparmor_monkeys
 
 systemctl daemon-reload
 systemctl enable riaps-rm-cgroups.service
@@ -63,12 +42,3 @@ systemctl enable riaps-deplo.service
 systemctl start riaps-deplo.service
 systemctl enable sethostname.service
 systemctl start sethostname.service
-
-ldconfig
-
-
-#MM TODO: STILL NEED TO INCORPORATE BELOW
-#=========================================
-#CFLAGS=-I/opt/riaps/armhf/include LDFLAGS=-L/opt/riaps/armhf/lib PATH=$PATH:/opt/riaps/armhf/bin pip3 install 'pycapnp==0.6.3'
-#CFLAGS=-I/opt/riaps/armhf/include LDFLAGS=-L/opt/riaps/armhf/lib PATH=$PATH:/opt/riaps/armhf/bin pip3 install /opt/riaps/armhf/bindings/czmq/python/ --verbose
-#CFLAGS=-I/opt/riaps/armhf/include LDFLAGS=-L/opt/riaps/armhf/lib PATH=$PATH:/opt/riaps/armhf/bin pip3 install /opt/riaps/armhf/bindings/zyre/python/ --verbose
