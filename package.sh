@@ -56,3 +56,32 @@ sed s/@version@/$pycomversion/g -i package/riaps-pycom-armhf/opt/riaps-pycom/src
 fakeroot dpkg-deb --build package/riaps-pycom-armhf
 
 cp package/riaps-pycom-armhf.deb .
+
+source version.sh
+mkdir -p package/riaps-pycom-arm64/DEBIAN
+mkdir -p package/riaps-pycom-arm64/etc/
+mkdir -p package/riaps-pycom-arm64/etc/riaps/
+mkdir -p package/riaps-pycom-arm64/opt/riaps-pycom/
+mkdir -p package/riaps-pycom-arm64/usr/bin/
+mkdir -p package/riaps-pycom-arm64/usr/local/riaps/etc/
+mkdir -p package/riaps-pycom-arm64/usr/local/riaps/lang/
+
+cp -r DEBIAN/arm64/pkgfiles/* package/riaps-pycom-arm64/DEBIAN/.
+cp -r DEBIAN/arm64/etc/* package/riaps-pycom-arm64/etc/.
+cp -r DEBIAN/arm64/usr/bin/* package/riaps-pycom-arm64/usr/bin/.
+cp -r src package/riaps-pycom-arm64/opt/riaps-pycom/.
+cp -r src/riaps/etc/riaps.conf package/riaps-pycom-arm64/etc/riaps/.
+cp -r src/riaps/etc/riaps-log.conf package/riaps-pycom-arm64/etc/riaps/.
+cp -r src/riaps/etc/redis.conf package/riaps-pycom-arm64/usr/local/riaps/etc/.
+cp -r src/riaps/lang/riaps.tx package/riaps-pycom-arm64/usr/local/riaps/lang/.
+cp -r src/riaps/lang/depl.tx package/riaps-pycom-arm64/usr/local/riaps/lang/.
+cp -r src/riaps/keys/id_rsa.key package/riaps-pycom-arm64/etc/riaps/.
+cp -r src/riaps/keys/id_rsa.pub package/riaps-pycom-arm64/etc/riaps/.
+cp -r src/riaps/keys/riaps-sys.cert package/riaps-pycom-arm64/etc/riaps/.
+cp -r src/riaps/keys/x509.pem package/riaps-pycom-arm64/etc/riaps/.
+
+sed s/@version@/$pycomversion/g -i package/riaps-pycom-arm64/DEBIAN/control
+sed s/@version@/$pycomversion/g -i package/riaps-pycom-arm64/opt/riaps-pycom/src/setup.py
+fakeroot dpkg-deb --build package/riaps-pycom-arm64
+
+cp package/riaps-pycom-arm64.deb .
