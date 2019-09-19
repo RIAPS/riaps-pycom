@@ -1,0 +1,43 @@
+#!/usr/bin/python
+
+from subprocess import call
+import re
+
+intf = 'eth0'
+intf_addr_path = '/sys/class/net/{}/address'.format(intf)
+hostname_prefix = 'nano-'
+hostname_path = '/etc/hostname'
+hosts_path = '/etc/hosts'
+set_hostname_command = ['/usr/bin/hostnamectl',  'set-hostname']
+mark_text = "# !RIAPS GENERATED$\n"
+
+if __name__ == '__main__':
+    print('Reading {} MAC address from {}'.format(intf, intf_addr_path))
+    with open (intf_addr_path, 'r') as f:
+        lines = f.readlines()
+
+    mac = lines[0].strip().split(':')
+
+    print ('{} MAC address is {}'.format(intf,mac))
+
+    hostname = '{}{}{}'.format(hostname_prefix, mac[4], mac[5])
+
+    set_hostname_command.append(hostname)
+    print('Setting hostname through hostnamectl: {}'.format(' '.join(set_hostname_command)))
+    call(set_hostname_command)
+
+    with open(hosts_path, "r+") as h:
+        print('Writing hostname {} and localhost IP to file {}'.format(hostname, hosts_path))
+        hosts_lines = h.readlines()
+        h.seek(0)
+        h.truncate(0)
+        if mark_text in hosts_lines:
+            mark_idx = hosts_lines.index(mark_text)
+            hosts_lines = hosts_lines[:mark_idx]
+        else:
+            bbb_line_reg = re.compile("^127\.0\.0\.1\s+bbb-.{4}\s*$")
+            hosts_lines = [item for item in hosts_lines if not bbb_line_reg.match(item)]
+
+        hosts_lines.append(mark_text)
+        hosts_lines.append('\n127.0.0.1\t{}\n'.format(hostname))
+        h.writelines(hosts_lines)

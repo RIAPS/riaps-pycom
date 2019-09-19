@@ -72,7 +72,9 @@ cp -r DEBIAN/arm64/usr/bin/* package/riaps-pycom-arm64/usr/bin/.
 cp -r src package/riaps-pycom-arm64/opt/riaps-pycom/.
 cp -r src/riaps/etc/riaps.conf package/riaps-pycom-arm64/etc/riaps/.
 cp -r src/riaps/etc/riaps-log.conf package/riaps-pycom-arm64/etc/riaps/.
+cp -r src/riaps/etc/riaps-hosts.conf package/riaps-pycom-arm64/etc/riaps/.
 cp -r src/riaps/etc/redis.conf package/riaps-pycom-arm64/usr/local/riaps/etc/.
+cp -r src/riaps/etc/riaps-ctrl.glade package/riaps-pycom-arm64/usr/local/riaps/etc/.
 cp -r src/riaps/lang/riaps.tx package/riaps-pycom-arm64/usr/local/riaps/lang/.
 cp -r src/riaps/lang/depl.tx package/riaps-pycom-arm64/usr/local/riaps/lang/.
 cp -r src/riaps/keys/id_rsa.key package/riaps-pycom-arm64/etc/riaps/.
