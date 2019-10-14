@@ -1,6 +1,10 @@
 #!/usr/bin/python
 
 """
+riaps_mn [hosts] [sshd_args*]
+- hosts: number of hosts, default = 4
+- sshd_args: arguments for sshd 
+
 Create a network and start sshd(8) on each host.
 
 While something like rshd(8) would be lighter and faster,
@@ -77,9 +81,10 @@ def sshd( network, cmd='/usr/sbin/sshd', opts='-D',
 
 if __name__ == '__main__':
     lg.setLogLevel( 'info')
-    net = TreeNet( depth=1, fanout=4 )
+    fanout,skip = (int(sys.argv[1]),2) if len(sys.argv) > 1 and sys.argv[1].isdigit() else (4,1)
+    net = TreeNet( depth=1, fanout=fanout)
     # get sshd args from the command line or use default args
     # useDNS=no -u0 to avoid reverse DNS lookup timeout
-    argvopts = ' '.join( sys.argv[ 1: ] ) if len( sys.argv ) > 1 else (
+    argvopts = ' '.join( sys.argv[skip:] ) if len( sys.argv ) > skip else (
         '-D -o UseDNS=no -u0' )
     sshd( net, opts=argvopts )

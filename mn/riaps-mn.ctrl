@@ -1,0 +1,26 @@
+#!/bin/bash
+# Start up the RIAPS controller on the mininet
+# To be run on the 'lead' node (typically h1)
+
+# Add default gateway
+# route add default gw 192.168.57.1
+
+# Add route to outer net 
+ip route add 192.168.56.0/24 via 192.168.57.126
+
+# Start registry - start it on one node only
+[ -z "$RIAPSDEV" ] || /usr/local/bin/rpyc_registry.py &
+
+# # pytinydns -- Not used
+# # Change resolver
+# mv /etc/resolv.conf /etc/resolv.conf.org
+# echo 'nameserver 10.0.0.1' >/etc/resolv.conf
+
+# # Launch DNS 
+# python2 pytinydns.py --noredis --config=pytinydns.conf --list=pytinydns.host &
+# # pytinydns -- End
+
+# Change to (non-privileged) user and run riaps_ctrl
+# RIAPSDEV is set if it is a platform development environment, otherwise it is an app development environment. 
+[ -z "$RIAPSDEV" ] && sudo -E -u riaps riaps_ctrl  || echo "cd $RIAPSHOME/..; export PYTHONPATH=$RIAPSHOME/..; python3 riaps/riaps_ctrl.py" | sudo -E -s -u riaps  
+

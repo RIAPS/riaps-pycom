@@ -1,0 +1,13 @@
+#!/bin/sh
+# Set up the basic RIAPS environment for a 'target' node on mininet.
+# Should be sourced onthe SLAVE RIAPS node before using any other scripts.
+# RIAPSAPPS is modified to be unique (based on the MAC address of the virtual host).
+
+# export RIAPSHOME=`pwd`/src/riaps
+# export RIAPSAPPS=`pwd`/tmp/`ps | grep bash | awk '{ printf $1 }'`
+export MAC=`cat /sys/class/net/$(ip route show default | awk '/default/ {print $5}')/address | tr -d ':'`
+export RIAPSAPPBASE=$RIAPSAPPS
+export RIAPSAPPS=$RIAPSAPPBASE/$MAC
+mkdir $RIAPSAPPS
+chown riaps:riaps $RIAPSAPPS
+#export PATH=$PATH:`pwd`/bin
