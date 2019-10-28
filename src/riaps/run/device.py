@@ -8,6 +8,7 @@ Created on Jan 7, 2017
 from .part import Part
 from .peripheral import Peripheral
 from .exc import BuildError
+import sys
 import zmq
 import time
 from riaps.run.disco import DiscoClient
@@ -100,7 +101,7 @@ class Device(Actor):
                     content = yaml.load(f, Loader=yaml.Loader)
                     hosts += content.hosts
             except:
-                pass
+                self.logger.error("Error loading app descriptor:s",str(sys.exc_info()[1]))
 
             self.auth = ThreadAuthenticator(self.appContext)
             self.auth.start()
@@ -131,6 +132,15 @@ class Device(Actor):
         self.internalNames = []
         for messageSpec in internals:
             self.internalNames.append(messageSpec["type"])
+            
+        groups = gModel["groups"]
+        self.groupTypes = {} 
+        for group in groups:
+            self.groupTypes[group["name"]] = { 
+                "kind" : group["kind"],
+                "message" :  group["message"],
+                "timed" : group["timed"]
+            }
             
         self.components = {}
         instSpecs = self.model["instances"]

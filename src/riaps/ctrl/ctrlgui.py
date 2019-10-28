@@ -18,7 +18,7 @@ import subprocess
 from riaps.lang.gviz import gviz
 
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, GLib, Gdk
+from gi.repository import Gtk, GLib, Gdk, GObject
 
 from threading import RLock
 
@@ -43,6 +43,7 @@ class ControlGUIClient(object):
         self.port = port
         self.controller = controller
         self.context = controller.context
+        GObject.threads_init()
         self.builder = Gtk.Builder()
         riaps_folder = os.getenv('RIAPSHOME', './')
         try:
@@ -59,7 +60,8 @@ class ControlGUIClient(object):
                                       "onClean": self.on_Clean,
                                       "onQuit": self.on_Quit,
                                       "onLoadApplication": self.on_LoadApplication,
-                                      "onViewApplication": self.on_ViewApplication
+                                      "onViewApplication": self.on_ViewApplication,
+                                      "onLogChanged" : self.on_LogChanged
                                       })
 
         #keyFile = controller.keyFile
@@ -74,6 +76,7 @@ class ControlGUIClient(object):
 
         self.mainWindow = self.builder.get_object("window1")
         self.messages = self.builder.get_object("messageTextBuffer")
+        self.logWindow = self.builder.get_object("scrolledwindow1")
         self.consoleIn = self.builder.get_object("consoleEntryBuffer")
         self.appNameEntry = self.builder.get_object("appNameEntry")
         self.deplNameEntry = self.builder.get_object("deplNameEntry")
@@ -124,6 +127,10 @@ class ControlGUIClient(object):
             text = '> ' + text + '\n'
             self.messages.insert(end, text)
         self.check_server_msg(text)
+        
+    def on_LogChanged(self,*args):
+            adj = self.logWindow.get_vadjustment()
+            adj.set_value(adj.get_upper() - adj.get_page_size())
     
     def on_serverMessage(self,_channel=None, _cond=None):
         '''

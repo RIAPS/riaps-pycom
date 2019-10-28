@@ -2,8 +2,13 @@
 
 # RIAPS disco messages
 
+using Cxx = import "/capnp/c++.capnp";
+$Cxx.namespace("riaps::discovery");
+
+# RIAPS disco messages
+
 enum Status { ok @0; err @1; }
-enum Kind { none @0; pub @1; sub @2; clt @3; srv @4; req @5; rep @6; qry @7; ans @8; }
+enum Kind { none @0; pub @1; sub @2; clt @3; srv @4; req @5; rep @6; qry @7; ans @8; gpub @9; gsub @10; }
 enum Scope { none @0; global @1; local @2; }
 
 struct ActorRegReq {
@@ -19,10 +24,10 @@ struct ActorRegRep {
 }
 
 struct ActorUnregReq {
-  appName   @0 : Text;
-  version   @1 : Text;
+  appName @0 : Text;
+  version @1 : Text;
   actorName @2 : Text;
-  pid       @3 : Int32;
+  pid @3 : Int32;
 }
 
 struct ActorUnregRep {
@@ -48,7 +53,7 @@ struct Client {
 
 struct Socket {
   host @0 : Text;
-  port @1 : Int32; 
+  port @1 : Int32;
  }
 
 struct ServiceRegReq  {
@@ -60,22 +65,15 @@ struct ServiceRegReq  {
 struct ServiceRegRep {
   status @0 : Status;
 }
- 
+
 struct ServiceLookupReq {
-  path @0 : Path; 
+  path @0 : Path;
   client @1 : Client;
 }
 
 struct ServiceLookupRep {
-  status @0  : Status; 
+  status @0  : Status;
   sockets @1 : List(Socket);
-}
-
-struct DiscoUpd {
-    union {
-        portUpdate  @0 : PortUpd;
-        groupUpdate @1 : GroupUpdate;
-    }
 }
 
 struct PortUpd {
@@ -84,11 +82,11 @@ struct PortUpd {
   socket @2 : Socket;
 }
 
-struct GroupUpdate {
-    appName           @0 : Text;
-    groupId           @1 : GroupId;
-    componentId       @2 : Text;
-    services          @3 : List(GroupService);
+struct DiscoUpd {
+    union {
+        portUpdate  @0 : PortUpd;
+        groupUpdate @1 : GroupUpdate;
+    }
 }
 
 struct DiscoReq {
@@ -127,11 +125,39 @@ struct GroupJoinReq {
     groupId     @1 : GroupId;
     services    @2 : List(GroupService);
     componentId @3 : Text;
+    pid         @4 : Int32;
 }
 
 struct GroupJoinRep {
     status @0  : Status;
 }
 
+# Messages between OpenDHT - rdiscoveryd threads
 
+struct ProviderListUpdate {
+        providerpath @0 : Text;
+        newvalues    @1 : List(Text);
+}
+
+struct ProviderListGet {
+    path         @0 : Path;
+    client       @1 : Client;
+    results      @2 : List(Text);
+}
+
+struct GroupUpdate {
+    appName           @0 : Text;
+    groupId           @1 : GroupId;
+    componentId       @2 : Text;
+    services          @3 : List(GroupService);
+}
+
+struct DhtUpdate {
+    union {
+        providerUpdate @0: ProviderListUpdate;
+        providerGet    @1: ProviderListGet;
+        zombieList     @2: List(Text);
+        groupUpdate    @3: GroupUpdate;
+    }
+}
 

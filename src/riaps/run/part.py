@@ -197,11 +197,11 @@ class Part(object):
         self.logger.info("handlePortUpdate %s %s %s" % (portName,str(host),str(port)))
         msg = ("portUpdate",portName,host,port)
         self.control.send_pyobj(msg)        # Relay message to component thread
-        rep = self.control.recv_pyobj()     # Wait for an OK response
-        if rep == "ok" :
-            pass
-        else:
-            pass
+        # rep = self.control.recv_pyobj()     # Wait for an OK response
+        #if rep == "ok" :
+        #    pass
+        #else:
+        #    pass
 
     def activatePorts(self,ports):
         '''
@@ -274,55 +274,55 @@ class Part(object):
         msg = ("limitCPU",)
         # print(msg)
         self.control.send_pyobj(msg)        # Relay message to component thread
-        rep = self.control.recv_pyobj()     # Wait for an OK response
-        if rep == "ok" :
-            pass
-        else:
-            pass
+#        rep = self.control.recv_pyobj()     # Wait for an OK response
+#         if rep == "ok" :
+#             pass
+#         else:
+#             pass
         
     def handleMemLimit(self):
         self.logger.info("handleMemLimit - %s:%s" % (self.name,self.typeName))
         msg = ("limitMem",)
         # print(msg)
         self.control.send_pyobj(msg)        # Relay message to component thread
-        rep = self.control.recv_pyobj()     # Wait for an OK response
-        if rep == "ok" :
-            pass
-        else:
-            pass
+#        rep = self.control.recv_pyobj()     # Wait for an OK response
+#         if rep == "ok" :
+#             pass
+#         else:
+#             pass
     
     def handleSpcLimit(self):
         self.logger.info("handleSpcLimit - %s:%s" % (self.name,self.typeName))
         msg = ("limitSpc",)
         # print(msg)
         self.control.send_pyobj(msg)        # Relay message to component thread
-        rep = self.control.recv_pyobj()     # Wait for an OK response
-        if rep == "ok" :
-            pass
-        else:
-            pass
+#        rep = self.control.recv_pyobj()     # Wait for an OK response
+#         if rep == "ok" :
+#             pass
+#         else:
+#             pass
         
     def handleNetLimit(self):
         self.logger.info("handleNetLimit - %s:%s" % (self.name,self.typeName))
         msg = ("limitNet",)
         # print(msg)
         self.control.send_pyobj(msg)        # Relay message to component thread
-        rep = self.control.recv_pyobj()     # Wait for an OK response
-        if rep == "ok" :
-            pass
-        else:
-            pass
+#        rep = self.control.recv_pyobj()     # Wait for an OK response
+#         if rep == "ok" :
+#             pass
+#         else:
+#             pass
     
     def handleNICStateChange(self,state):
         self.logger.info("handleNICStateChange - %s:%s NIC %s" % (self.name,self.typeName,state))
         msg = ("nicState",state)
         # print(msg)
         self.control.send_pyobj(msg)        # Relay message to component thread
-        rep = self.control.recv_pyobj()     # Wait for an OK response
-        if rep == "ok" :
-            pass
-        else:
-            pass
+#        rep = self.control.recv_pyobj()     # Wait for an OK response
+#         if rep == "ok" :
+#             pass
+#         else:
+#             pass
         
     def handlePeerStateChange(self,state,uuid):
         self.logger.info("handlePeerStateChange - %s:%s peer %s at %s" 
@@ -330,11 +330,11 @@ class Part(object):
         msg = ("peerState",state,uuid)
         # print(msg)
         self.control.send_pyobj(msg)        # Relay message to component thread
-        rep = self.control.recv_pyobj()     # Wait for an OK response
-        if rep == "ok" :
-            pass
-        else:
-            pass
+#        rep = self.control.recv_pyobj()     # Wait for an OK response
+#         if rep == "ok" :
+#             pass
+#         else:
+#             pass
         
     def terminate(self):
         self.logger.info("terminating %s" % self.typeName)

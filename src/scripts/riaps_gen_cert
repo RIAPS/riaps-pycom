@@ -6,7 +6,7 @@ self-signed certificate for securing riaps communications.
 THE KEY ANND CERTIFICATE MUST NEVER BE USED IN FIELDED SYSTEMS.
 Keys and the certificate must be installed in the $RIAPSHOME/keys
 directory. Private key is NOT ENCRYPTED.
-
+ 
 @author: riaps
 '''
 import datetime
@@ -22,10 +22,10 @@ from cryptography import x509
 from cryptography.x509.oid import NameOID
 from cryptography.hazmat.primitives import hashes
 
-import zmq.auth
+import zmq.auth 
 
 from riaps.consts.defs import *
-
+ 
 CERT_FILE = const.ctrlCertificate
 KEY_FILE = const.ctrlPrivateKey
 PUB_FILE = const.ctrlPublicKey
@@ -34,7 +34,7 @@ ZMQ_CERT_FILE = const.zmqCertificate
 def generate_keys(cert_dir):
     if exists(join(cert_dir, KEY_FILE)) or exists(join(cert_dir, PUB_FILE)) :
         sys.exit("Error: %s or %s already exists - move them first" % (KEY_FILE, PUB_FILE))
-
+    
     private_key = rsa.generate_private_key(public_exponent=65537,
                                            key_size=2048,
                                            backend=default_backend())
@@ -45,7 +45,7 @@ def generate_keys(cert_dir):
             format=serialization.PrivateFormat.TraditionalOpenSSL,
             encryption_algorithm=serialization.NoEncryption(),
             ))
-
+    
     public_key = private_key.public_key()
     with open(join(cert_dir, PUB_FILE), "wb") as f:
         f.write(public_key.public_bytes(
@@ -53,8 +53,8 @@ def generate_keys(cert_dir):
                 format=serialization.PublicFormat.SubjectPublicKeyInfo
                 ))
     return private_key
-
-
+      
+        
 def generate_self_signed_cert(cert_dir,key):
     if exists(join(cert_dir, CERT_FILE)):
         sys.exit("Error: %s already exists - move it first" % (CERT_FILE))
@@ -84,7 +84,7 @@ def generate_zmq_cert(cert_dir):
         sys.exit("Error: %s already exists - move it first" % (ZMQ_CERT_FILE))
     _public,cert = zmq.auth.create_certificates(cert_dir, "riaps",None)
     shutil.move(cert,join(cert_dir, const.zmqCertificate))
-
+    
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     output_dir = "."
@@ -100,6 +100,10 @@ if __name__ == '__main__':
             key = serialization.load_pem_private_key(data, None, default_backend())
     else:
         key = generate_keys(output_dir)
-
+        
     generate_self_signed_cert(output_dir,key)
     generate_zmq_cert(output_dir)
+    
+    
+    
+   

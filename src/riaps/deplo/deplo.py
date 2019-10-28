@@ -142,7 +142,7 @@ class DeploService(object):
             pass
         if type(resp) == tuple and resp[0] == 'dbase':   # Expected response: (redis) database host:port pair
             if self.depm != None:
-                self.depm.doCommand(('setDisco',) + resp[1:])
+                self.depm.callCommand(('setDisco',) + resp[1:])
             return True
         else:
             pass    # Ignore any other response
@@ -206,9 +206,8 @@ class DeploService(object):
         reply = None
         try: 
             cmd = msg[0]
-            if cmd in ('launch','halt','setupApp','cleanupApp','cleanupApps'):
-                self.depm.doCommand(msg)
-            elif cmd in ('query','reclaim','install'):
+            if cmd in ('launch','halt','setupApp','cleanupApp','cleanupApps', \
+                       'query','reclaim','install'):
                 reply = self.depm.callCommand(msg)
             elif cmd == "kill":
                 self.killed = True

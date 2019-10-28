@@ -201,6 +201,53 @@ class DiscoClient(object):
             raise SetupError("Invalid registration message")
         return result
 
+    def registerGroup(self,bundle):
+        self.logger.info("registerGroup: %s" % str(bundle))
+        _key,groupType, groupName, messageType,host,pubPort,partName,partType,portName = bundle
+        msgType = messageType + '@' + groupType + '.' + groupName    
+        regReqBundle = (partName,partType,"gpub",False,portName,msgType,host,pubPort)
+        lookupReqBundle = (partName,partType,"gsub",False,portName,msgType)  
+        # (1) lookupReq -> (2) reqReq
+        result = self.handleLookupReq(lookupReqBundle)
+        self.handleRegReq(regReqBundle)
+        return result
+        
+#         port = 0
+#         componentId = ""
+#         reqt = disco_capnp.DiscoReq.new_message()
+#         groupMessage = reqt.init('groupJoin')
+#         groupMessage.appName = self.appName
+#         groupId = disco_capnp.GroupId.new_message()
+#         groupId.groupType = groupType
+#         groupId.groupName = instName
+#         groupMessage.groupId = groupId
+#         services = groupMessage.init('services',1)
+#         services[0].messageType = messageType
+#         services[0].address = str(host) + ':' + str(port)
+#         groupMessage.componentId = str(componentId)
+#         groupMessage.pid = self.actor.pid
+#         
+#         msgBytes = reqt.to_bytes()
+#         self.socket.send(msgBytes)
+#         
+#         try:
+#             repBytes = self.socket.recv()
+#         except Exception as e:
+#             raise SetupError("No response from disco service : {1}".format(e.errno, e.strerror))
+#         rep = disco_capnp.DiscoRep.from_bytes(repBytes)
+#         which = rep.which()
+#         if which == 'groupJoin':
+#             repMessage = rep.groupJoin
+#             status = repMessage.status
+#             if status == 'err':
+#                 raise SetupError("Error response from disco service at group registration")
+#             else:
+#                 pass
+#         else:
+#             raise SetupError("Unexpected response from disco service at group registration")
+#         return
+    
+    
     def terminate(self):
         self.logger.info("terminating")
         if self.socket == None:

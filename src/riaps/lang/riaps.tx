@@ -26,7 +26,7 @@ Message:
 // Groups used in the application
 Group:
   'group' name=ID (kind=GroupKind)?
-  		  'using' messages*=[Message][','] ';' 
+  		  'using' message=[Message] (timed='timed')? ';' 
 ;
  
  GroupKind:

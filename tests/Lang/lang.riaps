@@ -5,6 +5,8 @@
 app LangTest {
 	message Message;
 	
+	group Grouper with consensus using Message; 
+	 
 	component Component {
 		timer Timer 1000;
 	}

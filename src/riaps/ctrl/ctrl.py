@@ -43,6 +43,7 @@ from riaps.ctrl.ctrlgui import ControlGUIClient
 from riaps.ctrl.ctrlcli import ControlCLIClient
 from riaps.lang.lang import compileModel
 from riaps.lang.depl import DeploymentModel
+from riaps.run.exc import BuildError
 
 import gi
 import tarfile
@@ -649,6 +650,9 @@ class Controller(object):
             if download == []:
                 self.log("* Nothing to download")
                 return False
+            if len(clients) == 0:
+                self.log("* No clients")
+                return False
             ok = self.downloadApp(download,libraries,clients,appName)
             if not ok:
                 self.log("* App download fault")
@@ -663,40 +667,54 @@ class Controller(object):
         else: 
             self.log("* App launch fault")
             return False
+        # Map to guard against multiple deployments of the same actor on the same host
+        clientActorMap = { }
+        for clientName in self.clientMap:
+            clientActorMap[clientName] = set()
         # Process the deployment and launch all actors.
         appNameJSON = appName + ".json"
         for depl in depls:
             targets = depl['target']
             actors = depl['actors']
             with ctrlLock:
-                if targets == []:
+                if targets == []:                               # Deploy on all clients
                     for clientName in self.clientMap:
                         client = self.clientMap[clientName]
                         client.setupApp(appName,appNameJSON)
                         for actor in actors:
                             actorName = actor["name"]
+                            if actorName in clientActorMap[clientName]:
+                                self.log("? %s => %s " % (actorName,clientName))
+                                continue
                             actuals = actor["actuals"]
                             actualArgs = self.buildArgs(actuals)
                             try:
-                                client.launch(appName,appNameJSON,actorName,actualArgs)
+                                res = client.launch(appName,appNameJSON,actorName,actualArgs)
+                                _tmp = res.value
                                 self.launchList.append([client,appName,actorName])
                                 self.log("L %s %s %s %s" % (clientName,appName,actorName,str(actualArgs)))
+                                clientActorMap[clientName].add(actorName)
                             except Exception:
                                 info = sys.exc_info()[1].args[0]
                                 self.log("? %s" % info)
                 else:
-                    for target in targets:
+                    for target in targets:                      # Deploy on selected targets
                         client = self.findClient(target)
                         if client != None:
                             client.setupApp(appName,appNameJSON)
                             for actor in actors:
                                 actorName = actor["name"]
+                                if actorName in clientActorMap[client.name]:
+                                    self.log("? %s => %s " % (actorName,client.name))
+                                    continue
                                 actuals = actor["actuals"]
                                 actualArgs = self.buildArgs(actuals)
                                 try:
-                                    client.launch(appName,appNameJSON,actorName,actualArgs)
+                                    res = client.launch(appName,appNameJSON,actorName,actualArgs)
+                                    _tmp = res.value
                                     self.launchList.append([client,appName,actorName])
                                     self.log("L %s %s %s %s" % (client.name,appName,actorName,str(actualArgs)))
+                                    clientActorMap[client.name].add(actorName)
                                 except Exception:
                                     info = sys.exc_info()[1].args[0]
                                     self.log("? %s" % info)

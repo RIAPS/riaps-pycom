@@ -73,6 +73,7 @@ class DeploymentManager(threading.Thread):
     Deployment manager service main class, implemented as a thread 
     '''    
     DISCONAME = 'riaps.disco'
+    ERRORMARK = 'Exc:'
     
     def __init__(self,parent,resm,fm):
         threading.Thread.__init__(self)
@@ -148,11 +149,6 @@ class DeploymentManager(threading.Thread):
             self.dns_ips = get_unix_dns_ips()
         else:
             self.dns_ips = []
-
-
-    def doCommand(self,cmd):
-        self.logger.info("doCommand: %s" % str(cmd))
-        self.command.send_pyobj(cmd)
     
     def callCommand(self,cmd):
         self.logger.info("callCommand: %s" % str(cmd))
@@ -170,6 +166,9 @@ class DeploymentManager(threading.Thread):
                     continue
                 else:
                     raise
+        if type(reply) == str and reply.startswith(self.ERRORMARK):
+            info = reply[len(self.ERRORMARK):]
+            raise BuildError(info)
         return reply
         
     def setupUser(self,user_name):
@@ -271,8 +270,6 @@ class DeploymentManager(threading.Thread):
         else:
             self.logger.info('disco already started')
             self.connectDisco()
-            pass
-    
     
     def setupApp(self,msg):
         ''' Set up model and unique user name for app'''
@@ -327,7 +324,8 @@ class DeploymentManager(threading.Thread):
             try:
                 with tarfile.open(tgz_file, "r:gz") as tar:
                     tar.extractall(self.riapsApps+'/')
-            except:
+            except Exception as ex:
+                self.logger.error("Extract app failed: %s(%s)" % (str(type(ex)),str(ex.args)))
                 ok, err = False, 'Content extraction failed' 
 
         try:
@@ -340,7 +338,7 @@ class DeploymentManager(threading.Thread):
     
     def installApp(self,msg):
         reply = self.installPackage(msg)
-        self.ctrl.send_pyobj(reply)
+        return reply
         
     def cleanupApp(self,msg):
         ''' Clean up everything related to an app'''
@@ -537,9 +535,10 @@ class DeploymentManager(threading.Thread):
         try:
             proc = psutil.Popen(command,
                                 preexec_fn=self.demote(user_uid, user_gid,self.is_su), 
-                                cwd=user_cwd, env=user_env, 
-                                stdout=logFile, stderr=subprocess.STDOUT)
+                                cwd=user_cwd, env=user_env,
+                                stdout=logFile,stderr=subprocess.STDOUT)
         except (FileNotFoundError,PermissionError):
+            self.logger.info("Error while starting actor: %s -- %s" % (command,sys.exc_info()[0]))
             try:
                 # if isPython:
                 command = ['python3',riaps_mod] + command[1:]
@@ -548,10 +547,10 @@ class DeploymentManager(threading.Thread):
                 proc = psutil.Popen(command,
                                     preexec_fn=self.demote(user_uid, user_gid,self.is_su), 
                                     cwd=user_cwd, env=user_env,
-                                    stdout=logFile, stderr=subprocess.STDOUT)
+                                    stdout=logFile,stderr=subprocess.STDOUT)
             except:
                 self.logger.error("Error while starting actor: %s -- %s" % (command,sys.exc_info()[0]))
-                raise
+                raise BuildError("Actor failed to start: %s.%s " % (appName,actorName))
         try:
             rc = proc.wait(const.depmStartTimeout)
         except:
@@ -685,6 +684,7 @@ class DeploymentManager(threading.Thread):
             self.stopActor(appName,actorName)
         except BuildError as buildError:
             self.logger.error(str(buildError.args[1]))
+            raise
     
     def unRegisterActor(self,appName,actorName,actorPid):
         '''
@@ -737,16 +737,16 @@ class DeploymentManager(threading.Thread):
                 reply[appName] = actors
             else:
                 reply[appName] = [actorName]
-        self.ctrl.send_pyobj(reply)
+        return reply
     
     def reclaimApp(self,msg):
         assert type(msg) == tuple and len(msg) == 1
         appName = msg[0]
         self.resm.reclaimApp(appName)
-        self.ctrl.send_pyobj('ok')
-            
+
     def handleCommand(self,msg):
         self.logger.info("handleCommand: %s" % (str(msg)))
+        reply = 'ok'
         try: 
             cmd = msg[0]
             if cmd == 'launch':             # Launch an actor
@@ -762,17 +762,19 @@ class DeploymentManager(threading.Thread):
             elif cmd == "setDisco":         # Set up disco 
                 self.setupDisco(msg[1:])
             elif cmd == "query":            # Query running apps
-                self.queryApps()
+                reply = self.queryApps()
             elif cmd == "reclaim":          # Reclaim app files (for riaps)
                 self.reclaimApp(msg[1:])
             elif cmd == "install":          # Install downloaded package
-                self.installApp(msg[1:])
+                reply = self.installApp(msg[1:])
             else:
                 pass
-        except: 
+        except Exception: 
+            # traceback.print_exc()
             info = sys.exc_info()
-            self.logger.error("Error in handleCommand '%s': %s %s" % (cmd, info[0], info[1]))
-            traceback.print_exc()
+            reply = '%s: %s %s' %(self.ERRORMARK, info[0].__name__,info[1])
+            self.logger.error("Error in handleCommand '%s':\n   %s: %s" % (cmd, info[0].__name__, info[1]))
+        self.ctrl.send_pyobj(reply)
     
     def kill(self,what,pid):
         self.logger.info("killing %s [%d]" % (what,pid))
@@ -1173,15 +1175,18 @@ class DeploymentManager(threading.Thread):
                                         cwd=appFolder,env=dev_env,
                                         stdout=logFile, stderr=subprocess.STDOUT)
             except:
-                raise BuildError("Error while starting device: %s" % sys.exc_info()[1])
+                self.logger.error("Error while starting device: %s -- %s" % (command,sys.exc_info()[0]))
+                raise BuildError("Device failed to start: %s" % (appName,actorName))
         try:
             rc = proc.wait(const.depmStartTimeout)
         except:
             rc = None
         if rc != None:
             raise BuildError("Device failed to start: %s " % (command,))
+        
         self.resm.startActor(appName, actorName, proc)
         self.fm.startActor(appName, actorName, proc)
+        
         key = str(appName) + "." + str(actorName)
         with self.mapLock:
             self.launchMap[key] = proc
@@ -1400,7 +1405,7 @@ class DeploymentManager(threading.Thread):
                 actorPid = proc.pid    
                 self.stopActor(appName, actorName)
                 self.unRegisterActor(appName,actorName,actorPid)
-                self.appDbase.delAppActor(appName, actorName)
+                # self.appDbase.delAppActor(appName, actorName)
                 msg = (appName,appModel,actorName,actorArgs)
                 self.startActor(msg)
             elif qualName in self.devices:

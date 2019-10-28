@@ -13,6 +13,7 @@ import traceback
 from .exc import BuildError
 from riaps.utils import spdlog_setup
 import spdlog
+from .dc import Coordinator
 
 class ComponentThread(threading.Thread):
     '''
@@ -25,6 +26,7 @@ class ComponentThread(threading.Thread):
         self.parent = parent
         self.context = parent.context
         self.instance = parent.instance
+        self.control = None
     
     def setupControl(self):
         '''
@@ -33,6 +35,10 @@ class ComponentThread(threading.Thread):
         self.control = self.context.socket(zmq.PAIR)
         self.control.connect('inproc://part_' + self.name + '_control')
     
+    def sendControl(self,msg):
+        assert self.control != None
+        self.control.send_pyobj(msg)
+
     def setupSockets(self):
         msg = self.control.recv_pyobj()
         if msg != "build":
@@ -54,6 +60,8 @@ class ComponentThread(threading.Thread):
         self.poller  = zmq.Poller()
         self.sock2NameMap = {}
         self.sock2PortMap = {}
+        self.sock2GroupMap = {}
+        self.portName2GroupMap = {}
         self.poller.register(self.control,zmq.POLLIN)
         self.sock2NameMap[self.control] = ""
         for portName in self.parent.ports:
@@ -79,6 +87,13 @@ class ComponentThread(threading.Thread):
             self.poller.register(newSocket,zmq.POLLIN)
             self.sock2NameMap[newSocket] = portName
             
+    def addGroupSocket(self,group):
+        groupSocket = group.getSocket()
+        groupId = group.getGroupId()
+        self.poller.register(groupSocket,zmq.POLLIN)
+        self.sock2GroupMap[groupSocket] = group
+        self.portName2GroupMap[groupId] = group
+        
     def runCommand(self):
         res = False
         msg = self.control.recv_pyobj()
@@ -97,37 +112,48 @@ class ComponentThread(threading.Thread):
         else: 
             cmd = msg[0]
             if cmd == "portUpdate":
-                self.logger.info("portUpdate")
+                self.logger.info("portUpdate: %s" % str(msg))
                 (_ignore,portName,host,port) = msg
-                portObj = self.parent.ports[portName]
-                res = portObj.update(host,port)
-                self.control.send_pyobj("ok")
+                ports = self.parent.ports
+                groups = self.portName2GroupMap
+                if portName in ports:
+                    portObj = ports[portName]
+                    res = portObj.update(host,port)
+                elif portName in groups:
+                    groupObj = groups[portName]
+                    res = groupObj.update(host,port)
+                else:
+                    pass
+                # self.control.send_pyobj("ok")
+            elif cmd == "groupUpdate":
+                # handle it in coordinator
+                pass
             elif cmd == "limitCPU":
                 self.logger.info("limitCPU")
                 self.instance.handleCPULimit()
-                self.control.send_pyobj("ok")
+                # self.control.send_pyobj("ok")
             elif cmd == "limitMem":
                 self.logger.info("limitMem")
                 self.instance.handleMemLimit()
-                self.control.send_pyobj("ok")
+                # self.control.send_pyobj("ok")
             elif cmd == "limitSpc":
                 self.logger.info("limitSpc")
                 self.instance.handleSpcLimit()
-                self.control.send_pyobj("ok")
+                # self.control.send_pyobj("ok")
             elif cmd == "limitNet":
                 self.logger.info("limitNet")
                 self.instance.handleNetLimit()
-                self.control.send_pyobj("ok")
+                # self.control.send_pyobj("ok")
             elif cmd == "nicState":
                 state = msg[1]
                 self.logger.info("nicState %s" % state)
                 self.instance.handleNICStateChange(state)
-                self.control.send_pyobj("ok")
+                # self.control.send_pyobj("ok")
             elif cmd == "peerState":
                 state,uuid = msg[1], msg[2]
                 self.logger.info("peerState %s at %s" % (state,uuid))
                 self.instance.handlePeerStateChange(state,uuid)
-                self.control.send_pyobj("ok")
+                # self.control.send_pyobj("ok")
             else:
                 self.logger.info("unknown command %s" % cmd)
                 pass            # Should report an error
@@ -155,28 +181,37 @@ class ComponentThread(threading.Thread):
                 del sockets[self.control]
             if toStop: break
             for socket in sockets:
-                portName = self.sock2NameMap[socket]
-                portObj = self.sock2PortMap[socket]
-                deadline = portObj.getDeadline()
-                try:
-                    funcName = 'on_' + portName
-                    func_ = getattr(self.instance, funcName)
-                    if deadline != 0:
-                        start = time.perf_counter()
-                    func_()
-                    if deadline != 0:
-                        finish = time.perf_counter()
-                        spent = finish-start
-                        if spent > deadline:
-                            self.logger.error('Deadline violation in %s.%s()' 
-                                              % (self.name,funcName))
-                            msg = ('deadline',)
-                            self.control.send_pyobj(msg)
-                            self.instance.handleDeadline(funcName)
-                except:
-                    fmtE = traceback.format_exc()
-                    msg = ('exception',fmtE,)
-                    self.control.send_pyobj(msg)
+                if socket in self.sock2PortMap:
+                    portName = self.sock2NameMap[socket]
+                    portObj = self.sock2PortMap[socket]
+                    deadline = portObj.getDeadline()
+                    try:
+                        funcName = 'on_' + portName
+                        func_ = getattr(self.instance, funcName)
+                        if deadline != 0:
+                            start = time.perf_counter()
+                        func_()
+                        if deadline != 0:
+                            finish = time.perf_counter()
+                            spent = finish-start
+                            if spent > deadline:
+                                self.logger.error('Deadline violation in %s.%s()' 
+                                                  % (self.name,funcName))
+                                msg = ('deadline',)
+                                self.control.send_pyobj(msg)
+                                self.instance.handleDeadline(funcName)
+                    except:
+                        traceback.print_exc()
+                        msg = ('exception',traceback.format_exc())
+                        self.control.send_pyobj(msg)
+                elif socket in self.sock2GroupMap:
+                    group = self.sock2GroupMap[socket]
+                    try:
+                        group.handleMessage()
+                    except:
+                        traceback.print_exc()
+                        msg = ('exception',traceback.format_exc())
+                        self.control.send_pyobj(msg)
         self.logger.info("stopping")
         if hasattr(self.instance,'__destroy__'):
             destroy_ = getattr(self.instance,'__destroy__')
@@ -191,30 +226,32 @@ class Component(object):
     def __init__(self):
         '''
         Constructor
-        Logger attributes
-        logger: logger for this class
-        loghandler: handler for the logger (defaults to a StreamHandler)
-        logformatter: formatter assigned to the handler (default: Level:Time:Process:Class:Message)
-        '''
+       '''
         class_ = getattr(self,'__class__')
         className = getattr(class_,'__name__')
         self.owner = class_.OWNER                   # This is set in the parent part (temporarily)
         #
-#         self.logger = logging.getLogger(className)
-#         self.logger.setLevel(logging.INFO)
-#         self.logger.propagate=False
-#         self.loghandler = logging.StreamHandler()
-#         self.loghandler.setLevel(logging.INFO)
-#         self.logformatter = logging.Formatter('%(levelname)s:%(asctime)s:[%(process)d]:%(name)s:%(message)s')
-#         self.loghandler.setFormatter(self.logformatter)
-#         self.logger.addHandler(self.loghandler)
+        # Logger attributes
+        # logger: logger for this class
+        # loghandler: handler for the logger (defaults to a StreamHandler)
+        # logformatter: formatter assigned to the handler (default: Level:Time:Process:Class:Message)
+        # self.logger = logging.getLogger(className)
+        # self.logger.setLevel(logging.INFO)
+        # self.logger.propagate=False
+        # self.loghandler = logging.StreamHandler()
+        # self.loghandler.setLevel(logging.INFO)
+        # self.logformatter = logging.Formatter('%(levelname)s:%(asctime)s:[%(process)d]:%(name)s:%(message)s')
+        # self.loghandler.setFormatter(self.logformatter)
+        # self.logger.addHandler(self.loghandler)
         #
         loggerName = self.owner.getActorName() + '.' + self.owner.getName()
         self.logger = spdlog_setup.get_logger(loggerName)
         if self.logger == None:
             self.logger = spdlog.ConsoleLogger(loggerName,True,True,False)
             self.logger.set_pattern(spdlog_setup.global_pattern)
-#        print  ( "Component() : '%s'" % self )
+        # print  ( "Component() : '%s'" % self )
+        self.coord = Coordinator(self)
+        self.thread = None
  
     def getName(self):
         '''
@@ -318,3 +355,54 @@ class Component(object):
         '''
         pass
     
+    def handleGroupMessage(self,_group):
+        '''
+        Default handler for group messages.
+        Implementation must immediately call recv/recv_pyobj on the group to obtain message. 
+        '''
+        pass
+    
+    def handleVoteRequest(self,group,rfvId):
+        '''
+        Default handler for vote requests (in member)
+        Implementation must recv/recv_pyobj to obtain the topic. 
+        '''
+        pass
+    
+    def handleVoteResult(self,group,rfvId,vote):
+        '''
+        Default handler for the result of a vote (in member)
+        '''
+        pass
+    
+    def handleActionVoteRequest(self,group,rfvId,when):
+        '''
+        Default handler for request to vote an action in the future (in member)
+        Implementation must recv/recv_pyobj to obtain the action topic. 
+        '''
+        pass
+        
+    def handleMessageToLeader(self,group):
+        '''
+        Default handler for messages sent to the leader (in leader)
+        Leader implementation must immediately call recv/recv_pyobj on the group to obtain message. 
+        '''
+        pass
+    
+    def handleMessageFromLeader(self,group):
+        '''
+        Default handler for messages received from the leader (in member) 
+        Member implementation must immediately call recv/recv_pyobj on the group to obtain message. 
+        '''
+        pass
+    
+    def joinGroup(self,groupName,instName):
+        if self.thread == None:
+            self.thread = self.owner.thread
+        group = self.coord.getGroup(groupName,instName)
+        if group == None:
+            group = self.coord.joinGroup(self.thread,groupName,instName,self.getLocalID())
+            self.thread.addGroupSocket(group)
+        return group
+
+            

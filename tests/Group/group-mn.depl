@@ -1,0 +1,6 @@
+// 
+app GroupApp {
+	on (192.168.57.2) GroupActorA(gs='12');
+	on (192.168.57.3) GroupActorB(gs='23');
+	on (192.168.57.4) GroupActorC(gs='13');
+}
