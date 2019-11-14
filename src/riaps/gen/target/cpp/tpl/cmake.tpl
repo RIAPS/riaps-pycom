@@ -26,9 +26,9 @@ endif()
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 if (${arch} STREQUAL "armhf")
- set(prefix /usr/arm-linux-gnueabihf)
+ set(riaps_prefix /usr/arm-linux-gnueabihf)
 else()
- set(prefix /usr/local)
+ set(riaps_prefix /usr/local)
 endif()
 
 set(DEPENDENCIES ${riaps_prefix})
