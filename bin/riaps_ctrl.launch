@@ -2,7 +2,7 @@
 <launchConfiguration type="org.eclipse.ui.externaltools.ProgramLaunchConfigurationType">
 <stringAttribute key="bad_container_name" value="/home/riaps/riaps_ctrl.launch"/>
 <mapAttribute key="org.eclipse.debug.core.environmentVariables">
-<mapEntry key="LD_LIBRARY_PATH" value="/opt/riaps/amd64/lib:/usr/local/lib"/>
+<mapEntry key="LD_LIBRARY_PATH" value="/usr/local/lib"/>
 <mapEntry key="RIAPSAPPS" value="/home/riaps/riaps_apps"/>
 <mapEntry key="RIAPSHOME" value="/usr/local/riaps"/>
 </mapAttribute>
