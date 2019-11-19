@@ -29,7 +29,7 @@ ln -s /etc/riaps/x509.pem /usr/local/riaps/keys/x509.pem
 
 #Create soft link from rdiscoveryd to run as default
 mv /usr/local/bin/riaps_disco /usr/local/bin/riaps_disco_redis
-ln -s /opt/riaps/amd64/bin/rdiscoveryd /usr/local/bin/riaps_disco
+ln -s /usr/local/bin/rdiscoveryd /usr/local/bin/riaps_disco
 
 rm -rf /opt/riaps-pycom/
 
