@@ -3,7 +3,7 @@
 # www.yahoo.com.:192.168.1.1
 # These are the only hosts available using the mininet/sshd example
 # NOTE: the host name must have . at the end 
-ctrl.:10.0.0.1
-bbb1.:10.0.0.2
-bbb2.:10.0.0.3
-bbb3.:10.0.0.4
+ctrl.:192.168.57.1
+bbb1.:192.168.57.2
+bbb2.:192.168.57.3
+bbb3.:192.168.57.4

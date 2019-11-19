@@ -174,8 +174,8 @@ class ComponentThread(threading.Thread):
                             self.control.send_pyobj(msg)
                             self.instance.handleDeadline(funcName)
                 except:
-                    traceback.print_exc()
-                    msg = ('exception',)
+                    fmtE = traceback.format_exc()
+                    msg = ('exception',fmtE,)
                     self.control.send_pyobj(msg)
         self.logger.info("stopping")
         if hasattr(self.instance,'__destroy__'):

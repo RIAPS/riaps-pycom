@@ -15,7 +15,6 @@
 # Location of RIAPS scripts (i.e riaps_actor)
 @{RIAPSEXEC}=/usr/local/bin
 # Location of RIAPS externals
-@{RIAPSEXTERNALS}=/opt/riaps/amd64
 
 #include <tunables/global>
 
@@ -33,7 +32,6 @@ profile /usr/local/bin/riaps_actor {
   @{RIAPSHOME}/** mr,
   @{RIAPSHOME}/ r,
   @{RIAPSEXEC}/ r,
-  @{RIAPSEXTERNALS}/** mr,
   /sbin/ldconfig ix,
 
   /etc/** r,
