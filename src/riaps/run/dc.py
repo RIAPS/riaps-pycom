@@ -123,6 +123,7 @@ class GroupThread(threading.Thread):
         self.groupPeerTimeout = const.groupPeerTimeout
         self.groupConsensusTimeout = const.groupConsensusTimeout
         self.timeout = None
+        self.numPeers = -1 
         
     def setup(self):
         self.group.setup(self)
