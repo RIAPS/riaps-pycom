@@ -70,7 +70,7 @@ DeploDiscoCommand = namedtuple('DeploDiscoCommand', 'cmd pid')
 
 class DeploymentManager(threading.Thread):
     '''
-    Deployment manager service main class, implemented as a thread 
+    Deployment manager (DM) service main class, implemented as a thread 
     '''    
     DISCONAME = 'riaps.disco'
     ERRORMARK = 'Exc:'
@@ -151,6 +151,10 @@ class DeploymentManager(threading.Thread):
             self.dns_ips = []
     
     def callCommand(self,cmd):
+        '''
+        Call a command in the DM. 
+        This method runs the DeploService background thread that handles the requests coming from riaps_ctrl.  
+        '''
         self.logger.info("callCommand: %s" % str(cmd))
         if self.pendingCall == False:
             self.command.send_pyobj(cmd)
@@ -172,6 +176,10 @@ class DeploymentManager(threading.Thread):
         return reply
         
     def setupUser(self,user_name):
+        '''
+        Set up a new user record (with the given user_name). 
+        The user must already exist in the OS. 
+        '''
         if user_name in self.users: return
         pw_record = pwd.getpwnam(user_name)
         user_record = DeploUserRecord(
@@ -182,11 +190,18 @@ class DeploymentManager(threading.Thread):
         self.users[user_name] = user_record
         
     def delUser(self,user_name):
+        '''
+        Delete the user record. 
+        '''
         if user_name == Config.TARGET_USER: return
         if user_name not in self.users: return
         del self.users[user_name]
     
     def makeLdLibEnv(self,os_env,libs=[]):
+        '''
+        Add an entry to the user environment that sets up
+        LD_LIBRARY_PATH to include the library directories (shipped with the app).  
+        '''
         if libs != []:
             ld_libs = os.getenv('LD_LIBRARY_PATH')
             if ld_libs != None:
@@ -196,6 +211,10 @@ class DeploymentManager(threading.Thread):
             os_env['LD_LIBRARY_PATH'] = ld_libs
         
     def makeUserEnv(self,user_name,ld_libs=[]):
+        '''
+        Build a dictionary from the user record (belonging to the user name)
+        to contain the environment for a new user process (that runs the app actor). 
+        '''
         user_env = os.environ.copy()
         user_record = self.users[user_name]
         user_env[ 'HOME'     ]  = user_record.home
@@ -208,6 +227,9 @@ class DeploymentManager(threading.Thread):
 
     @staticmethod
     def demote(user_uid,user_gid,is_su):
+        ''' 
+        Demote the user (actor) process from root to user_uid/gid  
+        '''
         def result():
             if is_su:
                 os.setgid(user_gid)
@@ -215,7 +237,11 @@ class DeploymentManager(threading.Thread):
         return result
     
 
-    def connectDisco(self):        
+    def connectDisco(self):
+        '''
+        Set up and connect the ZMQ socket for communicating with the 
+        Discovery Service. 
+        '''        
         self.discoCommand = self.context.socket(zmq.REQ)           # Socket to command disco
         self.discoCommand.setsockopt(zmq.RCVTIMEO,const.discoEndpointRecvTimeout)
         self.discoCommand.setsockopt(zmq.SNDTIMEO,const.discoEndpointSendTimeout)
@@ -262,6 +288,11 @@ class DeploymentManager(threading.Thread):
 
 
     def setupDisco(self,msg):
+        '''
+        Set up the Discovery Service.
+        If it is not running yet start it (this will also connect to it),
+        otherwise connect to it.  
+        '''
         assert type(msg) == tuple and len(msg) == 2
         self.dbaseHost, self.dbasePort = msg
         if self.disco == None:
@@ -272,7 +303,9 @@ class DeploymentManager(threading.Thread):
             self.connectDisco()
     
     def setupApp(self,msg):
-        ''' Set up model and unique user name for app'''
+        ''' 
+        Set up model and unique user name for app
+        '''
         assert type(msg) == tuple and len(msg) == 2
         
         appName,appModelName = msg
@@ -295,6 +328,11 @@ class DeploymentManager(threading.Thread):
         self.appDbase.addApp(appName)
         
     def verifyPackage(self,keyName,sigName,dataName):
+        '''
+        Very the application package (in file 'dataName')
+        against the key (in file 'keyName)' and 
+        signature (in file 'sigName)  
+        '''
         with open(keyName, 'rb') as f: key = f.read()
         with open(sigName,'rb') as f: sig = f.read()
         with open(dataName, 'rb') as f: data = f.read()
@@ -337,11 +375,16 @@ class DeploymentManager(threading.Thread):
         return ok if ok else err
     
     def installApp(self,msg):
+        '''
+        Install the app whose name is in the message. 
+        '''
         reply = self.installPackage(msg)
         return reply
         
     def cleanupApp(self,msg):
-        ''' Clean up everything related to an app'''
+        ''' 
+        Clean up everything related to an app
+        '''
         assert type(msg) == tuple and len(msg) == 1
         (appName,) = msg
         if appName not in self.appModels:
@@ -357,7 +400,9 @@ class DeploymentManager(threading.Thread):
         self.delUser(userName)
     
     def cleanupApps(self,msg):
-        ''' Clean up all known apps '''
+        ''' 
+        Clean up all known apps 
+        '''
         assert type(msg) == tuple and len(msg) == 0
         for k in self.appModels.keys():
             del self.appModels[k]
@@ -366,6 +411,10 @@ class DeploymentManager(threading.Thread):
         self.fm.cleanupApps()
                 
     def loadModel(self,appName,modelFileName):
+        '''
+        Load the (json) model file for the app. 
+        Loads the app descriptor file as well amd creats a DeploAppRecord.  
+        '''
         try:
             fp = open(modelFileName, 'rb')  
         except IOError as e:
@@ -413,23 +462,41 @@ class DeploymentManager(threading.Thread):
         fp.close()
     
     def getAppRecord(self,appName):
+        '''
+        Find the app record with the app name. 
+        '''
         if appName not in self.appModels:
             raise BuildError('App "%s" unknown' % appName)
         return self.appModels[appName]
     
     def getAppModel(self,appName):
+        '''
+        Get the app's model.
+        '''
         return self.getAppRecord(appName).model
     
     def getAppHome(self,appName):
+        '''
+        Get the 'home' (organizational source) of the app.
+        '''
         return self.getAppRecord(appName).home
     
     def getAppHosts(self,appName):
+        '''
+        Get the list of hosts the app is to have access to.
+        '''
         return self.getAppRecord(appName).hosts
     
     def getAppNetwork(self,appName):
+        '''
+        Get the list of the networks the app can have access to/
+        '''
         return self.getAppRecord(appName).network
     
     def setupAppSite(self,site,user_name,done,firewall):
+        '''
+        Allow the app's user to communicate with a site (represented by an IPv4 address)
+        '''
         if site in done: return 
         try:
             host = socket.gethostbyname(site)
@@ -440,10 +507,16 @@ class DeploymentManager(threading.Thread):
             raise BuildError('Error in setting up access to %s for %s' % (site,user_name))
     
     def setupAppDNS (self,user_name,done,firewall):
+        '''
+        All the app's user to access the available DNS servers.  
+        '''
         for dns_ip in get_unix_dns_ips():  
             self.setupAppSite(dns_ip,user_name,done,firewall)
     
     def setupAppNetworkSites(self,sites,user_name,done,firewall):
+        '''
+        Allow the app's user to access the sites (represented by IPv4 addresses) 
+        '''
         if sites is not None:
             if len(sites) == 0: return True  # Node can access any network
             for site in sites:
@@ -454,6 +527,10 @@ class DeploymentManager(threading.Thread):
         return False
                     
     def setupAppNetwork(self,appName,user_name):
+        '''
+        Set up an app's network. 
+        The app's user will be allowed to communicate through the firewall.  
+        '''
         firewall = []
         if not Config.SECURITY: return firewall             # No security
         if user_name == Config.TARGET_USER: return firewall # Don't restrict default target user 

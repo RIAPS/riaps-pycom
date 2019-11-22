@@ -33,11 +33,12 @@ class Groupie(Component):
             if 'm' in self.tl:
                 msg = "%s in %s @ %d" % (self.name, g.getGroupId(), now)
                 g.send_pyobj(msg)
+                self.logger.info("group size = %d" % g.groupSize())
             if 'l' in self.tl:
                 if g.hasLeader():
                     g.sendToLeader_pyobj("to leader from %s" % self.name)
                 else:
-                    self.logger.info("no leader yet")
+                    self.logger.info("no leader yet [%d]" % g.groupSize())
             if 'v' in self.tl:
                 if g.hasLeader():
                     if self.round == self.trip:
@@ -46,7 +47,7 @@ class Groupie(Component):
                         self.logger.info('... request for consensus sent: %s' % str(rfcId))
                     self.round = (self.round + 1) % self.rwrap
                 else:
-                    self.logger.info("no leader yet")
+                    self.logger.info("no leader yet [%d]" % g.groupSize())
             if 't' in self.tl:
                 if g.hasLeader():
                     if self.round == self.trip:
@@ -56,7 +57,7 @@ class Groupie(Component):
                         self.logger.info('... request for consensus sent: %s' % str(rfcId))
                     self.round = (self.round + 1) % self.rwrap
                 else:
-                    self.logger.info("no leader yet")
+                    self.logger.info("no leader yet[%d]" % g.groupSize())
 
     def handleActivate(self):
         for g in self.gs:
@@ -73,7 +74,7 @@ class Groupie(Component):
         identity = group.identity
         self.logger.info('handleMessageToLeader() %s:%s of %s = # %s #' % (self.name,str(identity),group.getGroupId(),str(msg)))
         rsp = "to member from leader of %s = %s" % (group.getGroupId(),msg[::-1])
-        group.sendToMember_pyobj(msg,identity)
+        group.sendToMember_pyobj(rsp,identity)
         
     def handleMessageFromLeader(self,group):
         assert (group in self.groups)

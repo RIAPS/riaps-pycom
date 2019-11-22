@@ -41,7 +41,7 @@ class DeploymentModel(object):
             fp = open(join(this_folder,fileName),'r')             # Load json file (one app)
             jsonModel = json.load(fp)
             self.appName = list(jsonModel.keys())[0]
-            self.deployments = jsonModel[self.appName]['deployments']
+            self.deployments = jsonModel[self.appName]['deployment']
             try:
                 self.network = jsonModel[self.appName]['network']
             except:

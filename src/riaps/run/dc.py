@@ -1037,6 +1037,12 @@ class Group(object):
         '''
         return self.groupThread.isLeader()
     
+    def groupSize(self):
+        '''
+        Return the size of the group (>= 1).  
+        '''
+        return self.groupThread.numPeers + 1 
+    
     def requestVote(self,topic,kind=Poll.MAJORITY,timeout=None):
         '''
         Request a vote on a topic (with timeout). Topic is a bytearray.
