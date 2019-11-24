@@ -1,8 +1,11 @@
 '''
-Distributed coordination
+Distributed coordination 
+
+Communication ports for the groups.
+
 Created on Feb 23, 2019
 
-@author: riaps
+Author: riaps
 '''
 
 import ctypes
@@ -32,7 +35,7 @@ except:
 
 class GroupPubPort(Port):
     '''
-    classdocs
+    Group Publisher port is for publishing application and housekeeping messages for all group members.
     '''
     def __init__(self, parentPart, portName, groupSpec):
         '''
@@ -105,7 +108,7 @@ class GroupPubPort(Port):
     
 class GroupSubPort(Port):
     '''
-    classdocs
+    Group subscriber port is for receiving application and housekeeping messages from all group members.
     '''
     def __init__(self, parentPart, portName, groupSpec):
         '''

@@ -1,8 +1,11 @@
 '''
 Distributed coordination
+
+Python implementation of group formation, communications, leader election, consensus and action coordination. 
+
 Created on Feb 23, 2019
 
-@author: riaps
+Author: riaps
 '''
 
 import time
@@ -34,6 +37,9 @@ except:
     import pickle
 
 class Poll(object):
+    '''
+    Poll object to represent an active poll in the group leader. 
+    '''
     
     # Voting type 
     MAJORITY = 'majority'                       # Must match dc_capnp spec 
