@@ -89,7 +89,7 @@ class ComponentThread(threading.Thread):
             
     def addGroupSocket(self,group):
         groupSocket = group.getSocket()
-        groupId = group.getGroupId()
+        groupId = group.getGroupName()
         self.poller.register(groupSocket,zmq.POLLIN)
         self.sock2GroupMap[groupSocket] = group
         self.portName2GroupMap[groupId] = group
@@ -394,6 +394,30 @@ class Component(object):
         Default handler for messages received from the leader (in member) 
         Member implementation must immediately call recv/recv_pyobj on the group to obtain message. 
         '''
+        pass
+    
+    def handleMemberJoined(self,group,memberId):
+        '''
+        Default handler for 'member join' events
+        '''  
+        pass
+    
+    def handleMemberLeft(self,group,memberId):
+        '''
+        Default handler for 'member leave' events
+        '''          
+        pass
+    
+    def handleLeaderElected(self,group,leaderId):
+        '''
+        Default handler for 'leader elected' events
+        '''  
+        pass
+    
+    def handleLeaderExited(self,group,leaderId):
+        '''
+        Default handler for 'leader exited' events
+        '''  
         pass
     
     def joinGroup(self,groupName,instName):

@@ -31,7 +31,7 @@ class Groupie(Component):
             self.logger.info('on_clock(): %s' % str(now))
         for g in self.groups:
             if 'm' in self.tl:
-                msg = "%s in %s @ %d" % (self.name, g.getGroupId(), now)
+                msg = "%s in %s @ %d" % (self.name, g.getGroupName(), now)
                 g.send_pyobj(msg)
                 self.logger.info("group size = %d" % g.groupSize())
             if 'l' in self.tl:
@@ -61,7 +61,9 @@ class Groupie(Component):
 
     def handleActivate(self):
         for g in self.gs:
-            self.groups += [self.joinGroup("TheGroup","g_%c" % g)]
+            group = self.joinGroup("TheGroup","g_%c" % g)
+            self.groups += [group]
+            self.logger.info("joined group[%s]: %s" % (group.getGroupName(),str(group.getGroupId())))
 
     def handleGroupMessage(self,group):
         assert (group in self.groups)
@@ -72,14 +74,14 @@ class Groupie(Component):
         assert (group in self.groups)
         msg = group.recv_pyobj()
         identity = group.identity
-        self.logger.info('handleMessageToLeader() %s:%s of %s = # %s #' % (self.name,str(identity),group.getGroupId(),str(msg)))
-        rsp = "to member from leader of %s = %s" % (group.getGroupId(),msg[::-1])
+        self.logger.info('handleMessageToLeader() %s:%s of %s = # %s #' % (self.name,str(identity),group.getGroupName(),str(msg)))
+        rsp = "to member from leader of %s = %s" % (group.getGroupName(),msg[::-1])
         group.sendToMember_pyobj(rsp,identity)
         
     def handleMessageFromLeader(self,group):
         assert (group in self.groups)
         msg = group.recv_pyobj()
-        rsp = "from leader of %s to member %s = # %s #" % (group.getGroupId(),self.name,msg[::-1])
+        rsp = "from leader of %s to member %s = # %s #" % (group.getGroupName(),self.name,msg[::-1])
         self.logger.info('handleMessageFromLeader()  %s' % rsp)
         
     def handleVoteRequest(self,group,rfcId):
@@ -100,4 +102,21 @@ class Groupie(Component):
         assert (group in self.groups)
         self.logger.info('handleVoteResult[%s] = %s ' % (str(rfcId),str(vote)))
 
+    def handleMemberJoined(self,group,memberId):
+        assert (group in self.groups)
+        self.logger.info('handleMemberJoined[%s]: %s' % (group.getGroupName(),str(memberId)))
+    
+    def handleMemberLeft(self,group,memberId):
+        assert (group in self.groups)
+        self.logger.info('handleMemberLeft[%s]: %s' % (group.getGroupName(),str(memberId)))
+    
+    def handleLeaderElected(self,group,leaderId):
+        assert (group in self.groups)
+        self.logger.info('handleLeaderElected[%s]: %s' % (group.getGroupName(),str(leaderId)))
+    
+    def handleLeaderExited(self,group,leaderId):
+        assert (group in self.groups)
+        self.logger.info('handleLeaderExited[%s]: %s' % (group.getGroupName(),str(leaderId)))
+        
+        
         

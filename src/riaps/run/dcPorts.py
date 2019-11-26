@@ -1,10 +1,7 @@
 '''
-Distributed coordination 
-
-Communication ports for the groups.
+Distributed coordination - Communication ports for the groups.
 
 Created on Feb 23, 2019
-
 Author: riaps
 '''
 

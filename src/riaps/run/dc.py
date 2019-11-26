@@ -4,7 +4,6 @@ Distributed coordination
 Python implementation of group formation, communications, leader election, consensus and action coordination. 
 
 Created on Feb 23, 2019
-
 Author: riaps
 '''
 
@@ -129,8 +128,10 @@ class GroupThread(threading.Thread):
         self.groupPeerTimeout = const.groupPeerTimeout
         self.groupConsensusTimeout = const.groupConsensusTimeout
         self.timeout = None
-        self.numPeers = -1 
-        
+        self.numPeers = -1
+        self.leader = None
+        self.ownId = None 
+    
     def setup(self):
         self.group.setup(self)
         if self.coordinated:
@@ -292,14 +293,25 @@ class GroupThread(threading.Thread):
             self.pubPort.sendGroup(GroupThread.HEARTBEAT, msg)
             self.lastHeartbeat = now
         
+    def sendChangeMessage(self,change,someId):
+        '''
+        Send message about a change to the component
+        '''
+        msgOut = [zmq.Frame(change),zmq.Frame(someId)]
+        self.groupSocket.send_multipart(msgOut)
+    
     def updatePeers(self,now):
         '''
         Update membership list (with the current time as the last time a peer was heard from)
         '''
+        leavers = []
         for peer in \
-            [peer for peer in self.peers if int((now - self.peers[peer])*1000) > self.groupPeerTimeout]: 
+            [peer for peer in self.peers if int((now - self.peers[peer])*1000) > self.groupPeerTimeout]:
+                leavers += [peer] 
                 del self.peers[peer] 
         self.numPeers = len(self.peers)
+        for leaver in leavers:
+            self.sendChangeMessage(Group.GROUP_MLT,leaver)      # Member dropped out 
     
     def updateTimeout(self,now):
         '''
@@ -322,6 +334,8 @@ class GroupThread(threading.Thread):
         self.checkAllPolls(now)
         if self.state == GroupThread.FOLLOWER:                  # If we are beyond the current election timeout then
             self.logger.info("... FOLLOWER --> CANDIDATE, starting leader election")                     
+            if self.leader != None:
+                self.sendChangeMessage(Group.GROUP_LEX,self.leader) # Leader exited
             self.term += 1                                      # increment term
             self.state = GroupThread.CANDIDATE                  # candidate state
             self.votes = 1                                      # self-vote
@@ -335,6 +349,8 @@ class GroupThread(threading.Thread):
             self.logger.info("... CANDIDATE --> FOLLOWER, timeout on leader election")
             self.state = GroupThread.FOLLOWER                   # follower state
             self.votedFor = None
+            if self.leader != None:
+                self.sendChangeMessage(Group.GROUP_LEX,self.leader) # Leader exited
             self.leader = None
             self.setTimeout(self.randomTimeout(),now)
         elif self.state == GroupThread.LEADER:                  # Leader sends message to inform members: term,id, host, port
@@ -348,6 +364,7 @@ class GroupThread(threading.Thread):
         else:
             self.logger.error("GroupThread.handleTimeout() - in undefined state")
             pass                                                # Error : timeout in unknown state")
+
     
     def handleNetMessage(self,now=None):
         '''
@@ -375,13 +392,15 @@ class GroupThread(threading.Thread):
             assert(now != None)
             frame = msgFrames[1]
             self.logger.info("... [%s].%d:%s", \
-                             self.group.getGroupId(),self.state,cmd.decode('utf-8'))
+                             self.group.getGroupName(),self.state,cmd.decode('utf-8'))
             if cmd == GroupThread.HEARTBEAT:              # Incoming peer heartbeat message
                 try:
                     peer = struct.unpack('!16s',frame)[0]
                 except:
                     self.logger.error("... invalid peer in heartbeat: %s" % str(frame))
                     return
+                if peer not in self.peers:
+                    self.sendChangeMessage(Group.GROUP_MJD,peer)
                 self.peers[peer] = now
                 self.numPeers = len(self.peers)
                 self.updateTimeout(now)
@@ -416,9 +435,12 @@ class GroupThread(threading.Thread):
                     self.logger.info('... leader asserts authority')
                     (_term,_leader,_host,_port) = struct.unpack('!L16sLL',frame)
                     if self.term >= _term and self.leader and self.leader != _leader:
-                        self.logger.error("GroupThread[%s] - leader conflict", self.group.getGroupId()) 
-                    self.term = _term                # update term/leader          
-                    self.leader = _leader               
+                        self.logger.error("GroupThread[%s] - leader conflict", self.group.getGroupName()) 
+                    self.term = _term                           # update term/leader
+                    prevLeader = self.leader
+                    self.leader = _leader    
+                    if prevLeader != _leader:                   # If leader has changed
+                        self.sendChangeMessage(Group.GROUP_LEL,self.leader)             
                     self.votedFor = None                        # clear last vote
                     self.setTimeout(self.randomTimeout(),now)   # Set new election timeout
                     if _port == GroupThread.NO_LEADER:
@@ -445,6 +467,8 @@ class GroupThread(threading.Thread):
                     rsp = struct.pack("!L16sL16s",_term,_node,int(vote),self.ownId)
                     self.pubPort.sendGroup(GroupThread.RSPVOTE, rsp)
                     self.term = _term
+                    if self.leader != None: 
+                        self.sendChangeMessage(Group.GROUP_LEX,self.leader) 
                     self.leader = None
                     self.qryPort.update(None,None)      # disconnect from previous leader (if at all)
                     if vote: self.votedFor = _node
@@ -465,6 +489,8 @@ class GroupThread(threading.Thread):
                         rsp = struct.pack("!L16sL16s",_term,_node,int(True),self.ownId)
                         self.pubPort.sendGroup(GroupThread.RSPVOTE, rsp)
                         self.term = _term
+                        if self.leader != None:
+                            self.sendChangeMessage(Group.GROUP_LEX,self.leader) # Leader exited
                         self.leader = None
                         self.qryPort.update(None,None)      # disconnect from previous leader (if at all)
                         self.votedFor = _node
@@ -480,6 +506,7 @@ class GroupThread(threading.Thread):
                                 self.logger.info("... candidate won election")
                                 self.state = GroupThread.LEADER    
                                 self.leader = self.ownId
+                                self.sendChangeMessage(Group.GROUP_LEL,self.leader) # Tell ourselves that we are elected
                                 self.ansPort.updatePoller(self.poller)      # Update ans socket/poller
                                 self.ansSocket = self.ansPort.getSocket()
                                 self.ldrPort = self.ansPort.getPortNumber()
@@ -492,8 +519,11 @@ class GroupThread(threading.Thread):
                     self.logger.info("... candidate received message from leader")
                     (_term,_leader,_host,_port) = struct.unpack('!L16sLL',frame)
                     self.state = GroupThread.FOLLOWER           # we lost, go back to FOLLOWER
-                    self.term = _term                           # update term/leader            
-                    self.leader = _leader               
+                    self.term = _term                           # update term/leader
+                    prevLeader= self.leader            
+                    self.leader = _leader
+                    if prevLeader != _leader:
+                        self.sendChangeMessage(Group.GROUP_LEL,self.leader)               
                     self.votedFor = None                        # clear last vote
                     _host = ipaddress.IPv4Address(_host).compressed
                     _port = int(_port)
@@ -508,10 +538,10 @@ class GroupThread(threading.Thread):
                 elif cmd == GroupThread.AUTHORITY:
                     (_term,_leader,_host,_port) = struct.unpack('!L16sLL',frame)
                     if self.term == _term and self.ownId != _leader:  
-                        self.logger.error("GroupThread[%s] - leader conflict", self.group.getGroupId())
+                        self.logger.error("GroupThread[%s] - leader conflict", self.group.getGroupName())
                 self.setTimeout(self.groupHeartbeat,now)
         else:
-            self.logger.error("GroupThread[%s] - no coordinated",self.group.getGroupId())
+            self.logger.error("GroupThread[%s] - not coordinated",self.group.getGroupName())
                         
     def startPoll(self,msg,member):
         '''
@@ -660,7 +690,7 @@ class GroupThread(threading.Thread):
         '''
         Main loop for GroupThread - polls all sources and calls handlers
         '''
-        self.logger.info("GroupThread.run() [%s]" % self.group.getGroupId())
+        self.logger.info("GroupThread.run() [%s]" % self.group.getGroupName())
         self.setup()
         self.pubPort = self.group.pubPort
         self.pubSocket = self.pubPort.getSocket()
@@ -733,26 +763,29 @@ class Group(object):
     GROUP_RCM = 'rcm'.encode('utf-8')           # Request consensus from member (by leader)
     GROUP_RTC = 'rtc'.encode('utf-8')           # Reply to consensus request
     GROUP_ANN = 'ann'.encode('utf-8')           # Announce consensus result
-    
+    GROUP_MJD = 'mjd'.encode('utf-8')           # Group member joined
+    GROUP_MLT = 'mlt'.encode('utf-8')           # Group member left
+    GROUP_LEL = 'lel'.encode('utf-8')           # Group leader elected
+    GROUP_LEX = 'lex'.encode('utf-8')           # Group leader exited
 
     
-    def __init__(self,parent,thread,groupType,groupName,componentId,groupSpec):
+    def __init__(self,parent,thread,groupType,groupInstance,componentId,groupSpec):
         self.logger = logging.getLogger(__name__)
         self.parent = parent
         self.thread = thread
         self.context = thread.context
         self.groupType = groupType
-        self.groupName = groupName
+        self.groupInstance = groupInstance
         self.componentId = componentId
         self.groupSpec = groupSpec
-        self.groupId = groupType + '.' + groupName
+        self.groupInstanceName = groupType + '.' + groupInstance
         self.messageType = self.groupSpec['message']
         self.isTimed = self.groupSpec['timed']
         self.kind = self.groupSpec['kind']
         self.coordinated = False if self.kind == "default" else True
         # PAIR socket for the component poller
         self.compSocket = self.context.socket(zmq.PAIR)
-        self.compSocket.bind('inproc://%s' % self.groupSocketName(self.groupType,self.groupName,self.componentId))
+        self.compSocket.bind('inproc://%s' % self.groupSocketName(self.groupType,self.groupInstance,self.componentId))
         # Message queue for group messages
         self.msgQueue = collections.deque()
         # Group thread
@@ -767,16 +800,16 @@ class Group(object):
         comp = self.parent.parent
         partName = comp.getName()
         partType = comp.getTypeName()
-        portName = self.groupId
-        msg = ('group', self.groupType, self.groupName, self.messageType,host,pubPort,partName,partType,portName) 
+        portName = self.groupInstanceName
+        msg = ('group', self.groupType, self.groupInstance, self.messageType,host,pubPort,partName,partType,portName) 
         self.thread.sendControl(msg)
         time.sleep(1.0) # 
     
-    def getGroupId(self):
+    def getGroupName(self):
         '''
-        Group identifier
+        Group unique name
         '''
-        return self.groupId 
+        return self.groupInstanceName 
     
     def getSocket(self):
         '''
@@ -795,14 +828,14 @@ class Group(object):
         Set up all the sockets for the worker thread
         Runs in group thread
         '''
-        self.pubPort = GroupPubPort(self.parent.parent.owner,self.groupId + '_pub',self.groupSpec)
+        self.pubPort = GroupPubPort(self.parent.parent.owner,self.groupInstanceName + '_pub',self.groupSpec)
         self.pubInfo = self.pubPort.setupSocket(groupThread)
-        self.subPort = GroupSubPort(self.parent.parent.owner,self.groupId + '_sub',self.groupSpec)
+        self.subPort = GroupSubPort(self.parent.parent.owner,self.groupInstanceName + '_sub',self.groupSpec)
         self.subInfo = self.subPort.setupSocket(groupThread) 
         if self.coordinated:  
-            self.qryPort = GroupQryPort(self.parent.parent.owner,self.groupId + '_qry',self.groupSpec)
+            self.qryPort = GroupQryPort(self.parent.parent.owner,self.groupInstanceName + '_qry',self.groupSpec)
             self.qryInfo = self.qryPort.setupSocket(groupThread)
-            self.ansPort = GroupAnsPort(self.parent.parent.owner,self.groupId + '_ans',self.groupSpec)
+            self.ansPort = GroupAnsPort(self.parent.parent.owner,self.groupInstanceName + '_ans',self.groupSpec)
             self.ansInfo = self.ansPort.setupSocket(groupThread)
         else:
             self.qryPort = None 
@@ -810,7 +843,7 @@ class Group(object):
             self.ansPort = None
             self.ansInfo = None 
         self.groupSocket = self.context.socket(zmq.PAIR)
-        self.groupSocket.connect('inproc://%s' % self.groupSocketName(self.groupType,self.groupName,self.componentId))
+        self.groupSocket.connect('inproc://%s' % self.groupSocketName(self.groupType,self.groupInstance,self.componentId))
         self.done = True
         
     def update(self,host,port):
@@ -928,6 +961,18 @@ class Group(object):
                     rfvId = ann.ann.rfvId
                     vote  = ann.ann.vote
                     self.parent.parent.handleVoteResult(self,rfvId,vote)    # Call member's message handler
+            elif cmd == Group.GROUP_MJD:
+                memberId = msgFrames[1]
+                self.parent.parent.handleMemberJoined(self,memberId)
+            elif cmd == Group.GROUP_MLT:
+                memberId = msgFrames[1]
+                self.parent.parent.handleMemberLeft(self,memberId)
+            elif cmd == Group.GROUP_LEL:
+                leaderId = msgFrames[1]
+                self.parent.parent.handleLeaderElected(self,leaderId)
+            elif cmd == Group.GROUP_LEX:
+                leaderId = msgFrames[1]
+                self.parent.parent.handleLeaderExited(self,leaderId)
             else:
                 self.logger.error("handleMessage() - unknown control message %s", str(cmd))
         except zmq.error.ZMQError as e:
@@ -1034,10 +1079,16 @@ class Group(object):
     
     def hasLeader(self):
         '''
-        Return True if the group has a leader.
+        True if the group has a leader.
         '''
         return self.groupThread.leader != None
     
+    def getLeaderId(self):
+        '''
+        Return the leader's id (or None if no leader)
+        '''
+        return self.groupThread.leader
+        
     def isLeader(self):
         '''
         Return True if the group member IS the leader.
@@ -1049,6 +1100,9 @@ class Group(object):
         Return the size of the group (>= 1).  
         '''
         return self.groupThread.numPeers + 1 
+    
+    def getGroupId(self):
+        return self.groupThread.ownId
     
     def requestVote(self,topic,kind=Poll.MAJORITY,timeout=None):
         '''
@@ -1185,41 +1239,41 @@ class Coordinator(object):
         self.groupMembers = { } 
         self.groups = { }
 
-    def groupId(self,groupType,groupName):
+    def groupName(self,groupType,groupInstance):
         '''
         Form a name for a group instance
         '''
-        return groupType + '.' + groupName
+        return groupType + '.' + groupInstance
     
-    def joinGroup(self,thread,groupType,groupName,componentId):
+    def joinGroup(self,thread,groupType,groupInstance,componentId):
         '''
         Operation to create a group instance in a component.
         Returns the instance
         '''
-        self.logger.info("Coordinator.joinGroup(%s,%s)" % (groupType,groupName))
+        self.logger.info("Coordinator.joinGroup(%s,%s)" % (groupType,groupInstance))
         # In component thread
-        if not groupName.isidentifier():
-            self.logger.error("Coordinator.joinGroup: invalid group name %s", groupName)
+        if not groupInstance.isidentifier():
+            self.logger.error("Coordinator.joinGroup: invalid group name %s", groupInstance)
             return None
         if groupType not in self.groupTypes:
             self.logger.error("Coordinator.joinGroup: group %s undefined", groupType)
             return None
         else:
             groupSpec = self.groupTypes[groupType]
-        key = self.groupId(groupType,groupName)
+        key = self.groupName(groupType,groupInstance)
         res = None
         if key in self.groupMembers:
             res = self.groupMembers[key]
         else:
-            res = Group(self,thread,groupType,groupName,componentId,groupSpec)
+            res = Group(self,thread,groupType,groupInstance,componentId,groupSpec)
             self.groupMembers[key] = res
         return res
     
-    def getGroup(self,groupType,groupName):
+    def getGroup(self,groupType,groupInstance):
         '''
         Returns a group instance based on its name
         '''
-        key = self.groupId(groupType,groupName)
+        key = self.groupName(groupType,groupInstance)
         return self.groupMembers[key] if key in self.groupMembers else None
 
     def leaveGroup(self,group):
