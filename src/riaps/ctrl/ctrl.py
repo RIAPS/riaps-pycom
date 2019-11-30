@@ -260,6 +260,11 @@ class Controller(object):
                 res = self.clientMap[clientName]
         return res
 
+    def getClients(self):
+        with ctrlLock:
+            res = [client for client in self.clientMap]
+        return res
+                
     def killAll(self):
         for client in self.clientMap.values():
             client.kill()
