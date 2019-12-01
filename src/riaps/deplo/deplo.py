@@ -95,6 +95,7 @@ class DeploService(object):
         if that fails try to access it via the supplied hostname/port arguments. If that fails, sleep a
         little and try again. 
         '''
+        host,port = None,None
         while True:
             self.conn = None
             try:
@@ -110,10 +111,11 @@ class DeploService(object):
                             self.conn = rpyc.connect(host,port,
                                                      config = {"allow_public_attrs" : True})
                     except socket.error as e:
-                        # print(e)
+                        self.logger.info('Failed to connect via rpyc[%s:%s]: %s' % (str(host),str(port),str(e)))
                         pass
                     if self.conn: break
-            except DiscoveryError:
+            except DiscoveryError as e:
+                self.logger.info('Discovery error: %s' % (str(e)))
                 pass
             if self.conn: break
             if self.ctrlrHost and self.ctrlrPort:
@@ -126,7 +128,8 @@ class DeploService(object):
                     else:
                         self.conn = rpyc.connect(self.ctrlrHost,self.ctrlrPort,
                                                  config = {"allow_public_attrs" : True})
-                except socket.error:
+                except socket.error as e:
+                    self.logger.info('Failed to connect via rpyc[%s:%s]: %s' % (str(host),str(port),str(e)))
                     pass
             if self.conn: break
             if retry == False:
@@ -134,6 +137,7 @@ class DeploService(object):
             else:
                 time.sleep(5)
                 continue
+        self.logger.info("connected [%s:%s]" % (str(host),str(port)))
         self.bgsrv = rpyc.BgServingThread(self.conn,self.handleBgServingThreadException)
         resp = None
         try:       
