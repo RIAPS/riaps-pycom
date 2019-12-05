@@ -242,11 +242,10 @@ class Port(object):
     def send(self,msg):
         '''Send a byte array (if possible) out through the port.
 
-        Used for sending a message that has been serialized into a bytearray
-        previously.
+        Used for sending a message that has been serialized into bytes previously.
         
-        :param msg: the message packed into a bytearray
-        :rtype: bytearray
+        :param msg: the message packed into a bytes
+        :rtype: bytes
         
         '''
         pass
@@ -256,8 +255,8 @@ class Port(object):
         
         Used for receiving a message that is subsequently deserialized.
         
-        :return: a message packed into a bytearray.
-        :rtype: bytearray
+        :return: a message packed into a bytes.
+        :rtype: bytes
         
         '''
         return None
@@ -267,12 +266,12 @@ class Port(object):
         Subclasses can override this operation.
         
         If the message is to be sent as a Python object, it is pickled; otherwise
-        it is assumed to be a bytearray. The message is packed into a frame, and, 
+        it is assumed to be a bytes. The message is packed into a frame, and, 
         if the port is 'timed' a current timestamp is appended as another frame.
         The message is sent as a multi-part message. 
         
         :param msg: message to be sent
-        :type msg: either a bytearray or any Python data object  
+        :type msg: either a bytes or any Python data object  
         :param is_pyobj: flag to indicate if the message is a Python object.
         :type is_pyobj: bool 
         
@@ -303,7 +302,7 @@ class Port(object):
         The message is received as a multi-part message.If the receiving port is
         timed, the current timestamp is saved as the time of message reception.
         If the message is to be received as a Python object, it is unpickled,
-        otherwise the message is returned as is (as a bytearray).
+        otherwise the message is returned as is (as a bytes).
         If the message included a timestamp, it is retrieved and saved as the
         time of message sending.         
  
@@ -311,7 +310,7 @@ class Port(object):
         :type is_pyobj: bool 
         
         :return: the message received 
-        :type msg: either a bytearray or any Python data object 
+        :type msg: either a bytes or any Python data object 
         
         :except: Throws a ``PortError`` exception when the underlying network operation fails.  
            

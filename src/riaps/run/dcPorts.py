@@ -270,7 +270,7 @@ class GroupAnsPort(Port):
         try:
             sendMsg = [zmq.Frame(self.identity)]    # Identity
             sendMsg += [zmq.Frame(msgType)]
-            sendMsg += [zmq.Frame(msg)]             # Take bytearray  
+            sendMsg += [zmq.Frame(msg)]             # Take bytes  
             if self.isTimed:
                 now = time.time()
                 now = struct.pack("d", now)

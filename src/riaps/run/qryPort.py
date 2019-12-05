@@ -107,7 +107,7 @@ class QryPort(Port):
     
     def recv(self):
         '''
-        Receive an bytearray through this port
+        Receive a bytes through this port
         '''
         if self.serverHost == None or self.serverPort == None:
             return None
@@ -115,7 +115,7 @@ class QryPort(Port):
     
     def send(self, msg):
         '''
-        Send a bytearray through this port
+        Send bytes through this port
         '''
         if self.serverHost == None or self.serverPort == None:
             return None

@@ -98,7 +98,7 @@ class AnsPort(Port):
             if is_pyobj:
                 payload = zmq.Frame(pickle.dumps(msg))  # Pickle python payload
             else:
-                payload = zmq.Frame(msg)                # Take bytearray                        
+                payload = zmq.Frame(msg)                # Take bytes                        
             sendMsg += [payload]
             if self.isTimed:
                 now = time.time()

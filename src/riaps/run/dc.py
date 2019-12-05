@@ -893,10 +893,10 @@ class Group(object):
 
     def send(self,msg):
         '''
-        Sends a bytearray object as a message to all members of the group
+        Sends a bytes object as a message to all members of the group
         Runs in component thread
         '''
-        assert(type(msg) == bytearray)
+        assert(type(msg) == bytes)
         return self.send_port(Group.GROUP_MSG,msg)
     
     def handleMessage(self,msgFrames=None):
@@ -1004,7 +1004,7 @@ class Group(object):
     
     def recv(self):
         '''
-        Receive a bytearray object message from the worker thread
+        Receive a bytes object message from the worker thread
         Runs in component thread, called from a component
         '''
         return self.recv_msg(False)
@@ -1019,7 +1019,7 @@ class Group(object):
         if not self.groupThread.coordinated:
             raise PortError("sendToLeader error: group is not coordinated")
         if self.groupThread.leader:
-            assert(type(msg) == bytearray)
+            assert(type(msg) == bytes)
             return self.send_port(Group.GROUP_MTL,msg)
         else:
             return False
@@ -1072,7 +1072,7 @@ class Group(object):
             if identity != None:
                 self.identity = identity
             assert(self.identity != None)
-            assert(type(msg) == bytearray) 
+            assert(type(msg) == bytes) 
             return self.send_port(Group.GROUP_MFL,msg,True)
         else:
             return False
@@ -1106,14 +1106,14 @@ class Group(object):
     
     def requestVote(self,topic,kind=Poll.MAJORITY,timeout=None):
         '''
-        Request a vote on a topic (with timeout). Topic is a bytearray.
+        Request a vote on a topic (with timeout). Topic is a bytes.
         A message is sent to the leader (if any) that starts a voting process.
         Returns None if there is no leader, otherwise a generated id string for the request.  
         '''
         if not self.groupThread.coordinated:
             raise PortError("requestVote error: group is not coordinated")
         if self.groupThread.leader:
-            assert(type(topic) == bytearray)
+            assert(type(topic) == bytes)
             assert(timeout == None or type(timeout) == float) 
             rfvId = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
             msg = dc_capnp.GroupVote.new_message()
@@ -1176,7 +1176,7 @@ class Group(object):
         if not self.groupThread.coordinated:
             raise PortError("requestActionVote error: group is not coordinated")
         if self.groupThread.leader:
-            assert(type(action) == bytearray)
+            assert(type(action) == bytes)
             assert(type(when) == float)
             assert(timeout == None or type(timeout) == float) 
             rfvId = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
