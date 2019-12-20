@@ -65,6 +65,7 @@ class AppInfo(object):
         self.model = model
         self.depl= depl
         self.status = status
+        self.clients = []
     
 ctrlLock = RLock()
 
@@ -209,8 +210,9 @@ class Controller(object):
         if res.ready:
             value = res.value
             if not value: return
-            self.addRecoveredAppInfo(value)
-            self.gui.update_node_apps(clientName,value)
+            data = value 
+            self.addRecoveredAppInfo(data,client)
+            self.gui.update_node_apps(clientName,data)
         else:
             exe = functools.partial(self.updateClient,  # Keep waiting if result not ready yet
                                     clientName=clientName,client=client,res=res)
@@ -557,7 +559,7 @@ class Controller(object):
         appNameJSON = appName + ".json"
         
         if (appInfo.model == None) or (appInfo.depl == None):
-            self.log("Error: Mismatched model or deployment for app '%s'" % appName)
+            self.log("Error: Missing model or deployment for app '%s'" % appName)
             return noresult
         
         if appName not in appInfo.model:
@@ -826,7 +828,12 @@ class Controller(object):
         os.remove(const.sigFile)
             
     def removeApp(self, appName):
-        files, libraries, clients, _depls = self.buildDownload(appName)
+        status = self.appInfo[appName].status if appName in self.appInfo else AppStatus.NotLoaded
+        if status == AppStatus.Loaded: 
+            files, libraries, clients, _depls = self.buildDownload(appName)
+        elif status == AppStatus.Recovered:
+            # If it was recovered, we have only clients and appName. 
+            files, libraries, clients = [], [], self.appInfo[appName].clients
         self.removeSignature()
         with ctrlLock:
             for client in clients:
@@ -850,14 +857,12 @@ class Controller(object):
         self.riaps_appFolder = appFolderPath
         os.chdir(appFolderPath)
     
-    def addRecoveredAppInfo(self,value):
-        for appName in value.keys():
-            actors = value[appName]
+    def addRecoveredAppInfo(self,data,client):
+        for item in data:
+            appName,_actors = item[0],item[1]
             if appName not in self.appInfo:
                 self.appInfo[appName] = AppInfo(model=None,depl=None,appFolder=None,status = AppStatus.Recovered)
-                # TODO: Attempt to locate app folder, model, depl; update record
-            else:
-                self.appInfo[appName] = AppStatus.Loaded
+            self.appInfo[appName].clients += [client]
     
     def compileApplication(self,appModelName,appFolder):
         '''

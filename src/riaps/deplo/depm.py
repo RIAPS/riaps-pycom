@@ -814,6 +814,7 @@ class DeploymentManager(threading.Thread):
                 reply[appName] = actors
             else:
                 reply[appName] = [actorName]
+        reply = list(reply.items())
         return reply
     
     def reclaimApp(self,msg):

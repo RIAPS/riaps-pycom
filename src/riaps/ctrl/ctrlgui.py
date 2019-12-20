@@ -361,15 +361,16 @@ class ControlGUIClient(object):
         actor = info[4]
         self.launch_app(node, app, actor)
         
-    def update_node_apps(self,clientName,value):
+    def update_node_apps(self,clientName,data):
         '''
         Update the gui with list of apps running on the client 
         '''
         global guiLock
         with guiLock:
-            if not value: return
-            for appName in value.keys():
-                actors = value[appName]
+            if not data: return
+            for item in data:
+                appName,actors = item[0],item[1] 
+                self.add_app(appName)
                 for actorName in actors:
                     self.launch_app(clientName,appName,actorName)
                     self.controller.addToLaunchList(clientName,appName,actorName)
