@@ -697,15 +697,22 @@ class GroupThread(threading.Thread):
         self.subPort = self.group.subPort
         self.subSocket = self.subPort.getSocket()
         self.groupSocket = self.group.groupSocket
-        self.qryPort = self.group.qryPort
-        self.qrySocket = self.qryPort.getSocket()
-        self.ansPort = self.group.ansPort
-        self.ansSocket = self.ansPort.getSocket()
+        if self.coordinated:
+            self.qryPort = self.group.qryPort
+            self.qrySocket = self.qryPort.getSocket()
+            self.ansPort = self.group.ansPort
+            self.ansSocket = self.ansPort.getSocket()
+        else:
+            self.qryPort = None
+            self.qrySocket = None
+            self.ansPort = None
+            self.ansSocket = None
         self.poller  = zmq.Poller()
         self.poller.register(self.groupSocket,zmq.POLLIN)
         self.poller.register(self.subSocket,zmq.POLLIN)
-        self.poller.register(self.qrySocket,zmq.POLLIN)
-        self.poller.register(self.ansSocket,zmq.POLLIN)
+        if self.coordinated:
+            self.poller.register(self.qrySocket,zmq.POLLIN)
+            self.poller.register(self.ansSocket,zmq.POLLIN)
         
         if self.coordinated:
             time.sleep(self.randomTimeout()/1000.0)            # Initial random sleep
