@@ -25,11 +25,11 @@ import yaml
 import ipaddress
 import tempfile
 import shutil
-from collections import namedtuple
+# from collections import namedtuple
 from Cryptodome.PublicKey import RSA
 from Cryptodome.Signature import PKCS1_v1_5
 from Cryptodome.Hash import SHA256
-import zmq
+# import zmq
 import zmq.auth
 from threading import RLock
 from enum import Enum, auto, unique 
@@ -45,11 +45,11 @@ from riaps.lang.lang import compileModel
 from riaps.lang.depl import DeploymentModel
 from riaps.run.exc import BuildError
 
-import gi
+# import gi
 import tarfile
 
-gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk
+# gi.require_version('Gtk', '3.0')
+# from gi.repository import Gtk
 
 # App status
 @unique
@@ -322,11 +322,11 @@ class Controller(object):
                 
     def startClientSession(self,client):
         hostName = client.name
-        hostKey = None
+        _hostKey = None
         hostKeyType = None
         if hostName in self.hostKeys:
             hostKeyType = self.hostKeys[hostName].keys()[0]
-            hostKey= self.hostKeys[hostName][hostKeyType]
+            _hostKey= self.hostKeys[hostName][hostKeyType]
             self.logger.info('Using host key of type %s' % hostKeyType)
         try:
             port = const.ctrlSSHPort
@@ -337,7 +337,7 @@ class Controller(object):
             self.logger.info('out of authenticate')
             if not t.is_authenticated():
                 self.logger.warning ('RSA key auth failed!') 
-                # t.connect(username=username, password=password, hostkey=hostkey)
+                # t.connect(username=username, password=password, hostkey=_hostkey) # Fallback
                 return None
             return t
         except Exception as e:
@@ -394,11 +394,11 @@ class Controller(object):
         if transport == None:
             return False
         try:
-            sftpSession = transport.open_session()
+            _sftpSession = transport.open_session()
             sftpClient = RSFTPClient.from_transport(transport)
             
-            appFolder = self.appInfo[appName].appFolder
-            dirRemote = os.path.join(client.appFolder,appName)
+            _appFolder = self.appInfo[appName].appFolder
+            _dirRemote = os.path.join(client.appFolder,appName)
            
             appFolderRemote = client.appFolder # os.path.join(client,appFolder)
             for fileName in [tgz_file,sha_file]:
@@ -785,7 +785,7 @@ class Controller(object):
         if transport == None:
             return False
         try:
-            sftpSession = transport.open_session()
+            _sftpSession = transport.open_session()
             sftpClient = paramiko.SFTPClient.from_transport(transport)
             
             dirRemote = os.path.join(client.appFolder, appName)
@@ -829,6 +829,7 @@ class Controller(object):
             
     def removeApp(self, appName):
         status = self.appInfo[appName].status if appName in self.appInfo else AppStatus.NotLoaded
+        files,libraries,clients = [],[],[]
         if status == AppStatus.Loaded: 
             files, libraries, clients, _depls = self.buildDownload(appName)
         elif status == AppStatus.Recovered:

@@ -26,6 +26,7 @@ import os
 import ipaddress
 import importlib
 import yaml
+import prctl
 from czmq import Zsys
 from riaps.utils import spdlog_setup
 from riaps.utils.config import Config
@@ -129,6 +130,25 @@ class Actor(object):
                 "timed" : group["timed"]
             }
 
+        self.rt_actor = self.model.get("real-time")         # If real time actor, set scheduler (if specified)
+        if self.rt_actor:
+            sched = self.model.get("scheduler")
+            if (sched):
+                _policy = sched.get("policy")
+                policy = { "rr" : os.SCHED_RR, "pri" : os.SCHED_FIFO}.get(_policy,None)
+                priority = sched.get("priority",None)
+                if policy and priority:
+                    try:
+                        param = os.sched_param(priority)
+                        os.sched_setscheduler(0,policy,param)
+                    except Exception as e:
+                        self.logger.error("Can't set up real-time scheduling '%r %r':\n   %r" % (_policy,priority,e))
+            try:
+                prctl.cap_effective.limit()                     # Drop all capabilities
+                prctl.cap_permitted.limit()
+                prctl.cap_inheritable.limit()
+            except Exception as e:
+                self.logger.error("Error while dropping capabilities")
         self.components = {}
         instSpecs = self.model["instances"]
         compSpecs = gModel["components"]
@@ -158,7 +178,7 @@ class Actor(object):
                         self.components[instName] = modObj.create_component_py(self,self.model,
                                                                                typeSpec,instName,
                                                                                instType,instArgs,
-                                                                               self.appName,self.name, groups)
+                                                                               self.appName,self.name,groups)
                     else:
                         self.components[instName]= Part(self,typeSpec,instName, instType, instArgs)
                 else: 

@@ -444,7 +444,7 @@ class GroupThread(threading.Thread):
                     self.votedFor = None                        # clear last vote
                     self.setTimeout(self.randomTimeout(),now)   # Set new election timeout
                     if _port == GroupThread.NO_LEADER:
-                        _host, _port = None, None
+                        _host, _port = None, None               # Will this ever happen?
                     else:
                         _host = ipaddress.IPv4Address(_host).compressed
                         _port = int(_port)

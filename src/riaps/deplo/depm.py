@@ -23,6 +23,7 @@ import functools
 import tarfile
 import yaml
 import socket
+import prctl
 
 import capnp
 from concurrent.futures.thread import ThreadPoolExecutor
@@ -226,17 +227,27 @@ class DeploymentManager(threading.Thread):
         return user_env
 
     @staticmethod
-    def demote(user_uid,user_gid,is_su):
+    def demote(is_su,rt_actor,user_uid,user_gid):
         ''' 
         Demote the user (actor) process from root to user_uid/gid  
         '''
         def result():
             if is_su:
+                if rt_actor:
+                    prctl.cap_inheritable.sys_nice = True
+                    prctl.cap_permitted.sys_nice = True
+                    prctl.securebits.keep_caps = True
+                    prctl.set_ambient(prctl.CAP_SYS_NICE,True)
                 os.setgid(user_gid)
                 os.setuid(user_uid)
+                if rt_actor:
+                    prctl.cap_permitted.limit(prctl.CAP_SYS_NICE)
+                    prctl.cap_inheritable.sys_nice = True
+                    prctl.cap_permitted.sys_nice = True
+                    prctl.cap_effective.sys_nice = True
+                    prctl.set_ambient(prctl.CAP_SYS_NICE,True)
         return result
     
-
     def connectDisco(self):
         '''
         Set up and connect the ZMQ socket for communicating with the 
@@ -265,14 +276,14 @@ class DeploymentManager(threading.Thread):
         command = [disco_prog,disco_arg1,disco_arg2]
         try:
             self.disco = psutil.Popen(command,
-                                      preexec_fn=self.demote(user_uid, user_gid,self.is_su), 
+                                      preexec_fn=self.demote(is_su,False,user_uid, user_gid), 
                                       cwd=user_cwd, env=user_env)
     
         except FileNotFoundError:
             try:
                 command = ['python3',disco_mod] + command[1:]
                 self.disco = psutil.Popen(command,
-                                          preexec_fn=DeploymentManager.demote(user_uid, user_gid,self.is_su), 
+                                          preexec_fn=DeploymentManager.demote(is_su,False,user_uid, user_gid), 
                                           cwd=user_cwd, env=user_env)    
             except:
                 self.logger.error("Error while starting disco: %s" % sys.exc_info()[0])
@@ -567,6 +578,7 @@ class DeploymentManager(threading.Thread):
         if not os.path.isdir(appFolder):
             raise BuildError('App folder is missing: %s' % appFolder)
     
+        rt_actor = self.isRealTime(appName,actorName)
         componentTypes = self.getComponentTypes(appName, actorName)
         if len(componentTypes) == 0:
             self.logger.warning('Actor has no components: %s.%s.' % (appName,actorName))
@@ -611,7 +623,7 @@ class DeploymentManager(threading.Thread):
         self.logger.info("Launching %s " % str(command))
         try:
             proc = psutil.Popen(command,
-                                preexec_fn=self.demote(user_uid, user_gid,self.is_su), 
+                                preexec_fn=self.demote(self.is_su,rt_actor,user_uid, user_gid), 
                                 cwd=user_cwd, env=user_env,
                                 stdout=logFile,stderr=subprocess.STDOUT)
         except (FileNotFoundError,PermissionError):
@@ -622,7 +634,7 @@ class DeploymentManager(threading.Thread):
                 # else:
                 #    command = [riaps_prog] + command[1:]
                 proc = psutil.Popen(command,
-                                    preexec_fn=self.demote(user_uid, user_gid,self.is_su), 
+                                    preexec_fn=self.demote(self.is_su,rt_actor,user_uid, user_gid), 
                                     cwd=user_cwd, env=user_env,
                                     stdout=logFile,stderr=subprocess.STDOUT)
             except:
@@ -671,6 +683,10 @@ class DeploymentManager(threading.Thread):
         for lib in libraries:
             app_libs += [lib['name']]
         return app_libs
+        
+    def isRealTime(self,appName,actorName):
+        actorModel = self.getActorModel(appName,actorName)
+        return actorModel["real-time"] if "real-time" in actorModel else False
         
     def getComponentTypes(self,appName, actorName):
         '''

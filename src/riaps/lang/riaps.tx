@@ -163,14 +163,21 @@ ActualValue:
 
 // Application actor
 Actor:
+  (rt ?= 'real-time') 
   'actor' name=ID
    ( '(' formals*=Formal[','] ')' )? 
   '{'
     ( 'local' locals*=[Message][','] ';' )? 		// Optional: local messages (stay within the host)
     ( 'internal' internals*=[Message][','] ';' )? 	// Optional: internal messages (stay within the actor)
     ( 'uses' '{' usage*=Usage '}' )?				// Optional: resource usage 
+    ( 'scheduler' scheduler=Scheduler ';' )?		// Optional: scheduler
     '{' instances+=Instance '}'
   '}'
+;
+
+// Scheduler
+Scheduler:
+	(rr ?= 'rr' | ('priority' priority=INT))
 ;
 
 // Usage:
