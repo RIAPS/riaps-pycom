@@ -30,13 +30,14 @@ class Port(object):
  
     '''
 
-    def __init__(self, parentPart, portName):
+    def __init__(self, parentPart, portName, portSpec=None):
         '''
         Constructor
         '''
         self.logger = logging.getLogger(__name__)
         self.parent = parentPart
         self.name = portName
+        self.index = portSpec.get('index',None) if portSpec else None
         self.context = parentPart.appContext
         (self.public_key,self.private_key) = (parentPart.parent.public_key,parentPart.parent.private_key)
         self.security = (self.public_key != None) and (self.private_key != None)
@@ -95,6 +96,17 @@ class Port(object):
         '''
         return self.deadline
 
+    def getIndex(self):
+        ''' Return the index of the port.
+        
+        For input ports the index is a small integer indicating its position in the port list of the component, for non-input ports it is None.
+        The index is used to determine the priority order for the port among all the ports, the concrete value is irrelevant. 
+        
+        :return: Index value for the port among all input ports.
+        :rtype: int
+        '''
+        return self.index
+        
     def getLocalIface(self):
         '''Return the IP address of the local network interface (typically 127.0.0.1)
         

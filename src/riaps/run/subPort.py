@@ -23,7 +23,7 @@ class SubPort(Port):
         '''
         Constructor
         '''
-        super(SubPort,self).__init__(parentComponent,portName)
+        super(SubPort,self).__init__(parentComponent,portName,portSpec)
         self.type = portSpec["type"]
         self.isTimed = portSpec["timed"]
         self.deadline = portSpec["deadline"] * 0.001 # msec

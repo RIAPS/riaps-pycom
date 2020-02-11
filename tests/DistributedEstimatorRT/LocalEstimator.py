@@ -18,23 +18,31 @@ class LocalEstimator(Component):
     def handleActivate(self):
         self.logger.info("activate: UUID = %s" % self.getUUID())
     
-    def on_ready(self):
-        msg = self.ready.recv_pyobj()
-        self.logger.info("on_ready():%s [%d]" % (msg, self.pid))
+    def do_query(self):
         while self.pending > 0:     # Handle the case when there is a pending request
             self.on_query()
         msg = "sensor_query"
         if self.query.send_pyobj(msg):
-            self.pending += 1 
+            self.pending += 1
+               
+    def on_ready(self):
+        msg = self.ready.recv_pyobj()
+        self.logger.info("on_ready():%s [%d]" % (msg, self.pid))
+        self.do_query()
     
     def on_query(self):
-        self.logger.info("on_query() -> ")
         msg = self.query.recv_pyobj()
         self.logger.info("on_query():%s" % msg)
         self.pending -= 1
         msg = "local_est(" + str(self.pid) + ")"
         self.estimate.send_pyobj(msg)
     
+    def on_tick(self):
+        self.logger.info("on_tick() -> ")
+        msg_now = self.tick.recv_pyobj()
+        self.do_query()
+
+        
     def handleNICStateChange(self, state):
         self.logger.info("NIC is %s" % state)
         

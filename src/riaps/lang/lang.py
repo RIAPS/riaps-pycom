@@ -116,9 +116,12 @@ class RiapsModel2JSON(object):
                 compObj["name"] = comp.name
                 compObj["formals"] = self.getFormals(comp.formals)
                 compObj["language"] = self.getImpl(comp)
+                compObj["scheduler"] = self.getComponentScheduler(comp.scheduler)
                 compObj["ports"] = self.getPorts(comp.ports)
                 res[comp.name] = compObj
         return res
+    def getComponentScheduler(self,sched):
+        return sched if sched in ('priority','rr') else 'default'
     def getPorts(self,ports):
         pubs = {}
         subs = {}
@@ -220,7 +223,7 @@ class RiapsModel2JSON(object):
             actObj["locals"] = self.getLocals(act.locals)
             actObj["internals"] = self.getInternals(act.internals)
             actObj["usage"] = self.getUsage(act.usage)
-            actObj["scheduler"] = self.getSched(act.scheduler)
+            actObj["scheduler"] = self.getActorScheduler(act.scheduler)
             actObj["instances"] = self.getInstances(act.instances)
 #            actObj["wires"] = self.getWires(act.wires)
             res[act.name] = actObj
@@ -311,7 +314,7 @@ class RiapsModel2JSON(object):
         return { "cpu" : cpuUsage , "mem" : memUsage, 
                 "spc" : spcUsage , "net" : netUsage
                 }
-    def getSched(self,sched):
+    def getActorScheduler(self,sched):
         res = { }
         if sched: 
             if sched.rr:

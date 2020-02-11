@@ -72,6 +72,7 @@ class Part(object):
         # self.control = None
         self.thread = None
         self.buildAllPorts(self.type["ports"])      # Build all the ports of the component
+        self.scheduler = self.type.get("scheduler","default")
         self.state = Part.State.Initial
         
     def getName(self):
