@@ -10,7 +10,8 @@ ip route add 192.168.56.0/24 via 192.168.57.126
 
 # Launch deplo as root
 # RIAPSDEV is set if it is a platform development environment, otherwise it is an app development environment. 
-[ -z "$RIAPSDEV" ] && echo "source setup.node ; riaps_deplo" | sudo -E -s -u root ||  echo "source setup.node ; cd $RIAPSHOME/..; export PYTHONPATH=$RIAPSHOME/..; python3 riaps/riaps_deplo.py" | sudo -E -s -u root  
+export LOC=`dirname $(readlink -f $0)`
+[ -z "$RIAPSDEV" ] && echo "source $LOC/setup.node ; riaps_deplo" | sudo -E -s -u root ||  echo "source $LOC/setup.node ; cd $RIAPSHOME/..; export PYTHONPATH=$RIAPSHOME/..; python3 riaps/riaps_deplo.py" | sudo -E -s -u root  
 
 
 # Deprecated: change to (non-privileged) 'riaps' user (replace 'root' with 'riaps' above)
