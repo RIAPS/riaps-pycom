@@ -542,6 +542,8 @@ class Controller(object):
             _tag = repo.create_tag(path, ref, 'riaps deplo @ %s' % dateTime)
         except git.exc.InvalidGitRepositoryError:
             pass
+        except:
+            self.log("Error: git tag failed")
         home = os.getcwd()
 
         with open(const.appDescFile,'w') as f:
