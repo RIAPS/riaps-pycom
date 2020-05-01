@@ -7,6 +7,7 @@ Actors are processes that act as shells for components that run in their own thr
 from .part import Part
 from .peripheral import Peripheral
 from .exc import BuildError
+import sys
 import zmq
 import time
 from riaps.run.disco import DiscoClient
@@ -25,6 +26,7 @@ import os
 import ipaddress
 import importlib
 import yaml
+import prctl
 from czmq import Zsys
 from riaps.utils import spdlog_setup
 from riaps.utils.config import Config
@@ -87,7 +89,7 @@ class Actor(object):
                     content = yaml.load(f, Loader=yaml.Loader)
                     hosts += content.hosts
             except:
-                pass
+                self.logger.error("Error loading app descriptor:%s",str(sys.exc_info()[1]))
 
             self.auth = ThreadAuthenticator(self.appContext)
             self.auth.start()
@@ -119,6 +121,34 @@ class Actor(object):
         for messageSpec in internals:
             self.internalNames.append(messageSpec["type"])
             
+        groups = gModel["groups"]
+        self.groupTypes = {} 
+        for group in groups:
+            self.groupTypes[group["name"]] = { 
+                "kind" : group["kind"],
+                "message" :  group["message"],
+                "timed" : group["timed"]
+            }
+
+        self.rt_actor = self.model.get("real-time")         # If real time actor, set scheduler (if specified)
+        if self.rt_actor:
+            sched = self.model.get("scheduler")
+            if (sched):
+                _policy = sched.get("policy")
+                policy = { "rr" : os.SCHED_RR, "pri" : os.SCHED_FIFO}.get(_policy,None)
+                priority = sched.get("priority",None)
+                if policy and priority:
+                    try:
+                        param = os.sched_param(priority)
+                        os.sched_setscheduler(0,policy,param)
+                    except Exception as e:
+                        self.logger.error("Can't set up real-time scheduling '%r %r':\n   %r" % (_policy,priority,e))
+            try:
+                prctl.cap_effective.limit()                     # Drop all capabilities
+                prctl.cap_permitted.limit()
+                prctl.cap_inheritable.limit()
+            except Exception as e:
+                self.logger.error("Error while dropping capabilities")
         self.components = {}
         instSpecs = self.model["instances"]
         compSpecs = gModel["components"]
@@ -148,7 +178,7 @@ class Actor(object):
                         self.components[instName] = modObj.create_component_py(self,self.model,
                                                                                typeSpec,instName,
                                                                                instType,instArgs,
-                                                                               self.appName,self.name)
+                                                                               self.appName,self.name,groups)
                     else:
                         self.components[instName]= Part(self,typeSpec,instName, instType, instArgs)
                 else: 
@@ -449,7 +479,7 @@ class Actor(object):
                     if s in self.controls.values():
                         part = self.controlMap[id(s)]
                         msg = s.recv_pyobj()                # receive python object from component
-                        self.handleEventReport(part,msg)    # Report event
+                        self.handleReport(part,msg)         # handle report
                     toDelete += [s]
                 for s in toDelete:
                     del sockets[s]
@@ -479,6 +509,9 @@ class Actor(object):
             if scope == "local":
                 assert host == self.localHost
             self.updatePart(instanceName,portName,host,port)    # Update the selected part
+        elif which == 'groupUpdate':
+            msg = msg.groupUpdate
+            self.logger.info('handleServiceUpdate():groupUpdate')
     
     def updatePart(self,instanceName,portName,host,port):
         '''
@@ -584,15 +617,21 @@ class Actor(object):
         for component in self.components.values():
             component.handleNetLimit()
     
-    def handleEventReport(self,part,msg):
-        '''Handle event report from a part
-        
-        The event report is forwarded to the deplo service. 
+    def handleReport(self,part,msg):
+        '''Handle report from a part
+        If it is a group message, it is forwarded to the disco service,
+        otherwise it is forwarded to the deplo service. 
         '''
         partName = part.getName()
         typeName = part.getTypeName() 
-        bundle = (partName,typeName,) + (msg,)
-        self.deplc.reportEvent(bundle)
+        if msg[0] == 'group':
+            result = self.disco.registerGroup(msg)
+            for res in result:
+                (partName,portName,host,port) = res
+                self.updatePart(partName,portName,host,port)
+        else:
+            bundle = (partName,typeName,) + (msg,)
+            self.deplc.reportEvent(bundle)
             
     def terminate(self):
         '''Terminate all functions of the actor. 

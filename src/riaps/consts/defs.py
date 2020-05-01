@@ -25,7 +25,7 @@ const.depmSendTimeout = 3000
 # Timeout for actor/device start by deplo (sec)
 const.depmStartTimeout = 1.0
 # Timeout for actor/device termination by deplo (sec)
-const.depmTermTimeout = 3.0
+const.depmTermTimeout = 5.0
 
 # Fault monitor endpoints
 const.fmNICMonitorEndpoint = 'inproc://fm-nic'
@@ -78,5 +78,12 @@ const.appCertFile = 'riaps-app.cert'
 
 # Log configuration
 const.logConfFile = 'riaps-log.conf'
+
+# Group coordination: default timing values (in msec)
+const.groupHeartbeat = 1000                 # Group heartbeat period
+const.groupElectionMin = 1500               # Minimum leader election timeout
+const.groupElectionMax = 2000               # Maximum leader election timeout
+const.groupPeerTimeout = 3000               # Peer is declared lost after this timeout
+const.groupConsensusTimeout = 1500          # Deadline for consensus vote 
 
 

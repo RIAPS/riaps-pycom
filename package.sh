@@ -1,6 +1,7 @@
 rm -rf package
 source version.sh
 mkdir -p package/riaps-pycom-amd64/DEBIAN
+mkdir -p package/riaps-pycom-amd64/usr/local/bin/
 mkdir -p package/riaps-pycom-amd64/etc/
 mkdir -p package/riaps-pycom-amd64/etc/riaps/
 mkdir -p package/riaps-pycom-amd64/opt/riaps-pycom/
@@ -9,6 +10,7 @@ mkdir -p package/riaps-pycom-amd64/usr/local/riaps/lang/
 
 cp -r DEBIAN/amd64/pkgfiles/* package/riaps-pycom-amd64/DEBIAN/.
 cp -r DEBIAN/amd64/etc/* package/riaps-pycom-amd64/etc/.
+cp -r DEBIAN/amd64/usr/* package/riaps-pycom-amd64/usr/.
 cp -r src package/riaps-pycom-amd64/opt/riaps-pycom/.
 cp -r src/riaps/etc/riaps.conf package/riaps-pycom-amd64/etc/riaps/.
 cp -r src/riaps/etc/riaps-log.conf package/riaps-pycom-amd64/etc/riaps/.

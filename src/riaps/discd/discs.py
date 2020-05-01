@@ -30,6 +30,7 @@ class DiscoService(object):
         self.suffix = self.macAddress
         self.dbase = DiscoDbase(self.context,dbase)
         self.registrations = {}
+        self.GROUPMSG_RE = re.compile("\w*\@\w*\.\w*")
     
     def setupIfaces(self):
         '''
@@ -193,7 +194,7 @@ class DiscoService(object):
         Construct a key used to lookup a service. Construct also a string that identifies the client of the lookup 
         '''
         # Map the requestor's kind into the provider's kind
-        kindMap = { "sub" : "pub" , "clt" : "srv", "req" : "rep", "rep" : "req", "qry" : "ans"} 
+        kindMap = { "sub" : "pub" , "clt" : "srv", "req" : "rep", "rep" : "req", "qry" : "ans", "gsub" : "gpub"} 
         key = '/' + appName + '/' + msgType + '/' + kindMap[kind]
         if scope == "local":                        # If the request is host-local, add the mac address to the end. Used to 
             key = key + ":" + str(self.macAddress)  # distinguish node-specific local requests. (The database is shared!)
@@ -222,7 +223,6 @@ class DiscoService(object):
         self.logger.info("handleServiceReg: %s,%s,%s,%s,%s,%s,%s" % (appName,appActorName,msgType,kind,scope,host,port))
 
         regKey = self.appActorName(appName, appActorName)
-        clients = []
         
         # if regKey not in self.registrations:
         (key,value) = self.buildInsertKeyValuePair(appName, msgType, kind, scope,host, port)
@@ -275,6 +275,53 @@ class DiscoService(object):
         repBytes = rep.to_bytes()
         self.server.send(repBytes)
     
+#     def makeGroupMessageType(self,msgType,groupType,groupName):
+#         return str(msgType) + '@' + str(groupType) + '.' + str(groupName)
+#     
+#     def isGroupMessageType(self,msg):
+#         return self.GROUPMSG_RE.match(msg)
+#     
+#     def parseGroupMessageType(self,msgName):
+#         msgType,rest = msgName.split('@')
+#         groupType,groupName = rest.split('.')
+#         return (msgType,groupType,groupName)    
+
+    def handleGroupJoin(self,msg):
+        '''
+        Handle the case when a component wants to join a group
+        '''
+        self.logger.info("handleGroupJoin: %s",str(msg))
+        groupJoin = msg.groupJoin
+        appName = groupJoin.appName
+        groupId = groupJoin.groupId
+        groupType = groupId.groupType
+        groupName = groupId.groupName 
+        services = groupJoin.services
+        _componentId = groupJoin.componentId
+        _pid = groupJoin.pid
+        
+#         for s in services:
+#             messageType = s.messageType
+#             address = s.address
+#             (host,port) = address.split(':') 
+#             
+#             regKey = self.appActorName(appName, 'group')
+#             clients = []
+#         
+#             # if regKey not in self.registrations:
+#             groupMessageType = self.makeGroupMessageType(messageType,groupType,groupName)
+#             (key,value) = self.buildInsertKeyValuePair(appName, groupMessageType, "gpub", "global",host, port)
+#             clients = self.dbase.insert(key,value)
+#             self.registrations[regKey].append((key,value))
+#             
+#         
+        rsp = disco_capnp.DiscoRep.new_message()
+        rspMessage = rsp.init('groupJoin')
+        rspMessage.status = "ok"
+
+        rspBytes = rsp.to_bytes()
+        self.server.send(rspBytes)
+        
     def handle(self,msgBytes):
         '''
         Dispatch the request based on the message type
@@ -289,6 +336,8 @@ class DiscoService(object):
             self.handleServiceLookup(msg)
         elif which == 'actorUnreg':
             self.handleActorUnreg(msg)
+        elif which == 'groupJoin':
+            self.handleGroupJoin(msg)
         else:
             pass
         

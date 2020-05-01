@@ -204,7 +204,8 @@ class Mock(MagicMock):
 
 MOCK_MODULES = ['pygtk', 'gtk', 'gobject', 'argparse', 'numpy', 'pandas', 'czmq', 'zyre', 
                 'gi', 'gi.repository', 'pycapnp' , 'spdlog' , 'capnp', 
-                'riaps.proto.deplo_capnp' , 'riaps.proto.disco_capnp', 'apparmor_monkeys']
+                'riaps.proto.deplo_capnp' , 'riaps.proto.disco_capnp', 'riaps.run.dc_capnp',
+                'apparmor_monkeys']
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
    
 

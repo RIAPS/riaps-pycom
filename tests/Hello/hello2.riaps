@@ -1,0 +1,20 @@
+// RIAPS Hello 
+
+app HelloApp {
+	// Message types used in the app
+    message Msg;
+    
+	// Hello component
+    component Hello2 {
+      timer clock 1000; 							
+    }
+    
+     
+    // Actor
+    actor Hello2Actor {
+       local Msg; 
+       {  
+          theHello : Hello2;
+       }
+    }
+}

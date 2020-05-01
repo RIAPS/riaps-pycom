@@ -1,0 +1,30 @@
+// RIAPS Hello 
+
+app HelloPubSub {
+	// Message types used in the app
+    message Msg;
+    
+	// Hello publisher component
+    component HelloPub {
+      timer clock 1000;
+      pub pubPort : Msg; 							
+    }
+    
+    // Hello subscriber component
+    component HelloSub {
+      sub subPort : Msg; 							
+    }
+     
+    // Actor
+    actor HelloPubActor {
+       {  
+         pubHello : HelloPub;
+       }
+    }
+    
+    actor HelloSubActor {
+       {  
+         subHello : HelloSub;
+       }
+    }   
+}

@@ -1,0 +1,14 @@
+// Mininet deployment example
+app DistributedEstimator {
+	host 192.168.57.1 {
+		network any;			// Actors on this host may connect to any Internet node
+	}
+	host all {
+		network dns;			// Actors on this may connect to the domain name service
+	}
+	host 192.168.57.3 {
+		network 192.168.1.1;	// Actors on this host may connect to 192.168.1.1
+	}
+	on all Estimator;
+	on (192.168.57.1) Aggregator(posArg=123,optArg="fromDeployment");
+}

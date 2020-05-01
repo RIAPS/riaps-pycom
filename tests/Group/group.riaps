@@ -4,19 +4,36 @@ app GroupApp {
 	// Message types used in the app
     message Msg;
     
-    group Grouper with leader using Msg; 
+    group TheGroup with leader using Msg; 
       
 	// Component
-    component Groupie {
+    component Groupie(name,gs,tl) {
       timer clock 1000; 							
     }
     
      
     // Actor
-    actor GroupActor {
-       local Msg; 
+    actor GroupActorA(gs='',tl='') {
+    //   local Msg; 
        {  
-          groupie : Groupie;
+          groupie : Groupie(name='A',gs=gs,tl=tl);
        }
     }
+    
+    // Actor
+    actor GroupActorB(gs='',tl='') {
+    //   local Msg; 
+       {  
+          groupie : Groupie(name='B',gs=gs,tl=tl);
+       }
+    }
+
+    // Actor
+    actor GroupActorC(gs='',tl='') {
+    //   local Msg; 
+       {  
+          groupie : Groupie(name='C',gs=gs,tl=tl);
+       }
+    }
+	
 }

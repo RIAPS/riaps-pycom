@@ -26,7 +26,7 @@ Message:
 // Groups used in the application
 Group:
   'group' name=ID (kind=GroupKind)?
-  		  'using' messages*=[Message][','] ';' 
+  		  'using' message=[Message] (timed='timed')? ';' 
 ;
  
  GroupKind:
@@ -58,6 +58,7 @@ Component:
  ( appComponent?='component' | ioComponent?='device') name=ID 
    ( '(' formals*=Formal[','] ')' )? 
    ( 'in' language=Language )?
+   ( 'scheduler' scheduler=ComponentScheduler ';' )?
   '{'
      ports*=Port
   '}'
@@ -73,6 +74,11 @@ FormalDefault:
 
 Number:
 	(INT !FLOAT) | FLOAT
+;
+
+// Component Scheduler
+ComponentScheduler:
+	('rr' | 'priority')
 ;
 
 // Port specs (interaction patterns in comment)
@@ -163,14 +169,21 @@ ActualValue:
 
 // Application actor
 Actor:
+  (rt ?= 'real-time') 
   'actor' name=ID
    ( '(' formals*=Formal[','] ')' )? 
   '{'
     ( 'local' locals*=[Message][','] ';' )? 		// Optional: local messages (stay within the host)
     ( 'internal' internals*=[Message][','] ';' )? 	// Optional: internal messages (stay within the actor)
     ( 'uses' '{' usage*=Usage '}' )?				// Optional: resource usage 
+    ( 'scheduler' scheduler=ActorScheduler ';' )?	// Optional: scheduler
     '{' instances+=Instance '}'
   '}'
+;
+
+// Actor Scheduler
+ActorScheduler:
+	(rr ?= 'rr' | ('priority' priority=INT))
 ;
 
 // Usage:

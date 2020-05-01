@@ -15,6 +15,7 @@ from rpyc.utils.server import ThreadedServer
 from rpyc.utils.authenticators import SSLAuthenticator
 from riaps.utils.config import Config
 import ssl
+import traceback
 
 rpyc.core.protocol.DEFAULT_CONFIG['allow_pickle'] = True
 
@@ -228,10 +229,15 @@ class ServiceThread(threading.Thread):
         self.auth = SSLAuthenticator(theController.keyFile, theController.certFile,
                                      cert_reqs=ssl.CERT_REQUIRED, ca_certs=theController.certFile,
                                      ) if Config.SECURITY else None
-        self.server = ThreadedServer(ControllerService,hostname=host, port=self.port,
-                                     authenticator = self.auth,
-                                     auto_register=True,
-                                     protocol_config = {"allow_public_attrs" : True})
+        try:
+            self.server = ThreadedServer(ControllerService,hostname=host, port=self.port,
+                                         authenticator = self.auth,
+                                         auto_register=True,
+                                         protocol_config = {"allow_public_attrs" : True})
+        except:
+            print ("Failed to create server")
+            traceback.print_exc()
+            os._exit(0)
         self.server.start()
         time.sleep(0.010)
         

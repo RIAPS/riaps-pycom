@@ -53,7 +53,7 @@ class InsPort(Port):
         '''
         Constructor
         '''
-        super(InsPort,self).__init__(parentPart,portName)
+        super(InsPort,self).__init__(parentPart,portName,portSpec)
         self.instName = self.parent.name + '.' + self.name
         self.spec = portSpec["spec"]
         self.thread = None

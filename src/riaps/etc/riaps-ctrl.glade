@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Generated with glade 3.18.3 -->
+<!-- Generated with glade 3.22.1 -->
 <interface>
   <requires lib="gtk+" version="3.12"/>
   <object class="GtkEntryBuffer" id="consoleEntryBuffer"/>
@@ -29,6 +29,9 @@
     <property name="title" translatable="yes">RIAPS Control</property>
     <property name="default_width">600</property>
     <signal name="delete-event" handler="onDeleteWindow" swapped="no"/>
+    <child>
+      <placeholder/>
+    </child>
     <child>
       <object class="GtkBox" id="box1">
         <property name="visible">True</property>
@@ -163,7 +166,7 @@
           </packing>
         </child>
         <child>
-          <object class="GtkBox" id="box3">
+          <object class="GtkBox" id="folderBox">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <child>
@@ -203,7 +206,7 @@
           </packing>
         </child>
         <child>
-          <object class="GtkBox" id="box2">
+          <object class="GtkBox" id="modelBox">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <child>
@@ -294,7 +297,7 @@
           </packing>
         </child>
         <child>
-          <object class="GtkBox" id="box20">
+          <object class="GtkBox" id="appNodesBox">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <property name="orientation">vertical</property>
@@ -302,6 +305,7 @@
               <object class="GtkScrolledWindow" id="scrolledwindow2">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
                 <property name="shadow_type">in</property>
                 <property name="min_content_height">300</property>
                 <child>
@@ -323,39 +327,78 @@
           </packing>
         </child>
         <child>
-          <object class="GtkScrolledWindow" id="scrolledwindow1">
+          <object class="GtkBox" id="fabBox">
             <property name="visible">True</property>
-            <property name="can_focus">True</property>
-            <property name="hscrollbar_policy">never</property>
-            <property name="shadow_type">etched-out</property>
-            <property name="min_content_height">150</property>
+            <property name="can_focus">False</property>
             <child>
-              <object class="GtkTextView" id="messageTextView">
+              <object class="GtkButton" id="fabLabel">
+                <property name="label" translatable="yes">fab:</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
-                <property name="halign">start</property>
-                <property name="resize_mode">immediate</property>
-                <property name="editable">False</property>
-                <property name="buffer">messageTextBuffer</property>
+                <property name="receives_default">True</property>
+                <property name="double_buffered">False</property>
               </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkEntry" id="consoleEntry">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="buffer">consoleEntryBuffer</property>
+                <signal name="activate" handler="onConsoleEntryActivate" swapped="no"/>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="position">1</property>
+              </packing>
             </child>
           </object>
           <packing>
-            <property name="expand">True</property>
+            <property name="expand">False</property>
             <property name="fill">True</property>
             <property name="position">4</property>
           </packing>
         </child>
         <child>
-          <object class="GtkEntry" id="consoleEntry">
+          <object class="GtkBox" id="logBox">
             <property name="visible">True</property>
-            <property name="can_focus">True</property>
-            <property name="buffer">consoleEntryBuffer</property>
-            <signal name="activate" handler="onConsoleEntryActivate" swapped="no"/>
+            <property name="can_focus">False</property>
+            <property name="orientation">vertical</property>
+            <child>
+              <object class="GtkScrolledWindow" id="scrolledwindow1">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="shadow_type">etched-out</property>
+                <property name="min_content_height">300</property>
+                <child>
+                  <object class="GtkTextView" id="messageTextView">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="hscroll_policy">natural</property>
+                    <property name="vscroll_policy">natural</property>
+                    <property name="editable">False</property>
+                    <property name="buffer">messageTextBuffer</property>
+                    <signal name="size-allocate" handler="onLogChanged" swapped="no"/>
+                  </object>
+                </child>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="pack_type">end</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
           </object>
           <packing>
             <property name="expand">True</property>
             <property name="fill">True</property>
+            <property name="pack_type">end</property>
             <property name="position">5</property>
           </packing>
         </child>

@@ -27,6 +27,8 @@ profile /home/riaps/workspace/RIAPS/src/scripts/riaps_actor {
   network inet udp,
   network inet tcp,
 
+  capability sys_nice,
+  
   @{RIAPSHOME}/** mr,
   @{RIAPSHOME}/ r,
   @{RIAPSEXEC}/ r,
