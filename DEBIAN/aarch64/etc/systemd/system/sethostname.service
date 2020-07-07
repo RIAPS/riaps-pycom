@@ -1,0 +1,11 @@
+[Unit]
+Description=Set hostname based on Ethernet MAC address
+Before=avahi-daemon.service
+Requires=avahi-daemon.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/set_unique_hostname
+
+[Install]
+WantedBy=multi-user.target

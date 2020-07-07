@@ -1,0 +1,21 @@
+mkdir -p /etc/riaps
+
+for i in `ls /usr/local/riaps/etc`; do rm -f /etc/riaps/$i ;done
+for i in `ls /usr/local/riaps/keys`; do rm -f /etc/riaps/$i ;done
+rm -f /usr/local/riaps/etc/riaps.conf  /usr/local/riaps/etc/riaps-log.conf
+rm -f /usr/local/riaps/etc/riaps-hosts.conf
+rm -f /usr/local/riaps/keys/id_rsa.pub /usr/local/riaps/keys/id_rsa.key
+rm -f /usr/local/riaps/keys/riaps-sys.cert /usr/local/riaps/keys/x509.pem
+rmdir /etc/riaps || true
+
+pip3 uninstall -y riaps-pycom || true
+
+rm -f /usr/local/bin/riaps_disco_redis
+
+rmdir /usr/local/riaps/etc || true
+rmdir /usr/local/riaps/keys || true
+rmdir /usr/local/riaps || true
+
+rm -f /etc/apparmor.d/cache/usr.local.bin.riaps_actor
+
+systemctl daemon-reload

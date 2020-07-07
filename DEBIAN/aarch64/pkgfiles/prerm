@@ -1,0 +1,7 @@
+
+systemctl disable riaps-rm-cgroups.service
+systemctl disable riaps-rm-quota.service
+systemctl disable riaps-rpyc-registry.service
+systemctl stop riaps-rm-cgroups.service || true
+systemctl stop riaps-rm-quota.service || true
+systemctl stop riaps-rpyc-registry.service || true
