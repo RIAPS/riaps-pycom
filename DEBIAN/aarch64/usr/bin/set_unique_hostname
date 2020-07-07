@@ -5,7 +5,7 @@ import re
 
 intf = 'eth0'
 intf_addr_path = '/sys/class/net/{}/address'.format(intf)
-hostname_prefix = 'nano-'
+hostname_prefix = 'aarch64-'
 hostname_path = '/etc/hostname'
 hosts_path = '/etc/hosts'
 set_hostname_command = ['/usr/bin/hostnamectl',  'set-hostname']

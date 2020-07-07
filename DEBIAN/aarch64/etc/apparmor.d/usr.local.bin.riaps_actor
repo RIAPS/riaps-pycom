@@ -37,7 +37,7 @@ profile /usr/local/bin/riaps_actor {
   /etc/** r,
   owner /proc/** rw,
   /usr/local/lib/** mr,
-  /usr/local/lib/python3.6/dist-packages/** mr,
+  /usr/local/lib/python3.8/dist-packages/** mr,
   /usr/share/dpkg/** mr,
 
    # Script file
