@@ -1,5 +1,5 @@
-Package: riaps-pycom-arm64
-Architecture: arm64
+Package: riaps-pycom-aarch64
+Architecture: aarch64
 Maintainer: Institute for Software Integrated Systems
 Depends: debconf (>= 0.5.00),libssl-dev, python3, python3-pip, riaps-core-aarch64
 Conflicts:
