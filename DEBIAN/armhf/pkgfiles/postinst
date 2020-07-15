@@ -4,12 +4,12 @@ mkdir -p /etc/riaps
 mkdir -p /usr/local/riaps/keys/
 
 mkdir -p /usr/local/riaps/etc
-rm -f /usr/local/riaps/etc/riaps.conf
-rm -f /usr/local/riaps/etc/riaps-log.conf
-rm -f /usr/local/riaps/keys/id_rsa.key
-rm -f /usr/local/riaps/keys/id_rsa.pub
-rm -f /usr/local/riaps/keys/riaps-sys.cert
-rm -f /usr/local/riaps/keys/x509.pem
+rm -f /usr/local/riaps/etc/riaps.conf || true
+rm -f /usr/local/riaps/etc/riaps-log.conf || true
+rm -f /usr/local/riaps/keys/id_rsa.key || true
+rm -f /usr/local/riaps/keys/id_rsa.pub || true
+rm -f /usr/local/riaps/keys/riaps-sys.cert || true
+rm -f /usr/local/riaps/keys/x509.pem || true
 
 chown -f root:riaps /etc/riaps/id_rsa.key
 chown -f root:riaps /etc/riaps/id_rsa.pub
@@ -31,14 +31,14 @@ ln -s /etc/riaps/x509.pem /usr/local/riaps/keys/x509.pem
 mv /usr/local/bin/riaps_disco /usr/local/bin/riaps_disco_redis
 ln -s /usr/local/bin/rdiscoveryd /usr/local/bin/riaps_disco
 
-rm -rf /opt/riaps-pycom/
+rm -rf /opt/riaps-pycom/ || true
 
 systemctl daemon-reload
 systemctl enable riaps-rm-cgroups.service
-systemctl start riaps-rm-cgroups.service
+systemctl start riaps-rm-cgroups.service || true
 systemctl enable riaps-rm-quota.service
-systemctl start riaps-rm-quota.service
+systemctl start riaps-rm-quota.service || true
 systemctl enable riaps-deplo.service
-systemctl start riaps-deplo.service
+systemctl start riaps-deplo.service || true
 systemctl enable sethostname.service
-systemctl start sethostname.service
+systemctl start sethostname.service || true

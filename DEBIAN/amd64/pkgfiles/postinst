@@ -31,12 +31,12 @@ ln -s /etc/riaps/x509.pem /usr/local/riaps/keys/x509.pem
 mv /usr/local/bin/riaps_disco /usr/local/bin/riaps_disco_redis
 ln -s /usr/local/bin/rdiscoveryd /usr/local/bin/riaps_disco
 
-rm -rf /opt/riaps-pycom/
+rm -rf /opt/riaps-pycom/ || true
 
 systemctl daemon-reload
 systemctl enable riaps-rm-cgroups.service
-systemctl start riaps-rm-cgroups.service
+systemctl start riaps-rm-cgroups.service || true
 systemctl enable riaps-rm-quota.service
-systemctl start riaps-rm-quota.service
+systemctl start riaps-rm-quota.service || true
 systemctl enable riaps-rpyc-registry.service
-systemctl start riaps-rpyc-registry.service
+systemctl start riaps-rpyc-registry.service || true
