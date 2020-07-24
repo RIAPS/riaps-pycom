@@ -10,7 +10,7 @@ import threading
 import logging
 import zmq
 import rpyc
-from rpyc import async
+from rpyc import async_
 from rpyc.utils.server import ThreadedServer
 from rpyc.utils.authenticators import SSLAuthenticator
 from riaps.utils.config import Config
@@ -188,7 +188,7 @@ class ControllerService(rpyc.Service):
         global theController,ctrlLock # ,guiClient
         #         if clientName == "*gui*":       # NOTE: the GUI is client of the service
         #             assert self.client == None and guiClient == None
-        #             guiClient = ServiceClient(clientName,async(callback),self,None)
+        #             guiClient = ServiceClient(clientName,async_(callback),self,None)
         #             return ()
         #         else:                           # RIAPS node client
         assert (appFolder != None)
@@ -197,7 +197,7 @@ class ControllerService(rpyc.Service):
             oldClient = theController.getClient(clientName)
             oldClient.exposed_logout()
             theController.delClient(clientName)
-        self.client = ServiceClient(clientName, async(callback),self,appFolder)   # Register client's callback
+        self.client = ServiceClient(clientName, async_(callback),self,appFolder)   # Register client's callback
         theController.addClient(clientName,self.client)
         dbaseNode = theController.nodeName      # The (redis) database is running on this same node
         dbasePort = const.discoRedisPort        

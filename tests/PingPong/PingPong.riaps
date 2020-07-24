@@ -1,0 +1,31 @@
+// RIAPS PingPong 
+
+app PingPongApp {
+	// Message types used in the app
+    message Msg;
+    
+    group PingPong with leader using Msg;
+    
+	// Player component
+    component Player(who,ball) {
+      timer tick 1000;
+      pub throw : Msg;
+      sub catch : Msg;	
+    }
+    
+     
+    // Actor
+    actor PingActor {
+       local Msg; 
+       {  
+       	  ping: Player(who="ping",ball=True);
+       }
+    }
+    
+    actor PongActor {
+       local Msg; 
+       {  
+       	  pong: Player(who="pong",ball=False);
+       }
+    }
+}

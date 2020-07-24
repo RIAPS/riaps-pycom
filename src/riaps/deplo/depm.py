@@ -642,7 +642,7 @@ class DeploymentManager(threading.Thread):
                 raise BuildError("Actor failed to start: %s.%s " % (appName,actorName))
         try:
             rc = proc.wait(const.depmStartTimeout)
-        except:
+        except psutil.TimeoutExpired:
             rc = None
         if rc != None:
             raise BuildError("Actor failed to start: %s.%s " % (appName,actorName))
@@ -751,12 +751,13 @@ class DeploymentManager(threading.Thread):
             assert qualName in self.actors
             record = self.actors[qualName]
             device = record.device
-            _control = record.control
-            _monitor = record.monitor
-            # TODO: Stop the zmqdevice, disconnect/destroy sockets
-            device._context.term()           # Terminate context for zmqDevice
-            device.join()
-            # control.close()                # TODO remove sockets from poller
+            if device:
+                # _control = record.control
+                # _monitor = record.monitor
+                # TODO: Stop the zmqdevice, disconnect/destroy sockets
+                device._context.term()           # Terminate context for zmqDevice
+                device.join()
+                # control.close()                # TODO remove sockets from poller
             # monitor.close()                
             del self.actors[qualName]
             self.procm.release(qualName)
