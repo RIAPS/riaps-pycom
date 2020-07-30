@@ -7,7 +7,7 @@ import os
 from riaps.consts.defs import *
 
 # Prevent namespace errors by explicitly defining which tasks belong to this file
-__all__ = ['update','updateBBBKey','updateAptKey','install','uninstall','kill','updateConfig','updateLogConfig','getLogs','ctrl', 'configRouting', 'securityOff', 'securityOn']
+__all__ = ['update','updateRemoteNodeKey','updateAptKey','install','uninstall','kill','updateConfig','updateLogConfig','getLogs','ctrl', 'configRouting', 'securityOff', 'securityOn']
 
 # RIAPS packages
 packages = [
@@ -29,8 +29,8 @@ def update():
         sudo('apt-get install ' + package + ' -y')
 
 @task
-def updateBBBKey():
-    """Rekey the BBBs with new generated keys"""
+def updateRemoteNodeKey():
+    """Rekey the remote RIAPS nodes with new generated keys"""
     etc_key_path = "/etc/riaps/"
     ssh_key_path = "/home/riaps/.ssh/"
     ssh_pubkey_name = os.path.join(ssh_key_path, str(const.ctrlPublicKey))

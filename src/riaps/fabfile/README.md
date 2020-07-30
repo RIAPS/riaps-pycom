@@ -1,5 +1,5 @@
-# Fabric File for Handling Multiple BBB Setup
-The **riaps_fab** script provides tools for configuring and controlling multiple BBBs.  This can be used with large or small clusters (even a single one) of BBBs.  This section explains the tools available and how to use them.  
+# Fabric File for Handling Multiple RIAPS Nodes Setup
+The **riaps_fab** script provides tools for configuring and controlling multiple RIAPS nodes.  This can be used with large or small clusters (even a single one) of RIAPS nodes.  This section explains the tools available and how to use them.  
 
 - To utilize the fabric tool, type the following with the command name desired.  If you do not know the command name, just type something for a command name and help information will be provided
 ```
@@ -15,10 +15,10 @@ riaps_fab help
   # This is the hosts configuration file for the RIAPS fabfile
   [RIAPS]
 
-  # List of bbb hosts for Fabric
-  # BBBs can be addressed by their IP address or the hostname.local (found at the command prompt on the BBB)
+  # List of remote RIAPS hosts for Fabric
+  # RIAPS nodes can be addressed by their IP address or the hostname.local (found at the command prompt on the RIAPS node)
   hosts = "192.168.1.2","192.168.1.3",
-          "ubuntu.local","bbb-ef9e.local"
+          "ubuntu.local","riaps-ef9e.local"
 ```
 - Hosts can additionally be specified explicitly with a flag (**'-H'**) followed by the list of hosts. This can be useful for debugging individual hosts or indicating the development machine (localhost).  Like the riaps-hosts.conf file, the hostnames are listed within double quotes and comma separated (without spaces).
 ```
@@ -64,7 +64,7 @@ riaps_fab sys.get:riaps_apps/<appname>/log/alogfile.log,.,true -H <hostname>
   - Single word commands do not need any quotes.
   - The sudo command is the same.
 ```
-riaps_fab sys.run:'"cat riaps_install_bbb.sh"'
+riaps_fab sys.run:'"cat riaps_install_node.sh"'
 riaps_fab sys.run:lsb_release
 riaps_fab sys.sudo:'"chmod 755 /usr/local/bin/riaps_fab"'
 ```
