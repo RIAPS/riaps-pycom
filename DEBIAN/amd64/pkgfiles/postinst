@@ -1,5 +1,5 @@
 set -e
-pip3 install /opt/riaps-pycom/src --verbose
+pip3 install /opt/riaps-pycom/src --verbose --no-index
 mkdir -p /usr/local/riaps/keys/
 
 rm -f /usr/local/riaps/etc/riaps.conf || true
