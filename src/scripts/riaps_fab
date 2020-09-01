@@ -22,6 +22,7 @@ import os
 import sys
 import shlex
 import argparse
+import site
 import subprocess
 
 def bash(cmd):
@@ -38,7 +39,7 @@ if __name__ == '__main__':
 
     fcmd = "fab"
     fflag = "-f"
-    fpaths = ["/usr/local/lib/python3.6/dist-packages/riaps/fabfile/",os.getenv('RIAPSHOME')+"/fabfile/"]
+    fpaths = site.getsitepackages() + [os.getenv('RIAPSHOME')]
     fhost = "-H"
     fident = ""
     fset = "--set"
@@ -55,8 +56,9 @@ if __name__ == '__main__':
     #    sys.path.append(os.getcwd())   # Ensure load_module works from current directory
     fpath = None
     for p in fpaths:
-        if os.path.isdir(p):
-            fpath = p; break
+        fp = os.path.join(p,"fabfile","")
+        if os.path.isdir(fp):
+            fpath = fp; break
     if fpath is not None:
         if args.hosts:
             cmd = str.join(' ',(fcmd, fflag, fpath, args.fabcmd, fhost, args.hosts, fident))
