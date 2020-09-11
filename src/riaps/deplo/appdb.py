@@ -29,7 +29,7 @@ from riaps.run.exc import BuildError
 class AppDbase(object):
     '''
     Application database. The database is a collection of key -> value pairs, where values are
-    picled Python objects (i.e. bytearrays). 
+    pickled Python objects (i.e. bytearrays). 
     Structure: 
     RIAPSAPPS -> [ appNames* ]
     appName -> [ actorRecords* ]

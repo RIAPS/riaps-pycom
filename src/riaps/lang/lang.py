@@ -56,12 +56,8 @@ class RiapsModel2JSON(object):
             groupObj = { }
             groupObj["name"] = group.name
             groupObj["kind"] = group.kind.kind if group.kind else 'default'
-            msgs = []
-            for msg in group.messages:
-                msgObj = {}
-                msgObj["type"] = msg.name
-                msgs.append(msgObj)
-            groupObj['messages'] = msgs
+            groupObj["message"] = group.message.name
+            groupObj["timed"] = True if group.timed == "timed" else False
             res.append(groupObj)
         return res
     def getLibraries(self,libraries):
@@ -120,9 +116,12 @@ class RiapsModel2JSON(object):
                 compObj["name"] = comp.name
                 compObj["formals"] = self.getFormals(comp.formals)
                 compObj["language"] = self.getImpl(comp)
+                compObj["scheduler"] = self.getComponentScheduler(comp.scheduler)
                 compObj["ports"] = self.getPorts(comp.ports)
                 res[comp.name] = compObj
         return res
+    def getComponentScheduler(self,sched):
+        return sched if sched in ('priority','rr') else 'default'
     def getPorts(self,ports):
         pubs = {}
         subs = {}
@@ -135,7 +134,8 @@ class RiapsModel2JSON(object):
         qrys = {}
         anss = {}
         portNames = []
-        for port in ports:
+        portIndex = 1
+        for port in ports:          # Assumption: 'ports' preserves the lexical order in model 
             portObj = { }
             if(port.name in portNames):
                 raise TextXSemanticError('Port name "%s" is not unique' %
@@ -151,6 +151,7 @@ class RiapsModel2JSON(object):
                 portObj['type'] = port.type.name
                 portObj['timed'] = port.timed
                 portObj['deadline'] = port.deadline
+                portObj['index'] = portIndex; portIndex += 1
                 subs[port.name] = portObj
             elif (portClass == 'ClntPort'):
                 portObj['req_type'] = port.req_type.name
@@ -162,37 +163,44 @@ class RiapsModel2JSON(object):
                 portObj['rep_type'] = port.rep_type.name
                 portObj['timed'] = port.timed
                 portObj['deadline'] = port.deadline
+                portObj['index'] = portIndex; portIndex += 1
                 srvs[port.name] = portObj
             elif (portClass == 'ReqPort'):
                 portObj['req_type'] = port.req_type.name
                 portObj['rep_type'] = port.rep_type.name
                 portObj['timed'] = port.timed
                 portObj['deadline'] = port.deadline
+                portObj['index'] = portIndex; portIndex += 1
                 reqs[port.name] = portObj
             elif(portClass == 'RepPort'):
                 portObj['req_type'] = port.req_type.name
                 portObj['rep_type'] = port.rep_type.name
                 portObj['timed'] = port.timed
                 portObj['deadline'] = port.deadline
+                portObj['index'] = portIndex; portIndex += 1
                 reps[port.name] = portObj
             elif(portClass == 'TimPort'):
                 portObj['period'] = port.period
                 portObj['deadline'] = port.deadline
+                portObj['index'] = portIndex; portIndex += 1
                 tims[port.name] = portObj
             elif (portClass == 'InsPort'):
                 inss[port.name] = portObj
                 portObj['spec'] = port.spec
+                portObj['index'] = portIndex; portIndex += 1
             elif (portClass == 'QryPort'):
                 portObj['req_type'] = port.req_type.name
                 portObj['rep_type'] = port.rep_type.name
                 portObj['timed'] = port.timed
                 portObj['deadline'] = port.deadline
+                portObj['index'] = portIndex; portIndex += 1
                 qrys[port.name] = portObj
             elif (portClass == 'AnsPort'):
                 portObj['req_type'] = port.req_type.name
                 portObj['rep_type'] = port.rep_type.name
                 portObj['timed'] = port.timed
                 portObj['deadline'] = port.deadline
+                portObj['index'] = portIndex; portIndex += 1
                 anss[port.name] = portObj
             else:
                 raise TextXSemanticError('Unknown type for port "%s"' %
@@ -210,10 +218,12 @@ class RiapsModel2JSON(object):
                 raise TextXSemanticError('Actor name "%s" is not unique.' % 
                                          act.name)
             actObj = { } 
+            actObj["real-time"] = act.rt
             actObj["formals"] = self.getFormals(act.formals)
             actObj["locals"] = self.getLocals(act.locals)
             actObj["internals"] = self.getInternals(act.internals)
             actObj["usage"] = self.getUsage(act.usage)
+            actObj["scheduler"] = self.getActorScheduler(act.scheduler)
             actObj["instances"] = self.getInstances(act.instances)
 #            actObj["wires"] = self.getWires(act.wires)
             res[act.name] = actObj
@@ -304,6 +314,16 @@ class RiapsModel2JSON(object):
         return { "cpu" : cpuUsage , "mem" : memUsage, 
                 "spc" : spcUsage , "net" : netUsage
                 }
+    def getActorScheduler(self,sched):
+        res = { }
+        if sched: 
+            if sched.rr:
+                res["policy"] = 'rr'
+                res["priority"] = 0
+            else:
+                res["policy"] = 'pri'
+                res["priority"] = sched.priority
+        return res
     def getInstances(self,instances):
         res = { } 
         for inst in instances:

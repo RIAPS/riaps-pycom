@@ -1,0 +1,5 @@
+// 
+app HelloPubSub {
+	on (192.168.1.116) HelloPubActor;
+	on (192.168.1.156) HelloSubActor;
+}

@@ -151,7 +151,7 @@ class TimPort(Port):
         '''
         Constructor
         '''
-        super(TimPort,self).__init__(parentPart,portName)
+        super(TimPort,self).__init__(parentPart,portName,portSpec)
         self.logger = logging.getLogger(__name__)
         self.instName = self.parent.name + '.' + self.name
         self.period = portSpec["period"]

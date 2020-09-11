@@ -1,0 +1,4 @@
+// 
+app HelloApp {
+	on all Hello2Actor;
+}

@@ -15,10 +15,12 @@ from _collections import OrderedDict
 import re
 import logging
 import subprocess
+import shlex
 from riaps.lang.gviz import gviz
+import riaps.fabfile
 
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, GLib, Gdk
+from gi.repository import Gtk, GLib, Gdk, GObject
 
 from threading import RLock
 
@@ -43,6 +45,7 @@ class ControlGUIClient(object):
         self.port = port
         self.controller = controller
         self.context = controller.context
+        GObject.threads_init()
         self.builder = Gtk.Builder()
         riaps_folder = os.getenv('RIAPSHOME', './')
         try:
@@ -59,7 +62,8 @@ class ControlGUIClient(object):
                                       "onClean": self.on_Clean,
                                       "onQuit": self.on_Quit,
                                       "onLoadApplication": self.on_LoadApplication,
-                                      "onViewApplication": self.on_ViewApplication
+                                      "onViewApplication": self.on_ViewApplication,
+                                      "onLogChanged" : self.on_LogChanged
                                       })
 
         #keyFile = controller.keyFile
@@ -74,6 +78,7 @@ class ControlGUIClient(object):
 
         self.mainWindow = self.builder.get_object("window1")
         self.messages = self.builder.get_object("messageTextBuffer")
+        self.logWindow = self.builder.get_object("scrolledwindow1")
         self.consoleIn = self.builder.get_object("consoleEntryBuffer")
         self.appNameEntry = self.builder.get_object("appNameEntry")
         self.deplNameEntry = self.builder.get_object("deplNameEntry")
@@ -105,8 +110,9 @@ class ControlGUIClient(object):
         self.mainWindow.show_all()
 
     def run(self):
+        self.messages.insert(self.messages.get_end_iter(), " "*256 + "\n")
         Gtk.main()
-    
+
 #     def bg_server(self, source=None, cond=None):
 #         '''
 #         Check if there is something pending from the server thread. Called by the main GUI loop
@@ -117,14 +123,20 @@ class ControlGUIClient(object):
 #         else:
 #             return False
 
-    def log(self,text):
+    def log(self,text,prompt='> '):
         global guiLock
         with guiLock:
             end = self.messages.get_end_iter()
-            text = '> ' + text + '\n'
+            text = prompt + text + '\n'
             self.messages.insert(end, text)
-        self.check_server_msg(text)
-    
+        self.updateStatus(text)
+        
+    def on_LogChanged(self,*_args):
+        with guiLock:
+            adj = self.logWindow.get_vadjustment()
+            upper,page = adj.get_upper(),adj.get_page_size()
+            adj.set_value(upper - page)
+                      
     def on_serverMessage(self,_channel=None, _cond=None):
         '''
         Callback used by the service thread(s): it prints a log message.
@@ -140,10 +152,28 @@ class ControlGUIClient(object):
     def on_ConsoleEntry(self, *args):
         '''
         Called when the console entry receives an 'activate' event
-        NOT USED
         '''
-        _source = self.consoleIn.get_text()
-        pass
+        global guiLock
+        fabcmd = self.consoleIn.get_text()
+        if len(fabcmd) == 0: fabcmd = "help"
+        fcmd = "fab"
+        fflag = "-f"
+        fhost = "-H"
+        fhosts = str.join(',',self.controller.getClients())
+        if len(fhosts) == 0:
+            self.log('? No hosts connected')
+        else:
+            fpath = os.path.dirname(riaps.fabfile.__file__)
+            cmd = str.join(' ',(fcmd, fflag, fpath, fabcmd, fhost, fhosts))
+            # print("=== "+cmd)
+            proc = subprocess.run(shlex.split(cmd),stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+            resp = proc.stdout.decode('utf-8')
+            # print(resp)
+            # self.log(resp,': ')
+            for line in resp.split('\n'):
+                if len(line) > 0: 
+                    self.log(line,': ')
+        self.consoleIn.delete_text(0,-1)
 
     def selectFile(self, title, patterns):
         '''
@@ -267,7 +297,7 @@ class ControlGUIClient(object):
     """
     Begin Status Table Additions
     """
-    def check_server_msg(self, text):
+    def updateStatus(self, text):
         '''
         Server message parser and dispatcher. Based on the log message received, updates the status grid gui.
         To be deprecated when the server is updated to call directly the status grid gui update functions. 
@@ -331,15 +361,16 @@ class ControlGUIClient(object):
         actor = info[4]
         self.launch_app(node, app, actor)
         
-    def update_node_apps(self,clientName,value):
+    def update_node_apps(self,clientName,data):
         '''
         Update the gui with list of apps running on the client 
         '''
         global guiLock
         with guiLock:
-            if not value: return
-            for appName in value.keys():
-                actors = value[appName]
+            if not data: return
+            for item in data:
+                appName,actors = item[0],item[1] 
+                self.add_app(appName)
                 for actorName in actors:
                     self.launch_app(clientName,appName,actorName)
                     self.controller.addToLaunchList(clientName,appName,actorName)

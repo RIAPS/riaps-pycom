@@ -19,7 +19,7 @@ class RepPort(Port):
         '''
         Constructor
         '''
-        super(RepPort,self).__init__(parentComponent,portName)
+        super(RepPort,self).__init__(parentComponent,portName,portSpec)
         self.req_type = portSpec["req_type"]
         self.rep_type = portSpec["rep_type"]
         self.isTimed = portSpec["timed"]

@@ -10,11 +10,12 @@ import threading
 import logging
 import zmq
 import rpyc
-from rpyc import async
+from rpyc import async_
 from rpyc.utils.server import ThreadedServer
 from rpyc.utils.authenticators import SSLAuthenticator
 from riaps.utils.config import Config
 import ssl
+import traceback
 
 rpyc.core.protocol.DEFAULT_CONFIG['allow_pickle'] = True
 
@@ -187,7 +188,7 @@ class ControllerService(rpyc.Service):
         global theController,ctrlLock # ,guiClient
         #         if clientName == "*gui*":       # NOTE: the GUI is client of the service
         #             assert self.client == None and guiClient == None
-        #             guiClient = ServiceClient(clientName,async(callback),self,None)
+        #             guiClient = ServiceClient(clientName,async_(callback),self,None)
         #             return ()
         #         else:                           # RIAPS node client
         assert (appFolder != None)
@@ -196,7 +197,7 @@ class ControllerService(rpyc.Service):
             oldClient = theController.getClient(clientName)
             oldClient.exposed_logout()
             theController.delClient(clientName)
-        self.client = ServiceClient(clientName, async(callback),self,appFolder)   # Register client's callback
+        self.client = ServiceClient(clientName, async_(callback),self,appFolder)   # Register client's callback
         theController.addClient(clientName,self.client)
         dbaseNode = theController.nodeName      # The (redis) database is running on this same node
         dbasePort = const.discoRedisPort        
@@ -228,10 +229,15 @@ class ServiceThread(threading.Thread):
         self.auth = SSLAuthenticator(theController.keyFile, theController.certFile,
                                      cert_reqs=ssl.CERT_REQUIRED, ca_certs=theController.certFile,
                                      ) if Config.SECURITY else None
-        self.server = ThreadedServer(ControllerService,hostname=host, port=self.port,
-                                     authenticator = self.auth,
-                                     auto_register=True,
-                                     protocol_config = {"allow_public_attrs" : True})
+        try:
+            self.server = ThreadedServer(ControllerService,hostname=host, port=self.port,
+                                         authenticator = self.auth,
+                                         auto_register=True,
+                                         protocol_config = {"allow_public_attrs" : True})
+        except:
+            print ("Failed to create server")
+            traceback.print_exc()
+            os._exit(0)
         self.server.start()
         time.sleep(0.010)
         

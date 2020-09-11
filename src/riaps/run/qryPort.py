@@ -21,7 +21,7 @@ class QryPort(Port):
         '''
         Initialize the query port object.
         '''
-        super(QryPort,self).__init__(parentComponent,portName)
+        super(QryPort,self).__init__(parentComponent,portName,portSpec)
         
         self.req_type = portSpec["req_type"]
         self.rep_type = portSpec["rep_type"]
@@ -107,7 +107,7 @@ class QryPort(Port):
     
     def recv(self):
         '''
-        Receive an bytearray through this port
+        Receive a bytes through this port
         '''
         if self.serverHost == None or self.serverPort == None:
             return None
@@ -115,7 +115,7 @@ class QryPort(Port):
     
     def send(self, msg):
         '''
-        Send a bytearray through this port
+        Send bytes through this port
         '''
         if self.serverHost == None or self.serverPort == None:
             return None

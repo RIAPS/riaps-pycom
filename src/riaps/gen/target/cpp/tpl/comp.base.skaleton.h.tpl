@@ -30,7 +30,8 @@ namespace py = pybind11;
                           const std::string& type_name        ,
                           const py::dict     args             ,
                           const std::string& application_name ,
-                          const std::string& actor_name       );
+                          const std::string& actor_name       ,
+                          const py::list     groups);
 
 {% block onhandlers %} {% endblock %}
 

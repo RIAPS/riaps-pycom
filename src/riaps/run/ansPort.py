@@ -26,7 +26,7 @@ class AnsPort(Port):
         '''
         Constructor
         '''
-        super(AnsPort,self).__init__(parentComponent,portName)
+        super(AnsPort,self).__init__(parentComponent,portName,portSpec)
         self.req_type = portSpec["req_type"]
         self.rep_type = portSpec["rep_type"]
         self.isTimed = portSpec["timed"]
@@ -98,7 +98,7 @@ class AnsPort(Port):
             if is_pyobj:
                 payload = zmq.Frame(pickle.dumps(msg))  # Pickle python payload
             else:
-                payload = zmq.Frame(msg)                # Take bytearray                        
+                payload = zmq.Frame(msg)                # Take bytes                        
             sendMsg += [payload]
             if self.isTimed:
                 now = time.time()

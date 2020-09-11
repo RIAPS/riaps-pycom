@@ -17,8 +17,9 @@
                       const std::string& type_name        ,
                       const py::dict     args             ,
                       const std::string& application_name ,
-                      const std::string& actor_name       )
-            : {{baseclassname}}(parent_actor, actor_spec, type_spec, name, type_name, args, application_name, actor_name) {
+                      const std::string& actor_name       ,
+                      const py::list     groups)
+            : {{baseclassname}}(parent_actor, actor_spec, type_spec, name, type_name, args, application_name, actor_name, groups) {
 
         }
         // riaps:keep_construct:end
@@ -62,16 +63,17 @@ create_component_py(const py::object *parent_actor,
                     const std::string &type_name,
                     const py::dict args,
                     const std::string &application_name,
-                    const std::string &actor_name) {
+                    const std::string &actor_name,
+                    const py::list     groups) {
     auto ptr = new {{classname_full}}(parent_actor, actor_spec, type_spec, name, type_name, args,
                                                                      application_name,
-                                                                     actor_name);
+                                                                     actor_name, groups);
     return std::move(std::unique_ptr<{{classname_full}}>(ptr));
 }
 
 PYBIND11_MODULE(lib{{classname|lower}}, m) {
     py::class_<{{classname_full}}> testClass(m, "{{classname}}");
-    testClass.def(py::init<const py::object*, const py::dict, const py::dict, const std::string&, const std::string&, const py::dict, const std::string&, const std::string&>());
+    testClass.def(py::init<const py::object*, const py::dict, const py::dict, const std::string&, const std::string&, const py::dict, const std::string&, const std::string&, const py::list>());
 
     testClass.def("setup"                 , &{{classname_full}}::Setup);
     testClass.def("activate"              , &{{classname_full}}::Activate);
@@ -84,6 +86,7 @@ PYBIND11_MODULE(lib{{classname|lower}}, m) {
     testClass.def("handleNICStateChange"  , &{{classname_full}}::HandleNICStateChange);
     testClass.def("handlePeerStateChange" , &{{classname_full}}::HandlePeerStateChange);
     testClass.def("handleReinstate"       , &{{classname_full}}::HandleReinstate);
+    testClass.def("handleActivate"        , &{{classname_full}}::HandleActivate);
 
     m.def("create_component_py", &create_component_py, "Instantiates the component from python configuration");
 }

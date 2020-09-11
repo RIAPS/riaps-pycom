@@ -1,0 +1,5 @@
+// 
+app HelloPubSub {
+	on all HelloPubActor;
+	on all HelloSubActor;
+}

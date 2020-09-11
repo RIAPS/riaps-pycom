@@ -25,11 +25,11 @@ import yaml
 import ipaddress
 import tempfile
 import shutil
-from collections import namedtuple
+# from collections import namedtuple
 from Cryptodome.PublicKey import RSA
 from Cryptodome.Signature import PKCS1_v1_5
 from Cryptodome.Hash import SHA256
-import zmq
+# import zmq
 import zmq.auth
 from threading import RLock
 from enum import Enum, auto, unique 
@@ -43,12 +43,13 @@ from riaps.ctrl.ctrlgui import ControlGUIClient
 from riaps.ctrl.ctrlcli import ControlCLIClient
 from riaps.lang.lang import compileModel
 from riaps.lang.depl import DeploymentModel
+from riaps.run.exc import BuildError
 
-import gi
+# import gi
 import tarfile
 
-gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk
+# gi.require_version('Gtk', '3.0')
+# from gi.repository import Gtk
 
 # App status
 @unique
@@ -64,6 +65,7 @@ class AppInfo(object):
         self.model = model
         self.depl= depl
         self.status = status
+        self.clients = []
     
 ctrlLock = RLock()
 
@@ -208,8 +210,9 @@ class Controller(object):
         if res.ready:
             value = res.value
             if not value: return
-            self.addRecoveredAppInfo(value)
-            self.gui.update_node_apps(clientName,value)
+            data = value 
+            self.addRecoveredAppInfo(data,client)
+            self.gui.update_node_apps(clientName,data)
         else:
             exe = functools.partial(self.updateClient,  # Keep waiting if result not ready yet
                                     clientName=clientName,client=client,res=res)
@@ -259,6 +262,11 @@ class Controller(object):
                 res = self.clientMap[clientName]
         return res
 
+    def getClients(self):
+        with ctrlLock:
+            res = [client for client in self.clientMap]
+        return res
+                
     def killAll(self):
         for client in self.clientMap.values():
             client.kill()
@@ -314,11 +322,11 @@ class Controller(object):
                 
     def startClientSession(self,client):
         hostName = client.name
-        hostKey = None
+        _hostKey = None
         hostKeyType = None
         if hostName in self.hostKeys:
             hostKeyType = self.hostKeys[hostName].keys()[0]
-            hostKey= self.hostKeys[hostName][hostKeyType]
+            _hostKey= self.hostKeys[hostName][hostKeyType]
             self.logger.info('Using host key of type %s' % hostKeyType)
         try:
             port = const.ctrlSSHPort
@@ -329,7 +337,7 @@ class Controller(object):
             self.logger.info('out of authenticate')
             if not t.is_authenticated():
                 self.logger.warning ('RSA key auth failed!') 
-                # t.connect(username=username, password=password, hostkey=hostkey)
+                # t.connect(username=username, password=password, hostkey=_hostkey) # Fallback
                 return None
             return t
         except Exception as e:
@@ -386,11 +394,11 @@ class Controller(object):
         if transport == None:
             return False
         try:
-            sftpSession = transport.open_session()
+            _sftpSession = transport.open_session()
             sftpClient = RSFTPClient.from_transport(transport)
             
-            appFolder = self.appInfo[appName].appFolder
-            dirRemote = os.path.join(client.appFolder,appName)
+            _appFolder = self.appInfo[appName].appFolder
+            _dirRemote = os.path.join(client.appFolder,appName)
            
             appFolderRemote = client.appFolder # os.path.join(client,appFolder)
             for fileName in [tgz_file,sha_file]:
@@ -534,6 +542,8 @@ class Controller(object):
             _tag = repo.create_tag(path, ref, 'riaps deplo @ %s' % dateTime)
         except git.exc.InvalidGitRepositoryError:
             pass
+        except:
+            self.log("Error: git tag failed")
         home = os.getcwd()
 
         with open(const.appDescFile,'w') as f:
@@ -551,7 +561,7 @@ class Controller(object):
         appNameJSON = appName + ".json"
         
         if (appInfo.model == None) or (appInfo.depl == None):
-            self.log("Error: Mismatched model or deployment for app '%s'" % appName)
+            self.log("Error: Missing model or deployment for app '%s'" % appName)
             return noresult
         
         if appName not in appInfo.model:
@@ -649,6 +659,9 @@ class Controller(object):
             if download == []:
                 self.log("* Nothing to download")
                 return False
+            if len(clients) == 0:
+                self.log("* No clients")
+                return False
             ok = self.downloadApp(download,libraries,clients,appName)
             if not ok:
                 self.log("* App download fault")
@@ -663,40 +676,54 @@ class Controller(object):
         else: 
             self.log("* App launch fault")
             return False
+        # Map to guard against multiple deployments of the same actor on the same host
+        clientActorMap = { }
+        for clientName in self.clientMap:
+            clientActorMap[clientName] = set()
         # Process the deployment and launch all actors.
         appNameJSON = appName + ".json"
         for depl in depls:
             targets = depl['target']
             actors = depl['actors']
             with ctrlLock:
-                if targets == []:
+                if targets == []:                               # Deploy on all clients
                     for clientName in self.clientMap:
                         client = self.clientMap[clientName]
                         client.setupApp(appName,appNameJSON)
                         for actor in actors:
                             actorName = actor["name"]
+                            if actorName in clientActorMap[clientName]:
+                                self.log("? %s => %s " % (actorName,clientName))
+                                continue
                             actuals = actor["actuals"]
                             actualArgs = self.buildArgs(actuals)
                             try:
-                                client.launch(appName,appNameJSON,actorName,actualArgs)
+                                res = client.launch(appName,appNameJSON,actorName,actualArgs)
+                                _tmp = res.value
                                 self.launchList.append([client,appName,actorName])
                                 self.log("L %s %s %s %s" % (clientName,appName,actorName,str(actualArgs)))
+                                clientActorMap[clientName].add(actorName)
                             except Exception:
                                 info = sys.exc_info()[1].args[0]
                                 self.log("? %s" % info)
                 else:
-                    for target in targets:
+                    for target in targets:                      # Deploy on selected targets
                         client = self.findClient(target)
                         if client != None:
                             client.setupApp(appName,appNameJSON)
                             for actor in actors:
                                 actorName = actor["name"]
+                                if actorName in clientActorMap[client.name]:
+                                    self.log("? %s => %s " % (actorName,client.name))
+                                    continue
                                 actuals = actor["actuals"]
                                 actualArgs = self.buildArgs(actuals)
                                 try:
-                                    client.launch(appName,appNameJSON,actorName,actualArgs)
+                                    res = client.launch(appName,appNameJSON,actorName,actualArgs)
+                                    _tmp = res.value
                                     self.launchList.append([client,appName,actorName])
                                     self.log("L %s %s %s %s" % (client.name,appName,actorName,str(actualArgs)))
+                                    clientActorMap[client.name].add(actorName)
                                 except Exception:
                                     info = sys.exc_info()[1].args[0]
                                     self.log("? %s" % info)
@@ -760,7 +787,7 @@ class Controller(object):
         if transport == None:
             return False
         try:
-            sftpSession = transport.open_session()
+            _sftpSession = transport.open_session()
             sftpClient = paramiko.SFTPClient.from_transport(transport)
             
             dirRemote = os.path.join(client.appFolder, appName)
@@ -803,7 +830,13 @@ class Controller(object):
         os.remove(const.sigFile)
             
     def removeApp(self, appName):
-        files, libraries, clients, _depls = self.buildDownload(appName)
+        status = self.appInfo[appName].status if appName in self.appInfo else AppStatus.NotLoaded
+        files,libraries,clients = [],[],[]
+        if status == AppStatus.Loaded: 
+            files, libraries, clients, _depls = self.buildDownload(appName)
+        elif status == AppStatus.Recovered:
+            # If it was recovered, we have only clients and appName. 
+            files, libraries, clients = [], [], self.appInfo[appName].clients
         self.removeSignature()
         with ctrlLock:
             for client in clients:
@@ -827,14 +860,12 @@ class Controller(object):
         self.riaps_appFolder = appFolderPath
         os.chdir(appFolderPath)
     
-    def addRecoveredAppInfo(self,value):
-        for appName in value.keys():
-            actors = value[appName]
+    def addRecoveredAppInfo(self,data,client):
+        for item in data:
+            appName,_actors = item[0],item[1]
             if appName not in self.appInfo:
                 self.appInfo[appName] = AppInfo(model=None,depl=None,appFolder=None,status = AppStatus.Recovered)
-                # TODO: Attempt to locate app folder, model, depl; update record
-            else:
-                self.appInfo[appName] = AppStatus.Loaded
+            self.appInfo[appName].clients += [client]
     
     def compileApplication(self,appModelName,appFolder):
         '''

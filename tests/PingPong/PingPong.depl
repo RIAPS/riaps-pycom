@@ -1,0 +1,5 @@
+// 
+app PingPongApp {
+	on all PingActor;
+	on all PongActor;
+}
