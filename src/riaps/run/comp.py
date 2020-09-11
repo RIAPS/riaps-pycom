@@ -567,4 +567,3 @@ class Component(object):
             self.thread.addGroupSocket(group,groupPriority)
         return group
 
-            
