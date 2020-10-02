@@ -39,7 +39,7 @@ if __name__ == '__main__':
 
     fcmd = "fab"
     fflag = "-f"
-    fpaths = site.getsitepackages() + [os.getenv('RIAPSHOME')]
+    fpaths = [p + "/riaps/" for p in site.getsitepackages()] + [os.getenv('RIAPSHOME')]
     fhost = "-H"
     fident = ""
     fset = "--set"
