@@ -22,7 +22,7 @@ class ComponentThread(threading.Thread):
     '''
     Component execution thread. Runs the component's code, and communicates with the parent actor.
     '''
-    
+
     def __init__(self,parent):
         threading.Thread.__init__(self)
         self.logger = logging.getLogger(__name__)
@@ -32,14 +32,14 @@ class ComponentThread(threading.Thread):
         self.instance = parent.instance
         self.schedulerType = parent.scheduler
         self.control = None
-    
+
     def setupControl(self):
         '''
         Create the control socket and connect it to the socket in the parent part
         '''
         self.control = self.context.socket(zmq.PAIR)
         self.control.connect('inproc://part_' + self.name + '_control')
-    
+
     def sendControl(self,msg):
         assert self.control != None
         self.control.send_pyobj(msg)
@@ -47,7 +47,7 @@ class ComponentThread(threading.Thread):
     def setupSockets(self):
         msg = self.control.recv_pyobj()
         if msg != "build":
-            raise BuildError 
+            raise BuildError
         for portName in self.parent.ports:
             res = self.parent.ports[portName].setupSocket(self)
             if res[0] == 'tim' or res[0] == 'ins':
@@ -83,7 +83,7 @@ class ComponentThread(threading.Thread):
 
     def replaceSocket(self,portObj,newSocket):
         portName = portObj.name
-        oldSocket = portObj.getSocket() 
+        oldSocket = portObj.getSocket()
         del self.sock2PortMap[oldSocket]
         if portObj.inSocket():
             self.poller.register(oldSocket, 0)
@@ -95,15 +95,15 @@ class ComponentThread(threading.Thread):
             self.poller.register(newSocket,zmq.POLLIN)
             self.sock2NameMap[newSocket] = portName
             self.sock2PrioMap[newSocket] = portObj.getIndex()
-            
+
     def addGroupSocket(self,group,groupPriority):
         groupSocket = group.getSocket()
         groupId = group.getGroupName()
         self.poller.register(groupSocket,zmq.POLLIN)
         self.sock2GroupMap[groupSocket] = group
         self.portName2GroupMap[groupId] = group
-        self.sock2PrioMap[groupSocket] = groupPriority      # TODO: better solution for group message priority  
-        
+        self.sock2PrioMap[groupSocket] = groupPriority      # TODO: better solution for group message priority
+
     def runCommand(self):
         res = False
         msg = self.control.recv_pyobj()
@@ -112,14 +112,14 @@ class ComponentThread(threading.Thread):
             res = True
         elif msg == "activate":
             self.logger.info("activate")
-            self.instance.handleActivate()  
+            self.instance.handleActivate()
         elif msg == "deactivate":
             self.logger.info("deactivate")
-            self.instance.handleDeactivate()     
+            self.instance.handleDeactivate()
         elif msg == "passivate":
             self.logger.info("passivate")
-            self.instance.handlePassivate()                
-        else: 
+            self.instance.handlePassivate()
+        else:
             cmd = msg[0]
             if cmd == "portUpdate":
                 self.logger.info("portUpdate: %s" % str(msg))
@@ -168,22 +168,22 @@ class ComponentThread(threading.Thread):
                 self.logger.info("unknown command %s" % cmd)
                 pass            # Should report an error
         return res
-    
+
     def getInfo(self):
         info = []
         for (_portName,portObj) in self.parent.ports:
             res = portObj.getInfo()
             info.append(res)
         return info
-    
+
     def logEvent(self,msg):
         self.control.send_pyobj(msg)
-    
+
     def executeHandlerFor(self,socket):
         '''
         Execute the handler for the socket
-        
-        The handler is always allowed to run to completion, the operation is never preempted. 
+
+        The handler is always allowed to run to completion, the operation is never preempted.
         '''
         if socket in self.sock2PortMap:
             portName = self.sock2NameMap[socket]
@@ -199,7 +199,7 @@ class ComponentThread(threading.Thread):
                     finish = time.perf_counter()
                     spent = finish-start
                     if spent > deadline:
-                        self.logger.error('Deadline violation in %s.%s()' 
+                        self.logger.error('Deadline violation in %s.%s()'
                                           % (self.name,funcName))
                         msg = ('deadline',)
                         self.control.send_pyobj(msg)
@@ -218,24 +218,24 @@ class ComponentThread(threading.Thread):
                 self.control.send_pyobj(msg)
         else:
             self.logger.error('Unbound port')
-        
+
     def batchScheduler(self,sockets):
         '''
         Batch scheduler for the component message processing.
-        
-        The dictionary containing the active sockets is scanned and the associated handler is invoked. 
-        
+
+        The dictionary containing the active sockets is scanned and the associated handler is invoked.
+
         '''
         for socket in sockets:
             self.executeHandlerFor(socket)
-            
+
     def rrScheduler(self,sockets):
         '''
-        Round-robin scheduler for the component message processing. 
-        
+        Round-robin scheduler for the component message processing.
+
         The round-robin order is determined by the order of component ports. The dictionary of active sockets is scanned, and the \
         associated handlers are invoked in round-robin order. After each invocation, the inputs are polled (in a no-wait operation) \
-        and the round-robin queue is updated. 
+        and the round-robin queue is updated.
         '''
         while True:
             jobs = []
@@ -243,26 +243,26 @@ class ComponentThread(threading.Thread):
                 if socket in self.sock2PortMap:
                     tag = self.sock2PrioMap[socket]
                 elif socket in self.sock2GroupMap:
-                    tag = self.sock2PrioMap[socket]             # TODO: better solution for group message priority  
+                    tag = self.sock2PrioMap[socket]             # TODO: better solution for group message priority
                 jobs += [(tag,socket)]
             jobs = sorted(jobs)                 # Sort jobs by tag
             if len(jobs) != 1:                  # More than one job
                 if len(self.dq):                # If deque is not empty
-                    # Find jobs whose tag is larger than the last executed tag 
+                    # Find jobs whose tag is larger than the last executed tag
                     larger = [ i for i, job in enumerate(jobs) if job[0] > self.last]
                     if len(larger):             # There is at least one such job
                         first = larger[0]       # Shuffle job list to keep rr- order
                         jobs = jobs[-first:] + jobs[0:first]
                 else:
                     self.last = jobs[-1][0]     # Tag of last job to be added to deque
-            self.dq.extendleft(jobs)            # Add jobs to deque   
+            self.dq.extendleft(jobs)            # Add jobs to deque
             sockets = {}
             while True:
                 try:
                     tag,socket = self.dq.pop()
                     self.last = self.dq[0][0] if len(self.dq) > 0 else tag
                     self.executeHandlerFor(socket)
-                    if len(self.dq) == 0: return                # Empty queue, return               
+                    if len(self.dq) == 0: return                # Empty queue, return
                     sockets = dict(self.poller.poll(None))      # Check if something came in
                     if sockets:
                         if self.control in sockets:             # Handle control message
@@ -276,21 +276,21 @@ class ComponentThread(threading.Thread):
                 except IndexError:                              # Queue empty, return
                     print('indexError')
                     return
-                  
+
     def priorityScheduler(self,sockets):
         '''
-        priority scheduler for the component message processing. 
-        
+        priority scheduler for the component message processing.
+
         The priority order is determined by the order of component ports. The dictionary of active sockets is scanned, and the \
         they are inserted into a priority queue (according to their priority value). The queue is processed (in order of \
-        priority). After each invocation, the inputs are polled (in a no-wait operation) and the priority queue is updated. 
+        priority). After each invocation, the inputs are polled (in a no-wait operation) and the priority queue is updated.
         '''
         while True:
             for socket in sockets:
                 if socket in self.sock2PortMap:
                     pri = self.sock2PrioMap[socket]
                 elif socket in self.sock2GroupMap:
-                    pri = self.sock2PrioMap[socket]             # TODO: better solution for group message priority  
+                    pri = self.sock2PrioMap[socket]             # TODO: better solution for group message priority
                 cnt = next(self.tc)
                 entry = (pri,cnt,socket)
                 heapq.heappush(self.pq,entry)
@@ -313,11 +313,11 @@ class ComponentThread(threading.Thread):
                         continue                                #  keep running inner loop
                 except IndexError:                              # Queue empty, return
                     return
- 
-    
+
+
     def setupScheduler(self):
         '''
-        Select the message scheduler algorithm based on the model. 
+        Select the message scheduler algorithm based on the model.
         '''
         if self.schedulerType == 'default':
             self.scheduler = self.batchScheduler
@@ -332,7 +332,7 @@ class ComponentThread(threading.Thread):
         else:
             self.logger.error('Unknown scheduler type: %r' % self.schedulerType)
             self.scheduler = None
-            
+
     def run(self):
         self.setupControl()
         self.setupSockets()
@@ -360,7 +360,7 @@ class Component(object):
     '''
     GROUP_PRIORITY_MAX = 0                          # Priority 0 means highest priority
     GROUP_PRIORITY_MIN = 256                        # Priority 256 means lowest priority (>= 256 port indices are unexpected)
-    
+
     def __init__(self):
         '''
         Constructor
@@ -390,19 +390,19 @@ class Component(object):
         # print  ( "Component() : '%s'" % self )
         self.coord = Coordinator(self)
         self.thread = None
- 
+
     def getName(self):
         '''
         Return the name of the component (as in model)
         '''
         return self.owner.getName()
-    
+
     def getTypeName(self):
         '''
-        Return the name of the type of the component (as in model) 
+        Return the name of the type of the component (as in model)
         '''
         return self.owner.getTypeName()
-    
+
     def getLocalID(self):
         '''
         Return a locally unique ID (int) of the component. The ID is unique within the actor.
@@ -414,150 +414,150 @@ class Component(object):
         Return the name of the parent actor (as in model)
         '''
         return self.owner.getActorName()
-    
+
     def getAppName(self):
         '''
         Return the name of the parent application (as in model)
         '''
         return self.owner.getAppName()
-    
+
     def getActorID(self):
         '''
-        Return a globally unique ID (8 bytes) for the parent actor. 
+        Return a globally unique ID (8 bytes) for the parent actor.
         '''
         return self.owner.getActorID()
-    
+
     def getUUID(self):
         '''
         Return the network unique ID for the parent actor
         '''
         return self.owner.getUUID()
-    
+
     def handleActivate(self):
         '''
         Default activation handler
         '''
         pass
-    
-    def handleDectivate(self):
+
+    def handleDeactivate(self):
         '''
-        Default activation handler
+        Default deactivation handler
         '''
         pass
-    
+
     def handlePassivate(self):
         '''
-        Default activation handler
+        Default passivation handler
         '''
         pass
-    
+
     def handleCPULimit(self):
-        ''' 
+        '''
         Default handler for CPU limit exceed
         '''
         pass
-    
+
     def handleMemLimit(self):
-        ''' 
+        '''
         Default handler for memory limit exceed
         '''
         pass
-    
+
     def handleSpcLimit(self):
-        ''' 
+        '''
         Default handler for space limit exceed
         '''
         pass
-        
+
     def handleNetLimit(self):
-        ''' 
+        '''
         Default handler for space limit exceed
         '''
         pass
-    
+
     def handleNICStateChange(self,state):
-        ''' 
+        '''
         Default handler for NIC state change
         '''
         pass
-    
+
     def handlePeerStateChange(self,state,uuid):
-        ''' 
+        '''
         Default handler for peer state change
         '''
         pass
-    
+
     def handleDeadline(self,_funcName):
         '''
         Default handler for deadline violation
         '''
         pass
-    
+
     def handleGroupMessage(self,_group):
         '''
         Default handler for group messages.
-        Implementation must immediately call recv/recv_pyobj on the group to obtain message. 
+        Implementation must immediately call recv/recv_pyobj on the group to obtain message.
         '''
         pass
-    
+
     def handleVoteRequest(self,group,rfvId):
         '''
         Default handler for vote requests (in member)
-        Implementation must recv/recv_pyobj to obtain the topic. 
+        Implementation must recv/recv_pyobj to obtain the topic.
         '''
         pass
-    
+
     def handleVoteResult(self,group,rfvId,vote):
         '''
         Default handler for the result of a vote (in member)
         '''
         pass
-    
+
     def handleActionVoteRequest(self,group,rfvId,when):
         '''
         Default handler for request to vote an action in the future (in member)
-        Implementation must recv/recv_pyobj to obtain the action topic. 
+        Implementation must recv/recv_pyobj to obtain the action topic.
         '''
         pass
-        
+
     def handleMessageToLeader(self,group):
         '''
         Default handler for messages sent to the leader (in leader)
-        Leader implementation must immediately call recv/recv_pyobj on the group to obtain message. 
+        Leader implementation must immediately call recv/recv_pyobj on the group to obtain message.
         '''
         pass
-    
+
     def handleMessageFromLeader(self,group):
         '''
-        Default handler for messages received from the leader (in member) 
-        Member implementation must immediately call recv/recv_pyobj on the group to obtain message. 
+        Default handler for messages received from the leader (in member)
+        Member implementation must immediately call recv/recv_pyobj on the group to obtain message.
         '''
         pass
-    
+
     def handleMemberJoined(self,group,memberId):
         '''
         Default handler for 'member join' events
-        '''  
+        '''
         pass
-    
+
     def handleMemberLeft(self,group,memberId):
         '''
         Default handler for 'member leave' events
-        '''          
+        '''
         pass
-    
+
     def handleLeaderElected(self,group,leaderId):
         '''
         Default handler for 'leader elected' events
-        '''  
+        '''
         pass
-    
+
     def handleLeaderExited(self,group,leaderId):
         '''
         Default handler for 'leader exited' events
-        '''  
+        '''
         pass
-    
+
     def joinGroup(self,groupName,instName,groupPriority=GROUP_PRIORITY_MIN):
         if self.thread == None:
             self.thread = self.owner.thread
@@ -566,4 +566,3 @@ class Component(object):
             group = self.coord.joinGroup(self.thread,groupName,instName,self.getLocalID())
             self.thread.addGroupSocket(group,groupPriority)
         return group
-
