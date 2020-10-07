@@ -11,6 +11,14 @@ rm -f /usr/local/riaps/keys/id_rsa.pub || true
 rm -f /usr/local/riaps/keys/riaps-sys.cert || true
 rm -f /usr/local/riaps/keys/x509.pem || true
 
+if [ -d "/home/riaps/.ssh/riaps_keys" ]; then
+  echo "Restoring saved security keys"
+  sudo cp /home/riaps/.ssh/riaps_keys/id_rsa.key /etc/riaps/id_rsa.key
+  sudo cp /home/riaps/.ssh/riaps_keys/id_rsa.pub /etc/riaps/id_rsa.pub
+  sudo cp /home/riaps/.ssh/riaps_keys/riaps-sys.cert /etc/riaps/riaps-sys.cert
+  sudo cp /home/riaps/.ssh/riaps_keys/x509.pem /etc/riaps/x509.pem
+fi
+
 chown root:riaps /etc/riaps/id_rsa.key
 chown root:riaps /etc/riaps/id_rsa.pub
 chown root:riaps /etc/riaps/riaps-sys.cert

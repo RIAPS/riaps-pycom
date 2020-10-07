@@ -7,3 +7,9 @@ systemctl stop riaps-deplo.service || true
 systemctl stop sethostname.service || true
 systemctl stop riaps-rm-cgroups.service || true
 systemctl stop riaps-rm-quota.service || true
+mkdir -p /home/riaps/.ssh/riaps_keys
+echo "Saving existing security keys (~/.ssh/riaps_keys)"
+sudo cp /etc/riaps/id_rsa.key /home/riaps/.ssh/riaps_keys/id_rsa.key
+sudo cp /etc/riaps/id_rsa.pub /home/riaps/.ssh/riaps_keys/id_rsa.pub
+sudo cp /etc/riaps/riaps-sys.cert /home/riaps/.ssh/riaps_keys/riaps-sys.cert
+sudo cp /etc/riaps/x509.pem /home/riaps/.ssh/riaps_keys/x509.pem
