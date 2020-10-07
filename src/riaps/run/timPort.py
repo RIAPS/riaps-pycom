@@ -87,6 +87,7 @@ class TimerThread(threading.Thread):
         '''
         self.started.set()          # Get out of wait if we are not started
         self.terminated.set()
+        self.waiting.set()
     
     def getPeriod(self):
         ''' 
