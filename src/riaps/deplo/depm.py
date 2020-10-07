@@ -1319,7 +1319,8 @@ class DeploymentManager(threading.Thread):
             if qualName not in self.launchMap:
                 return
             proc = self.launchMap[qualName]
-            proc.poll()
+            res = proc.poll()
+            self.logger.info("Device poll: %s"  % str(res))
             if proc.returncode == None:
                 running = True
                 if self.launchRefs[qualName] == 1:
@@ -1335,9 +1336,11 @@ class DeploymentManager(threading.Thread):
         if proc != None:
             self.logger.info("Stopping device %s" % qualName)
             assert qualName in self.devices
+            self.resm.stopActor(appName, actorName, proc)
+            self.fm.stopActor(appName, actorName, proc)
             self.procm.release(qualName)
             if running:       
-                self.terminateDevice(proc,appName,actorName) 
+                self.executor.submit(self.terminateDevice,proc,appName,actorName) 
         self.logger.info("Stopped %s" % qualName)
         
     def handleDeviceReq(self,msg):
@@ -1384,8 +1387,8 @@ class DeploymentManager(threading.Thread):
         
         ok = True
         try:
-            # self.stopDevice(appName, typeName)
-            self.executor.submit(self.stopDevice,appName,typeName)
+            self.stopDevice(appName, typeName)
+            # self.executor.submit(self.stopDevice,appName,typeName)
         except BuildError as buildError:
             ok = False
             self.logger.error(str(buildError.args[1]))
