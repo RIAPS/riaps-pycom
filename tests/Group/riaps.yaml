@@ -1,9 +1,0 @@
-!!python/object:riaps.utils.appdesc.AppDescriptor
-home: /home/riaps/temp/riaps-pycom/tests/Group
-host: '3232235878'
-hosts:
-- 192.168.1.101
-mac: 0800277e99c0
-network: {}
-sha: 0800277e99c0
-url: file:////home/riaps/temp/riaps-pycom/tests/Group
