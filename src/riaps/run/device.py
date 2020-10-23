@@ -165,7 +165,7 @@ class Device(Actor):
                     self.components[instName] = modObj.create_component_py(self,self.model,
                                                                            typeSpec,instName,
                                                                            instType,instArgs,
-                                                                           self.appName,self.name)
+                                                                           self.appName,self.name,groups)
                 else:
                     self.components[instName]= Part(self,typeSpec,instName, instType, instArgs)
             except Exception as e:
