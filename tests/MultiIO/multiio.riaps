@@ -1,0 +1,29 @@
+// RIAPS MultiIO 
+// I/O device with multiple inner threads
+
+app MultiIO {
+    message EchoReq;
+    message EchoRep;
+     
+	// IODevice
+    device IODevice(nthreads) {			// parameter = number of internal threads to create
+      inside trigger /* default */; 	// Inside port for triggering message coming from any internal thread.
+      timer clock 1000;					// Timer, used only once for initialization
+      req echo : (EchoReq, EchoRep);	// Request port to ask the echo server
+    }
+    
+    // Echo component
+    component Echo() {
+      timer clock 3000;					// A periodic timer - heartbeat
+      rep echo : (EchoReq, EchoRep);	// Reply port to of the echo server
+    }
+
+    // EchoIO actor
+    actor EchoIO(nthreads=3) {
+       local EchoReq,EchoRep;			// Local message types
+       {
+       	  ioDevice : IODevice(nthreads=nthreads);
+          echo : Echo(); 		
+       }
+    }
+}
