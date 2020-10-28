@@ -1,12 +1,14 @@
-
-systemctl disable riaps-deplo.service
-systemctl disable sethostname.service
-systemctl disable riaps-rm-cgroups.service
-systemctl disable riaps-rm-quota.service
+# Stop and remove RIAPS services
 systemctl stop riaps-deplo.service || true
 systemctl stop sethostname.service || true
 systemctl stop riaps-rm-cgroups.service || true
 systemctl stop riaps-rm-quota.service || true
+systemctl disable riaps-deplo.service
+systemctl disable sethostname.service
+systemctl disable riaps-rm-cgroups.service
+systemctl disable riaps-rm-quota.service
+
+# Save off security keys for use with next install
 mkdir -p /home/riaps/.ssh/riaps_keys
 echo "Saving existing security keys (~/.ssh/riaps_keys)"
 sudo cp /etc/riaps/id_rsa.key /home/riaps/.ssh/riaps_keys/id_rsa.key

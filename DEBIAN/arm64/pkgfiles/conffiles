@@ -1,2 +1,3 @@
 /etc/riaps/riaps.conf
 /etc/riaps/riaps-log.conf
+/etc/riaps/redis.conf

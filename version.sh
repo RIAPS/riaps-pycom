@@ -1,2 +1,2 @@
-export coreversion="1.1.18"
+export coreversion="1.1.19rc1"
 export pycomversion="1.1.19rc1"
