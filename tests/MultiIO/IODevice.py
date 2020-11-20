@@ -59,8 +59,11 @@ class IODeviceThread(threading.Thread):
                 elif self.plug in socks and socks[self.plug] == zmq.POLLIN:   # Input from the plug
                     message = self.plug.recv_pyobj()    # Receive messages 
                     self.logger.info("IODeviceThread[%d] recv = %s" % (self.ident,message))
-                    sent = self.past.popleft()
-                    assert str(sent)[::-1] == message  
+                    if len(self.past) > 0:
+                        sent = self.past.popleft()
+                        assert str(sent)[::-1] == message
+                    else:
+                        pass
         self.logger.info('IODeviceThread ended')
                
 
@@ -101,6 +104,14 @@ class IODevice(Component):
             self.trigger.activate()
         now = self.clock.recv_pyobj()   # Receive time (as float)
         self.clock.halt()               # Halt this timer (don't need it anymore)
+        for (thread_id,thread) in self.ioThreads.items():  # Send an initial message to the inner threads
+                plug = thread.get_plug()
+                if plug != None:            # Retrieve the 'plug' of the inner thread
+                    plug_identity = self.trigger.get_plug_identity(plug) # Retrieve the identity of the thread's plug 
+                    msg = "first msg to %s" % str(thread_id)
+                    # Before sending the message we have to set the identity - this will ensure that it gets sent to the correct thread
+                    self.trigger.set_identity(plug_identity)  
+                    self.trigger.send_pyobj(msg)
 
     def __destroy__(self):
         self.logger.info("__destroy__")
