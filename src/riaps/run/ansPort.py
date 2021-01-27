@@ -16,7 +16,7 @@ try:
 except:
     cPickle = None
     import pickle
-    
+
 class AnsPort(Port):
     '''
     classdocs
@@ -38,7 +38,7 @@ class AnsPort(Port):
 
     def setup(self):
         pass
-  
+
     def setupSocket(self,owner):
         self.setOwner(owner)
         self.socket = self.context.socket(zmq.ROUTER)
@@ -58,23 +58,23 @@ class AnsPort(Port):
 
     def update(self, host, port):
         raise OperationError("Unsupported update() on AnsPort")
-    
+
     def reset(self):
         pass
-    
+
     def getSocket(self):
         return self.socket
-    
+
     def inSocket(self):
         return True
-    
+
     def get_identity(self):
         return self.identity
-    
+
     def set_identity(self,identity):
         self.identity = identity
-        
-    def ans_port_recv(self,is_pyobj):   
+
+    def ans_port_recv(self,is_pyobj):
         try:
             msgFrames = self.socket.recv_multipart()    # Receive multipart (IDENTITY + payload) message
         except zmq.error.ZMQError as e:
@@ -91,14 +91,14 @@ class AnsPort(Port):
             rawTuple = struct.unpack("d", rawMsg)
             self.sendTime = rawTuple[0]
         return result
-        
+
     def ans_port_send(self,msg,is_pyobj):
         try:
             sendMsg = [self.identity]                   # Identity is already a frame
             if is_pyobj:
                 payload = zmq.Frame(pickle.dumps(msg))  # Pickle python payload
             else:
-                payload = zmq.Frame(msg)                # Take bytes                        
+                payload = zmq.Frame(msg)                # Take bytes
             sendMsg += [payload]
             if self.isTimed:
                 now = time.time()
@@ -109,19 +109,18 @@ class AnsPort(Port):
         except zmq.error.ZMQError as e:
             raise PortError("send error (%d)" % e.errno, e.errno) from e
         return True
-    
+
     def recv_pyobj(self):
         return self.ans_port_recv(True)
 
-    def send_pyobj(self,msg): 
-        return self.ans_port_send(msg,True)     
-    
+    def send_pyobj(self,msg):
+        return self.ans_port_send(msg,True)
+
     def recv(self):
         return self.ans_port_recv(False)
 
     def send(self, _msg):
-        return self.ans_port_send(False)
-        
+        return self.ans_port_send(_msg, False)
+
     def getInfo(self):
         return self.info
-    

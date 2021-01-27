@@ -16,7 +16,7 @@ try:
 except:
     cPickle = None
     import pickle
-    
+
 # Example insider thread (1 sec ticker)
 class InsThread(threading.Thread):
     def __init__(self,parent):
@@ -24,13 +24,13 @@ class InsThread(threading.Thread):
         self.name = parent.instName
         self.parent = parent
         self.context = parent.context
-        self.period = 1.0 
+        self.period = 1.0
         self.active = threading.Event()
         self.active.clear()
         self.waiting = threading.Event()
         self.terminated = threading.Event()
         self.terminated.clear()
-        
+
     def run(self):
         self.plug = self.parent.setupPlug(self)
         while 1:
@@ -44,19 +44,19 @@ class InsThread(threading.Thread):
 
     def activate(self):
         self.active.set()
-    
+
     def deactivate(self):
         self.active.clear()
-    
+
     def terminate(self):
         self.waiting.set()
         self.terminated.set()
-        
+
 class InsPort(Port):
     '''
     classdocs
     '''
-        
+
     def __init__(self, parentPart, portName, portSpec):
         '''
         Constructor
@@ -74,8 +74,8 @@ class InsPort(Port):
             thread = InsThread(self)
             thread.start()
         else:
-            pass 
-    
+            pass
+
     def setupSocket(self,owner):
         self.setOwner(owner)
         self.parent_thread = threading.current_thread()
@@ -83,10 +83,10 @@ class InsPort(Port):
         self.socket.bind('inproc://inside_' + self.instName)
         self.info = ('ins',self.name)
         return self.info
-    
+
     def reset(self):
         pass
-    
+
     def setupPlug(self,thread):
         assert thread != self.parent_thread # Must be called from an inner thread
         if thread in self.inner_threads:
@@ -104,12 +104,12 @@ class InsPort(Port):
         for thread in self.inner_threads:
             if thread and hasattr(thread,'activate'):
                 thread.activate()
-        
+
     def deactivate(self):
         for thread in self.inner_threads:
             if thread and hasattr(thread,'deactivate'):
                 thread.deactivate()
-        
+
     def terminate(self):
         for thread in self.inner_threads:
             if hasattr(thread,'terminate') and thread.is_alive():
@@ -117,23 +117,23 @@ class InsPort(Port):
 
     def getSocket(self):
         return self.socket
-    
+
     def inSocket(self):
         return True
-    
+
     def getContext(self):
         return self.context
-    
+
     def get_plug_identity(self,plug):
         return self.plugMap.get(plug,None)
-    
+
     def get_identity(self):
         return self.identity
-    
+
     def set_identity(self,identity):
         self.identity = identity
-        
-    def ins_port_recv(self,is_pyobj):   
+
+    def ins_port_recv(self,is_pyobj):
         try:
             msgFrames = self.socket.recv_multipart()    # Receive multipart (IDENTITY + payload) message
         except zmq.error.ZMQError as e:
@@ -144,32 +144,31 @@ class InsPort(Port):
         else:
             result = msgFrames[1]                   # Separate payload (bytes)
         return result
-        
+
     def ins_port_send(self,msg,is_pyobj):
         try:
             sendMsg = [self.identity]                   # Identity is already a frame
             if is_pyobj:
                 payload = zmq.Frame(pickle.dumps(msg))  # Pickle python payload
             else:
-                payload = zmq.Frame(msg)                # Take bytes                        
+                payload = zmq.Frame(msg)                # Take bytes
             sendMsg += [payload]
             self.socket.send_multipart(sendMsg)
         except zmq.error.ZMQError as e:
             raise PortError("send error (%d)" % e.errno, e.errno) from e
         return True
-    
+
     def recv_pyobj(self):
         return self.ins_port_recv(True)
 
-    def send_pyobj(self,msg): 
-        return self.ins_port_send(msg,True)     
-    
+    def send_pyobj(self,msg):
+        return self.ins_port_send(msg,True)
+
     def recv(self):
         return self.ins_port_recv(False)
 
     def send(self, _msg):
-        return self.ins_port_send(False)
-    
+        return self.ins_port_send(_msg,False)
+
     def getInfo(self):
         return self.info
-    
