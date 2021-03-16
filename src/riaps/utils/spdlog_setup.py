@@ -67,16 +67,16 @@ def add_parent_dir(s):
             except FileExistsError:
                 pass
     
-def add_simple_file_sink_st(s):
+def add_basic_file_sink_st(s):
     add_parent_dir(s)
-    return spdlog.simple_file_sink_st(filename=s['filename'],
-                                      truncate=s['truncate'] if 'truncate' in s.keys() else False)
+    return spdlog.basic_file_sink_st(filename=s['filename'],
+                                     truncate=s['truncate'] if 'truncate' in s.keys() else False)
 
          
      
-def add_simple_file_sink_mt(s):
+def add_basic_file_sink_mt(s):
     add_parent_dir(s)
-    return spdlog.simple_file_sink_mt(filename=s['filename'],
+    return spdlog.basic_file_sink_mt(filename=s['filename'],
                                      truncate=s['truncate'] if 'truncate' in s.keys() else False)
 
 def add_rotating_file_sink_st(s):
@@ -109,27 +109,33 @@ def add_null_sink_st(_s):
 def add_null_sink_mt(_s):
     return spdlog.null_sink_mt()
 
-def add_syslog_sink(s):
-    return spdlog.syslog_sink(ident=s['ident'] if 'ident' in s.keys() else "",
+def add_syslog_sink_st(s):
+    return spdlog.syslog_sink_st(ident=s['ident'] if 'ident' in s.keys() else "",
                               syslog_option=s['syslog_option'] if 'syslog_option' in s.keys() else 0,
                               syslog_facility=s['syslog_facility'] if 'syslog_facility' in s.keys() else (1 << 3)
                               )
 
+def add_syslog_sink_mt(s):
+    return spdlog.syslog_sink_mt(ident=s['ident'] if 'ident' in s.keys() else "",
+                              syslog_option=s['syslog_option'] if 'syslog_option' in s.keys() else 0,
+                              syslog_facility=s['syslog_facility'] if 'syslog_facility' in s.keys() else (1 << 3)
+                              )
 
 types = { 
         'stdout_sink_st' : add_stdout_sink_st,
         'stdout_sink_mt' : add_stdout_sink_mt,
         'color_stdout_sink_st' : add_color_stdout_sink_st,
         'color_stdout_sink_mt' : add_color_stdout_sink_mt,
-        'simple_file_sink_st' : add_simple_file_sink_st,
-        'simple_file_sink_mt' : add_simple_file_sink_mt,
+        'basic_file_sink_st' : add_basic_file_sink_st,
+        'basic_file_sink_mt' : add_basic_file_sink_mt,
         'rotating_file_sink_st' : add_rotating_file_sink_st,
         'rotating_file_sink_mt' : add_rotating_file_sink_mt,
         'daily_file_sink_st' : add_daily_file_sink_st,
         'daily_file_sink_mt' : add_daily_file_sink_mt,
         'null_sink_st' : add_null_sink_st,
         'null_sink_mt' : add_null_sink_mt,
-        'syslog_sink' : add_syslog_sink
+        'syslog_sink_st' : add_syslog_sink_st,
+        'syslog_sink_mt' : add_syslog_sink_mt
         }
     
 def from_file(fname):
@@ -207,7 +213,7 @@ type = "color_stdout_sink_mt"
 
 [[sink]]
 name = "file_out"
-type = "simple_file_sink_st"
+type = "basic_file_sink_st"
 filename = "log/spdlog_setup.log"
 # truncate field is optional
 # truncate = false (default)
@@ -217,7 +223,7 @@ create_parent_dir = true
 
 [[sink]]
 name = "file_err"
-type = "simple_file_sink_mt"
+type = "basic_file_sink_mt"
 filename = "log/spdlog_setup_err.log"
 truncate = true
 level = "err"

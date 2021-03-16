@@ -619,10 +619,10 @@ class ControlGUIClient(object):
     ''' Cell helper functions'''
     def modify_text_cell_color(self, cell, bg='', fg=''):
         if cell is not None:
-            if bg is not '':
+            if bg != '':
                 cell.modify_bg(Gtk.StateType.NORMAL, Gdk.color_parse(bg))
 
-            if fg is not '':
+            if fg != '':
                 cell.modify_fg(Gtk.StateType.NORMAL, Gdk.color_parse(fg))
 
 

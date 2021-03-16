@@ -25,7 +25,7 @@ class Filter(Component):
     
     def on_query(self):
         msg = self.query.recv_pyobj()
-        self.logger.info("on_query():%s", msg)
+        self.logger.info("on_query():%s" % msg)
         sendTime = self.query.get_sendTime()
         recvTime = self.query.get_recvTime()
         self.logger.info("SensorValue recv'd @ %f, sent @ %f, diff = %f" 

@@ -112,6 +112,7 @@ class Controller(object):
         self.gui = None
         self.clientMap = { }        # Maps hostIP -> ServiceClient 
         self.riaps_Folder = os.getenv('RIAPSHOME', './')
+        self.riaps_appFolder = None
         self.keyFile = os.path.join(self.riaps_Folder,"keys/" + str(const.ctrlPrivateKey))
         self.certFile = os.path.join(self.riaps_Folder,"keys/" + str(const.ctrlCertificate))
 #         self.riaps_appName = None   # App name
@@ -119,7 +120,7 @@ class Controller(object):
 #         self.riaps_depl = None      # App deployment model to be launched
         self.appInfo = {}           # Info about apps 
         self.launchList = []        # List of launch operations
-        self.setupHostKeys()
+        self.setupHostKeys()        
 
     def setupIfaces(self):
         '''
@@ -557,6 +558,10 @@ class Controller(object):
         download = []
         if appName not in self.appInfo:
             return noresult
+        
+        if not self.riaps_appFolder:
+            return noresult
+        
         appInfo = self.appInfo[appName]
         appNameJSON = appName + ".json"
         

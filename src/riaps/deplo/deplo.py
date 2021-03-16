@@ -106,6 +106,7 @@ class DeploService(object):
                             self.conn = rpyc.ssl_connect(host,port,
                                                          keyfile = self.keyFile, certfile = self.certFile,
                                                          cert_reqs=ssl.CERT_REQUIRED,ca_certs=self.certFile,
+                                                         ssl_version = ssl.PROTOCOL_TLSv1_2,
                                                          config = {"allow_public_attrs" : True})
                         else:
                             self.conn = rpyc.connect(host,port,
@@ -124,6 +125,7 @@ class DeploService(object):
                         self.conn = rpyc.ssl_connect(self.ctrlrHost,self.ctrlrPort,
                                                      keyfile = self.keyFile, certfile = self.certFile,
                                                      cert_reqs=ssl.CERT_REQUIRED,ca_certs=self.certFile,
+                                                     ssl_version=ssl.PROTOCOL_TLSv1_2,
                                                      config = {"allow_public_attrs" : True})
                     else:
                         self.conn = rpyc.connect(self.ctrlrHost,self.ctrlrPort,

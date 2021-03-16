@@ -19,7 +19,7 @@ class Client(Component):
 
     def on_clock(self):
         now = self.clock.recv_pyobj()   # Receive time.time() as float
-        self.logger.info('on_clock(): %s',str(now))
+        self.logger.info('on_clock(): %s' % str(now))
         msg = "clt_req: %d" % self.pid
         self.logger.info('[%d] send req: %s' % (self.pid,msg))
         try:

@@ -20,12 +20,22 @@ class IODeviceThread(threading.Thread):
         self.terminated = threading.Event()
         self.terminated.clear()
         self.trigger = trigger              # inside RIAPS port
-        self.port = port                    # port number for socket to connect to connect to console client 
+        self.port = port                    # port number for socket to connect to connect to console client
+        self.plug = None 
+        self.plug_identity = None
         self.context = zmq.Context()
         self.cons = self.context.socket(zmq.REP)    # Create zmq REP socket 
         self.cons.bind("tcp://*:%s" % self.port)
         self.logger.info('IODeviceThread _init()_ed')
-
+    
+    def get_identity(self,ins_port):
+        if self.plug_identity is None:
+            while True:
+                if self.plug != None:
+                    self.plug_identity = ins_port.get_plug_identity(self.plug)
+                    break
+                time.sleep(0.1)
+        return self.plug_identity
     
     def run(self):
         self.logger.info('IODeviceThread starting')
@@ -37,7 +47,7 @@ class IODeviceThread(threading.Thread):
             self.active.wait(None)                  # Events to handle activation/termination
             if self.terminated.is_set(): break
             if self.active.is_set():                # If we are active
-                socks = dict(self.poller.poll(1000.0))  # Run the poller: wait input from either side, timeout if none
+                socks = dict(self.poller.poll(5000.0))  # Run the poller: wait input from either side, timeout if none
                 if len(socks) == 0:
                     self.logger.info('IODeviceThread timeout')
                 if self.terminated.is_set(): break
@@ -73,8 +83,8 @@ class IODevice(Component):
     def on_clock(self):
         if self.IODeviceThread == None: # First clock pulse
             self.IODeviceThread = IODeviceThread(self.trigger,self.port,self.logger) # Inside port, external zmq port
-            self.IODeviceThread.start() # Start thread
-            time.sleep(0.1)
+            self.IODeviceThread.start() # St
+            self.trigger.set_identity(self.IODeviceThread.get_identity(self.trigger))
             self.trigger.activate()
         now = self.clock.recv_pyobj()   # Receive time (as float)
         self.clock.halt()               # Halt this timer (don't need it anymore)

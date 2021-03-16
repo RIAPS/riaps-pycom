@@ -24,6 +24,7 @@ import tarfile
 import yaml
 import socket
 import prctl
+import importlib
 
 import capnp
 from concurrent.futures.thread import ThreadPoolExecutor
@@ -106,27 +107,12 @@ class DeploymentManager(threading.Thread):
         self.monitors = { }     # Monitors of actor messages
         self.poller = None
 
-        self.riaps_actor_file = 'riaps_actor'   # Default name for the executable riaps actor shell
-        try:
-            import riaps.riaps_actor            # Try to import the python riaps_actor first so that we know is correct file name
-            self.riaps_actor_file = riaps.riaps_actor.__file__
-        except:
-            pass
-        
-        self.riaps_device_file = 'riaps_device'       # Default name for the executable riaps device shell
-        try:
-            import riaps.riaps_device          # We try to import the python riaps_device first so that we know is correct file name
-            self.riaps_device_file = riaps.riaps_device.__file__
-        except:
-            pass       
-        
-        self.riaps_disco_file = 'riaps_disco'   # Default name for the executable riaps disco 
-        try:
-            import riaps.riaps_disco            # Try to import the python riaps_disco first so that we know is correct file name
-            self.riaps_disco_file = riaps.riaps_disco.__file__
-        except:
-            pass
+        self.riaps_actor_file = self.find_origin('riaps_actor')
 
+        self.riaps_device_file = self.find_origin('riaps_device')       
+        
+        self.riaps_disco_file = self.find_origin('riaps_disco')
+        
         self.depmCommandEndpoint = parent.depmCommandEndpoint
         # self.devmCommandEndpoint = parent.devmCommandEndpoint
         self.procMonEndpoint = parent.procMonEndpoint
@@ -150,6 +136,14 @@ class DeploymentManager(threading.Thread):
             self.dns_ips = get_unix_dns_ips()
         else:
             self.dns_ips = []
+    
+    def find_origin(self,module_name):
+        try:
+            spec = importlib.util.find_spec(module_name)
+            return spec.origin
+        except:
+            pass
+        return module_name
     
     def callCommand(self,cmd):
         '''
