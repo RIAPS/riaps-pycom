@@ -1,7 +1,8 @@
+# MM TODO:  TEMPORARY CHANGE HERE TO SETUP AN ALL PYTHON PKG RELEASE - removed riaps-core-arm64 dependency, need it back if rdiscoveryd gets fixed
 Package: riaps-pycom-arm64
 Architecture: arm64
 Maintainer: Institute for Software Integrated Systems
-Depends: debconf (>= 0.5.00),libssl-dev, python3, python3-pip, riaps-core-arm64
+Depends: debconf (>= 0.5.00),libssl-dev, python3, python3-pip
 Conflicts:
 Priority: required
 Version:  @version@
