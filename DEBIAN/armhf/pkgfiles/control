@@ -1,4 +1,3 @@
-# MM TODO:  TEMPORARY CHANGE HERE TO SETUP AN ALL PYTHON PKG RELEASE - removed riaps-core-armhf dependency, need it back if rdiscoveryd gets fixed
 Package: riaps-pycom-armhf
 Architecture: armhf
 Maintainer: Institute for Software Integrated Systems
@@ -7,3 +6,4 @@ Conflicts:
 Priority: required
 Version:  @version@
 Description: This is the python version of the component model.
+# MM TODO:  TEMPORARY CHANGE HERE TO SETUP AN ALL PYTHON PKG RELEASE - removed riaps-core-armhf dependency, need it back if rdiscoveryd gets fixed

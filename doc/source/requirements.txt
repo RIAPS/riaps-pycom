@@ -1,26 +1,16 @@
 sphinx==2.1.1
 paramiko==2.7.2
-gitdb2==2.0.5
+gitdb==4.0.7
 GitPython==3.1.14
 rpyc==5.0.1
 PyYAML==5.3.1
-ruamel.std.argparse==0.8.1
-ruamel.yaml==0.15.74
-ruamel.yaml.cmd==0.5.3
-ruamel.yaml.convert==0.3.0
-ruamel.yaml.jinja2==0.2.2
 pycryptodomex==3.10.1
 pyzmq==22.0.3
-qredis==0.1.7
 redis==3.5.3
 # hiredis == 1.1.0
-enum34==1.1.6
 pycairo==1.16.2
-pygraphviz==1.3.1
-# graphviz==0.5.2
 # cgroups==0.1.0
 cgroupspy==0.1.6
-cmd2==0.9.4
 lmdb==1.1.1
 psutil==5.5.1
 # pycapnp==1.0.0
@@ -29,7 +19,6 @@ simplejson==3.16.0
 pyroute2==0.5.14
 butter==0.12.6
 Fabric3==1.14.post1
-more-itertools==4.3.0
 pymultigen==0.2.0
 textX==2.3.0
 toml==0.10.2
