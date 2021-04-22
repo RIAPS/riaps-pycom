@@ -8,25 +8,25 @@ import zmq
 from .port import Port
 from riaps.utils.config import Config
 from zmq.error import ZMQError
-#from .part import Part
-#from .actor import Actor
+# from .part import Part
+# from .actor import Actor
+
 
 class QryPort(Port):
     '''
     Query port is to access a server. Has a request and a response message type, and uses a DEALER socket.
     '''
 
-
     def __init__(self, parentComponent, portName, portSpec):
         '''
         Initialize the query port object.
         '''
-        super(QryPort,self).__init__(parentComponent,portName,portSpec)
+        super(QryPort, self).__init__(parentComponent, portName, portSpec)
         
         self.req_type = portSpec["req_type"]
         self.rep_type = portSpec["rep_type"]
         self.isTimed = portSpec["timed"]
-        self.deadline = portSpec["deadline"] * 0.001 # msec
+        self.deadline = portSpec["deadline"] * 0.001  # msec
         parentActor = parentComponent.parent
         # The request and reply message types must be of the same kind (global/local)
         assert parentActor.isInnerMessage(self.req_type) == parentActor.isInnerMessage(self.rep_type)
@@ -37,21 +37,20 @@ class QryPort(Port):
         self.serverPort = None
         self.info = None
 
-
     def setup(self):
         '''
         Set up the port
         '''
         pass
   
-    def setupSocket(self,owner):
+    def setupSocket(self, owner):
         '''
         Set up the socket of the port. Return a tuple suitable for querying the discovery service for the publishers
         '''
         self.setOwner(owner)
         self.socket = self.context.socket(zmq.DEALER)
         self.socket.setsockopt_string(zmq.IDENTITY, str(id(self)), 'utf-8')  # FIXME: identity is not unique across nodes
-        self.socket.setsockopt(zmq.SNDTIMEO,self.sendTimeout)
+        self.socket.setsockopt(zmq.SNDTIMEO, self.sendTimeout)
         self.setupCurve(False) 
         self.host = ''
         if not self.isLocalPort:
@@ -62,7 +61,7 @@ class QryPort(Port):
             localHost = self.getLocalIface()
             self.portNum = -1 
             self.host = localHost
-        self.info = ('qry',self.isLocalPort,self.name,str(self.req_type) + '#' + str(self.rep_type),self.host)
+        self.info = ('qry', self.isLocalPort, self.name, str(self.req_type) + '#' + str(self.rep_type), self.host)
         return self.info
     
     def reset(self):
@@ -80,7 +79,7 @@ class QryPort(Port):
         '''
         return True
     
-    def update(self,host,port):
+    def update(self, host, port):
         '''
         Update the query -- connect its socket to a server
         '''
@@ -97,13 +96,13 @@ class QryPort(Port):
             return None
         return self.port_recv(True)
     
-    def send_pyobj(self,msg):
+    def send_pyobj(self, msg):
         '''
         Send an object through this port
         '''
         if self.serverHost == None or self.serverPort == None:
             return False
-        return self.port_send(msg,True)              
+        return self.port_send(msg, True)              
     
     def recv(self):
         '''
@@ -119,12 +118,11 @@ class QryPort(Port):
         '''
         if self.serverHost == None or self.serverPort == None:
             return None
-        return self.port_send(msg,False) 
+        return self.port_send(msg, False) 
     
     def getInfo(self):
         '''
         Retrieve relevant information about this port
         '''
         return self.info
-    
     

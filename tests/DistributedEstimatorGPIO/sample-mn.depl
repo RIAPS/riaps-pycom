@@ -1,0 +1,7 @@
+// Mininet deployment example
+app DistributedEstimator {
+	on (192.168.57.2) Estimator(rate=2);
+	on (192.168.57.3) Estimator(rate=4);
+	on (192.168.57.4) Estimator(rate=8);
+	on (192.168.57.1) Aggregator;
+}

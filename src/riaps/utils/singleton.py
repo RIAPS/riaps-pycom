@@ -6,7 +6,8 @@ Created on Jul 23, 2018
 import socket
 import os
 
-def singleton(process_name,suffix=None):
+
+def singleton(process_name, suffix=None):
     ''' 
     Enforce the caller process is a singleton
     '''
@@ -17,7 +18,7 @@ def singleton(process_name,suffix=None):
 
     try:
         singleton._lock_socket.bind('\0' + singleton._name)
-        #print 'I got the lock'
+        # print 'I got the lock'
     except socket.error:
         print ("%s is already running - exiting" % (process_name))
         os._exit(0)

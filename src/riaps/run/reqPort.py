@@ -19,11 +19,11 @@ class ReqPort(Port):
         '''
         Constructor
         '''
-        super(ReqPort,self).__init__(parentComponent,portName,portSpec)
+        super(ReqPort, self).__init__(parentComponent, portName, portSpec)
         self.req_type = portSpec["req_type"]
         self.rep_type = portSpec["rep_type"]
         self.isTimed = portSpec["timed"]
-        self.deadline = portSpec["deadline"] * 0.001 # msec
+        self.deadline = portSpec["deadline"] * 0.001  # msec
         parentActor = parentComponent.parent
         self.isLocalPort = parentActor.isLocalMessage(self.req_type) and parentActor.isLocalMessage(self.rep_type)
         self.replyHost = None
@@ -33,10 +33,10 @@ class ReqPort(Port):
     def setup(self):
         pass
   
-    def setupSocket(self,owner):
+    def setupSocket(self, owner):
         self.setOwner(owner)
         self.socket = self.context.socket(zmq.REQ)
-        self.socket.setsockopt(zmq.SNDTIMEO,self.sendTimeout)
+        self.socket.setsockopt(zmq.SNDTIMEO, self.sendTimeout)
         self.setupCurve(False)   
         self.host = ''
         if not self.isLocalPort:
@@ -47,18 +47,18 @@ class ReqPort(Port):
             localHost = self.getLocalIface()
             self.portNum = -1
             self.host = localHost
-        self.info = ('req',self.isLocalPort,self.name,str(self.req_type) + '#' + str(self.rep_type),self.host)
+        self.info = ('req', self.isLocalPort, self.name, str(self.req_type) + '#' + str(self.rep_type), self.host)
         return self.info
     
     def reset(self):
         newSocket = self.context.socket(zmq.REQ)
-        newSocket.setsockopt(zmq.SNDTIMEO,self.sendTimeout)
-        newSocket.setsockopt(zmq.RCVTIMEO,self.recvTimeout)
+        newSocket.setsockopt(zmq.SNDTIMEO, self.sendTimeout)
+        newSocket.setsockopt(zmq.RCVTIMEO, self.recvTimeout)
         self.socket.setsockopt(zmq.LINGER, 0)
         if self.replyHost != None and self.replyPort != None:
             repPort = "tcp://" + str(self.replyHost) + ":" + str(self.replyPort)
             self.socket.disconnect(repPort)
-        self.owner.replaceSocket(self,newSocket)
+        self.owner.replaceSocket(self, newSocket)
         self.socket = newSocket
         self.setupCurve(False)
         if self.replyHost != None and self.replyPort != None:
@@ -71,7 +71,7 @@ class ReqPort(Port):
     def inSocket(self):
         return True
     
-    def update(self,host,port):
+    def update(self, host, port):
         repPort = "tcp://" + str(host) + ":" + str(port)
         self.replyHost = host
         self.replyPort = port
@@ -80,17 +80,15 @@ class ReqPort(Port):
     def recv_pyobj(self):
         return self.port_recv(True)
     
-    def send_pyobj(self,msg):
-        return self.port_send(msg,True)              
+    def send_pyobj(self, msg):
+        return self.port_send(msg, True)              
     
     def recv(self):
         return self.port_recv(False)
     
     def send(self, msg):
-        return self.port_send(msg,False) 
+        return self.port_send(msg, False) 
 
     def getInfo(self):
         return self.info 
-    
-    
     

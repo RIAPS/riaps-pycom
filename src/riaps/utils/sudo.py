@@ -33,33 +33,39 @@ env.hosts = [gethostname()]
 # Standard riaps setup
 env.user = 'riaps'
 env.password = 'riaps@isis'
-#env.sudo_password = 'riaps@isis'
+# env.sudo_password = 'riaps@isis'
 # END OF IMPORT
 # Shell
 env.shell = "/bin/bash -l -i -c"
+
  
 def run(cmd):
     res = fabric.operations.sudo(cmd)
     return res
+
  
 def sudo(cmd):
-    exe = functools.partial(run,cmd=cmd)
+    exe = functools.partial(run, cmd=cmd)
     res = tasks.execute(exe)
     return res
+
  
 def cleanup():
     fabric.network.disconnect_all()
+
  
 atexit.register(cleanup)
 
 is_su_flag = '?'
+
  
 def is_su():
     global is_su_flag
-    if is_su_flag == '?' : is_su_flag = (os.getuid() == 0)
+    if is_su_flag == '?': is_su_flag = (os.getuid() == 0)
     return is_su_flag
+
  
-def riaps_sudo(cmd,timeout=None):
+def riaps_sudo(cmd, timeout=None):
     try:
         if is_su(): 
             full = ['sudo'] + cmd.split(' ')

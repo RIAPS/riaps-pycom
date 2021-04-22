@@ -4,7 +4,7 @@
 import zmq
 import time
 import struct
-from .exc import SetupError,OperationError,PortError
+from .exc import SetupError, OperationError, PortError
 from riaps.utils.config import Config
 import logging
 
@@ -14,6 +14,7 @@ try:
 except:
     cPickle = None
     import pickle
+
     
 class Port(object):
     '''Base class for all Port objects. 
@@ -37,9 +38,9 @@ class Port(object):
         self.logger = logging.getLogger(__name__)
         self.parent = parentPart
         self.name = portName
-        self.index = portSpec.get('index',None) if portSpec else None
+        self.index = portSpec.get('index', None) if portSpec else None
         self.context = parentPart.appContext
-        (self.public_key,self.private_key) = (parentPart.parent.public_key,parentPart.parent.private_key)
+        (self.public_key, self.private_key) = (parentPart.parent.public_key, parentPart.parent.private_key)
         self.security = (self.public_key != None) and (self.private_key != None)
         self.localIface = None
         self.globalIface = None
@@ -53,7 +54,7 @@ class Port(object):
         self.info = None
         self.owner = None
     
-    def setupCurve(self,server):
+    def setupCurve(self, server):
         if self.socket and self.security:
             self.socket.curve_secretkey = self.private_key
             self.socket.curve_publickey = self.public_key
@@ -62,7 +63,7 @@ class Port(object):
             else:
                 self.socket.curve_serverkey = self.public_key
                 
-    def setupSocket(self,owner):
+    def setupSocket(self, owner):
         ''' Setup the socket. Abstract, subclasses must implement this method.
         
         :param owner: The Component the port belongs to. This operation must be called from the component thread only. 
@@ -71,7 +72,7 @@ class Port(object):
         '''
         pass
     
-    def setOwner(self,owner):
+    def setOwner(self, owner):
         ''' Save owner thread into a data member.
         
         :param owner: The ComponentThread the port is handled in.
@@ -173,9 +174,9 @@ class Port(object):
                 port object, and the name of the message type the port handles.  
         :rtype: a tuple (portType, portName, msgType)
         '''
-        return ("port",None,None)
+        return ("port", None, None)
     
-    def update(self,host,port):
+    def update(self, host, port):
         ''' 
         Update the socket with information from the discovery service.
         Abstract, subclasses must implement this method.
@@ -213,7 +214,7 @@ class Port(object):
         '''
         pass
     
-    def send_pyobj(self,msg):
+    def send_pyobj(self, msg):
         '''Send a Python data object (if possible) out through the port. 
         Abstract, subclasses must implement this method.
         
@@ -239,7 +240,7 @@ class Port(object):
         '''
         return None
 
-    def send_capnp(self,msg):
+    def send_capnp(self, msg):
         '''DEPRECATED. Send a byte array (if possible) out through the port
         '''
         self.logger.warning("send_capnp: deprecated, use send() instead")
@@ -251,7 +252,7 @@ class Port(object):
         self.logger.warning("recv_capnp: deprecated, use recv() instead")
         return None
     
-    def send(self,msg):
+    def send(self, msg):
         '''Send a byte array (if possible) out through the port.
 
         Used for sending a message that has been serialized into bytes previously.
@@ -273,7 +274,7 @@ class Port(object):
         '''
         return None
     
-    def port_send(self,msg,is_pyobj):
+    def port_send(self, msg, is_pyobj):
         '''Lowest level message sending operation.
         Subclasses can override this operation.
         
@@ -307,7 +308,7 @@ class Port(object):
             raise PortError("send error (%d)" % e.errno, e.errno) from e
         return True
     
-    def port_recv(self,is_pyobj):
+    def port_recv(self, is_pyobj):
         '''Lowest level message receiving operation.
         Subclasses can override this operation.
         
@@ -384,7 +385,7 @@ class Port(object):
         sto = None if self.sendTimeout == -1 else self.sendTimeout * 0.001
         return sto
     
-    def set_recv_timeout(self,rto):
+    def set_recv_timeout(self, rto):
         '''Set the receive timeout for the port.
         
         Receive timeout determines how long a receive operation will block before
@@ -396,9 +397,9 @@ class Port(object):
         '''
         assert rto == None or (type(rto) == float and rto >= 0.0)
         self.recvTimeout = -1 if rto == None else int(rto * 1000)
-        self.socket.setsockopt(zmq.RCVTIMEO,self.recvTimeout)
+        self.socket.setsockopt(zmq.RCVTIMEO, self.recvTimeout)
 
-    def set_send_timeout(self,sto):
+    def set_send_timeout(self, sto):
         '''Set the send timeout for the port.
         
         Send timeout determines how long a send operation will block before
@@ -410,5 +411,5 @@ class Port(object):
         '''
         assert sto == None or (type(sto) == float and sto >= 0.0)
         self.sendTimeout = -1 if sto == None else int(sto * 1000)
-        self.socket.setsockopt(zmq.SNDTIMEO,self.sendTimeout)
+        self.socket.setsockopt(zmq.SNDTIMEO, self.sendTimeout)
     

@@ -68,7 +68,9 @@ DeviceActorRecord = namedtuple('DeviceActorRecord', 'app model actor args device
 # Record of an app actor command 
 DeploActorCommand = namedtuple('DeploActorCommand', 'app model actor args cmd pid firewall')
 # Record of the disco command
-DeploDiscoCommand = namedtuple('DeploDiscoCommand', 'cmd pid')
+DeploDiscoCommand = namedtuple('DeploDiscoCommand', 'cmd pid args')
+
+IPT_WAIT = ' -w 1'
 
 class DeploymentManager(threading.Thread):
     '''
@@ -130,9 +132,9 @@ class DeploymentManager(threading.Thread):
         self.started = False
         self.pendingCall = False
         if Config.SECURITY:
-            riaps_sudo('iptables -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT')  # track conn's
-            riaps_sudo('iptables -A INPUT -m conntrack --ctstate INVALID -j DROP')                # drop invalid state packets
-            riaps_sudo('iptables -A INPUT -i lo -j ACCEPT')                                       # accept lo
+            riaps_sudo('iptables -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT' + IPT_WAIT)  # track conn's
+            riaps_sudo('iptables -A INPUT -m conntrack --ctstate INVALID -j DROP' + IPT_WAIT)                # drop invalid state packets
+            riaps_sudo('iptables -A INPUT -i lo -j ACCEPT' + IPT_WAIT)                                       # accept lo
             self.dns_ips = get_unix_dns_ips()
         else:
             self.dns_ips = []
@@ -216,6 +218,8 @@ class DeploymentManager(threading.Thread):
         user_env[ 'LOGNAME'  ]  = user_record.name
         user_env[ 'PWD'      ]  = os.getcwd()
         user_env[ 'USER'     ]  = user_record.name
+        user_env[ 'RIAPSHOME']  = os.getenv('RIAPSHOME')
+        user_env[ 'RIAPSAPPS']  = os.getenv('RIAPSAPPS')
         if ld_libs != []:
             self.makeLdLibEnv(user_env,ld_libs)
         return user_env
@@ -288,7 +292,7 @@ class DeploymentManager(threading.Thread):
         pid = proc.pid
         cmdline = [p.info for p in psutil.process_iter(attrs=['pid','cmdline'])
                    if pid == p.info['pid']][0]['cmdline']
-        self.appDbase.setDiscoCommand(DeploDiscoCommand(cmd=cmdline,pid=pid))
+        self.appDbase.setDiscoCommand(DeploDiscoCommand(cmd=cmdline,pid=pid, args=disco_arg2))
         self.logger.info("disco started")
 
 
@@ -506,7 +510,7 @@ class DeploymentManager(threading.Thread):
         try:
             host = socket.gethostbyname(site)
             cmd = "OUTPUT -d %s -m owner --uid-owner %s -j ACCEPT" % (host,user_name)
-            riaps_sudo("iptables -A %s" % cmd)
+            riaps_sudo("iptables -A %s" % cmd  + IPT_WAIT)
             firewall += [cmd]
         except:
             raise BuildError('Error in setting up access to %s for %s' % (site,user_name))
@@ -550,7 +554,7 @@ class DeploymentManager(threading.Thread):
         if self.setupAppNetworkSites(sites, user_name, done,firewall): return firewall     # Access to any network
         host = '0.0.0.0/0'                                 # deny access to all others
         cmd = "OUTPUT -d %s -m owner --uid-owner %s -j DROP" % (host,user_name)
-        riaps_sudo("iptables -A %s" % cmd)
+        riaps_sudo("iptables -A %s" % cmd  + IPT_WAIT)
         firewall += [cmd]
         return firewall
     
@@ -723,7 +727,7 @@ class DeploymentManager(threading.Thread):
     def undoAppNetwork(self,firewall):
         if not Config.SECURITY: return 
         for cmd in firewall:
-            riaps_sudo("iptables -D %s" % cmd)
+            riaps_sudo("iptables -D %s" % cmd  + IPT_WAIT)
 
     def stopActor(self,appName,actorName):
         '''
@@ -894,9 +898,11 @@ class DeploymentManager(threading.Thread):
         
     def stopOrphanDisco(self):
         record = self.appDbase.getDiscoCommand()
+        result = (self.dbaseHost,self.dbasePort)
         if record != None:
             cmdline = record.cmd
             pid = record.pid 
+            result = tuple(record.args.split(':'))
             infoList = [p.info for p in psutil.process_iter(attrs=['pid','cmdline'])
                         if pid == p.info['pid']]
             for info in infoList:
@@ -904,6 +910,7 @@ class DeploymentManager(threading.Thread):
                     self.logger.info("stopping orphan disco [%d] '%s'" % (pid,' '.join(cmdline)))
                     self.kill('orphan disco',pid)
                     self.appDbase.delDiscoCommand()
+        return result
                     
         
     def stopOrphanActor(self,record):
@@ -933,9 +940,9 @@ class DeploymentManager(threading.Thread):
                 self.stopOrphanActor(act)
                 recs += [act]
         if disco != None:                           # Recover discovery
-            self.stopOrphanDisco()
+            args = self.stopOrphanDisco()
             self.logger.info("recover: disco = %s" % str(disco))
-            self.setupDisco(disco)
+            self.setupDisco(args)             # Try to use old dbase
         for act in recs:                            # Unregister orphan actors from disco
             self.unregisterOrphanActor(act)
         for app in apps:

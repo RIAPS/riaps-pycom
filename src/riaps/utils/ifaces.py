@@ -7,7 +7,10 @@ Created on Nov 4, 2016
 
 import netifaces
 import socket
+from random import randint
+from contextlib import closing
 from riaps.utils.config import Config
+
 
 def getNetworkInterfaces(nicName=None):
     '''
@@ -32,13 +35,14 @@ def getNetworkInterfaces(nicName=None):
                 ipAddressList.append(ifAddr)
                 ifNameList.append(ifName)
                 linkAddrs = netifaces.ifaddresses(ifName)[netifaces.AF_LINK]
-                linkAddr = linkAddrs[0]['addr'].replace(':','')
+                linkAddr = linkAddrs[0]['addr'].replace(':', '')
                 macAddressList.append(linkAddr)
                 if(nicName == ifName):
                     ipAddressList = [ipAddressList[-1]]
                     macAddressList = [macAddressList[-1]] 
                     break
-    return (ipAddressList,macAddressList,ifNameList,local)
+    return (ipAddressList, macAddressList, ifNameList, local)
+
 
 def is_valid_ipv4_address(address):
     ''' Determine if the argument is a valid IP address
@@ -55,6 +59,7 @@ def is_valid_ipv4_address(address):
         return False
     return True
 
+
 def get_unix_dns_ips():
     ''' Retrieve the IP address(es) of dns servers used by this host
     '''
@@ -68,3 +73,20 @@ def get_unix_dns_ips():
                 if is_valid_ipv4_address(ip):
                     dns_ips.append(ip)
     return dns_ips
+
+
+RANDOM_PORT_MIN = 49152
+RANDOM_PORT_MAX = 65535
+
+
+def get_random_port():
+    '''
+    Get a random open port
+    '''
+    while True:
+        port = randint(RANDOM_PORT_MIN , RANDOM_PORT_MAX)
+        with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
+            s.bind(('', port))
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            return s.getsockname()[1]
+

@@ -6,5 +6,5 @@ Created on Jan 19, 2018
 '''
 
 
-def actorIdentity(appName,actorName,pid):
+def actorIdentity(appName, actorName, pid):
     return  appName + "." + actorName + "-" + str(pid)

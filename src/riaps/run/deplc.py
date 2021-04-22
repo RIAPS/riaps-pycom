@@ -13,11 +13,13 @@ from riaps.consts.defs import *
 from .exc import SetupError
 import logging
 
+
 class DeplClient(object):
     '''
     Deployment service client of an actor
     '''
-    def __init__(self, parentActor,suffix):
+
+    def __init__(self, parentActor, suffix):
         '''
         Constructor
         '''
@@ -32,14 +34,14 @@ class DeplClient(object):
     def start(self):
         self.logger.info("starting")
         self.socket = self.context.socket(zmq.REQ)
-        self.socket.setsockopt(zmq.RCVTIMEO,const.deplEndpointRecvTimeout)
-        self.socket.setsockopt(zmq.SNDTIMEO,const.deplEndpointSendTimeout)
+        self.socket.setsockopt(zmq.RCVTIMEO, const.deplEndpointRecvTimeout)
+        self.socket.setsockopt(zmq.SNDTIMEO, const.deplEndpointSendTimeout)
         endpoint = const.deplEndpoint
         self.socket.connect(endpoint)    
         self.channel = self.context.socket(zmq.PAIR)
         self.logger.info("started")
 
-    def registerApp(self,isDevice=False):
+    def registerApp(self, isDevice=False):
         self.logger.info("registerApp")
         reqt = deplo_capnp.DeplReq.new_message()
         appMessage = reqt.init('actorReg')
@@ -89,23 +91,23 @@ class DeplClient(object):
             # raise SetupError("registerApp - unexpected response from deplo")
             return False
 
-    def registerDevice(self,bundle):
+    def registerDevice(self, bundle):
         self.logger.info("registerDevice %s" % str(bundle))
         
         if self.socket == None:
             self.logger.info("No deplo service - skipping device registration: %s", str(bundle))
             return False
 
-        appName,modelName,typeName,args = bundle
+        appName, modelName, typeName, args = bundle
 
         reqt = deplo_capnp.DeplReq.new_message()
         devMessage = reqt.init('deviceGet')
         devMessage.appName = appName
         devMessage.modelName = modelName
         devMessage.typeName = typeName
-        devMessage.init('deviceArgs',len(args))
+        devMessage.init('deviceArgs', len(args))
         i = 0
-        for argName,argValue in args.items():
+        for argName, argValue in args.items():
             deviceArg = devMessage.deviceArgs[i]
             deviceArg.name = argName
             deviceArg.value = str(argValue)
@@ -147,14 +149,14 @@ class DeplClient(object):
             # raise SetupError("registerDevice - unexpected response from deplo")
             return False
     
-    def unregisterDevice(self,bundle):
+    def unregisterDevice(self, bundle):
         self.logger.info("unregisterDevice %s" % str(bundle))
         
         if self.socket == None:
             self.logger.info("No deplo service - skipping device unregistration: %s", str(bundle))
             return False
 
-        appName,modelName,typeName = bundle
+        appName, modelName, typeName = bundle
 
         reqt = deplo_capnp.DeplReq.new_message()
         devMessage = reqt.init('deviceRel')
@@ -198,7 +200,7 @@ class DeplClient(object):
             # raise SetupError(errMsg)
             return False
     
-    def reportEvent(self,bundle):
+    def reportEvent(self, bundle):
         self.logger.info("reportEvent %s" % str(bundle))
         
         if self.socket == None:
@@ -247,7 +249,6 @@ class DeplClient(object):
             self.logger.error(errMsg)
             # raise SetupError("reportEvent - unexpected response from deplo")
             return False
-        
     
     def terminate(self):
         self.logger.info("terminating")

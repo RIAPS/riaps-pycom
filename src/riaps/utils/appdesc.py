@@ -7,6 +7,7 @@ Created on Oct 29, 2018
 '''
 import yaml
 
+
 class AppDescriptor(yaml.YAMLObject):
     '''
     RIAPS app origin - 'signature file
@@ -19,7 +20,8 @@ class AppDescriptor(yaml.YAMLObject):
     network = network access control for nodes, (ip|'[]') => [] | [ ('dns' | ip) ]+  
     '''
     yaml_loader = yaml.SafeLoader
-    def __init__(self,url,host,mac,sha,home,hosts,network):
+
+    def __init__(self, url, host, mac, sha, home, hosts, network):
         self.url = url
         self.host = host
         self.mac = mac

@@ -12,11 +12,13 @@ from riaps.consts.defs import *
 from .exc import SetupError, OperationError
 import logging
 
+
 class DiscoClient(object):
     '''
     Discovery service client of an actor
     '''
-    def __init__(self, parentActor,suffix):
+
+    def __init__(self, parentActor, suffix):
         '''
         Constructor
         '''
@@ -31,8 +33,8 @@ class DiscoClient(object):
     def start(self):
         self.logger.info("starting")
         self.socket = self.context.socket(zmq.REQ)
-        self.socket.setsockopt(zmq.RCVTIMEO,const.discoEndpointRecvTimeout)
-        self.socket.setsockopt(zmq.SNDTIMEO,const.discoEndpointSendTimeout)
+        self.socket.setsockopt(zmq.RCVTIMEO, const.discoEndpointRecvTimeout)
+        self.socket.setsockopt(zmq.SNDTIMEO, const.discoEndpointSendTimeout)
         endpoint = const.discoEndpoint
         self.socket.connect(endpoint)    
         self.channel = self.context.socket(zmq.PAIR)
@@ -89,12 +91,12 @@ class DiscoClient(object):
         self.registerApp()
         self.logger.info('reconnected')
         
-    def handleRegReq(self,bundle):
+    def handleRegReq(self, bundle):
         self.logger.info("handleRegReq: %s" % str(bundle))
         if self.socket == None:
             self.logger.info("No disco service - skipping registration: %s", str(bundle))
             return 
-        (partName,partType,kind,isLocal,portName,portType,portHost,portNum) = bundle[0:8]
+        (partName, partType, kind, isLocal, portName, portType, portHost, portNum) = bundle[0:8]
         # All interactions below go via the REQ/REP socket ; the channel is for server pushes
         req = disco_capnp.DiscoReq.new_message()
         reqMsg = req.init('serviceReg')
@@ -126,12 +128,12 @@ class DiscoClient(object):
             raise SetupError("Unexpected response from disco service at service registration")
         return
     
-    def handleLookupReq(self,bundle):
+    def handleLookupReq(self, bundle):
         self.logger.info("handleLookupReq: %s" % str(bundle))
         if self.socket == None:
             self.logger.info("No disco service - skipping lookup: %s", str(bundle))
             return []
-        (partName,_partType,kind,isLocal,portName,portType) = bundle[0:6]
+        (partName, _partType, kind, isLocal, portName, portType) = bundle[0:6]
         # All interactions below go via the REQ/REP socket ; the channel is for server pushes
         req = disco_capnp.DiscoReq.new_message()
         reqMsg = req.init('serviceLookup')
@@ -166,15 +168,14 @@ class DiscoClient(object):
             for sock in sockets:
                 host = sock.host
                 port = sock.port
-                returnValue.append((partName,portName,host,port))
+                returnValue.append((partName, portName, host, port))
             else:
                 pass
         else:
             raise SetupError("Service lookup error - bad response")
         return returnValue
- 
         
-    def registerEndpoint(self,bundle):
+    def registerEndpoint(self, bundle):
         self.logger.info("registerEndpoint: %s" % str(bundle))
         # print ("DiscoClient.registerEndpoint",bundle)
         # Prefix: (partName, partType)
@@ -187,7 +188,7 @@ class DiscoClient(object):
         # (qry,local,name,(req,rep),host)
         # (ans,local,name,(req,rep),host,port)
         kind = bundle[2]
-        #(partName,partType,kind,isLocal,portName,portType) = bundle[0:6]
+        # (partName,partType,kind,isLocal,portName,portType) = bundle[0:6]
         # All interactions below go via the REQ/REP socket ; the channel is for server pushes
         result = []
         # Update component means: add command to component's message queue
@@ -201,12 +202,12 @@ class DiscoClient(object):
             raise SetupError("Invalid registration message")
         return result
 
-    def registerGroup(self,bundle):
+    def registerGroup(self, bundle):
         self.logger.info("registerGroup: %s" % str(bundle))
-        _key,groupType, groupName, messageType,host,pubPort,partName,partType,portName = bundle
+        _key, groupType, groupName, messageType, host, pubPort, partName, partType, portName = bundle
         msgType = messageType + '@' + groupType + '.' + groupName    
-        regReqBundle = (partName,partType,"gpub",False,portName,msgType,host,pubPort)
-        lookupReqBundle = (partName,partType,"gsub",False,portName,msgType)  
+        regReqBundle = (partName, partType, "gpub", False, portName, msgType, host, pubPort)
+        lookupReqBundle = (partName, partType, "gsub", False, portName, msgType)  
         # (1) lookupReq -> (2) reqReq
         result = self.handleLookupReq(lookupReqBundle)
         self.handleRegReq(regReqBundle)
@@ -246,7 +247,6 @@ class DiscoClient(object):
 #         else:
 #             raise SetupError("Unexpected response from disco service at group registration")
 #         return
-    
     
     def terminate(self):
         self.logger.info("terminating")

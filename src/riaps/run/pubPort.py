@@ -17,15 +17,17 @@ except:
     cPickle = None
     import pickle
 
+
 class PubPort(Port):
     '''
     classdocs
     '''
+
     def __init__(self, parentComponent, portName, portSpec):
         '''
         Constructor
         '''
-        super(PubPort,self).__init__(parentComponent,portName)
+        super(PubPort, self).__init__(parentComponent, portName)
         self.type = portSpec["type"]
         self.isTimed = portSpec["timed"]
         parentActor = parentComponent.parent
@@ -35,10 +37,10 @@ class PubPort(Port):
     def setup(self):
         pass
         
-    def setupSocket(self,owner):
+    def setupSocket(self, owner):
         self.setOwner(owner)
         self.socket = self.context.socket(zmq.PUB)
-        self.socket.setsockopt(zmq.SNDTIMEO,self.sendTimeout) 
+        self.socket.setsockopt(zmq.SNDTIMEO, self.sendTimeout) 
         self.host = ''
         self.portNum = -1
         self.setupCurve(True) 
@@ -50,7 +52,7 @@ class PubPort(Port):
             localHost = self.getLocalIface()
             self.portNum = self.socket.bind_to_random_port("tcp://" + localHost)
             self.host = localHost
-        self.info = ('pub',self.isLocalPort,self.name,self.type,self.host,self.portNum)
+        self.info = ('pub', self.isLocalPort, self.name, self.type, self.host, self.portNum)
         return self.info
         
     def reset(self):
@@ -65,11 +67,11 @@ class PubPort(Port):
     def inSocket(self):
         return False
     
-    def send_pyobj(self,msg):
-        return self.port_send(msg,True)
+    def send_pyobj(self, msg):
+        return self.port_send(msg, True)
 
     def send(self, msg):
-        return self.port_send(msg,False)
+        return self.port_send(msg, False)
         
     def recv_pyobj(self):
         raise OperationError("attempt to receive through a publish port")
@@ -79,6 +81,4 @@ class PubPort(Port):
     
     def getInfo(self):
         return self.info
-    
-    
     

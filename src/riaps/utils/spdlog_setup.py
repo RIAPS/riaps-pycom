@@ -13,23 +13,23 @@ sinks = { }
 patterns = { }
 loggers = {}
 
-
 levels = {
-        'trace' : spdlog.LogLevel.TRACE,
-        'debug' : spdlog.LogLevel.DEBUG,
-        'info'  : spdlog.LogLevel.INFO,
-        'warn'  : spdlog.LogLevel.WARN,
-        'err'   : spdlog.LogLevel.ERR,
-        'critical' : spdlog.LogLevel.CRITICAL,
-        'off'   : spdlog.LogLevel.OFF        
+        'trace': spdlog.LogLevel.TRACE,
+        'debug': spdlog.LogLevel.DEBUG,
+        'info': spdlog.LogLevel.INFO,
+        'warn': spdlog.LogLevel.WARN,
+        'err': spdlog.LogLevel.ERR,
+        'critical': spdlog.LogLevel.CRITICAL,
+        'off': spdlog.LogLevel.OFF        
     }
 
 sizes = {
-    'T' : 1E12,
-    'G' : 1E9,
-    'M' : 1E6,
-    'k' : 1E3
+    'T': 1E12,
+    'G': 1E9,
+    'M': 1E6,
+    'k': 1E3
     }
+
 
 def file_size(num):
     global sizes
@@ -46,17 +46,22 @@ def file_size(num):
     except:
         raise
 
+
 def add_stdout_sink_st(_s):
     return spdlog.stdout_sink_st()
+
 
 def add_stdout_sink_mt(_s):
     return spdlog.stdout_sink_mt()
 
+
 def add_color_stdout_sink_st(_s):
     return spdlog.stdout_color_sink_st()
 
+
 def add_color_stdout_sink_mt(_s):
     return spdlog.stdout_color_sink_mt()
+
 
 def add_parent_dir(s):
     if 'create_parent_dir' in s.keys() and s['create_parent_dir']:
@@ -66,12 +71,12 @@ def add_parent_dir(s):
                 os.mkdir(d)
             except FileExistsError:
                 pass
+
     
 def add_basic_file_sink_st(s):
     add_parent_dir(s)
     return spdlog.basic_file_sink_st(filename=s['filename'],
                                      truncate=s['truncate'] if 'truncate' in s.keys() else False)
-
          
      
 def add_basic_file_sink_mt(s):
@@ -79,17 +84,20 @@ def add_basic_file_sink_mt(s):
     return spdlog.basic_file_sink_mt(filename=s['filename'],
                                      truncate=s['truncate'] if 'truncate' in s.keys() else False)
 
+
 def add_rotating_file_sink_st(s):
     add_parent_dir(s)
     return spdlog.rotating_file_sink_st(filename=s['base_filename'],
                                         max_size=file_size(s['max_size']),
-                                        max_files = s['max_files'])
+                                        max_files=s['max_files'])
+
 
 def add_rotating_file_sink_mt(s):
     add_parent_dir(s)
     return spdlog.rotating_file_sink_mt (filename=s['base_filename'],
                                          max_size=file_size(s['max_size']),
-                                         max_files = s['max_files'])
+                                         max_files=s['max_files'])
+
 
 def add_daily_file_sink_st(s):
     add_parent_dir(s)
@@ -97,17 +105,21 @@ def add_daily_file_sink_st(s):
                                      rotation_hour=s['rotation_hour'],
                                      rotation_minute=s['rotation_minute'])
 
+
 def add_daily_file_sink_mt(s):
     add_parent_dir(s)
     return spdlog.daily_file_sink_mt(filename=s['base_filename'],
                                      rotation_hour=s['rotation_hour'],
                                      rotation_minute=s['rotation_minute'])
 
+
 def add_null_sink_st(_s):
     return spdlog.null_sink_st()
 
+
 def add_null_sink_mt(_s):
     return spdlog.null_sink_mt()
+
 
 def add_syslog_sink_st(s):
     return spdlog.syslog_sink_st(ident=s['ident'] if 'ident' in s.keys() else "",
@@ -115,31 +127,34 @@ def add_syslog_sink_st(s):
                               syslog_facility=s['syslog_facility'] if 'syslog_facility' in s.keys() else (1 << 3)
                               )
 
+
 def add_syslog_sink_mt(s):
     return spdlog.syslog_sink_mt(ident=s['ident'] if 'ident' in s.keys() else "",
                               syslog_option=s['syslog_option'] if 'syslog_option' in s.keys() else 0,
                               syslog_facility=s['syslog_facility'] if 'syslog_facility' in s.keys() else (1 << 3)
                               )
 
+
 types = { 
-        'stdout_sink_st' : add_stdout_sink_st,
-        'stdout_sink_mt' : add_stdout_sink_mt,
-        'color_stdout_sink_st' : add_color_stdout_sink_st,
-        'color_stdout_sink_mt' : add_color_stdout_sink_mt,
-        'basic_file_sink_st' : add_basic_file_sink_st,
-        'basic_file_sink_mt' : add_basic_file_sink_mt,
-        'rotating_file_sink_st' : add_rotating_file_sink_st,
-        'rotating_file_sink_mt' : add_rotating_file_sink_mt,
-        'daily_file_sink_st' : add_daily_file_sink_st,
-        'daily_file_sink_mt' : add_daily_file_sink_mt,
-        'null_sink_st' : add_null_sink_st,
-        'null_sink_mt' : add_null_sink_mt,
-        'syslog_sink_st' : add_syslog_sink_st,
-        'syslog_sink_mt' : add_syslog_sink_mt
+        'stdout_sink_st': add_stdout_sink_st,
+        'stdout_sink_mt': add_stdout_sink_mt,
+        'color_stdout_sink_st': add_color_stdout_sink_st,
+        'color_stdout_sink_mt': add_color_stdout_sink_mt,
+        'basic_file_sink_st': add_basic_file_sink_st,
+        'basic_file_sink_mt': add_basic_file_sink_mt,
+        'rotating_file_sink_st': add_rotating_file_sink_st,
+        'rotating_file_sink_mt': add_rotating_file_sink_mt,
+        'daily_file_sink_st': add_daily_file_sink_st,
+        'daily_file_sink_mt': add_daily_file_sink_mt,
+        'null_sink_st': add_null_sink_st,
+        'null_sink_mt': add_null_sink_mt,
+        'syslog_sink_st': add_syslog_sink_st,
+        'syslog_sink_mt': add_syslog_sink_mt
         }
+
     
 def from_file(fname):
-    global global_pattern, sinks,patterns,loggers,levels
+    global global_pattern, sinks, patterns, loggers, levels
     d = toml.load(fname)
     if 'global_pattern' in d.keys():
         global_pattern = d['global_pattern']
@@ -164,13 +179,14 @@ def from_file(fname):
                 p = l['pattern']
                 if p in patterns.keys():
                     if 'value' in patterns[p]:
-                        p = patterns[p]['value']
-                    logger.set_pattern(p)
+                        pat = patterns[p]['value']
+                        logger.set_pattern(pat)
             elif global_pattern:
                 logger.set_pattern(global_pattern)
             if 'level' in l.keys():
                 logger.set_level(levels[l['level']])
             loggers[name] = logger
+
 
 def get_logger(name):
     global loggers
@@ -178,6 +194,7 @@ def get_logger(name):
         return loggers[name]
     else:
         return None
+
     
 if __name__ == '__main__':
     test = """# level is optional for both sinks and loggers
@@ -271,8 +288,16 @@ type = "null_sink_mt"
 
 # only works for Linux
 [[sink]]
-name = "syslog"
-type = "syslog_sink"
+name = "syslog_sink_mt"
+type = "syslog_sink_mt"
+# generally no need to fill up the optional fields below
+# ident = "" (default)
+# syslog_option = 0 (default)
+# syslog_facility = LOG_USER (default macro value)
+
+[[sink]]
+name = "syslog_sink_st"
+type = "syslog_sink_st"
 # generally no need to fill up the optional fields below
 # ident = "" (default)
 # syslog_option = 0 (default)
@@ -291,7 +316,7 @@ sinks = [
     "file_out", "file_err",
     "rotate_out", "rotate_err",
     "null_sink_st", "null_sink_mt",
-    "syslog"]
+    "syslog_sink_st", "syslog_sink_mt"]
 level = "trace"
 
 [[logger]]
@@ -299,7 +324,7 @@ name = "console"
 sinks = ["console_st", "console_mt"]
 pattern = "succient"
 """ 
-    with open('test.toml','w') as f:
+    with open('test.toml', 'w') as f:
         f.write(test)
         
     from_file('test.toml')
@@ -312,6 +337,4 @@ pattern = "succient"
         logger.warn('warn')
         logger.error('error')
         logger.critical('critical')
-        
-
     

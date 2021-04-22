@@ -31,11 +31,14 @@ from Cryptodome.Signature import PKCS1_v1_5
 from Cryptodome.Hash import SHA256
 # import zmq
 import zmq.auth
+
+import opendht as dht
+
 from threading import RLock
 from enum import Enum, auto, unique 
 
 from riaps.consts.defs import *
-from riaps.utils.ifaces import getNetworkInterfaces
+from riaps.utils.ifaces import getNetworkInterfaces,get_random_port
 from riaps.utils.config import Config 
 from riaps.utils.appdesc import AppDescriptor
 from riaps.ctrl.ctrlsrv import ServiceThread, ServiceClient
@@ -120,7 +123,8 @@ class Controller(object):
 #         self.riaps_depl = None      # App deployment model to be launched
         self.appInfo = {}           # Info about apps 
         self.launchList = []        # List of launch operations
-        self.setupHostKeys()        
+        self.setupHostKeys()
+        self.discoType = None        
 
     def setupIfaces(self):
         '''
@@ -148,9 +152,9 @@ class Controller(object):
         self.service.start()
         time.sleep(0.001)           # Yield to thread to enable 
         
-    def startDbase(self):
+    def startRedis(self):
         '''
-        Start the (redis) database
+        Start Redis (for discovery)
         ''' 
         dbase_config = join(self.riaps_Folder,"etc/redis.conf")
         # Launch the database process
@@ -160,6 +164,16 @@ class Controller(object):
         except:
             self.logger.error("Error when starting database: %s", sys.exc_info()[0])
             raise
+        
+    def startDht(self):
+        '''
+        Start Dht node (for discovery)
+        '''
+        config = dht.DhtConfig()
+        config.setBootstrapMode(False)  # Server 
+        self.dht = dht.DhtRunner()
+        self.dhtPort = get_random_port()
+        self.dht.run(port=self.dhtPort,ipv4=self.hostAddress,config=config)
         
     def startUI(self):
         '''
@@ -174,7 +188,14 @@ class Controller(object):
         '''
         Start up everything in the controller
         '''
-        self.startDbase()
+        if Config.DISCO_TYPE == 'redis':
+            self.startRedis()
+            self.discoType = 'redis'
+        elif Config.DISCO_TYPE == 'opendht':
+            self.startDht()
+            self.discoType = 'opendht'
+        else:
+            self.logger.error("Unknown riaps_disco type %s", Config.DISCO_TYPE)
         self.startUI()
         self.startService()
         

@@ -15,18 +15,20 @@ except:
     cPickle = None
     import pickle
 
+
 class SubPort(Port):
     '''
     classdocs
     '''
+
     def __init__(self, parentComponent, portName, portSpec):
         '''
         Constructor
         '''
-        super(SubPort,self).__init__(parentComponent,portName,portSpec)
+        super(SubPort, self).__init__(parentComponent, portName, portSpec)
         self.type = portSpec["type"]
         self.isTimed = portSpec["timed"]
-        self.deadline = portSpec["deadline"] * 0.001 # msec
+        self.deadline = portSpec["deadline"] * 0.001  # msec
         parentActor = parentComponent.parent
         self.isLocalPort = parentActor.isLocalMessage(self.type)
         self.pubs = []
@@ -37,7 +39,7 @@ class SubPort(Port):
     def setup(self):
         pass
        
-    def setupSocket(self,owner):
+    def setupSocket(self, owner):
         self.setOwner(owner)
         self.socket = self.context.socket(zmq.SUB)
         self.socket.setsockopt_string(zmq.SUBSCRIBE, '')
@@ -51,7 +53,7 @@ class SubPort(Port):
             localHost = self.getLocalIface()
             self.portNum = -1 
             self.host = localHost
-        self.info = ('sub',self.isLocalPort,self.name,self.type,self.host)
+        self.info = ('sub', self.isLocalPort, self.name, self.type, self.host)
         return self.info
     
     def reset(self):
@@ -63,21 +65,21 @@ class SubPort(Port):
     def inSocket(self):
         return True
     
-    def update(self,host,port):
+    def update(self, host, port):
         pubPort = "tcp://" + str(host) + ":" + str(port)
-        self.pubs.append((host,port))
+        self.pubs.append((host, port))
         self.socket.connect(pubPort)
     
     def recv_pyobj(self):
         return self.port_recv(True)
 
-    def send_pyobj(self,msg):
+    def send_pyobj(self, msg):
         raise OperationError("attempt to send through a subscriber port")
     
     def recv(self):
         return self.port_recv(False)
     
-    def send(self):
+    def send(self, _msg):
         raise OperationError("attempt to send through a subscriber port")
 
     def getInfo(self):

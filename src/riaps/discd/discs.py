@@ -4,14 +4,18 @@ Created on Oct 19, 2016
 
 @author: riaps
 '''
-import zmq
-import capnp
 import time
 import sys
 import re
 import os
 
-from .dbase import DiscoDbase
+import zmq
+from czmq import Zsys
+import capnp
+
+from .dbase_redis import RedisDbase
+from .dbase_dht import DhtDbase
+from riaps.utils.config import Config
 from riaps.proto import disco_capnp
 from riaps.consts.defs import *
 from riaps.utils.ifaces import getNetworkInterfaces
@@ -22,13 +26,21 @@ class DiscoService(object):
     '''
     Discovery service main class. 
     '''
-    
-    def __init__(self,dbase):
+    def __init__(self,dbaseLoc):
         self.logger = logging.getLogger(__name__)
+        czmq_ctx = Zsys.init()
+        self.context = zmq.Context.shadow(czmq_ctx.value)
+        Zsys.handler_reset() 
         self.context = zmq.Context()
         self.setupIfaces()
         self.suffix = self.macAddress
-        self.dbase = DiscoDbase(self.context,dbase)
+        self.dbase = None 
+        if Config.DISCO_TYPE == 'redis':
+            self.dbase = RedisDbase(self.context,dbaseLoc)
+        elif Config.DISCO_TYPE == 'opendht':
+            self.dbase = DhtDbase(self.context,self.hostAddress,dbaseLoc)
+        else:
+            pass    
         self.registrations = {}
         self.GROUPMSG_RE = re.compile("\w*\@\w*\.\w*")
     
@@ -36,7 +48,7 @@ class DiscoService(object):
         '''
         Find the IP addresses of the (host-)local and network(-global) interfaces
         '''
-        (globalIPs,globalMACs,_globalNames,_localIP) = getNetworkInterfaces()
+        (globalIPs,globalMACs,globalNames,_localIP) = getNetworkInterfaces()
         try:
             assert len(globalIPs) > 0 and len(globalMACs) > 0
         except:
@@ -44,6 +56,8 @@ class DiscoService(object):
             raise
         globalIP = globalIPs[0]
         globalMAC = globalMACs[0]
+        if Config.NIC_NAME == None:
+            Config.NIC_NAME = globalNames[0]
         self.hostAddress = globalIP
         self.macAddress = globalMAC
         
@@ -255,20 +269,20 @@ class DiscoService(object):
         clientPortName = client.portName
         client = (appName,clientActorHost,clientActorName,clientInstanceName,clientPortName)
 
-        self.logger.info("handleServiceLookup:%s,%s,%s,%s,%s,%s" 
-                            % (appName,str(client),msgType,kind,scope,clientInstanceName))
+
         (key,client) = self.buildLookupKey(appName, msgType, kind, scope,
                                            clientActorHost, clientActorName, 
                                            clientInstanceName,clientPortName)
         result = self.dbase.fetch(key,client)
-        
+        self.logger.info("handleServiceLookup:%s,%s,%s,%s,%s,%s -> %r"
+                           % (appName,str(client),msgType,kind,scope,clientInstanceName,result))   
         rep = disco_capnp.DiscoRep.new_message()            # Construct the response: all providers of the requested service
         repMsg = rep.init('serviceLookup')
         repMsg.status = "ok"
         sockets = repMsg.init('sockets',len(result))
         i = 0
         for elt in result:
-            pair = str(elt.decode('utf-8')).split(':')
+            pair = str(elt).split(':')
             sockets[i].host = str(pair[0])
             sockets[i].port = int(pair[1])
             i += 1
@@ -352,7 +366,7 @@ class DiscoService(object):
         host = pair[0]
         port = pair[1]
         for client in clients:                          # For each client:
-            clientString = client.decode('utf-8')           # Parse the client string
+            clientString = client                       # .decode('utf-8')           # Parse the client string
             spl = re.split('/',clientString)
             _skip = spl[0]
             appName = spl[1]
@@ -391,6 +405,7 @@ class DiscoService(object):
     def terminate(self):
         self.logger.info("terminating")
         # Clean up everything
+        self.dbase.terminate()
         self.context.destroy()
         time.sleep(1.0)
         self.logger.info("terminated")
