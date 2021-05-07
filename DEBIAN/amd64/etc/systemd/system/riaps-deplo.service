@@ -1,6 +1,7 @@
 [Unit]
 Description=RIAPS Deployment Manager Service
-Requires=riaps-rm-cgroups.service riaps-rm-quota.service
+Requires=sys-subsystem-net-devices-eth0.device riaps-rm-cgroups.service riaps-rm-quota.service
+After=sys-subsystem-net-devices-eth0.device
 
 [Service]
 Type=simple
