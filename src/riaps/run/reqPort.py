@@ -4,13 +4,13 @@ Created on Oct 10, 2016
 @author: riaps
 '''
 import zmq
-from .port import Port
+from .port import Port,PortInfo,DuplexConnPort
 from riaps.run.exc import OperationError
 from riaps.utils.config import Config
 from zmq.error import ZMQError
 
 
-class ReqPort(Port):
+class ReqPort(DuplexConnPort):
     '''
     Similar to a client port
     '''
@@ -19,36 +19,41 @@ class ReqPort(Port):
         '''
         Constructor
         '''
-        super(ReqPort, self).__init__(parentComponent, portName, portSpec)
-        self.req_type = portSpec["req_type"]
-        self.rep_type = portSpec["rep_type"]
-        self.isTimed = portSpec["timed"]
-        self.deadline = portSpec["deadline"] * 0.001  # msec
-        parentActor = parentComponent.parent
-        self.isLocalPort = parentActor.isLocalMessage(self.req_type) and parentActor.isLocalMessage(self.rep_type)
+        super().__init__(parentComponent, portName, portSpec)
+        # self.req_type = portSpec["req_type"]
+        # self.rep_type = portSpec["rep_type"]
+        # self.isTimed = portSpec["timed"]
+        # self.deadline = portSpec["deadline"] * 0.001  # msec
+        # parentActor = parentComponent.parent
+        # req_kind = parentActor.messageKind(self.req_type)
+        # rep_kind = parentActor.messageKind(self.rep_type)
+        # assert req_kind == rep_kind
+        # self.portKind = req_kind
         self.replyHost = None
         self.replyPort = None
-        self.info = None
 
     def setup(self):
         pass
   
     def setupSocket(self, owner):
-        self.setOwner(owner)
-        self.socket = self.context.socket(zmq.REQ)
-        self.socket.setsockopt(zmq.SNDTIMEO, self.sendTimeout)
-        self.setupCurve(False)   
-        self.host = ''
-        if not self.isLocalPort:
-            globalHost = self.getGlobalIface()
-            self.portNum = -1
-            self.host = globalHost
-        else:
-            localHost = self.getLocalIface()
-            self.portNum = -1
-            self.host = localHost
-        self.info = ('req', self.isLocalPort, self.name, str(self.req_type) + '#' + str(self.rep_type), self.host)
-        return self.info
+        return self.setupConnSocket(owner,zmq.REQ,'req')
+        # self.setOwner(owner)
+        # self.socket = self.context.socket(zmq.REQ)
+        # self.socket.setsockopt(zmq.SNDTIMEO, self.sendTimeout)
+        # self.setupCurve(False)   
+        # self.host = ''
+        # if self.portKind == PortKind.GLOBAL:
+        #     globalHost = self.getGlobalIface()
+        #     self.portNum = -1
+        #     self.host = globalHost
+        # else:
+        #     localHost = self.getLocalIface()
+        #     self.portNum = -1
+        #     self.host = localHost
+        # self.info = PortInfo(portType='req', portKind=self.portKind, portName=self.name, 
+        #                      msgType=str(self.req_type) + '#' + str(self.rep_type), 
+        #                      host=self.host, portNum=self.portNum) 
+        # return self.info
     
     def reset(self):
         newSocket = self.context.socket(zmq.REQ)

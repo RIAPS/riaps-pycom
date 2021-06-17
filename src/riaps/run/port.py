@@ -4,6 +4,8 @@
 import zmq
 import time
 import struct
+from collections import namedtuple
+from enum import IntEnum, auto
 from .exc import SetupError, OperationError, PortError
 from riaps.utils.config import Config
 import logging
@@ -15,6 +17,19 @@ except:
     cPickle = None
     import pickle
 
+# Port information tuple
+PortInfo = namedtuple('PortInfo', 'portKind portScope portName msgType portHost portNum')
+
+class PortScope(IntEnum):
+    GLOBAL = auto()
+    LOCAL = auto()
+    INTERNAL = auto()
+
+    def scope(self):
+        return { PortScope.GLOBAL : "global" , 
+                PortScope.LOCAL : "local" ,
+                PortScope.INTERNAL : "internal"                
+                } [self.value] 
     
 class Port(object):
     '''Base class for all Port objects. 
@@ -170,11 +185,14 @@ class Port(object):
         Abstract, subclasses must implement this method.
         
         :returns: a tuple containing the name of the port's type: 
-                req,rep,clt,srv,qry,ans,pub,sub,ins,or tim; the name of the
-                port object, and the name of the message type the port handles.  
-        :rtype: a tuple (portType, portName, msgType)
+                req,rep,clt,srv,qry,ans,pub,sub,ins,or tim; 
+                the kind of the port (global, local, internal);
+                the name of the port object; 
+                the name of the message type;
+                the host and the port number.  
+        :rtype: PortInfo
         '''
-        return ("port", None, None)
+        raise SetupError
     
     def update(self, host, port):
         ''' 
@@ -412,4 +430,149 @@ class Port(object):
         assert sto == None or (type(sto) == float and sto >= 0.0)
         self.sendTimeout = -1 if sto == None else int(sto * 1000)
         self.socket.setsockopt(zmq.SNDTIMEO, self.sendTimeout)
+    
+class SimplexBindPort(Port):
+    '''
+    Uni-directional 'binder' port
+    '''
+    def __init__(self, parentComponent, portName, portSpec):
+        '''
+        Constructor
+        '''
+        super().__init__(parentComponent, portName)
+        self.type = portSpec["type"]
+        self.isTimed = portSpec["timed"]
+        parentActor = parentComponent.parent
+        self.portScope = parentActor.messageScope(self.type)
+
+    def setupBindSocket(self, owner,zmqType, portKind):
+        self.setOwner(owner)
+        self.socket = self.context.socket(zmqType)
+        self.socket.setsockopt(zmq.SNDTIMEO, self.sendTimeout) 
+        self.host = ''
+        self.portNum = -1
+        self.setupCurve(True) 
+        if self.portScope == PortScope.GLOBAL:
+            globalHost = self.getGlobalIface()
+            self.portNum = self.socket.bind_to_random_port("tcp://" + globalHost)
+            self.host = globalHost
+        else:
+            localHost = self.getLocalIface()
+            self.portNum = self.socket.bind_to_random_port("tcp://" + localHost)
+            self.host = localHost
+        self.info = PortInfo(portKind = portKind, portScope=self.portScope, portName=self.name, 
+                             msgType=self.type, portHost=self.host, portNum=self.portNum)
+        return self.info
+    
+class SimplexConnPort(Port):
+    '''
+        Uni-directional 'connect' port
+    '''
+    def __init__(self, parentComponent, portName, portSpec):
+        '''
+        Constructor
+        '''
+        super().__init__(parentComponent, portName, portSpec)
+        self.type = portSpec["type"]
+        self.isTimed = portSpec["timed"]
+        self.deadline = portSpec["deadline"] * 0.001  # msec
+        parentActor = parentComponent.parent
+        self.portScope = parentActor.messageScope(self.type)
+        
+    def setupConnSocket(self,owner,zmqType,portKind,sockopts=[]):
+        self.setOwner(owner)
+        self.socket = self.context.socket(zmqType)
+        for (k,v) in sockopts:
+            self.socket.setsockopt_string(k,v)
+        self.setupCurve(False)
+        self.host = ''
+        if self.portScope == PortScope.GLOBAL:
+            globalHost = self.getGlobalIface()
+            self.portNum = -1 
+            self.host = globalHost
+        else:
+            localHost = self.getLocalIface()
+            self.portNum = -1 
+            self.host = localHost
+        self.info = PortInfo(portKind=portKind, portScope=self.portScope, portName=self.name, 
+                             msgType=self.type, portHost=self.host, portNum=self.portNum)
+        return self.info
+
+class DuplexBindPort(Port):
+    '''
+    Bi-directional 'bind' port
+    '''
+    def __init__(self, parentComponent, portName, portSpec):
+        '''
+        Constructor
+        '''
+        super().__init__(parentComponent, portName, portSpec)
+        self.req_type = portSpec["req_type"]
+        self.rep_type = portSpec["rep_type"]
+        self.isTimed = portSpec["timed"]
+        self.deadline = portSpec["deadline"] * 0.001  # msec
+        parentActor = parentComponent.parent
+        req_scope = parentActor.messageScope(self.req_type)
+        rep_scope = parentActor.messageScope(self.rep_type)
+        assert req_scope == rep_scope
+        self.portScope = req_scope
+        self.info = None
+    
+    def setupBindSocket(self,owner,zmqType,portKind):
+        self.setOwner(owner)
+        self.socket = self.context.socket(zmqType)
+        self.socket.setsockopt(zmq.SNDTIMEO, self.sendTimeout)
+        self.setupCurve(True)
+        self.host = ''
+        if self.portScope == PortScope.GLOBAL:
+            globalHost = self.getGlobalIface()
+            self.portNum = self.socket.bind_to_random_port("tcp://" + globalHost) 
+            self.host = globalHost
+        else:
+            localHost = self.getLocalIface()
+            self.portNum = self.socket.bind_to_random_port("tcp://" + localHost)
+            self.host = localHost
+        self.info = PortInfo(portKind=portKind, portScope=self.portScope, portName=self.name, 
+                             msgType=str(self.req_type) + '#' + str(self.rep_type), 
+                             portHost=self.host, portNum=self.portNum) 
+        return self.info
+
+    
+class DuplexConnPort(Port):
+    '''
+    Bi-directional 'connect' port
+    '''
+    def __init__(self, parentComponent, portName, portSpec):
+        super().__init__(parentComponent, portName, portSpec)
+        self.req_type = portSpec["req_type"]
+        self.rep_type = portSpec["rep_type"]
+        self.isTimed = portSpec["timed"]
+        self.deadline = portSpec["deadline"] * 0.001  # msec
+        parentActor = parentComponent.parent
+        req_scope = parentActor.messageScope(self.req_type)
+        rep_scope = parentActor.messageScope(self.rep_type)
+        assert req_scope == rep_scope
+        self.portScope = req_scope
+        self.info = None    
+    
+    def setupConnSocket(self,owner,zmqType,portKind):
+        self.setOwner(owner)
+        self.socket = self.context.socket(zmqType)
+        self.socket.setsockopt(zmq.SNDTIMEO, self.sendTimeout)
+        self.setupCurve(False)   
+        self.host = ''
+        if self.portScope == PortScope.GLOBAL:
+            globalHost = self.getGlobalIface()
+            self.portNum = -1
+            self.host = globalHost
+        else:
+            localHost = self.getLocalIface()
+            self.portNum = -1
+            self.host = localHost
+        self.info = PortInfo(portKind=portKind, portScope=self.portScope, portName=self.name, 
+                             msgType=str(self.req_type) + '#' + str(self.rep_type), 
+                             portHost=self.host, portNum=self.portNum) 
+        return self.info
+    
+
     

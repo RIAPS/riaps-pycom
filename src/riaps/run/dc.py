@@ -800,13 +800,14 @@ class Group(object):
         self.groupThread.start()
         while not self.done: time.sleep(0.1)  # Allow groupThread to create sockets
         # send a message to disco to register new group
-        assert(self.pubInfo[0] == 'gpub')
-        assert(self.subInfo[0] == 'gsub')
-        _gpub, _local, _name, _type, host, pubPort = self.pubInfo
+        assert(self.pubInfo.portKind == 'gpub')
+        assert(self.subInfo.portKind == 'gsub')
+        host, pubPort = self.pubInfo.portHost, self.pubInfo.portNum
         comp = self.parent.parent
         partName = comp.getName()
         partType = comp.getTypeName()
         portName = self.groupInstanceName
+        # ???
         msg = ('group', self.groupType, self.groupInstance, self.messageType, host, pubPort, partName, partType, portName) 
         self.thread.sendControl(msg)
         time.sleep(1.0)  # 

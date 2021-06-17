@@ -8,6 +8,7 @@ import os
 import zmq
 import capnp
 from ..proto import disco_capnp
+from .port import PortInfo,PortScope
 from riaps.consts.defs import *
 from .exc import SetupError, OperationError
 import logging
@@ -28,6 +29,7 @@ class DiscoClient(object):
         self.appName = parentActor.appName
         self.messageNames = parentActor.messageNames
         self.localNames = parentActor.localNames
+        self.internalNames = parentActor.internalNames
         self.context = zmq.Context()
         
     def start(self):
@@ -39,14 +41,15 @@ class DiscoClient(object):
         self.socket.connect(endpoint)    
         self.channel = self.context.socket(zmq.PAIR)
 
-    def registerApp(self):
-        self.logger.info("registerApp")
+    def registerActor(self):
+        self.logger.info("registerActor")
         reqt = disco_capnp.DiscoReq.new_message()
         appMessage = reqt.init('actorReg')
         appMessage.appName = self.appName
         appMessage.version = '0.0.0'
         appMessage.actorName = self.actor.name
         appMessage.pid = self.actor.pid
+        appMessage.isDevice = self.actor.isDevice()
                   
         msgBytes = reqt.to_bytes()
         
@@ -88,27 +91,30 @@ class DiscoClient(object):
         self.socket.disconnect(endpoint)
         self.socket.connect(endpoint)
         self.channel = self.context.socket(zmq.PAIR)
-        self.registerApp()
+        self.registerActor()
         self.logger.info('reconnected')
         
     def handleRegReq(self, bundle):
         self.logger.info("handleRegReq: %s" % str(bundle))
         if self.socket == None:
             self.logger.info("No disco service - skipping registration: %s", str(bundle))
-            return 
-        (partName, partType, kind, isLocal, portName, portType, portHost, portNum) = bundle[0:8]
+            return
+        prefix,portInfo = bundle
+        partName, partType = prefix
+        portKind, portScope, portName, msgType, portHost, portNum = portInfo
+        # (partName, partType, kind, isLocal, portName, portType, portHost, portNum) = bundle[0:8]
         # All interactions below go via the REQ/REP socket ; the channel is for server pushes
         req = disco_capnp.DiscoReq.new_message()
         reqMsg = req.init('serviceReg')
         reqMsgPath = reqMsg.path
-        reqMsg.socket.host = self.actor.localHost if isLocal else self.actor.globalHost
+        reqMsg.socket.host = self.actor.globalHost if portScope == PortScope.GLOBAL else self.actor.localHost
         reqMsg.socket.port = portNum
         reqMsg.pid = os.getpid()
         reqMsgPath.appName = self.appName
         reqMsgPath.actorName = self.actor.name
-        reqMsgPath.msgType = portType 
-        reqMsgPath.kind = kind
-        reqMsgPath.scope = 'local' if isLocal else 'global'
+        reqMsgPath.msgType = msgType 
+        reqMsgPath.kind = portKind
+        reqMsgPath.scope = portScope.scope()
         msgBytes = req.to_bytes()
         self.socket.send(msgBytes)
         try:
@@ -133,19 +139,22 @@ class DiscoClient(object):
         if self.socket == None:
             self.logger.info("No disco service - skipping lookup: %s", str(bundle))
             return []
-        (partName, _partType, kind, isLocal, portName, portType) = bundle[0:6]
+        prefix,portInfo = bundle
+        partName, _partType = prefix
+        portKind, portScope, portName, msgType, _portHost, _portNum = portInfo
+        # (partName, _partType, kind, isLocal, portName, portType) = bundle[0:6]
         # All interactions below go via the REQ/REP socket ; the channel is for server pushes
         req = disco_capnp.DiscoReq.new_message()
         reqMsg = req.init('serviceLookup')
         reqMsgPath = reqMsg.path
         reqMsgPath.appName = self.appName
         reqMsgPath.actorName = self.actor.name
-        reqMsgPath.msgType = portType 
-        reqMsgPath.kind = kind
-        reqMsgPath.scope = 'local' if isLocal else 'global'
+        reqMsgPath.msgType = msgType 
+        reqMsgPath.kind = portKind
+        reqMsgPath.scope = portScope.scope()
         reqMsgClient = reqMsg.client
         reqMsgClient.actorHost = self.actor.getGlobalIface()
-        reqMsgClient.actorName = self.actor.name
+        reqMsgClient.actorName = self.actor.name # "%s.%s" % (self.actor.name,self.actor.iName) if self.actor.isDevice() else self.actor.name
         reqMsgClient.instanceName = partName
         reqMsgClient.portName = portName
         
@@ -176,6 +185,7 @@ class DiscoClient(object):
         return returnValue
         
     def registerEndpoint(self, bundle):
+        # bundle = [(partName,partTypeName),PortInfo]
         self.logger.info("registerEndpoint: %s" % str(bundle))
         # print ("DiscoClient.registerEndpoint",bundle)
         # Prefix: (partName, partType)
@@ -187,15 +197,15 @@ class DiscoClient(object):
         # (rep,local,name,(req,rep),host,port)
         # (qry,local,name,(req,rep),host)
         # (ans,local,name,(req,rep),host,port)
-        kind = bundle[2]
-        # (partName,partType,kind,isLocal,portName,portType) = bundle[0:6]
+        _prefix,portInfo = bundle
+        portKind = portInfo.portKind
         # All interactions below go via the REQ/REP socket ; the channel is for server pushes
         result = []
         # Update component means: add command to component's message queue
-        if kind == 'pub' or kind == 'srv' or kind == 'rep' or kind == 'ans':
+        if portKind in {'pub', 'srv', 'rep', 'ans'}:
             # Register publisher or server port
             self.handleRegReq(bundle)
-        elif kind == 'sub' or kind == 'clt' or kind == 'req' or kind == 'qry':
+        elif portKind in {'sub', 'clt', 'req', 'qry'}:
             # Request pub(s) or srv(s);  update component
             result = self.handleLookupReq(bundle)
         else:
@@ -206,8 +216,16 @@ class DiscoClient(object):
         self.logger.info("registerGroup: %s" % str(bundle))
         _key, groupType, groupName, messageType, host, pubPort, partName, partType, portName = bundle
         msgType = messageType + '@' + groupType + '.' + groupName    
-        regReqBundle = (partName, partType, "gpub", False, portName, msgType, host, pubPort)
-        lookupReqBundle = (partName, partType, "gsub", False, portName, msgType)  
+        regReqBundle = [(partName, partType), 
+                        PortInfo(portKind="gpub", portScope=PortScope.GLOBAL, 
+                                 portName=portName, 
+                                 msgType=msgType, 
+                                 portHost=host, portNum=pubPort)]
+        lookupReqBundle = [(partName, partType), 
+                           PortInfo(portKind="gsub", portScope=PortScope.GLOBAL,
+                                    portName=portName, 
+                                    msgType=msgType,
+                                    portHost='',portNum=0)]  
         # (1) lookupReq -> (2) reqReq
         result = self.handleLookupReq(lookupReqBundle)
         self.handleRegReq(regReqBundle)
@@ -257,7 +275,7 @@ class DiscoClient(object):
         appMessage = reqt.init('actorUnreg')
         appMessage.appName = self.appName
         appMessage.version = '0.0.0'
-        appMessage.actorName = self.actor.name
+        appMessage.actorName = self.actor.name # "%s.%s" % (self.actor.name,self.actor.iName) if self.actor.isDevice() else self.actor.name
         appMessage.pid = self.actor.pid
                   
         msgBytes = reqt.to_bytes()

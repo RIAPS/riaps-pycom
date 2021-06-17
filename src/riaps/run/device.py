@@ -33,6 +33,7 @@ from riaps.utils import spdlog_setup
 import yaml
 import zmq.auth
 from zmq.auth.thread import ThreadAuthenticator
+from pickle import TRUE
 
 
 class Device(Actor):
@@ -40,15 +41,25 @@ class Device(Actor):
     The actor class implements all the management and control functions over its components
     '''          
 
-    def __init__(self, gModel, gModelName, dName, sysArgv):
+    def __init__(self, gModel, gModelName, dName, qName, sysArgv):
         '''
         Constructor
+        
+        :param dName: device type name
+        :type dName: str
+        
+        :param qName: qualified name of the device instance: 'actor.inst'
+        :type qName: str
+         
         '''
         self.logger = logging.getLogger(__name__)
         self.inst_ = self
         self.appName = gModel["name"]
         self.modelName = gModelName
-        self.name = dName
+        aName,iName = qName.split('.')
+        self.name = qName
+        self.iName = iName
+        self.dName = dName 
         self.pid = os.getpid()
         self.uuid = None
         self.suffix = ""
@@ -75,10 +86,11 @@ class Device(Actor):
             actuals.append(actual)
         devInst["actuals"] = actuals
         
-        self.model["instances"] = { dName: devInst}
+        self.model["instances"] = { iName: devInst}     # Single instance (under iName)
         
-        self.model["locals"] = self.getMessageTypes(devModel)  # All messages are local
-        self.model["internals"] = { }  # No internals 
+        aModel = gModel["actors"][aName]
+        self.model["locals"] = aModel["locals"]         # Locals
+        self.model["internals"] = aModel["internals"]   # Internals 
         
         self.INT_RE = re.compile(r"^[-]?\d+$")
         self.parseParams(sysArgv)
@@ -146,7 +158,7 @@ class Device(Actor):
             
         self.components = {}
         instSpecs = self.model["instances"]
-        compSpecs = gModel["components"]
+        _compSpecs = gModel["components"]
         devSpecs = gModel["devices"]
         for instName in instSpecs:  # Create the component instances: the 'parts'
             instSpec = instSpecs[instName]
@@ -193,6 +205,9 @@ class Device(Actor):
         self.getPortMessageTypes(ports, "anss", ["req_type", "rep_type"], res)
         return res
                      
+    def isDevice(self):
+        return True 
+    
     def setup(self):
         '''
         Perform a setup operation on the actor (after  the initial construction but before the activation of parts)
@@ -201,12 +216,12 @@ class Device(Actor):
         # self.setupIfaces()
         self.suffix = self.macAddress
         self.disco = DiscoClient(self, self.suffix)
-        self.disco.start()  # Start the discovery service client
-        self.disco.registerApp()  # Register this actor with the discovery service
+        self.disco.start()                      # Start the discovery service client
+        self.disco.registerActor()              # Register this actor with the discovery service
         self.logger.info("device registered with disco")
         self.deplc = DeplClient(self, self.suffix)
         self.deplc.start()
-        ok = self.deplc.registerApp(isDevice=True)       
+        ok = self.deplc.registerActor()       
         self.logger.info("device %s registered with depl" % ("is" if ok else "is not"))
         self.controls = { }
         self.controlMap = { }

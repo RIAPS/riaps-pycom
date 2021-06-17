@@ -41,22 +41,23 @@ class DeplClient(object):
         self.channel = self.context.socket(zmq.PAIR)
         self.logger.info("started")
 
-    def registerApp(self, isDevice=False):
-        self.logger.info("registerApp")
+    def registerActor(self):
+        self.logger.info("registerActor")
         reqt = deplo_capnp.DeplReq.new_message()
         appMessage = reqt.init('actorReg')
         appMessage.appName = self.appName
         appMessage.version = '0.0.0'
+        isDevice = self.actor.isDevice()
         appMessage.actorName = self.actor.name
         appMessage.pid = os.getpid()
         appMessage.isDevice = isDevice
-                  
+        
         msgBytes = reqt.to_bytes()
 
         try:
             self.socket.send(msgBytes)
         except Exception as e:
-            self.logger.error("registerApp - failed to send: {1}".format(e.errno, e.strerror))
+            self.logger.error("registerActor - failed to send: {1}".format(e.errno, e.strerror))
             # self.socket.close()
             # self.socket = None
             return False
@@ -64,7 +65,7 @@ class DeplClient(object):
         try:
             respBytes = self.socket.recv()
         except Exception as e:
-            self.logger.error("registerApp - no response: {1}".format(e.errno, e.strerror))
+            self.logger.error("registerActor - no response: {1}".format(e.errno, e.strerror))
             # self.socket.close()
             # self.socket = None
             return False
@@ -81,30 +82,31 @@ class DeplClient(object):
                 self.actor.setUUID(uuid)
                 return True
             else:
-                errMsg = "registerApp - can't connect to deplo channel"
+                errMsg = "registerActor - can't connect to deplo channel"
                 self.logger.error(errMsg)
-                # raise SetupError("registerApp - can't connect to deplo channel")
+                # raise SetupError("registerActor - can't connect to deplo channel")
                 return False
         else:
-            errMsg = "registerApp - unexpected response from deplo"
+            errMsg = "registerActor - unexpected response from deplo"
             self.logger.error(errMsg)
-            # raise SetupError("registerApp - unexpected response from deplo")
+            # raise SetupError("registerActor - unexpected response from deplo")
             return False
 
-    def registerDevice(self, bundle):
-        self.logger.info("registerDevice %s" % str(bundle))
+    def requestDevice(self, bundle):
+        self.logger.info("requestDevice %s" % str(bundle))
         
         if self.socket == None:
             self.logger.info("No deplo service - skipping device registration: %s", str(bundle))
             return False
 
-        appName, modelName, typeName, args = bundle
+        appName, modelName, typeName, instName, args = bundle
 
         reqt = deplo_capnp.DeplReq.new_message()
         devMessage = reqt.init('deviceGet')
         devMessage.appName = appName
         devMessage.modelName = modelName
         devMessage.typeName = typeName
+        devMessage.instName = instName
         devMessage.init('deviceArgs', len(args))
         i = 0
         for argName, argValue in args.items():
@@ -118,7 +120,7 @@ class DeplClient(object):
         try:
             self.socket.send(msgBytes)
         except Exception as e:
-            self.logger.error("registerDevice - failed to send: %s" % str(e.args))
+            self.logger.error("requestDevice - failed to send: %s" % str(e.args))
             # self.socket.close()
             # self.socket = None
             return False
@@ -126,7 +128,7 @@ class DeplClient(object):
         try:
             respBytes = self.socket.recv()
         except Exception as e:
-            self.logger.error("registerDevice - no response: %s" % str(e.args))
+            self.logger.error("requestDevice - no response: %s" % str(e.args))
             # self.socket.close()
             # self.socket = None
             return False
@@ -139,37 +141,38 @@ class DeplClient(object):
             if status == 'ok':
                 return True
             else:
-                errMsg = "registerDevice - error response from deplo"
+                errMsg = "requestDevice - error response from deplo"
                 self.logger.error(errMsg)
-                # raise SetupError("registerDevice - error response from deplo")
+                # raise SetupError("requestDevice - error response from deplo")
                 return False
         else:
-            errMsg = "registerDevice - unexpected response from deplo"
+            errMsg = "requestDevice - unexpected response from deplo"
             self.logger.errro(errMsg)
-            # raise SetupError("registerDevice - unexpected response from deplo")
+            # raise SetupError("requestDevice - unexpected response from deplo")
             return False
     
-    def unregisterDevice(self, bundle):
-        self.logger.info("unregisterDevice %s" % str(bundle))
+    def releaseDevice(self, bundle):
+        self.logger.info("releaseDevice %s" % str(bundle))
         
         if self.socket == None:
-            self.logger.info("No deplo service - skipping device unregistration: %s", str(bundle))
+            self.logger.info("No deplo service - skipping device release: %s", str(bundle))
             return False
 
-        appName, modelName, typeName = bundle
+        appName, modelName, typeName, instName = bundle
 
         reqt = deplo_capnp.DeplReq.new_message()
         devMessage = reqt.init('deviceRel')
         devMessage.appName = appName
         devMessage.modelName = modelName
         devMessage.typeName = typeName
+        devMessage.instName = instName
 
         msgBytes = reqt.to_bytes()
  
         try:
             self.socket.send(msgBytes)
         except Exception as e:
-            self.logger.error("unregisterDevice - failed to send: %s" % str(e.args))
+            self.logger.error("releaseDevice - failed to send: %s" % str(e.args))
 #             self.socket.close()
 #             self.socket = None
             return False
@@ -177,7 +180,7 @@ class DeplClient(object):
         try:
             respBytes = self.socket.recv()
         except Exception as e:
-            self.logger.error("unregisterDevice - no response: %s" % str(e.args))
+            self.logger.error("releaseDevice - no response: %s" % str(e.args))
 #             self.socket.close()
 #             self.socket = None
             return False
@@ -190,12 +193,12 @@ class DeplClient(object):
             if status == 'ok':
                 return True
             else:
-                errMsg = "unregisterDevice - error response from deplo"
+                errMsg = "releaseDevice - error response from deplo"
                 self.logger.error(errMsg)
                 # raise SetupError(errMsg)
                 return False
         else:
-            errMsg = "unregisterDevice - unexpected response from deplo"
+            errMsg = "releaseDevice - unexpected response from deplo"
             self.logger.error(errMsg)
             # raise SetupError(errMsg)
             return False

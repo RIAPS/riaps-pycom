@@ -3,7 +3,7 @@ Created on Jan 9, 2017
 
 @author: riaps
 '''
-from .port import Port
+from .port import Port,PortInfo
 import threading
 import zmq
 import time
@@ -84,7 +84,8 @@ class InsPort(Port):
         self.parent_thread = threading.current_thread()
         self.socket = self.context.socket(zmq.ROUTER)
         self.socket.bind('inproc://inside_' + self.instName)
-        self.info = ('ins', self.name)
+        self.info = PortInfo(portKind='ins', portScope=PortScope.INTERNAL, portName=self.name, 
+                             msgType='inside', portHost='', portNum=-1)
         return self.info
     
     def reset(self):

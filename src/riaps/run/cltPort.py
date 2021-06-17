@@ -5,14 +5,14 @@ Created on Oct 10, 2016
 @author: riaps
 '''
 import zmq
-from .port import Port
+from .port import Port,PortInfo,DuplexConnPort
 from riaps.utils.config import Config
 from zmq.error import ZMQError
 # from .part import Part
 # from .actor import Actor
 
 
-class CltPort(Port):
+class CltPort(DuplexConnPort):
     '''
     Client port is to access a server. Has a request and a response message type, and uses a REQ socket.
     '''
@@ -21,17 +21,16 @@ class CltPort(Port):
         '''
         Initialize the client port object.
         '''
-        super(CltPort, self).__init__(parentComponent, portName)
-        
-        self.req_type = portSpec["req_type"]
-        self.rep_type = portSpec["rep_type"]
-        self.isTimed = portSpec["timed"]
-        parentActor = parentComponent.parent
-        # The request and reply message types must be of the same kind (global/local)
-        assert parentActor.isInnerMessage(self.req_type) == parentActor.isInnerMessage(self.rep_type)
-        assert parentActor.isLocalMessage(self.req_type) == parentActor.isLocalMessage(self.rep_type)
-        # Determine if the port is host-local 
-        self.isLocalPort = parentActor.isLocalMessage(self.req_type) and parentActor.isLocalMessage(self.rep_type)
+        super().__init__(parentComponent, portName, portSpec)
+        #
+        # self.req_type = portSpec["req_type"]
+        # self.rep_type = portSpec["rep_type"]
+        # self.isTimed = portSpec["timed"]
+        # parentActor = parentComponent.parent
+        # req_scope = parentActor.messageScope(self.req_type)
+        # rep_scope = parentActor.messageScope(self.rep_type)
+        # assert req_scope == rep_scope
+        # self.portScope = req_scope
         self.serverHost = None
         self.serverPort = None
         self.info = None
@@ -46,21 +45,24 @@ class CltPort(Port):
         '''
         Set up the socket of the port. Return a tuple suitable for querying the discovery service for the publishers
         '''
-        self.setOwner(owner)
-        self.socket = self.context.socket(zmq.REQ)
-        self.socket.setsockopt(zmq.SNDTIMEO, self.sendTimeout) 
-        self.setupCurve(False)
-        self.host = ''
-        if not self.isLocalPort:
-            globalHost = self.getGlobalIface()
-            self.portNum = -1 
-            self.host = globalHost
-        else:
-            localHost = self.getLocalIface()
-            self.portNum = -1 
-            self.host = localHost
-        self.info = ('clt', self.isLocalPort, self.name, str(self.req_type) + '#' + str(self.rep_type), self.host)
-        return self.info
+        return self.setupConnSocket(owner,zmq.REQ,'clt')
+        # self.setOwner(owner)
+        # self.socket = self.context.socket(zmq.REQ)
+        # self.socket.setsockopt(zmq.SNDTIMEO, self.sendTimeout) 
+        # self.setupCurve(False)
+        # self.host = ''
+        # if self.portKind == PortKind.GLOBAL:
+        #     globalHost = self.getGlobalIface()
+        #     self.portNum = -1 
+        #     self.host = globalHost
+        # else:
+        #     localHost = self.getLocalIface()
+        #     self.portNum = -1 
+        #     self.host = localHost
+        # self.info = PortInfo(portType='clt', portKind=self.portKind, portName=self.name, 
+        #                      msgType=str(self.req_type) + '#' + str(self.rep_type), 
+        #                      host=self.host, portNum=self.portNum) 
+        # return self.info
 
     def reset(self):
         newSocket = self.context.socket(zmq.REQ)

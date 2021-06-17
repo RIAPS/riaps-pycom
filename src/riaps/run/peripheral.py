@@ -71,17 +71,17 @@ class Peripheral(object):
             raise StateError("Invalid state %s in setup()" % self.state)
         self.logger.info("setting up device component")
         # Ask parent actor to contact devm to start our dca
-        msg = (self.typeName, self.args)
-        _resp = self.parent.registerDevice(msg)
+        msg = (self.typeName, self.name, self.args)
+        _resp = self.parent.requestDevice(msg)
 
         self.state = Peripheral.State.Ready
         
-    def handleUpdate(self, msg):
+    def handlePortUpdate(self, _portName, _host, _port):
         '''
         Handle an update message coming from the devm service
         '''
-        # print(msg)
-        pass
+        self.logger.error("Peripheral.handlePortUpdate() called")
+        raise StateError("Peripheral does not implement portUpdate")
       
     def activate(self):
         '''
@@ -90,7 +90,6 @@ class Peripheral(object):
         if not self.state in (Peripheral.State.Ready, Peripheral.State.Passive, Peripheral.State.Inactive):
             raise StateError("Invalid state %s in activate()" % self.state)
         # Now we are active
- 
         self.state = Peripheral.State.Active
 
     def deactivate(self):
@@ -147,7 +146,7 @@ class Peripheral(object):
     
     def terminate(self):
         self.logger.info("terminating %s" % self.typeName)
-        msg = (self.typeName,)
-        resp = self.parent.unregisterDevice(msg)
+        msg = (self.typeName,self.name)
+        resp = self.parent.releaseDevice(msg)
         self.logger.info("terminating %s" % self.typeName)
     

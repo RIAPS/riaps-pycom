@@ -48,18 +48,19 @@ class ComponentThread(threading.Thread):
     def setupSockets(self):
         msg = self.control.recv_pyobj()
         if msg != "build":
-            raise BuildError 
+            raise BuildError('setupSockets: invalid msg: %s' % str(msg)) 
         for portName in self.parent.ports:
             res = self.parent.ports[portName].setupSocket(self)
-            if res[0] == 'tim' or res[0] == 'ins':
+            portKind = res.portKind
+            if portKind in {'tim','ins'}:
                 continue
-            elif res[0] == 'pub' or res[0] == 'sub' or \
-                    res[0] == 'clt' or res[0] == 'srv' or \
-                    res[0] == 'req' or res[0] == 'rep' or \
-                    res[0] == 'qry' or res[0] == 'ans':
+            elif portKind in {'pub', 'sub', \
+                              'clt', 'srv', \
+                              'req', 'rep', \
+                              'qry', 'ans'}:
                 self.control.send_pyobj(res)
             else:
-                raise BuildError
+                raise BuildError('setupSockets: invalid portKind: %s' % str(portKind))
         self.control.send_pyobj("done")
 
     def setupPoller(self):

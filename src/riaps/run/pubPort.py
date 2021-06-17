@@ -6,7 +6,7 @@ Created on Oct 10, 2016
 import zmq
 import time
 import struct
-from riaps.run.port import Port
+from riaps.run.port import Port,PortScope,PortInfo,SimplexBindPort
 from riaps.run.exc import OperationError
 from riaps.utils.config import Config
 from zmq.error import ZMQError
@@ -18,7 +18,7 @@ except:
     import pickle
 
 
-class PubPort(Port):
+class PubPort(SimplexBindPort):
     '''
     classdocs
     '''
@@ -27,33 +27,35 @@ class PubPort(Port):
         '''
         Constructor
         '''
-        super(PubPort, self).__init__(parentComponent, portName)
-        self.type = portSpec["type"]
-        self.isTimed = portSpec["timed"]
-        parentActor = parentComponent.parent
-        self.isLocalPort = parentActor.isLocalMessage(self.type)
-        self.info = None
+        super().__init__(parentComponent,portName,portSpec)
+        # self.type = portSpec["type"]
+        # self.isTimed = portSpec["timed"]
+        # parentActor = parentComponent.parent
+        # self.portScope = parentActor.messageScope(self.type)
+        # self.info = None
     
     def setup(self):
         pass
         
     def setupSocket(self, owner):
-        self.setOwner(owner)
-        self.socket = self.context.socket(zmq.PUB)
-        self.socket.setsockopt(zmq.SNDTIMEO, self.sendTimeout) 
-        self.host = ''
-        self.portNum = -1
-        self.setupCurve(True) 
-        if not self.isLocalPort:
-            globalHost = self.getGlobalIface()
-            self.portNum = self.socket.bind_to_random_port("tcp://" + globalHost)
-            self.host = globalHost
-        else:
-            localHost = self.getLocalIface()
-            self.portNum = self.socket.bind_to_random_port("tcp://" + localHost)
-            self.host = localHost
-        self.info = ('pub', self.isLocalPort, self.name, self.type, self.host, self.portNum)
-        return self.info
+        return self.setupBindSocket(owner,zmq.PUB,'pub')
+        # self.setOwner(owner)
+        # self.socket = self.context.socket(zmq.PUB)
+        # self.socket.setsockopt(zmq.SNDTIMEO, self.sendTimeout) 
+        # self.host = ''
+        # self.portNum = -1
+        # self.setupCurve(True) 
+        # if self.portKind == PortKind.GLOBAL:
+        #     globalHost = self.getGlobalIface()
+        #     self.portNum = self.socket.bind_to_random_port("tcp://" + globalHost)
+        #     self.host = globalHost
+        # else:
+        #     localHost = self.getLocalIface()
+        #     self.portNum = self.socket.bind_to_random_port("tcp://" + localHost)
+        #     self.host = localHost
+        # self.info = PortInfo(portKind = 'pub', portScope=self.portScope, portName=self.name, 
+        #                      msgType=self.type, portHost=self.host, portNum=self.portNum)
+        # return self.info
         
     def reset(self):
         pass

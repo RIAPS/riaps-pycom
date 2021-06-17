@@ -1,0 +1,9 @@
+// RIAPS Message topology test
+// 
+
+app MsgTopo {
+	on all Actor_1_1(cname='a.c', dname='a.d');
+	// on all Actor_1_2(cname1='a.c1',cname2='a.c2',dname1='a.d1',dname2='a.d2');
+	// on all ActorA_1_2(cname1='aA.c1',cname2='aA.c2',dname1='aA.d1',dname2='aA.d2');
+	// on all ActorB_1_2(cname1='aB.c1',cname2='aB.c2',dname1='aB.d1',dname2='aB.d2');
+}

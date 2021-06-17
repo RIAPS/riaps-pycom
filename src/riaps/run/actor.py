@@ -12,6 +12,7 @@ import zmq
 import time
 from riaps.run.disco import DiscoClient
 from riaps.run.deplc import DeplClient
+from riaps.run.port import PortScope
 from riaps.proto import disco_capnp
 from riaps.proto import deplo_capnp
 from riaps.consts.defs import *
@@ -33,6 +34,7 @@ from riaps.utils.config import Config
 from riaps.utils.appdesc import AppDescriptor
 import zmq.auth
 from zmq.auth.thread import ThreadAuthenticator
+from pickle import FALSE
 
 
 class Actor(object):
@@ -116,12 +118,14 @@ class Actor(object):
         locals_ = self.model["locals"]  # Local message types (local to the host)
         self.localNames = []
         for messageSpec in locals_:
-            self.localNames.append(messageSpec["type"]) 
+            self.localNames.append(messageSpec["type"])
+        self.localNams = set(self.localNames)
             
         internals = self.model["internals"]  # Internal message types (internal to the actor process)
         self.internalNames = []
         for messageSpec in internals:
             self.internalNames.append(messageSpec["type"])
+        self.internalNames = set(self.internalNames)
             
         groups = gModel["groups"]
         self.groupTypes = {} 
@@ -294,18 +298,17 @@ class Actor(object):
             args[argName] = argValue
         return args
     
-    def isLocalMessage(self, msgTypeName):
+    def messageScope(self, msgTypeName):
         '''Return True if the message type is local
         
         '''
-        return msgTypeName in self.localNames
-
-    def isInnerMessage(self, msgTypeName):
-        '''Return True if the message type is internal
-        
-        '''
-        return msgTypeName in self.internalNames
-        
+        if msgTypeName in self.localNames:
+            return PortScope.LOCAL
+        elif msgTypeName in self.internalNames:
+            return PortScope.INTERNAL
+        else:
+            return PortScope.GLOBAL
+   
     def getLocalIface(self):
         '''Return the IP address of the host-local network interface (usually 127.0.0.1) 
         '''
@@ -362,7 +365,10 @@ class Actor(object):
         self.localHost = localIP
         self.globalHost = globalIP
         self.macAddress = globalMAC
-               
+    
+    def isDevice(self):
+        return False 
+    
     def setup(self):
         '''Perform a setup operation on the actor, after  the initial construction 
         but before the activation of parts
@@ -371,12 +377,12 @@ class Actor(object):
         self.logger.info("setup")
         self.suffix = self.macAddress
         self.disco = DiscoClient(self, self.suffix)
-        self.disco.start()  # Start the discovery service client
-        self.disco.registerApp()  # Register this actor with the discovery service
+        self.disco.start()                  # Start the discovery service client
+        self.disco.registerActor()          # Register this actor with the discovery service
         self.logger.info("actor registered with disco")
         self.deplc = DeplClient(self, self.suffix)
         self.deplc.start()
-        ok = self.deplc.registerApp()
+        ok = self.deplc.registerActor()  # Register this actor with the deplo service
         self.logger.info("actor %s registered with depl" % ("is" if ok else "is not"))
             
         self.controls = { }
@@ -402,22 +408,24 @@ class Actor(object):
             (partName, portName, host, port) = res
             self.updatePart(partName, portName, host, port)
     
-    def registerDevice(self, bundle):
-        '''Relay the device registration message to the device interface service client
+    def requestDevice(self, bundle):
+        '''Relay the device request message to the deplo client
         
         '''
-        typeName, args = bundle
-        msg = (self.appName, self.modelName, typeName, args)
-        result = self.deplc.registerDevice(msg)
+        typeName, instName, args = bundle
+        instName ="%s.%s" % (self.name, instName)
+        msg = (self.appName, self.modelName, typeName, instName, args)
+        result = self.deplc.requestDevice(msg)
         return result
 
-    def unregisterDevice(self, bundle):
-        '''Relay the device unregistration message to the device interface service client
+    def releaseDevice(self, bundle):
+        '''Relay the device release message to the deplo client
         
         '''
-        typeName, = bundle
-        msg = (self.appName, self.modelName, typeName)
-        result = self.deplc.unregisterDevice(msg)
+        typeName,instName = bundle
+        instName ="%s.%s" % (self.name, instName)
+        msg = (self.appName, self.modelName, typeName, instName)
+        result = self.deplc.releaseDevice(msg)
         return result
     
     def activate(self):
@@ -496,19 +504,19 @@ class Actor(object):
             msg = msgUpd.portUpdate
             client = msg.client
             actorHost = client.actorHost
-            assert actorHost == self.globalHost  # It has to be addressed to this actor
+            assert actorHost == self.globalHost                 # It has to be addressed to this actor
             actorName = client.actorName
             assert actorName == self.name
             instanceName = client.instanceName
-            assert instanceName in self.components  # It has to be for a part of this actor
+            assert instanceName in self.components              # It has to be for a part of this actor
             portName = client.portName
             scope = msg.scope
             socket = msg.socket
             host = socket.host
             port = socket.port 
-            if scope == "local":
-                assert host == self.localHost
-            self.updatePart(instanceName, portName, host, port)  # Update the selected part
+            if scope != "global":
+                assert host == self.localHost                   # Local/internal ports ar host-local
+            self.updatePart(instanceName, portName, host, port) # Update the selected part
         elif which == 'groupUpdate':
             msg = msg.groupUpdate
             self.logger.info('handleServiceUpdate():groupUpdate')

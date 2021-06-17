@@ -89,9 +89,9 @@ class RedisDbase(DiscoDbase):
                 values = self.r.smembers(key)
                 clientsKey = key + "_clients"
                 clientsToNotify = self.r.smembers(clientsKey)
+                clientsToNotify = list(map(lambda s:s.decode('utf-8'),clientsToNotify))
                 for value in values:
                     valueString = value.decode('utf-8')
-                    clientsToNotify = list(map(lambda s:s.decode('utf-8'),clientsToNotify))
                     res.append((key, valueString, clientsToNotify))
             return res
         except redis.exceptions.ConnectionError:
@@ -99,7 +99,7 @@ class RedisDbase(DiscoDbase):
         except OSError:
             raise DatabaseError("OS error")
                       
-    def insert(self,key,value):
+    def insert(self,key:str,value:str) -> [str]:
         '''
         Insert value under key and return list of clients of value (if any). 
         A key may have multiple values associated with it, hence the new value 
@@ -108,10 +108,9 @@ class RedisDbase(DiscoDbase):
         self.logger.info("insert %s -> %s" % (repr(key),repr(value)))
         try:
             clientsToNotify = []
-            if self.r.exists(key) and (value in self.r.smembers(key)):
+            if self.r.exists(key) and (value.encode('utf-8') in self.r.smembers(key)):
                 return []
             self.r.sadd(key,value)
-#            self.updateSubs(key)
             clientsKey = key + "_clients"
             clientsToNotify = self.r.smembers(clientsKey)
             clientsToNotify = list(map(lambda s:s.decode('utf-8'),clientsToNotify))
@@ -121,7 +120,7 @@ class RedisDbase(DiscoDbase):
         except OSError:
             raise DatabaseError("OS error")
 
-    def fetch(self,key,client):
+    def fetch(self,key:str,client:str) -> [str]:
         '''
         Fetch value(s) under key. Add client to list of clients interested in the value
         '''
@@ -142,14 +141,16 @@ class RedisDbase(DiscoDbase):
             raise DatabaseError("OS error")
           
         
-    def remove(self,key,value):
+    def remove(self,key : str,value : str) -> [str]:
         '''
         Remove value from values under key.
         '''
         self.logger.info("remove %s from %s" % (repr(value),repr(key)))
         try:
             self.r.srem(key,value)
-            return self.r.smembers(key)
+            values = self.r.smembers(key)
+            values = list(map(lambda s:s.decode('utf-8'),values))
+            return values
         except redis.exceptions.ConnectionError:
             raise DatabaseError("db connection lost")
         except OSError:

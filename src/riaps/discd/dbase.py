@@ -7,6 +7,7 @@ Created on Oct 19, 2016
 
 from riaps.consts.defs import *
 from riaps.run.exc import *
+import typing
 import re
 import logging
 
@@ -32,14 +33,14 @@ class DiscoDbase(object):
         pass
 
     # 
-    def fetchUpdates(self):
+    def fetchUpdates(self) -> [str]:
         '''
         Check and fetch the updated values of the subscribed keys if any
         '''
         return []
     
                       
-    def insert(self,key,value):
+    def insert(self,key:str,value:str) -> [str]:
         '''
         Insert value under key and return list of clients of value (if any). 
         A key may have multiple values associated with it, hence the new value 
@@ -48,20 +49,20 @@ class DiscoDbase(object):
         clientsToNotify = []
         return clientsToNotify
     
-    def fetch(self,key,client):
+    def fetch(self,key:str,client:str) -> [str]:
         '''
         Fetch value(s) under key. Add client to list of clients interested in the value
         '''
         values = []
         return values
         
-    def remove(self,key,value):
+    def remove(self,key:str,value:str) -> [str]:
         '''
         Remove value from values under key.
         '''
         pass
         
-    def delete(self,key):
+    def delete(self,key:str):
         '''
         Completely delete key and list of clients for that key.
         '''

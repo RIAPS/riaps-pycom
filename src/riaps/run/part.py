@@ -11,6 +11,7 @@ import time
 
 from enum import Enum
 
+from .port import PortInfo
 from .pubPort import PubPort
 from .subPort import SubPort
 from .cltPort import CltPort
@@ -183,11 +184,12 @@ class Part(object):
             if msg == "done":  # OK, we are done
                 break;
             res = msg  # Otherwise append the response to the queue
-            if res[0] == 'pub' or res[0] == 'sub' or \
-                    res[0] == 'clt' or res[0] == 'srv' or \
-                    res[0] == 'req' or res[0] == 'rep' or \
-                    res[0] == 'qry' or res[0] == 'ans':
-                queue.append(prefix + res)
+            if type(res) is PortInfo and \
+                    res.portKind in {'pub', 'sub', \
+                                     'clt', 'srv', \
+                                     'req', 'rep', \
+                                     'qry', 'ans'}:
+                queue.append([prefix,res])
             else:
                 raise BuildError("invalid response from ComponentThread %s" % msg)
         # Process all component thread responses 
@@ -221,8 +223,8 @@ class Part(object):
         '''
         if not self.state in (Part.State.Ready, Part.State.Passive, Part.State.Inactive):
             raise StateError("Invalid state %s in activate()" % self.state)
-        self.activatePorts(self.ports)  # Activate parts
-        self.sendControl("activate", -1)  # Send activation command to component thread
+        self.activatePorts(self.ports)      # Activate parts
+        self.sendControl("activate", -1)    # Send activation command to component thread
         self.state = Part.State.Active
 
     def deactivatePorts(self, ports):
@@ -269,9 +271,9 @@ class Part(object):
         for portName in self.ports:
             port = self.ports[portName]
             info = port.getInfo()
-            kind = info[0]
-            if kind == 'pub' or kind == 'srv' or kind == 'rep' or kind == 'ans':
-                endp = prefix + info
+            portType = info.portType
+            if portType in {'pub', 'srv', 'rep', 'ans'}:
+                endp = [prefix, info]
                 self.parent.registerEndpoint(endp) 
         
     def handleCPULimit(self):

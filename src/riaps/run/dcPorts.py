@@ -12,7 +12,7 @@ import time
 import logging
 import struct
 import traceback
-from riaps.run.port import Port
+from riaps.run.port import Port,PortInfo,PortScope
 from riaps.consts.defs import *
 from riaps.utils import spdlog_setup
 import spdlog
@@ -43,7 +43,7 @@ class GroupPubPort(Port):
         super(GroupPubPort, self).__init__(parentPart, portName)
         self.type = groupSpec["message"]
         self.isTimed = groupSpec["timed"]
-        self.isLocalPort = False
+        self.portScope = PortScope.GLOBAL
         self.info = None
     
     def setup(self):
@@ -59,7 +59,9 @@ class GroupPubPort(Port):
         globalHost = self.getGlobalIface()
         self.portNum = self.socket.bind_to_random_port("tcp://" + globalHost)
         self.host = globalHost
-        self.info = ('gpub', False, self.name, self.type, self.host, self.portNum)
+        self.info = PortInfo(portKind='gpub', portScope=self.portScope, portName=self.name, 
+                             msgType=self.type, 
+                             portHost=self.host, portNum=self.portNum)
         return self.info
         
     def reset(self):
@@ -119,7 +121,7 @@ class GroupSubPort(Port):
         self.type = groupSpec["message"]
         self.isTimed = groupSpec["timed"]
         self.deadline = None
-        self.isLocalPort = False
+        self.portScope = PortScope.GLOBAL
         self.pubs = []
         self.sendTime = 0.0
         self.recvTime = 0.0
@@ -137,7 +139,9 @@ class GroupSubPort(Port):
         globalHost = self.getGlobalIface()
         self.portNum = -1 
         self.host = globalHost
-        self.info = ('gsub', False, self.name, self.type, self.host)
+        self.info = PortInfo(portKind='gsub', portScope=self.portScope, portName=self.name, 
+                             msgType=self.type, 
+                             portHost=self.host, portNum=self.portNum)
         return self.info
     
     def reset(self):
@@ -201,7 +205,7 @@ class GroupAnsPort(Port):
         self.req_type = 'group-mtl'
         self.rep_type = 'group-mfl'
         self.isTimed = groupSpec["timed"]
-        self.isLocalPort = False
+        self.portScope = PortScope.GLOBAL
         self.identity = None
         self.socket = None
         self.portNum = None
@@ -218,7 +222,9 @@ class GroupAnsPort(Port):
         globalHost = self.getGlobalIface()
         self.host = globalHost
         self.portNum = None 
-        self.info = ('gans', False, self.name, str(self.req_type) + '#' + str(self.rep_type), self.host, self.portNum)
+        self.info = PortInfo(portKind='gans', portScope=self.portScope, portName=self.name, 
+                             msgType=str(self.req_type) + '#' + str(self.rep_type), 
+                             portHost=self.host, portNum=self.portNum)
         return self.info
 
     def update(self):
@@ -235,7 +241,9 @@ class GroupAnsPort(Port):
             self.poller.register(self.socket, zmq.POLLIN)  # Register with poller
         port = self.socket.bind_to_random_port("tcp://%s" % self.host)
         self.portNum = port
-        self.info = ('gans', False, self.name, str(self.req_type) + '#' + str(self.rep_type), self.host, self.portNum)
+        self.info = PortInfo(portKind='gans', portScope=self.portScope, portName=self.name, 
+                             msgType=str(self.req_type) + '#' + str(self.rep_type), 
+                             portHost=self.host, portNum=self.portNum)
         
     def reset(self):
         pass
@@ -321,7 +329,7 @@ class GroupQryPort(Port):
         self.req_type = 'group-mtl'
         self.rep_type = 'group-mfl'
         self.isTimed = groupSpec["timed"]
-        self.isLocalPort = False
+        self.portScope = PortScope.GLOBAL
         self.serverHost = None
         self.serverPort = None
         self.info = None
@@ -345,7 +353,9 @@ class GroupQryPort(Port):
         globalHost = self.getGlobalIface()
         self.portNum = -1 
         self.host = globalHost
-        self.info = ('gqry', False, self.name, str(self.req_type) + '#' + str(self.rep_type), self.host)
+        self.info = PortInfo(portKind='gqry', portScope=self.portScope, portName=self.name, 
+                             msgType=str(self.req_type) + '#' + str(self.rep_type), 
+                             portHost=self.host, portNum=self.portNum)
         return self.info
     
     def reset(self):

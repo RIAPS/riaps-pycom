@@ -3,7 +3,7 @@ Created on Oct 10, 2016
 
 @author: riaps
 '''
-from .port import Port
+from .port import Port,PortScope,PortInfo
 import threading
 import zmq
 import time
@@ -173,7 +173,8 @@ class TimPort(Port):
         self.socket = self.context.socket(zmq.PAIR)  # SUB
         self.socket.connect('inproc://timer_' + self.instName)
         # self.socket.setsockopt_string(zmq.SUBSCRIBE, u'')
-        self.info = ('tim', self.name)
+        self.info = PortInfo(portKind='tim', portScope=PortScope.INTERNAL, portName=self.name, 
+                             msgType='tick', portHost='', portNum=-1)
         return self.info
 
     def reset(self):

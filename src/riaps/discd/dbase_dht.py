@@ -103,7 +103,7 @@ class DhtPeerMon(threading.Thread):
         while True:
             reader = self.poller.wait(-1)   # Wait forever
             if self.poller.terminated():
-                self.logger.warning("DhtPeerMon.run - poller terminated")
+                self.logger.info("DhtPeerMon.run - poller terminated")
                 break
             if type(reader) == zyre.c_void_p and reader.value == self.command.underlying:
                 msg = self.command.recv_pyobj()
@@ -585,7 +585,7 @@ class DhtDbase(DiscoDbase):
                 del self.republishMap[(key,value)]
 
     
-    def insert(self,key,value):
+    def insert(self,key:str,value:str) -> [str]:
         '''
         Insert value under key and return list of clients of value (if any). 
         A key may have multiple values associated with it.
@@ -606,7 +606,7 @@ class DhtDbase(DiscoDbase):
         except OSError:
             raise DatabaseError("OS error")
 
-    def fetch(self,key,client):
+    def fetch(self,key:str,client:str) -> [str]:
         '''
         Fetch value(s) under key. 
         Retrieve values, remove deleted values from result, add client to list of clients interested in updates
@@ -623,7 +623,7 @@ class DhtDbase(DiscoDbase):
             raise DatabaseError("OS error")
           
         
-    def remove(self,key,value):
+    def remove(self,key:str,value:str) -> [str]:
         '''
         Remove value from values under key.
         '''
@@ -638,7 +638,7 @@ class DhtDbase(DiscoDbase):
         except OSError:
             raise DatabaseError("OS error")
         
-    def delete(self,key):
+    def delete(self,key:str):
         '''
         Completely delete key and list of clients for that key.
         '''

@@ -52,6 +52,7 @@ def main(debug=True):
     parser.add_argument("app", help="app name")  # App name
     parser.add_argument("model", help="model file name")  # Model file argument
     parser.add_argument("device", help="device name")  # Device name argument
+    parser.add_argument("instance", help="actor.instance name")
     parser.add_argument("-t", "--trace", help="debug server on host:port")
     (args, rest) = parser.parse_known_args()
 
@@ -67,6 +68,7 @@ def main(debug=True):
         fp = open(modelFileName, 'r')  # Load model file
         model = json.load(fp)
         aName = args.device
+        iName = args.instance
     except IOError as e:
         print ("I/O error({0}): {1}".format(e.errno, e.strerror))
         os._exit(1)
@@ -80,7 +82,7 @@ def main(debug=True):
     logging.Formatter.default_msec_format = '%s,%03d'
 
     global theDevice
-    theDevice = Device(model, args.model, aName, rest)  # Construct the Device
+    theDevice = Device(model, args.model, aName, iName, rest)  # Construct the Device
     signal.signal(signal.SIGTERM, termHandler)  # Termination signal handler
 #     signal.signal(signal.SIGXCPU,sigXCPUHandler)    # CPU limit exceeded handler
 #     signal.signal(signal.SIGUSR1,sigXMEMHandler)    # Mem limit exceeded handler

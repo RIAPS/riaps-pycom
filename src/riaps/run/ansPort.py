@@ -6,7 +6,7 @@ Created on Oct 10, 2016
 import time
 import zmq
 import struct
-from .port import Port
+from .port import Port,PortScope,PortInfo,DuplexBindPort
 from riaps.run.exc import OperationError, PortError
 from riaps.utils.config import Config
 from zmq.error import ZMQError
@@ -18,7 +18,7 @@ except:
     import pickle
 
     
-class AnsPort(Port):
+class AnsPort(DuplexBindPort):
     '''
     classdocs
     '''
@@ -27,13 +27,16 @@ class AnsPort(Port):
         '''
         Constructor
         '''
-        super(AnsPort, self).__init__(parentComponent, portName, portSpec)
-        self.req_type = portSpec["req_type"]
-        self.rep_type = portSpec["rep_type"]
-        self.isTimed = portSpec["timed"]
-        self.deadline = portSpec["deadline"] * 0.001  # msec
-        parentActor = parentComponent.parent
-        self.isLocalPort = parentActor.isLocalMessage(self.req_type) and parentActor.isLocalMessage(self.rep_type)
+        super().__init__(parentComponent, portName, portSpec)
+        # self.req_type = portSpec["req_type"]
+        # self.rep_type = portSpec["rep_type"]
+        # self.isTimed = portSpec["timed"]
+        # self.deadline = portSpec["deadline"] * 0.001  # msec
+        # parentActor = parentComponent.parent
+        # req_scope = parentActor.messageScope(self.req_type)
+        # rep_scope = parentActor.messageScope(self.rep_type)
+        # assert req_scope == rep_scope
+        # self.portScope = req_scope
         self.identity = None
         self.info = None
 
@@ -41,21 +44,24 @@ class AnsPort(Port):
         pass
   
     def setupSocket(self, owner):
-        self.setOwner(owner)
-        self.socket = self.context.socket(zmq.ROUTER)
-        self.socket.setsockopt(zmq.SNDTIMEO, self.sendTimeout)
-        self.setupCurve(True)
-        self.host = ''
-        if not self.isLocalPort:
-            globalHost = self.getGlobalIface()
-            self.portNum = self.socket.bind_to_random_port("tcp://" + globalHost)
-            self.host = globalHost
-        else:
-            localHost = self.getLocalIface()
-            self.portNum = self.socket.bind_to_random_port("tcp://" + localHost)
-            self.host = localHost
-        self.info = ('ans', self.isLocalPort, self.name, str(self.req_type) + '#' + str(self.rep_type), self.host, self.portNum)
-        return self.info
+        return self.setupBindSocket(owner,zmq.ROUTER,'ans')
+        # self.setOwner(owner)
+        # self.socket = self.context.socket(zmq.ROUTER)
+        # self.socket.setsockopt(zmq.SNDTIMEO, self.sendTimeout)
+        # self.setupCurve(True)
+        # self.host = ''
+        # if self.portKind == PortKind.GLOBAL:
+        #     globalHost = self.getGlobalIface()
+        #     self.portNum = self.socket.bind_to_random_port("tcp://" + globalHost)
+        #     self.host = globalHost
+        # else:
+        #     localHost = self.getLocalIface()
+        #     self.portNum = self.socket.bind_to_random_port("tcp://" + localHost)
+        #     self.host = localHost
+        # self.info = PortInfo(portKind='ans', portScope=self.portScope, portName=self.name, 
+        #                      msgType=str(self.req_type) + '#' + str(self.rep_type), 
+        #                      portHost=self.host, portNum=self.portNum)
+        # return self.info
 
     def update(self, host, port):
         raise OperationError("Unsupported update() on AnsPort")
