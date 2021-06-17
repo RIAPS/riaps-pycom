@@ -99,23 +99,27 @@ def visualize_actors(G,appModel,hostName,hostLabel,actors,msgMap,msgMapUsed,glob
     actorModels = appModel['actors']
     componentModels = appModel['components']
     deviceModels = appModel['devices']
-
+    
+    actorLocals = [] 
+    actorLocalMessageNodes = { }
+    localMsgSubgraph = None
+    
+    # Locals 
     for actor in actors:
         actorName = actor['name']
-#         actorNode = pydot.Node(unique(actorName),label=actorName)
-#         actorNode.set('shape','box3d')
-        actorCluster = pydot.Cluster(graph_name=unique(actorName), label=actorName, style='rounded')
         actorModel = actorModels[actorName]
-        # Locals
-        actorLocals = [] 
         for localMessage in actorModel['locals']:
             actorLocals.append(localMessage['type'])
-        actorLocalMessageNodes = { }
-        if len(actorLocals) != 0:
-            localMsgSubgraph = pydot.Subgraph(unique(actorName + '_msgs'),rank='min') #,rankdir='LR')
+    if len(actorLocals) != 0:
+            localMsgSubgraph = pydot.Subgraph(unique(hostName + '_msgs'),rank='min') #,rankdir='LR')
             host.add_subgraph(localMsgSubgraph)
-        else:
-            localMsgSubgraph = None
+    
+    for actor in actors:
+        actorName = actor['name']
+        # actorNode = pydot.Node(unique(actorName),label=actorName)
+        # actorNode.set('shape','box3d')
+        actorCluster = pydot.Cluster(graph_name=unique(actorName), label=actorName, style='rounded')
+        actorModel = actorModels[actorName]
         # Internals
         actorInternals = []
         for internalMessage in actorModel['internals']:
