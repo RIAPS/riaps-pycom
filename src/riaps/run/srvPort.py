@@ -10,7 +10,7 @@ from riaps.utils.config import Config
 from zmq.error import ZMQError
 
 
-class SrvPort(Port):
+class SrvPort(DuplexBindPort):
     '''
     classdocs
     '''

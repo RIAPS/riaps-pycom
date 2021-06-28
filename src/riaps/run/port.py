@@ -475,7 +475,7 @@ class SimplexConnPort(Port):
         super().__init__(parentComponent, portName, portSpec)
         self.type = portSpec["type"]
         self.isTimed = portSpec["timed"]
-        self.deadline = portSpec["deadline"] * 0.001  # msec
+        self.deadline = portSpec.get("deadline",0) * 0.001  # msec
         parentActor = parentComponent.parent
         self.portScope = parentActor.messageScope(self.type)
         
@@ -510,7 +510,7 @@ class DuplexBindPort(Port):
         self.req_type = portSpec["req_type"]
         self.rep_type = portSpec["rep_type"]
         self.isTimed = portSpec["timed"]
-        self.deadline = portSpec["deadline"] * 0.001  # msec
+        self.deadline = portSpec.get("deadline",0) * 0.001  # msec
         parentActor = parentComponent.parent
         req_scope = parentActor.messageScope(self.req_type)
         rep_scope = parentActor.messageScope(self.rep_type)
@@ -547,7 +547,7 @@ class DuplexConnPort(Port):
         self.req_type = portSpec["req_type"]
         self.rep_type = portSpec["rep_type"]
         self.isTimed = portSpec["timed"]
-        self.deadline = portSpec["deadline"] * 0.001  # msec
+        self.deadline = portSpec.get("deadline",0) * 0.001  # msec
         parentActor = parentComponent.parent
         req_scope = parentActor.messageScope(self.req_type)
         rep_scope = parentActor.messageScope(self.rep_type)

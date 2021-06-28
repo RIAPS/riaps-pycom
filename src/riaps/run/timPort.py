@@ -159,7 +159,7 @@ class TimPort(Port):
         self.logger = logging.getLogger(__name__)
         self.instName = self.parent.name + '.' + self.name
         self.period = portSpec["period"]
-        self.deadline = portSpec["deadline"] * 0.001  # msec
+        self.deadline = portSpec.get("deadline",0) * 0.001  # msec
         self.thread = None
         self.info = None
 
