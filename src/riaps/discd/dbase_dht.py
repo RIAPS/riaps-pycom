@@ -613,9 +613,9 @@ class DhtDbase(DiscoDbase):
         '''
         self.logger.info("dht.fetch[%r] -> %r" % (key,client))
         try:
+            self.dhtAddClient(key,client)
             values = self.filterDelValues(self.dhtGet(key))
             self.logger.info("dht.fetch[%r] = %r" % (key,values))
-            self.dhtAddClient(key,client)
             return values
         except Exception:
             raise DatabaseError("dht.fetch: %s" % sys.exc_info()[0])
