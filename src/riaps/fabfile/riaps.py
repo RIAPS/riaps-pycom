@@ -100,30 +100,32 @@ def uninstall():
 @task
 def kill():
     """Kills any hanging processes. deplo.stop should be called first"""
-    pgrepResult = run('pgrep \'riaps_\' -l')
+    deplo.stop()
+
+    pgrepResult = sudo('pgrep \'riaps_\' -l')
     pgrepEntries = pgrepResult.rsplit('\n')
     processList = []
 
     for process in pgrepEntries:
         if process != "":
             processList.append(process.split()[1])
-
     for process in processList:
-        sudo('pkill -SIGKILL '+process)
+        sudo('pkill -SIGKILL ' + process)
 
-    hostname = run('hostname')
-    if hostname[0:3] == 'bbb':
-        host_last_4 = hostname[-4:]
-    # If it doesn't start with bbb, assume it is a development VM
-    else:
-        vm_mac = run('ip link show enp0s8 | awk \'/ether/ {print $2}\'')
-        host_last_4 = vm_mac[-5:-3] + vm_mac[-2:]
+    cmd = 'python3 -c "from riaps.utils.config import Config; c=Config(); print(c.NIC_NAME)"'
+    nic_name = sudo(cmd)
+    cmd = 'ip link show %s | awk \'/ether/ {print $2}\'' % nic_name
+    mac = sudo(cmd)
+    host_last_4 = mac[-5:-3] + mac[-2:]
+    # Get last for digits of mac address since that is how apps and users are named.
 
-    apps = run('\ls ' + env.riapsApps).split() # \ls bypasses alias to ls with color formatting
+
+    apps = sudo('\ls ' + env.riapsApps).split()  # \ls bypasses alias to ls with color formatting
     for app in apps:
-        sudo('rm -R /home/riaps/riaps_apps/'+app+'/')
+        sudo('rm -R /home/riaps/riaps_apps/' + app + '/')
         if app != 'riaps-apps.lmdb':
             sudo('userdel ' + app.lower() + host_last_4)
+
 
 @task
 def updateConfig():
