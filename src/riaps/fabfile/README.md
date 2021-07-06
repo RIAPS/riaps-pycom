@@ -52,7 +52,7 @@ riaps_fab riaps.kill
 ```
 - Upload a file to all hosts. **Make sure to update fabile/__init__.py** to reflect the local paths of your machine.
 ```
-riaps_fab sys.put <fileName>
+riaps_fab sys.put:<fileName>
 ```
 - Get files from all or specific hosts. This example shows how to grab application saved log files from the application deployment folder (the folder is protected, so sudo=true)
 ```
