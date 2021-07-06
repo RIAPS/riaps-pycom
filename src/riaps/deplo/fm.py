@@ -261,7 +261,7 @@ class FMMonitor(threading.Thread):
                     self.logger.info("FMMon.SHOUT %s = %s " % (str(pUUID), arg))
                     peer = pUUID
                     cmd,pair = arg.split(' ')
-                    appName,actorName = pair.split('.')
+                    appName,actorName = pair.split('.',1)
                     head, cast = '?','?'
                     if cmd == '+': 
                         head,cast = 'peer+',' has peer '

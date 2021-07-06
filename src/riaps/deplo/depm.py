@@ -825,7 +825,7 @@ class DeploymentManager(threading.Thread):
         reply = {}
         # This should be self.actors 
         for key in self.launchMap.keys():
-            appName,actorName = key.split('.')
+            appName,actorName = key.split('.',1)
             if appName in reply.keys():
                 actors = reply[appName]
                 actors += [actorName]
@@ -1436,7 +1436,7 @@ class DeploymentManager(threading.Thread):
         # Kill actors
         toHalt = []
         for key in self.launchMap.keys():
-            appName,actorName = key.split('.')
+            appName,actorName = key.split('.',1)
             toHalt += [(appName,actorName)]
         for h in toHalt:
             self.haltActor(h)
@@ -1495,7 +1495,7 @@ class DeploymentManager(threading.Thread):
             self.startDisco()
             self.reinstate()
         else:
-            appName,actorName = qualName.split('.')
+            appName,actorName = qualName.split('.',1)
             if qualName in self.actors:
                 record = self.actors[qualName]
                 assert appName == record.app and actorName == record.actor                
@@ -1512,6 +1512,8 @@ class DeploymentManager(threading.Thread):
             elif qualName in self.devices:
                 record = self.devices[qualName]
                 appModel = record.model
+                typeName = record.type
+                instName = record.inst
                 actorArgs = record.args
                 self.stopDevice(appName,actorName)
                 self.startDevice(appName, appModel, typeName, instName, actorArgs)

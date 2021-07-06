@@ -3,7 +3,7 @@ Created on Jan 9, 2017
 
 @author: riaps
 '''
-from .port import Port,PortInfo
+from .port import Port,PortInfo,PortScope
 import threading
 import zmq
 import time
