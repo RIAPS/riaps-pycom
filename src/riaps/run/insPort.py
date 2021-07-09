@@ -17,44 +17,104 @@ except:
     cPickle = None
     import pickle
 
-    
-# Example insider thread (1 sec ticker)
-class InsThread(threading.Thread):
-
-    def __init__(self, parent):
+class _DeviceThread(threading.Thread):
+    '''
+    Prototypical 'inside' thread that implements a 1 sec 
+    'ticker' and an echo service.
+    '''
+    def __init__(self, trigger):
         threading.Thread.__init__(self)
-        self.name = parent.instName
-        self.parent = parent
-        self.context = parent.context
-        self.period = 1.0 
+        self.trigger = trigger
         self.active = threading.Event()
         self.active.clear()
-        self.waiting = threading.Event()
         self.terminated = threading.Event()
         self.terminated.clear()
-        
+        self.period = 1000.0        # 1 sec 
+        self.plug = None
+        self.plug_identity = None
+
+    def get_identity(self,ins_port):
+        '''
+        to be called from the 'outer' component thread, retrieves the identity of the 
+        'inner' side (i.e. thread), so that that component thread can send 
+        messages to the selected inner (thread).   
+        '''
+        if self.plug_identity is None:
+            while True:
+                if self.plug != None:
+                    self.plug_identity = ins_port.get_plug_identity(self.plug)
+                    break
+                time.sleep(0.1)
+        return self.plug_identity
+
     def run(self):
         self.plug = self.parent.setupPlug(self)
+        self.poller = zmq.Poller() 
+        self.poller.register(self.plug, zmq.POLLIN)
         while 1:
             self.active.wait(None)
             if self.terminated.is_set(): break
-            self.waiting.wait(self.period)
-            if self.terminated.is_set(): break
             if self.active.is_set():
-                value = time.time()
-                self.plug.send_pyobj(value)
+                socks = dict(self.poller.poll(self.period))
+                if self.terminated.is_set(): break
+                if self.plug in socks and socks[self.plug] == zmq.POLLIN:
+                    msg = self.plug.recv_pyobj()    # Message from component
+                    self.plug.send_pyobj(msg)       # ... echo it
+                    continue
+                if len(socks) == 0:                 # Timeout
+                    value = time.time()
+                    self.plug.send_pyobj(value)
 
     def activate(self):
         self.active.set()
-    
+
     def deactivate(self):
         self.active.clear()
-    
+
     def terminate(self):
-        self.waiting.set()
+        self.active.set()
         self.terminated.set()
 
-        
+# class Component:
+#     pass
+#
+# class _Device(Component):
+#     '''
+#     message Query;
+#     message Answer;
+#     device _Device() {
+#         inside trigger;
+#         ans echo (Query,Answer);
+#     }
+#     '''
+#     def __init__(self):
+#         super().__init__()
+#         self.thread = None
+#
+#     def handleActivate(self):                   # activation: sets up inner thread
+#         if self.thread == None: 
+#             self.thread = _DeviceThread(self.trigger)
+#             self.thread.start() 
+#             self.trigger.set_identity(self._DeviceThread.get_identity(self.trigger))
+#             self.trigger.activate()
+#
+#     def __destroy__(self):
+#         self._DeviceThread.deactivate()
+#         self._DeviceThread.terminate()
+#         self._DeviceThread.join()
+#
+#     def on_trigger(self):                       # operation triggered by inner thread
+#         msg = self.trigger.recv_pyobj()
+#         if type(msg) == float:                  # time value
+#             pass
+#         else:                                   # echo answer
+#             self.echo.send_pyobj(msg)
+#
+#     def on_echo(self):
+#         qry = self.echo.recv_pyobj()            # recv query to echo
+#         self.trigger.send_pyobj(qry)            # send it to inner thread
+
+
 class InsPort(Port):
     '''
     classdocs
@@ -71,11 +131,13 @@ class InsPort(Port):
         self.parent_thread = None
         self.info = None
         self.plugMap = { }
+        self.identity = bytes(8)    # Default identity, it is an error to use it. 
 
     def setup(self):
         if self.spec == 'default':
-            thread = InsThread(self)
+            thread = _DeviceThread(self)
             thread.start()
+            self.activate()
         else:
             pass 
     
