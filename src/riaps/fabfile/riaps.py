@@ -7,7 +7,7 @@ import os
 from riaps.consts.defs import *
 
 # Prevent namespace errors by explicitly defining which tasks belong to this file
-__all__ = ['update','updateRemoteNodeKey','updateAptKey','install','uninstall','kill','updateConfig','updateLogConfig','getLogs','ctrl', 'configRouting', 'securityOff', 'securityOn']
+__all__ = ['update','updateRemoteNodeKey','updateAptKey','install','uninstall','kill','updateConfig','updateLogConfig','getSystemdLogs','getLogs','ctrl', 'configRouting', 'securityOff', 'securityOn']
 
 # RIAPS packages
 packages = [
@@ -106,11 +106,30 @@ def kill():
     pgrepEntries = pgrepResult.rsplit('\n')
     processList = []
 
+    print(f"pgrepResult: {pgrepResult}")
+
     for process in pgrepEntries:
-        if process != "":
+        if process != "" and process.split()[1] != "riaps_fab":
             processList.append(process.split()[1])
+
+    print(f"processList: {processList}")
+
     for process in processList:
         sudo('pkill -SIGKILL ' + process)
+
+    pgrepPost = sudo('pgrep \'riaps_\' -l')
+    pgrepPostEntries = pgrepPost.rsplit('\n')
+    post_process_list = []
+    print(f"pgrepPostEntries: {pgrepPostEntries}")
+    print(f"type(pgrepPostEntries): {type(pgrepPostEntries)}")
+    for process in pgrepPostEntries:
+        if process != "" and process.split()[1] != "riaps_fab":
+            post_process_list.append(process.split()[1])
+
+    if post_process_list:
+        print("\033[93m processes still running \033[0m")
+    else:
+        print("\033[92m processes terminated \033[0m")
 
     cmd = 'python3 -c "from riaps.utils.config import Config; c=Config(); print(c.NIC_NAME)"'
     nic_name = sudo(cmd)
@@ -125,7 +144,6 @@ def kill():
         sudo('rm -R /home/riaps/riaps_apps/' + app + '/')
         if app != 'riaps-apps.lmdb':
             sudo('userdel ' + app.lower() + host_last_4)
-
 
 @task
 def updateConfig():
@@ -146,17 +164,23 @@ def updateLogConfig():
         sudo('cp riaps-log.conf /etc/riaps/')
         sudo('chown root:root /etc/riaps/riaps-log.conf')
         sudo('rm riaps-log.conf')
+
     else:
         print("Local riaps-log.conf doesn't exist!")
 
 # If using riaps-deplo.service, the log data is being recorded in a system journal.
 # This function pulls that data from the system journal and places them in a log file
 @task
-def getLogs():
+def getSystemdLogs():
     """Get deployment logs and save them to logs/"""
     hostname = env.host_string
     sudo('journalctl -u riaps-deplo.service --since today > riaps-deplo-' + hostname + '.log')
     get('riaps-deplo-' + hostname + '.log','logs/')
+
+@task
+def getLogs(app_name):
+    """Get deployment logs and save them to logs/"""
+    get('/home/riaps/riaps_apps/'+app_name+'/*.log')
 
 @task
 @hosts('localhost')
