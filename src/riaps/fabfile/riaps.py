@@ -178,7 +178,7 @@ def getSystemdLogs():
     get('riaps-deplo-' + hostname + '.log','logs/')
 
 @task
-def getLogs(app_name):
+def getAppLogs(app_name):
     """Get deployment logs and save them to logs/"""
     get('/home/riaps/riaps_apps/'+app_name+'/*.log')
 
