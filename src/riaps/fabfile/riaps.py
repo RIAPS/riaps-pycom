@@ -7,7 +7,7 @@ import os
 from riaps.consts.defs import *
 
 # Prevent namespace errors by explicitly defining which tasks belong to this file
-__all__ = ['update','updateRemoteNodeKey','updateAptKey','install','uninstall','kill','updateConfig','updateLogConfig','getSystemdLogs','getLogs','ctrl', 'configRouting', 'securityOff', 'securityOn']
+__all__ = ['update','updateRemoteNodeKey','updateAptKey','install','uninstall','kill','updateConfig','updateLogConfig','getSystemdLogs','getAppLogs','ctrl', 'configRouting', 'securityOff', 'securityOn']
 
 # RIAPS packages
 packages = [
