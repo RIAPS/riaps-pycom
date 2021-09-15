@@ -11,8 +11,6 @@ __all__ = ['update','updateRemoteNodeKey','updateAptKey','install','uninstall','
 
 # RIAPS packages
 packages = [
-            'riaps-externals-',
-            'riaps-core-',
             'riaps-pycom-',
             'riaps-timesync-'
             ]
