@@ -74,7 +74,7 @@ class Part(object):
         self.logger.info('Constructing %s of type %s' % (iName, self.typeName))
         self.instance = self.class_(**self.args)  # Run the component constructor
         self.class_.OWNER = None
-        # self.control = None
+        self.control = None
         self.thread = None
         self.buildAllPorts(self.type["ports"])  # Build all the ports of the component
         self.scheduler = self.type.get("scheduler", "default")
@@ -173,9 +173,9 @@ class Part(object):
        
         self.setupPorts(self.ports)
         
-        self.thread = ComponentThread(self)  # Create and launch the component thread
+        self.thread = ComponentThread(self)     # Create component thread
         self.thread.start() 
-        time.sleep(0.001)  # Hack to yield to the component thread
+        time.sleep(0.01)  # Hack to yield to the component thread
         self.sendControl("build", -1)  # Command the component thread to build itself
         prefix = (self.name, self.typeName)
         queue = []
@@ -279,73 +279,37 @@ class Part(object):
     def handleCPULimit(self):
         self.logger.info("handleCPULimit - %s:%s" % (self.name, self.typeName))
         msg = ("limitCPU",)
-        # print(msg)
-        self.control.send_pyobj(msg)  # Relay message to component thread
-#        rep = self.control.recv_pyobj()     # Wait for an OK response
-#         if rep == "ok" :
-#             pass
-#         else:
-#             pass
+        self.sendControl(msg,-1)            # Relay message to component thread
         
     def handleMemLimit(self):
         self.logger.info("handleMemLimit - %s:%s" % (self.name, self.typeName))
         msg = ("limitMem",)
-        # print(msg)
-        self.control.send_pyobj(msg)  # Relay message to component thread
-#        rep = self.control.recv_pyobj()     # Wait for an OK response
-#         if rep == "ok" :
-#             pass
-#         else:
-#             pass
+        self.sendControl(msg,-1)            # Relay message to component thread
     
     def handleSpcLimit(self):
         self.logger.info("handleSpcLimit - %s:%s" % (self.name, self.typeName))
         msg = ("limitSpc",)
-        # print(msg)
-        self.control.send_pyobj(msg)  # Relay message to component thread
-#        rep = self.control.recv_pyobj()     # Wait for an OK response
-#         if rep == "ok" :
-#             pass
-#         else:
-#             pass
+        self.sendControl(msg,-1)            # Relay message to component thread
         
     def handleNetLimit(self):
         self.logger.info("handleNetLimit - %s:%s" % (self.name, self.typeName))
         msg = ("limitNet",)
-        # print(msg)
-        self.control.send_pyobj(msg)  # Relay message to component thread
-#        rep = self.control.recv_pyobj()     # Wait for an OK response
-#         if rep == "ok" :
-#             pass
-#         else:
-#             pass
+        self.sendControl(msg,-1)            # Relay message to component thread
     
     def handleNICStateChange(self, state):
         self.logger.info("handleNICStateChange - %s:%s NIC %s" % (self.name, self.typeName, state))
         msg = ("nicState", state)
-        # print(msg)
-        self.control.send_pyobj(msg)  # Relay message to component thread
-#        rep = self.control.recv_pyobj()     # Wait for an OK response
-#         if rep == "ok" :
-#             pass
-#         else:
-#             pass
+        self.sendControl(msg,-1)            # Relay message to component thread
         
     def handlePeerStateChange(self, state, uuid):
         self.logger.info("handlePeerStateChange - %s:%s peer %s at %s" 
                          % (self.name, self.typeName, state, uuid))
         msg = ("peerState", state, uuid)
-        # print(msg)
-        self.control.send_pyobj(msg)  # Relay message to component thread
-#        rep = self.control.recv_pyobj()     # Wait for an OK response
-#         if rep == "ok" :
-#             pass
-#         else:
-#             pass
+        self.sendControl(msg,-1)            # Relay message to component thread
         
     def terminate(self):
         self.logger.info("terminating %s" % self.typeName)
-        self.sendControl("kill", -1)  # Send message to the thread to kill itself
+        self.sendControl("kill", -1)        # Send message to the thread to kill itself
         time.sleep(0.1)
         if self.thread != None:
             self.thread.join()

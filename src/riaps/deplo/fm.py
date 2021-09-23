@@ -27,7 +27,7 @@ import traceback
 
 class FMMonitor(threading.Thread):
     def __init__(self,context,hostAddress,riapsHome):
-        threading.Thread.__init__(self)
+        threading.Thread.__init__(self,daemon=True)
         self.logger = logging.getLogger(__name__)
         self.context = context
         self.hostAddress = hostAddress
@@ -292,7 +292,7 @@ class FMMonitor(threading.Thread):
         
 class NICMonitor(threading.Thread):
     def __init__(self,context):
-        threading.Thread.__init__(self)
+        threading.Thread.__init__(self,daemon=True)
         self.logger = logging.getLogger(__name__)
         self.context = context
         self.ip = IPRSocket()

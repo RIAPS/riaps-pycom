@@ -1,0 +1,23 @@
+@startuml
+state initial
+state c1 <<choice>>
+state c2 <<choice>>
+state has_ball
+state no_ball
+
+[*] --> initial
+initial -down-> c1 : tick
+c1 -up-> initial : [no partner]
+c1 -down-> c2 : [partner]
+c2 -left-> has_ball : [ball]
+c2 -right-> no_ball : [no ball]
+
+has_ball -right-> no_ball : tick [partner] | throw!
+has_ball -left-> has_ball : catch | error
+
+no_ball -left-> no_ball : tick
+no_ball -left-> has_ball : catch [not own_ball] 
+
+initial -up-> has_ball : catch 
+
+@enduml

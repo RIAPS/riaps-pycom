@@ -46,7 +46,7 @@ import logging
 
 class DhtPeerMon(threading.Thread):
     def __init__(self,context,hostAddress,riapsHome,dht,dhtPort):
-        threading.Thread.__init__(self)
+        threading.Thread.__init__(self,daemon=True)
         self.logger = logging.getLogger(__name__)
         self.context = context
         self.hostAddress = hostAddress
@@ -584,7 +584,18 @@ class DhtDbase(DiscoDbase):
                 self.republisher.cancel(event)
                 del self.republishMap[(key,value)]
 
-    
+    def delFromRepublishAll(self,key,values):
+        '''
+        Remove all k/v pair/s from the republisher. 
+        '''
+        self.logger.info('dhtRemoveFromRepublish[%s]=%r' % (key,str(values)))
+        with self.republishLock:
+            for value in values:
+                event = self.republishMap.get((key,value),None)
+                if event:
+                    self.republisher.cancel(event)
+                    del self.republishMap[(key,value)]
+                    
     def insert(self,key:str,value:str) -> [str]:
         '''
         Insert value under key and return list of clients of value (if any). 
@@ -629,9 +640,9 @@ class DhtDbase(DiscoDbase):
         '''
         self.logger.info("dht.remove[%r]:%r" % (value,key))
         try:
-            values = self.dhtRemove(key,value)
-            self.regDb.delKeyValue(key, value)                  # Delete k/v from db           
             self.delFromRepublish(key,value)                    # Delete k/v from republisher
+            self.regDb.delKeyValue(key, value)                  # Delete k/v from db
+            values = self.dhtRemove(key,value)
             return values
         except Exception:
             raise DatabaseError("dht.remove: %s" % sys.exc_info()[0])
@@ -644,10 +655,10 @@ class DhtDbase(DiscoDbase):
         '''
         self.logger.info("dht.delete[%r]" % key)
         try:
-            values = self.dhtDelete(key)
-            self.regDb.delKey(key)
-            for value in values:
-                self.delFromRepublish(key,value)
+            values= self.dhtGet(key)                # Retrieve values                   
+            self.delFromRepublishAll(key,values)    # Remove values from republisher
+            self.regDb.delKey(key)                  # Delete k/v from db
+            values = self.dhtDelete(key)            # Delete values from dht
         except Exception:
             raise DatabaseError("dht.delete: %s" % sys.exc_info()[0])
         except OSError:

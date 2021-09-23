@@ -80,7 +80,7 @@ class DeploymentManager(threading.Thread):
     ERRORMARK = 'Exc:'
     
     def __init__(self,parent,resm,fm):
-        threading.Thread.__init__(self)
+        threading.Thread.__init__(self,daemon=True)
         self.logger = logging.getLogger(__name__)
         self.context = parent.context
         self.hostAddress = parent.hostAddress
@@ -271,6 +271,7 @@ class DeploymentManager(threading.Thread):
         user_uid = user_record.uid
         user_gid = user_record.gid
         user_cwd = os.getcwd()
+        user_env["PWD"] = user_cwd
         command = [disco_prog,disco_arg1,disco_arg2]
         try:
             self.disco = psutil.Popen(command,
@@ -604,6 +605,7 @@ class DeploymentManager(threading.Thread):
         user_uid = user_record.uid
         user_gid = user_record.gid
         user_cwd = appFolder
+        user_env["PWD"] = user_cwd
         
         firewall = self.setupAppNetwork(appName,userName)
         
@@ -1254,7 +1256,8 @@ class DeploymentManager(threading.Thread):
            
         app_libs = self.getAppLibs(appName)
         self.makeLdLibEnv(dev_env,app_libs)
-        
+        dev_env["PWD"] = appFolder
+               
         riaps_arg1 = appName 
         riaps_arg2 = appModelPath
         riaps_arg3 = typeName

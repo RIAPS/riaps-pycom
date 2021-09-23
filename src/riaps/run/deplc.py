@@ -43,6 +43,10 @@ class DeplClient(object):
 
     def registerActor(self):
         self.logger.info("registerActor")
+        if self.socket == None:
+            self.logger.error("registerActor: No deplo")
+            return False
+        
         reqt = deplo_capnp.DeplReq.new_message()
         appMessage = reqt.init('actorReg')
         appMessage.appName = self.appName
@@ -57,7 +61,7 @@ class DeplClient(object):
         try:
             self.socket.send(msgBytes)
         except Exception as e:
-            self.logger.error("registerActor - failed to send: {1}".format(e.errno, e.strerror))
+            self.logger.error("registerActor: Failed to send: {1}".format(e.errno, e.strerror))
             # self.socket.close()
             # self.socket = None
             return False
@@ -65,7 +69,7 @@ class DeplClient(object):
         try:
             respBytes = self.socket.recv()
         except Exception as e:
-            self.logger.error("registerActor - no response: {1}".format(e.errno, e.strerror))
+            self.logger.error("registerActor: No response: {1}".format(e.errno, e.strerror))
             # self.socket.close()
             # self.socket = None
             return False
@@ -82,13 +86,11 @@ class DeplClient(object):
                 self.actor.setUUID(uuid)
                 return True
             else:
-                errMsg = "registerActor - can't connect to deplo channel"
-                self.logger.error(errMsg)
+                self.logger.error("registerActor: can't connect to deplo")
                 # raise SetupError("registerActor - can't connect to deplo channel")
                 return False
         else:
-            errMsg = "registerActor - unexpected response from deplo"
-            self.logger.error(errMsg)
+            self.logger.error("registerActor: unexpected response from deplo")
             # raise SetupError("registerActor - unexpected response from deplo")
             return False
 
@@ -96,7 +98,7 @@ class DeplClient(object):
         self.logger.info("requestDevice %s" % str(bundle))
         
         if self.socket == None:
-            self.logger.info("No deplo service - skipping device registration: %s", str(bundle))
+            self.logger.error("requestDevice: No deplo")
             return False
 
         appName, modelName, typeName, instName, args = bundle
@@ -120,7 +122,7 @@ class DeplClient(object):
         try:
             self.socket.send(msgBytes)
         except Exception as e:
-            self.logger.error("requestDevice - failed to send: %s" % str(e.args))
+            self.logger.error("requestDevice: failed to send: %s" % str(e.args))
             # self.socket.close()
             # self.socket = None
             return False
@@ -128,7 +130,7 @@ class DeplClient(object):
         try:
             respBytes = self.socket.recv()
         except Exception as e:
-            self.logger.error("requestDevice - no response: %s" % str(e.args))
+            self.logger.error("requestDevice: no response: %s" % str(e.args))
             # self.socket.close()
             # self.socket = None
             return False
@@ -141,13 +143,11 @@ class DeplClient(object):
             if status == 'ok':
                 return True
             else:
-                errMsg = "requestDevice - error response from deplo"
-                self.logger.error(errMsg)
+                self.logger.error("requestDevice: error response from deplo")
                 # raise SetupError("requestDevice - error response from deplo")
                 return False
         else:
-            errMsg = "requestDevice - unexpected response from deplo"
-            self.logger.errro(errMsg)
+            self.logger.error("requestDevice: unexpected response from deplo")
             # raise SetupError("requestDevice - unexpected response from deplo")
             return False
     
@@ -155,7 +155,7 @@ class DeplClient(object):
         self.logger.info("releaseDevice %s" % str(bundle))
         
         if self.socket == None:
-            self.logger.info("No deplo service - skipping device release: %s", str(bundle))
+            self.logger.error("releaseDevice: No deplo")
             return False
 
         appName, modelName, typeName, instName = bundle
@@ -172,7 +172,7 @@ class DeplClient(object):
         try:
             self.socket.send(msgBytes)
         except Exception as e:
-            self.logger.error("releaseDevice - failed to send: %s" % str(e.args))
+            self.logger.error("releaseDevice: failed to send: %s" % str(e.args))
 #             self.socket.close()
 #             self.socket = None
             return False
@@ -193,13 +193,11 @@ class DeplClient(object):
             if status == 'ok':
                 return True
             else:
-                errMsg = "releaseDevice - error response from deplo"
-                self.logger.error(errMsg)
+                self.logger.error("releaseDevice: error response from deplo")
                 # raise SetupError(errMsg)
                 return False
         else:
-            errMsg = "releaseDevice - unexpected response from deplo"
-            self.logger.error(errMsg)
+            self.logger.error("releaseDevice: unexpected response from deplo")
             # raise SetupError(errMsg)
             return False
     
@@ -207,7 +205,7 @@ class DeplClient(object):
         self.logger.info("reportEvent %s" % str(bundle))
         
         if self.socket == None:
-            self.logger.info("No deplo service - skipping event reporting: %s", str(bundle))
+            self.logger.error("reportEvent: No deplo", str(bundle))
             return False
         
         reqt = deplo_capnp.DeplReq.new_message()
@@ -222,7 +220,7 @@ class DeplClient(object):
         try:
             self.socket.send(msgBytes)
         except Exception as e:
-            self.logger.error("reportEvent - failed to send: {1}".format(e.errno, e.strerror))
+            self.logger.error("reportEvent: failed to send: {1}".format(e.errno, e.strerror))
             # self.socket.close()
             # self.socket = None
             return False
@@ -230,7 +228,7 @@ class DeplClient(object):
         try:
             respBytes = self.socket.recv()
         except Exception as e:
-            self.logger.error("reportEvent - no response: {1}".format(e.errno, e.strerror))
+            self.logger.error("reportEvent: no response: {1}".format(e.errno, e.strerror))
             # self.socket.close()
             # self.socket = None
             return False
@@ -243,13 +241,11 @@ class DeplClient(object):
             if status == 'ok':
                 return True
             else:
-                errMsg = "reportEvent -  err status from deplo"
-                self.logger.error(errMsg)
+                self.logger.error("reportEvent: error response from deplo")
                 # raise SetupError("reportEvent - can't connect to deplo channel")
                 return False
         else:
-            errMsg = "reportEvent - unexpected response from deplo"
-            self.logger.error(errMsg)
+            self.logger.error("reportEvent: unexpected response from deplo")
             # raise SetupError("reportEvent - unexpected response from deplo")
             return False
     

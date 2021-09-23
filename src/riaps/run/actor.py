@@ -34,7 +34,6 @@ from riaps.utils.config import Config
 from riaps.utils.appdesc import AppDescriptor
 import zmq.auth
 from zmq.auth.thread import ThreadAuthenticator
-from pickle import FALSE
 
 
 class Actor(object):
@@ -63,6 +62,8 @@ class Actor(object):
         self.pid = os.getpid()
         self.uuid = None
         self.setupIfaces()
+        self.disco = None 
+        self.deplc = None 
         # Assumption : pid is a 4 byte int
         self.actorID = ipaddress.IPv4Address(self.globalHost).packed + self.pid.to_bytes(4, 'big')
         self.suffix = ""
@@ -383,7 +384,7 @@ class Actor(object):
         self.deplc = DeplClient(self, self.suffix)
         self.deplc.start()
         ok = self.deplc.registerActor()  # Register this actor with the deplo service
-        self.logger.info("actor %s registered with depl" % ("is" if ok else "is not"))
+        self.logger.info("actor %s registered with deplo" % ("is" if ok else "is not"))
             
         self.controls = { }
         self.controlMap = { }
@@ -651,8 +652,8 @@ class Actor(object):
         for component in self.components.values():
             component.terminate()
         time.sleep(1.0)
-        self.deplc.terminate()
-        self.disco.terminate()
+        if self.deplc: self.deplc.terminate()
+        if self.disco: self.disco.terminate()
         if self.auth:
             self.auth.stop()
         # Clean up everything

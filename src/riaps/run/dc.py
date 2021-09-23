@@ -116,7 +116,7 @@ class GroupThread(threading.Thread):
     NO_LEADER = 0
     
     def __init__(self, group):
-        threading.Thread.__init__(self)
+        threading.Thread.__init__(self,daemon=True)
         self.logger = logging.getLogger(__name__)
         self.group = group
         self.coordinated = False if self.group.kind == "default" else True
@@ -435,7 +435,7 @@ class GroupThread(threading.Thread):
                     self.logger.info('... leader asserts authority')
                     (_term, _leader, _host, _port) = struct.unpack('!L16sLL', frame)
                     if self.term >= _term and self.leader and self.leader != _leader:
-                        self.logger.error("GroupThread[%s] - leader conflict", self.group.getGroupName()) 
+                        self.logger.info("GroupThread[%s] - leader has changed", self.group.getGroupName()) 
                     self.term = _term  # update term/leader
                     prevLeader = self.leader
                     self.leader = _leader    
@@ -811,6 +811,12 @@ class Group(object):
         msg = ('group', self.groupType, self.groupInstance, self.messageType, host, pubPort, partName, partType, portName) 
         self.thread.sendControl(msg)
         time.sleep(1.0)  # 
+    
+    def __del__(self):
+        self.logger.info("Group.__del__: %s - TODO" % self.groupInstanceName)
+        # Send out message the component is leaving group
+        # Stop and terminate Group thread
+        # Discard sockets
     
     def getGroupName(self):
         '''
@@ -1285,6 +1291,12 @@ class Coordinator(object):
         return self.groupMembers[key] if key in self.groupMembers else None
 
     def leaveGroup(self, group):
-        # TODO: leave group, trash group object
-        pass
+        '''
+        Operation to 'leave' a group by a component. 
+        The group will be deactivated / its threads stopped, and deleted.. 
+        '''
+        groupName = group.getGroupName()
+        self.logger.info("Coordinator.leaveGroup(%s)" % groupName)
+        del group           
+        
     

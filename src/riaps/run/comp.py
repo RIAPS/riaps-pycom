@@ -25,7 +25,7 @@ class ComponentThread(threading.Thread):
     '''
     
     def __init__(self, parent):
-        threading.Thread.__init__(self)
+        threading.Thread.__init__(self,daemon=True)
         self.logger = logging.getLogger(__name__)
         self.name = parent.name
         self.parent = parent
@@ -105,6 +105,14 @@ class ComponentThread(threading.Thread):
         self.sock2GroupMap[groupSocket] = group
         self.portName2GroupMap[groupId] = group
         self.sock2PrioMap[groupSocket] = groupPriority  # TODO: better solution for group message priority  
+        
+    def delGroupSocket(self, group):
+        groupSocket = group.getSocket()
+        groupId = group.getGroupName()
+        self.poller.unregister(groupSocket)
+        del self.sock2GroupMap[groupSocket]
+        del self.portName2GroupMap[groupId]
+        del self.sock2PrioMap[groupSocket] 
         
     def runCommand(self):
         res = False
@@ -569,3 +577,13 @@ class Component(object):
             self.thread.addGroupSocket(group, groupPriority)
         return group
             
+    def leaveGroup(self, groupName, instName):
+        if self.thread == None:
+            self.thread = self.owner.thread
+        group = self.coord.getGroup(groupName, instName)
+        if group != None:
+            self.thread.delGroupSocket(group)
+            self.coord.leaveGroup(self.thread, groupName, instName, self.getLocalID())
+        return None
+    
+    

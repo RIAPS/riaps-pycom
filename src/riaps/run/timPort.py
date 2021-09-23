@@ -15,7 +15,7 @@ from .exc import OperationError
 class TimerThread(threading.Thread):
 
     def __init__(self, parent):
-        threading.Thread.__init__(self)
+        threading.Thread.__init__(self,daemon=True)
         self.logger = logging.getLogger(__name__)
         self.name = parent.instName
         self.context = parent.context

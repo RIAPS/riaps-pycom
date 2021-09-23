@@ -287,7 +287,7 @@ class ActorResourceManager(object):
                 try:
                     self.parent.memCGroup.delete_cgroup(self.actorName)
                 except:
-                    pass
+                    pass           
         if self.hasNet:
             if self.parent.netCGroup:
                 try:
@@ -405,7 +405,21 @@ class AppResourceManager(object):
                     _res = riaps_sudo(command)
                 except:
                     self.logger.warning('setting quota failed')
-        
+    
+    def delQuota(self):
+        if self.userName != Config.TARGET_USER:             # Don't set quotas for the default user
+            if self.spcUsage != 0:
+                try:
+                    softblock = 0 
+                    hardblock = 0 
+                    softinode = 0 
+                    hardinode = 0
+                    command = 'setquota -u %s %d %d %d %d /' % (self.userName,softblock,hardblock,softinode,hardinode)
+                    self.logger.info('exec: %s' % command)
+                    _res = riaps_sudo(command)
+                except:
+                    self.logger.warning('re-setting quota failed')
+                    
     def addActor(self,actorName,actorDef):
         if actorName in self.actors:
             return
@@ -464,6 +478,7 @@ class AppResourceManager(object):
                 self.parent.riapsNet.delete_cgroup(self.appName)
         except: 
             pass
+        self.delQuota()
         riaps_uid = self.parent.riaps_uid
         try:
             # tc qdisc del dev enp0s3 parent 1000:1001 handle 1001:

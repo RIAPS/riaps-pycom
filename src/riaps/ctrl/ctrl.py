@@ -294,8 +294,9 @@ class Controller(object):
             client.kill()
     
     def cleanAll(self):
-        for client in self.clientMap.values():
-            self.removeAppFromClient(client, appName='')
+        appNames = [app for app in self.appInfo.keys()]
+        for appName in appNames:
+            self.removeAppByName(appName)
                 
     def setupHostKeys(self):
         # get host key, if we know one
@@ -763,14 +764,17 @@ class Controller(object):
         '''
         newLaunchList = []
         clientList = []
+        found = False
         for elt in self.launchList:
             client,appName,actorName = elt[0], elt[1], elt[2]
             if appName == appNameToHalt:
                 client.halt(appName,actorName)
                 self.log("H %s %s %s" % (client.name,appName,actorName))
                 clientList.append(client)
+                found = True
             else:
                 newLaunchList.append(elt)
+        if not found: return
         for client in clientList:
             res = client.reclaim(appName)
             if res == None: continue
@@ -856,6 +860,7 @@ class Controller(object):
         os.remove(const.sigFile)
             
     def removeApp(self, appName):
+        self.haltByName(appName)
         status = self.appInfo[appName].status if appName in self.appInfo else AppStatus.NotLoaded
         files,libraries,clients = [],[],[]
         if status == AppStatus.Loaded: 

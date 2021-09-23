@@ -56,7 +56,7 @@ class DiscoClient(object):
         try:
             self.socket.send(msgBytes)
         except Exception as e:
-            self.logger.error("Unable to register app with discovery: %s" % e.args)
+            self.logger.error("registerActor: Unable to register app with disco: %s" % str(e.args))
             self.socket.close()
             self.socket = None
             return
@@ -64,7 +64,7 @@ class DiscoClient(object):
         try:
             respBytes = self.socket.recv()
         except Exception as e:
-            self.logger.error("No response from discovery service: %s" % e.args)
+            self.logger.error("registerActor: No response from disco: %s" % str(e.args))
             self.socket.close()
             self.socket = None
             return
@@ -77,12 +77,12 @@ class DiscoClient(object):
             status = respMessage.status
             port = respMessage.port
             if status == 'ok':
-                self.logger.info("connecting to 127.0.0.1:%s" % str(port))
+                self.logger.info("registerActor:connecting to 127.0.0.1:%s" % str(port))
                 self.channel.connect("tcp://127.0.0.1:" + str(port))
             else:
-                raise SetupError("Error response from disco service at app registration")
+                raise SetupError("registerActor: Error response from disco")
         else:
-            raise SetupError("Unexpected response from disco service at app registration")
+            raise SetupError("registerActor: Unexpected response from disco")
         return
      
     def reconnect(self):
@@ -97,7 +97,7 @@ class DiscoClient(object):
     def handleRegReq(self, bundle):
         self.logger.info("handleRegReq: %s" % str(bundle))
         if self.socket == None:
-            self.logger.info("No disco service - skipping registration: %s", str(bundle))
+            self.logger.error("handleRegReq: No disco - %s", str(bundle))
             return
         prefix,portInfo = bundle
         partName, partType = prefix
@@ -120,24 +120,24 @@ class DiscoClient(object):
         try:
             repBytes = self.socket.recv()
         except Exception as e:
-            raise SetupError("No response from disco service : {1}".format(e.errno, e.strerror))
+            raise SetupError("handleRegReq: No response from disco: %s", str(e.args)) 
         rep = disco_capnp.DiscoRep.from_bytes(repBytes)
         which = rep.which()
         if which == 'serviceReg':
             repMessage = rep.serviceReg
             status = repMessage.status
             if status == 'err':
-                raise SetupError("Error response from disco service at service registration")
+                raise SetupError("handleRegReq: Error response from disco")
             else:
                 pass
         else:
-            raise SetupError("Unexpected response from disco service at service registration")
+            raise SetupError("handleRegReq: Unexpected response from disco")
         return
     
     def handleLookupReq(self, bundle):
         self.logger.info("handleLookupReq: %s" % str(bundle))
         if self.socket == None:
-            self.logger.info("No disco service - skipping lookup: %s", str(bundle))
+            self.logger.info("handleLookupReq: No disco - %s", str(bundle))
             return []
         prefix,portInfo = bundle
         partName, _partType = prefix
@@ -163,8 +163,7 @@ class DiscoClient(object):
         try:
             repBytes = self.socket.recv()
         except Exception as e:
-            raise SetupError("No response from disco service : {1}".format(e.errno, e.strerror))
-            raise
+            raise SetupError("handleLookupReq: No response from disco: %s", str(e.args))
         rep = disco_capnp.DiscoRep.from_bytes(repBytes)
         which = rep.which()
         returnValue = []
@@ -172,7 +171,7 @@ class DiscoClient(object):
             repMessage = rep.serviceLookup
             status = repMessage.status
             if status == 'err':
-                raise SetupError('Unable to lookup service')
+                raise SetupError('handleLookupReq: error response from disco')
             sockets = repMessage.sockets
             for sock in sockets:
                 host = sock.host
@@ -181,7 +180,7 @@ class DiscoClient(object):
             else:
                 pass
         else:
-            raise SetupError("Service lookup error - bad response")
+            raise SetupError("handleLookupReq: Bad response from disco")
         return returnValue
         
     def registerEndpoint(self, bundle):
@@ -269,7 +268,7 @@ class DiscoClient(object):
     def terminate(self):
         self.logger.info("terminating")
         if self.socket == None:
-            self.logger.info("No disco service - skipping termination")
+            self.logger.info("terminate: No discovery service - skipping termination")
             return
         reqt = disco_capnp.DiscoReq.new_message()
         appMessage = reqt.init('actorUnreg')
@@ -283,7 +282,7 @@ class DiscoClient(object):
         try:
             self.socket.send(msgBytes)
         except Exception as e:
-            self.logger.error("Unable to unregister app with discovery: %s" % e.args)
+            self.logger.error("terminate: Unable to unregister app with disco: %s" % str(e.args))
             self.socket.close()
             self.socket = None
             return
@@ -291,7 +290,7 @@ class DiscoClient(object):
         try:
             respBytes = self.socket.recv()
         except Exception as e:
-            self.logger.error("No response from discovery service: %s" % e.args)
+            self.logger.error("terminate: No response from disco: %s" % str(e.args))
             self.socket.close()
             self.socket = None
             return
@@ -304,14 +303,14 @@ class DiscoClient(object):
             status = respMessage.status
             port = respMessage.port
             if status == 'ok':
-                self.logger.info("disconnecting 127.0.0.1:%s" % str(port))
+                self.logger.info("terminate: disconnecting 127.0.0.1:%s" % str(port))
                 try:
                     self.channel.disconnect("tcp://127.0.0.1:" + str(port))
                 except:
                     pass
             else:
-                raise SetupError("Error response from disco service at app unregistration")
+                raise SetupError("terminate: Error response from disco")
         else:
-            raise SetupError("Unexpected response from disco service at app unregistration")
+            raise SetupError("terminate: Unexpected response from disco")
         self.logger.info("terminated")
     

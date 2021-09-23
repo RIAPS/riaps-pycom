@@ -58,8 +58,8 @@ class ControlGUIClient(object):
                                       "onSelectApplication": self.on_SelectApplication,
                                       "onSelectDeployment": self.on_SelectDeployment,
                                       "onFolderEntryActivate": self.on_folderEntryActivate,
-                                      "onKill": self.on_Kill,
-                                      "onClean": self.on_Clean,
+                                      "onHalt": self.on_Halt,
+                                      "onReset": self.on_Reset,
                                       "onQuit": self.on_Quit,
                                       "onLoadApplication": self.on_LoadApplication,
                                       "onViewApplication": self.on_ViewApplication,
@@ -160,19 +160,20 @@ class ControlGUIClient(object):
         fflag = "-f"
         fhost = "-H"
         fhosts = str.join(',',self.controller.getClients())
+        fpath = os.path.dirname(riaps.fabfile.__file__)
         if len(fhosts) == 0:
-            self.log('? No hosts connected')
+            self.log('? No hosts connected - using default')
+            cmd = str.join(' ',(fcmd, fflag, fpath, fabcmd))
         else:
-            fpath = os.path.dirname(riaps.fabfile.__file__)
             cmd = str.join(' ',(fcmd, fflag, fpath, fabcmd, fhost, fhosts))
-            # print("=== "+cmd)
-            proc = subprocess.run(shlex.split(cmd),stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
-            resp = proc.stdout.decode('utf-8')
-            # print(resp)
-            # self.log(resp,': ')
-            for line in resp.split('\n'):
-                if len(line) > 0: 
-                    self.log(line,': ')
+        self.log(cmd)
+        proc = subprocess.run(shlex.split(cmd),stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+        resp = proc.stdout.decode('utf-8')
+        # print(resp)
+        # self.log(resp,': ')
+        for line in resp.split('\n'):
+            if len(line) > 0: 
+                self.log(line,': ')
         self.consoleIn.delete_text(0,-1)
 
     def selectFile(self, title, patterns):
@@ -274,15 +275,15 @@ class ControlGUIClient(object):
             self.folderEntry.set_text(folderName)
             self.controller.setAppFolder(folderName)
 
-    def on_Kill(self, *args):
+    def on_Halt(self, *args):
         '''
-        Kill all connected deplos
+        Halt all connected deplos
         '''
         self.controller.killAll()
         
-    def on_Clean(self, *args):
+    def on_Reset(self, *args):
         '''
-        Clean all connected deplos
+        Clean all connected deplos (stop/remove apps)
         '''
         self.controller.cleanAll()
 

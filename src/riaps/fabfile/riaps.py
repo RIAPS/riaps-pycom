@@ -7,7 +7,7 @@ import os
 from riaps.consts.defs import *
 
 # Prevent namespace errors by explicitly defining which tasks belong to this file
-__all__ = ['update','updateRemoteNodeKey','updateAptKey','install','uninstall','kill','updateConfig','updateLogConfig','getSystemdLogs','getAppLogs','ctrl', 'configRouting', 'securityOff', 'securityOn']
+__all__ = ['update','updateRemoteNodeKey','updateAptKey','install','uninstall','kill','reset', 'updateConfig','updateLogConfig','getSystemdLogs','getAppLogs','ctrl', 'configRouting', 'securityOff', 'securityOn']
 
 # RIAPS packages
 packages = [
@@ -142,7 +142,40 @@ def kill():
         sudo('rm -R /home/riaps/riaps_apps/' + app + '/')
         if app != 'riaps-apps.lmdb':
             sudo('userdel ' + app.lower() + host_last_4)
+@task
+def reset():
+    """Reset target nodes: kill riaps_*, clean, restart riaps_*"""
+    deplo.stop()            # stop deplo service
+    
+    sudo('pkill -SIGKILL "(riaps_deplo|riaps_disco|riaps_actor|riaps_device)"')
 
+    remains = sudo('pgrep -l riaps_')
+    if remains:
+        print("=== Still alive: " + remains)
+
+    hostname = run('hostname')
+    if hostname[0:4] == 'riaps':    
+        host_last_4 = hostname[-4:]
+    else:
+        # If it doesn't start with riaps, assume it is a development VM
+        cmd = 'python3 -c "from riaps.utils.config import Config; c=Config(); print(c.NIC_NAME)"'
+        nic_name = sudo(cmd)
+        if nic_name != None: 
+            cmd = 'ip link show %s | awk \'/ether/ {print $2}\'' % nic_name
+            mac = sudo(cmd)
+            host_last_4 = mac[-5:-3] + mac[-2:]
+        else:                           # Should have set the NIC_NAME ...
+            host_last_4 = '0000'
+    # Get last for digits of mac address since that is how apps and users are named.
+
+    apps = sudo('\ls ' + env.riapsApps).split()  # \ls bypasses alias to ls with color formatting
+    for app in apps:
+        sudo('rm -R /home/riaps/riaps_apps/' + app + '/')
+        if app not in ('riaps-apps.lmdb','riaps-disco.lmdb'):
+            sudo('userdel ' + app.lower() + host_last_4)    # May fail if dev vm
+   
+    deplo.start()
+    
 @task
 def updateConfig():
     """"Place local riaps.conf on all remote hosts"""

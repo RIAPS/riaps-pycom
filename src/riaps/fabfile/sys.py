@@ -7,7 +7,7 @@ import os,csv,itertools,configparser
 # Prevent namespace errors by explicitly defining which tasks belong to this file
 __all__ = ['check', 'shutdown', 'reboot', 'clearJournal', 'run', 'sudo', 'hosts', 'get', 'put', 'arch', 'setup_cython', 'flushIPTables']
 
-# Check that all BBBs are communicating
+# Check that all RIAPS nodes are communicating
 @task
 def check():
     """Test that hosts are communicating"""

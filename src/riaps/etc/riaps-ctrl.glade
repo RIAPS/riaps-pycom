@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Generated with glade 3.22.1 -->
+<!-- Generated with glade 3.22.2 -->
 <interface>
   <requires lib="gtk+" version="3.12"/>
   <object class="GtkEntryBuffer" id="consoleEntryBuffer"/>
@@ -29,7 +29,7 @@
     <property name="title" translatable="yes">RIAPS Control</property>
     <property name="default_width">600</property>
     <signal name="delete-event" handler="onDeleteWindow" swapped="no"/>
-    <child>
+    <child type="titlebar">
       <placeholder/>
     </child>
     <child>
@@ -88,23 +88,22 @@
                     </child>
                     <child>
                       <object class="GtkImageMenuItem" id="imagemenuitem15">
-                        <property name="label">Kill</property>
+                        <property name="label">Halt</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="image">image2</property>
                         <property name="use_stock">False</property>
-                        <signal name="activate" handler="onKill" swapped="no"/>
+                        <signal name="activate" handler="onHalt" swapped="no"/>
                       </object>
                     </child>
                     <child>
                       <object class="GtkImageMenuItem" id="imagemenuitem2">
-                        <property name="label" translatable="yes">Clean</property>
+                        <property name="label" translatable="yes">Reset</property>
                         <property name="visible">True</property>
-                        <property name="sensitive">False</property>
                         <property name="can_focus">False</property>
                         <property name="image">image3</property>
                         <property name="use_stock">False</property>
-                        <signal name="activate" handler="onClean" swapped="no"/>
+                        <signal name="activate" handler="onReset" swapped="no"/>
                       </object>
                     </child>
                     <child>
