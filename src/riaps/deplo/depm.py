@@ -618,6 +618,7 @@ class DeploymentManager(threading.Thread):
         if Config.APP_LOGS == 'log':
             logFileName = os.path.join(self.riapsApps,appName,actorName + '.log')
             logFile = open(logFileName ,"ab")
+            os.chown(logFileName,user_uid,user_gid)
         else:
             logFile = None
         self.logger.info("Launching %s " % str(command))
