@@ -35,10 +35,6 @@ ln -s /etc/riaps/id_rsa.pub /usr/local/riaps/keys/id_rsa.pub
 ln -s /etc/riaps/riaps-sys.cert /usr/local/riaps/keys/riaps-sys.cert
 ln -s /etc/riaps/x509.pem /usr/local/riaps/keys/x509.pem
 
-# Create soft link from rdiscoveryd to run as default
-# MM TODO:  TEMPORARY CHANGE HERE TO SETUP AN ALL PYTHON PKG RELEASE - mv /usr/local/bin/riaps_disco /usr/local/bin/riaps_disco_redis
-# MM TODO:  TEMPORARY CHANGE HERE TO SETUP AN ALL PYTHON PKG RELEASE - ln -s /usr/local/bin/rdiscoveryd /usr/local/bin/riaps_disco
-
 # Remove location used while installing riaps-pycom package
 rm -rf /opt/riaps-pycom/ || true
 
@@ -50,5 +46,3 @@ systemctl enable riaps-rm-quota.service
 systemctl start riaps-rm-quota.service || true
 systemctl enable riaps-deplo.service
 systemctl start riaps-deplo.service || true
-systemctl enable sethostname.service
-systemctl start sethostname.service || true

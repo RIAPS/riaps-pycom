@@ -11,9 +11,6 @@ rm -f /usr/local/riaps/etc/redis.conf || true
 # Uninstall riaps-pycom package
 pip3 uninstall -y riaps-pycom || true
 
-# Remove riaps-pycom discovery version
-# MM TODO:  TEMPORARY CHANGE HERE TO SETUP AN ALL PYTHON PKG RELEASE - rm -f /usr/local/bin/riaps_disco_redis || true
-
 # Remove apparmor file from the cache
 rm -f /etc/apparmor.d/cache/usr.local.bin.riaps_actor || true
 
