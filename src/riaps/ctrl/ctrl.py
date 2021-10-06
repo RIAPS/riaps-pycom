@@ -68,7 +68,7 @@ class AppInfo(object):
         self.model = model
         self.depl= depl
         self.status = status
-        self.clients = []
+        self.clients = set()
     
 ctrlLock = RLock()
 
@@ -264,6 +264,11 @@ class Controller(object):
         '''
         with ctrlLock:
             if clientName in self.clientMap:
+                client = self.clientMap[clientName]
+                apps = [app for (_,app) in self.appInfo.items() if client in app.clients]
+                for app in apps:
+                    app.clients.remove(client)
+                    if len(app.clients) == 0: app.status = AppStatus.NotLoaded
                 del self.clientMap[clientName]
     
     def isClient(self,clientName):
@@ -488,7 +493,7 @@ class Controller(object):
             cltList = []
             for client in clients:
                 if client.stale:
-                    self.log('S %s',client.name)    # Stale client, we don't deploy
+                    self.log('S %s'% client.name)    # Stale client, we don't deploy
                 else:
                     ok = self.downloadAppToClient(appName,tgz_file,sha_file,client,resList)
                     if ok: cltList += [client.name]
@@ -707,6 +712,8 @@ class Controller(object):
         clientActorMap = { }
         for clientName in self.clientMap:
             clientActorMap[clientName] = set()
+        # Keep track of clients the app is deployed on
+        appInfo = self.appInfo[appName]
         # Process the deployment and launch all actors.
         appNameJSON = appName + ".json"
         for depl in depls:
@@ -717,6 +724,7 @@ class Controller(object):
                     for clientName in self.clientMap:
                         client = self.clientMap[clientName]
                         client.setupApp(appName,appNameJSON)
+                        success = True
                         for actor in actors:
                             actorName = actor["name"]
                             if actorName in clientActorMap[clientName]:
@@ -730,14 +738,22 @@ class Controller(object):
                                 self.launchList.append([client,appName,actorName])
                                 self.log("L %s %s %s %s" % (clientName,appName,actorName,str(actualArgs)))
                                 clientActorMap[clientName].add(actorName)
+                                success &= True
                             except Exception:
                                 info = sys.exc_info()[1].args[0]
                                 self.log("? %s" % info)
+                                success = False
+                        if success:
+                            appInfo.clients.add(client)
+                        else:
+                            # Should retract partial deployment
+                            pass
                 else:
                     for target in targets:                      # Deploy on selected targets
                         client = self.findClient(target)
                         if client != None:
                             client.setupApp(appName,appNameJSON)
+                            success = True
                             for actor in actors:
                                 actorName = actor["name"]
                                 if actorName in clientActorMap[client.name]:
@@ -751,9 +767,13 @@ class Controller(object):
                                     self.launchList.append([client,appName,actorName])
                                     self.log("L %s %s %s %s" % (client.name,appName,actorName,str(actualArgs)))
                                     clientActorMap[client.name].add(actorName)
+                                    success &= True
                                 except Exception:
                                     info = sys.exc_info()[1].args[0]
                                     self.log("? %s" % info)
+                                    success = False
+                            if success:
+                                appInfo.clients.add(client)
                         else:
                             self.log('? %s ' % target)
         return True
@@ -896,7 +916,7 @@ class Controller(object):
             appName,_actors = item[0],item[1]
             if appName not in self.appInfo:
                 self.appInfo[appName] = AppInfo(model=None,depl=None,appFolder=None,status = AppStatus.Recovered)
-            self.appInfo[appName].clients += [client]
+            self.appInfo[appName].clients.add(client)
     
     def compileApplication(self,appModelName,appFolder):
         '''

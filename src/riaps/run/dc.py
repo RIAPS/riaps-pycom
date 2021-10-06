@@ -307,13 +307,14 @@ class GroupThread(threading.Thread):
         '''
         leavers = []
         for peer in \
-            [peer for peer in self.peers if int((now - self.peers[peer]) * 1000) > self.groupPeerTimeout]:
+            [p for p in self.peers if int((now - self.peers[p]) * 1000) > self.groupPeerTimeout]:
                 leavers += [peer] 
-                del self.peers[peer] 
-        self.numPeers = len(self.peers)
-        for leaver in leavers:
-            self.sendChangeMessage(Group.GROUP_MLT, leaver)  # Member dropped out 
-    
+        if len(leavers) > 0:
+            for leaver in leavers:
+                self.sendChangeMessage(Group.GROUP_MLT, leaver)  # Member dropped out
+                del self.peers[leaver] 
+            self.numPeers = len(self.peers)
+                  
     def updateTimeout(self, now):
         '''
         Update the timeout value - used when a data message was received from the group; 
@@ -732,24 +733,24 @@ class GroupThread(threading.Thread):
             if self.coordinated:
                 now = time.time()
                 self.heartbeat(now)
+                self.updatePeers(now)                           # Check if there is a change in peers 
             if len(events) == 0 and self.coordinated:
                 self.handleTimeout(now)
             else:
                 sockets = dict(events)
                 if self.groupSocket in sockets:  # Message from component
                     toStop = self.handleCompMessage()
-                    del sockets[self.groupSocket]
-                elif self.subSocket in sockets:  # Group message: data, heartbeat, leader, or election messages    
+                    # del sockets[self.groupSocket]
+                if self.subSocket in sockets:  # Group message: data, heartbeat, leader, or election messages    
                     self.handleNetMessage(now)
-                    del sockets[self.subSocket]
-                elif self.ansSocket in sockets:  # Message to leader
-                    self.handleMessageForLeader()
-                    del sockets[self.ansSocket]
-                elif self.qrySocket in sockets:  # Message from leader
-                    self.handleMessageForMember()
-                    del sockets[self.qrySocket]
-                else:
-                    pass
+                    # del sockets[self.subSocket]
+                if self.coordinated:
+                    if self.ansSocket in sockets:  # Message to leader
+                        self.handleMessageForLeader()
+                        # del sockets[self.ansSocket]
+                    if self.qrySocket in sockets:  # Message from leader
+                        self.handleMessageForMember()
+                        # del sockets[self.qrySocket]
             if toStop: break
 
 

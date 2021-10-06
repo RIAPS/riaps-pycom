@@ -54,7 +54,7 @@
                     <property name="can_focus">False</property>
                     <child>
                       <object class="GtkImageMenuItem" id="imagemenuitem16">
-                        <property name="label" translatable="yes">Folder</property>
+                        <property name="label" translatable="yes">Application</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="image">image5</property>
@@ -64,7 +64,7 @@
                     </child>
                     <child>
                       <object class="GtkImageMenuItem" id="imagemenuitem11">
-                        <property name="label">Application</property>
+                        <property name="label">Model</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="use_stock">False</property>
@@ -87,23 +87,23 @@
                       </object>
                     </child>
                     <child>
-                      <object class="GtkImageMenuItem" id="imagemenuitem15">
-                        <property name="label">Halt</property>
-                        <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="image">image2</property>
-                        <property name="use_stock">False</property>
-                        <signal name="activate" handler="onHalt" swapped="no"/>
-                      </object>
-                    </child>
-                    <child>
                       <object class="GtkImageMenuItem" id="imagemenuitem2">
                         <property name="label" translatable="yes">Reset</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="image">image3</property>
                         <property name="use_stock">False</property>
-                        <signal name="activate" handler="onReset" swapped="no"/>
+                        <signal name="activate" handler="onResetAll" swapped="no"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkImageMenuItem" id="imagemenuitem15">
+                        <property name="label">Halt</property>
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="image">image2</property>
+                        <property name="use_stock">False</property>
+                        <signal name="activate" handler="onHaltAll" swapped="no"/>
                       </object>
                     </child>
                     <child>
@@ -262,7 +262,7 @@
             </child>
             <child>
               <object class="GtkButton" id="button1">
-                <property name="label" translatable="yes">Deploy</property>
+                <property name="label" translatable="yes">Load</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>

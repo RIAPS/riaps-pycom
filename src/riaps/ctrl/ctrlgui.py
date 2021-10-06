@@ -58,11 +58,11 @@ class ControlGUIClient(object):
                                       "onSelectApplication": self.on_SelectApplication,
                                       "onSelectDeployment": self.on_SelectDeployment,
                                       "onFolderEntryActivate": self.on_folderEntryActivate,
-                                      "onHalt": self.on_Halt,
-                                      "onReset": self.on_Reset,
+                                      "onResetAll": self.on_resetAll,
+                                      "onHaltAll": self.on_haltAll,
                                       "onQuit": self.on_Quit,
-                                      "onLoadApplication": self.on_LoadApplication,
-                                      "onViewApplication": self.on_ViewApplication,
+                                      "onLoadApplication": self.on_loadApplication,
+                                      "onViewApplication": self.on_viewApplication,
                                       "onLogChanged" : self.on_LogChanged
                                       })
 
@@ -233,7 +233,7 @@ class ControlGUIClient(object):
         '''
         App selection. Sets the app entry and calls the controller to compile the app model.
         '''
-        fileName = self.selectFile("application", ["*.riaps","*.json"])
+        fileName = self.selectFile("application model", ["*.riaps","*.json"])
         if fileName != None:
             self.appNameEntry.set_text(os.path.basename(fileName))
             self.controller.compileApplication(fileName, self.folderEntry.get_text())
@@ -252,7 +252,7 @@ class ControlGUIClient(object):
         Deployment selection. Sets the deployment entry and calls the controller
         to compile the deployment model.
         '''
-        fileName = self.selectFile("application", ["*.depl","*.json"])
+        fileName = self.selectFile("deployment", ["*.depl","*.json"])
         if fileName != None:
             self.deplNameEntry.set_text(os.path.basename(fileName))
             self.appToLoad = self.controller.compileDeployment(fileName)
@@ -270,18 +270,19 @@ class ControlGUIClient(object):
         '''
         App folder selection. Called when the folder entry or the folder button is activated.
         '''
-        folderName = self.selectFolder("application folder")
+        folderName = self.selectFolder("application directory")
         if folderName != None:
             self.folderEntry.set_text(folderName)
             self.controller.setAppFolder(folderName)
 
-    def on_Halt(self, *args):
+    def on_haltAll(self, *args):
         '''
-        Halt all connected deplos
+        Reset and halt all connected clients. Deplos maybe restarted automatically. 
         '''
+        self.controller.cleanAll()
         self.controller.killAll()
         
-    def on_Reset(self, *args):
+    def on_resetAll(self, *args):
         '''
         Clean all connected deplos (stop/remove apps)
         '''
@@ -504,7 +505,7 @@ class ControlGUIClient(object):
 
         self.gridScrollWindow.show_all()
 
-    def on_LoadApplication(self, widget):
+    def on_loadApplication(self, widget):
         '''
         Load the selected application onto to the network
         '''
@@ -515,9 +516,9 @@ class ControlGUIClient(object):
         self.add_app(self.appToLoad)
         self.clearApplication()
         self.clearDeployment()
-        self.appToLoad = ''
+        self.appToLoad = None
 
-    def on_ViewApplication(self, widget):
+    def on_viewApplication(self, widget):
         '''
         View the selected application as to be deployed
         '''
