@@ -46,7 +46,7 @@ class QryPort(DuplexConnPort):
         '''
         Set up the socket of the port. Return a tuple suitable for querying the discovery service for the publishers
         '''
-        return self.setupConnSocket(owner,zmq.DEALER,'qry')
+        return self.setupConnSocket(owner,zmq.DEALER,'qry',[(zmq.IDENTITY,str(id(self)))])
         # self.setOwner(owner)
         # self.socket = self.context.socket(zmq.DEALER)
         # self.socket.setsockopt_string(zmq.IDENTITY, str(id(self)), 'utf-8')  # FIXME: identity is not unique across nodes

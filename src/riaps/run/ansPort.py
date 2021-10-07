@@ -44,7 +44,7 @@ class AnsPort(DuplexBindPort):
         pass
   
     def setupSocket(self, owner):
-        return self.setupBindSocket(owner,zmq.ROUTER,'ans')
+        return self.setupBindSocket(owner,zmq.ROUTER,'ans',[(zmq.ROUTER_MANDATORY,1)])
         # self.setOwner(owner)
         # self.socket = self.context.socket(zmq.ROUTER)
         # self.socket.setsockopt(zmq.SNDTIMEO, self.sendTimeout)

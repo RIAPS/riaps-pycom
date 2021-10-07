@@ -430,6 +430,15 @@ class Port(object):
         assert sto == None or (type(sto) == float and sto >= 0.0)
         self.sendTimeout = -1 if sto == None else int(sto * 1000)
         self.socket.setsockopt(zmq.SNDTIMEO, self.sendTimeout)
+        
+    def set_sockoptions(self,sockopts):
+        for (k,v) in sockopts:
+            if type(v) == str:
+                self.socket.setsockopt_string(k,v)
+            elif type(v) == int:
+                self.socket.setsockopt(k,v)
+            else:
+                pass                # Error
     
 class SimplexBindPort(Port):
     '''
@@ -445,10 +454,11 @@ class SimplexBindPort(Port):
         parentActor = parentComponent.parent
         self.portScope = parentActor.messageScope(self.type)
 
-    def setupBindSocket(self, owner,zmqType, portKind):
+    def setupBindSocket(self, owner,zmqType, portKind,sockopts=[]):
         self.setOwner(owner)
         self.socket = self.context.socket(zmqType)
         self.socket.setsockopt(zmq.SNDTIMEO, self.sendTimeout) 
+        self.set_sockoptions(sockopts)
         self.host = ''
         self.portNum = -1
         self.setupCurve(True) 
@@ -482,8 +492,7 @@ class SimplexConnPort(Port):
     def setupConnSocket(self,owner,zmqType,portKind,sockopts=[]):
         self.setOwner(owner)
         self.socket = self.context.socket(zmqType)
-        for (k,v) in sockopts:
-            self.socket.setsockopt_string(k,v)
+        self.set_sockoptions(sockopts)
         self.setupCurve(False)
         self.host = ''
         if self.portScope == PortScope.GLOBAL:
@@ -518,10 +527,11 @@ class DuplexBindPort(Port):
         self.portScope = req_scope
         self.info = None
     
-    def setupBindSocket(self,owner,zmqType,portKind):
+    def setupBindSocket(self,owner,zmqType,portKind,sockopts=[]):
         self.setOwner(owner)
         self.socket = self.context.socket(zmqType)
         self.socket.setsockopt(zmq.SNDTIMEO, self.sendTimeout)
+        self.set_sockoptions(sockopts)
         self.setupCurve(True)
         self.host = ''
         if self.portScope == PortScope.GLOBAL:
@@ -555,10 +565,11 @@ class DuplexConnPort(Port):
         self.portScope = req_scope
         self.info = None    
     
-    def setupConnSocket(self,owner,zmqType,portKind):
+    def setupConnSocket(self,owner,zmqType,portKind,sockopts=[]):
         self.setOwner(owner)
         self.socket = self.context.socket(zmqType)
         self.socket.setsockopt(zmq.SNDTIMEO, self.sendTimeout)
+        self.set_sockoptions(sockopts)
         self.setupCurve(False)   
         self.host = ''
         if self.portScope == PortScope.GLOBAL:

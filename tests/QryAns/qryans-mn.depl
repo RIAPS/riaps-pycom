@@ -1,0 +1,5 @@
+app QryAns {
+	on (192.168.57.2) QueryActor;
+	on (192.168.57.3) RelayActor;
+	on (192.168.57.4) AnswerActor;
+}
