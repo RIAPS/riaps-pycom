@@ -31,8 +31,6 @@ class CltPort(DuplexConnPort):
         # rep_scope = parentActor.messageScope(self.rep_type)
         # assert req_scope == rep_scope
         # self.portScope = req_scope
-        self.serverHost = None
-        self.serverPort = None
         self.info = None
 
     def setup(self):
@@ -65,19 +63,18 @@ class CltPort(DuplexConnPort):
         # return self.info
 
     def reset(self):
-        newSocket = self.context.socket(zmq.REQ)
-        newSocket.setsockopt(zmq.SNDTIMEO, self.sendTimeout)
-        newSocket.setsockopt(zmq.RCVTIMEO, self.recvTimeout)
-        self.socket.setsockopt(zmq.LINGER, 0)
-        if self.serverHost != None and self.serverPort != None:
-            srvPort = "tcp://" + str(self.serverHost) + ":" + str(self.serverPort)
-            self.socket.disconnect(srvPort)
-        self.owner.replaceSocket(self, newSocket)
-        self.socket = newSocket
-        self.setupCurve(False)
-        if self.serverHost != None and self.serverPort != None:
-            srvPort = "tcp://" + str(self.serverHost) + ":" + str(self.serverPort)
-            self.socket.connect(srvPort)
+        self.resetConnSocket(zmq.REQ)
+        # newSocket = self.setupConnSocket(self.owner,zmq.REQ,'clt')
+        # self.socket.setsockopt(zmq.LINGER, 0)
+        # for (host,port) in self.servers:
+        #     srvPort = "tcp://" + str(host) + ":" + str(port)
+        #     self.socket.disconnect(srvPort)
+        # self.owner.replaceSocket(self, newSocket)
+        # self.socket = newSocket
+        # self.setupCurve(False)
+        # for (host,port) in self.servers:
+        #     srvPort = "tcp://" + str(host) + ":" + str(port)
+        #     self.socket.connect(srvPort)
     
     def getSocket(self):
         '''
@@ -91,26 +88,38 @@ class CltPort(DuplexConnPort):
         '''
         return False
     
-    def update(self, host, port):
-        '''
-        Update the client -- connect its socket to a server
-        '''
-        srvPort = "tcp://" + str(host) + ":" + str(port)
-        self.serverHost = host
-        self.serverPort = port
-        self.socket.connect(srvPort)
+    # def update(self, host, port):
+    #     '''
+    #     Update the client -- connect its socket to a server
+    #     '''
+    #     if (host,port) not in self.servers:
+    #         srvPort = "tcp://" + str(host) + ":" + str(port)
+    #         self.servers.add((host,port))
+    #         self.socket.connect(srvPort)
         
     def recv_pyobj(self):
-        return self.port_recv(True)
+        if len(self.servers) == 0:
+            return None
+        else:
+            return self.port_recv(True)
     
     def send_pyobj(self, msg):
-        return self.port_send(msg, True)              
+        if len(self.servers) == 0:
+            return False
+        else:
+            return self.port_send(msg, True)              
     
     def recv(self):
-        return self.port_recv(False)
+        if len(self.servers) == 0:
+            return None
+        else:
+            return self.port_recv(False)
     
     def send(self, msg):
-        return self.port_send(msg, False) 
+        if len(self.servers) == 0:
+            return False
+        else:
+            return self.port_send(msg, False) 
     
     def getInfo(self):
         '''

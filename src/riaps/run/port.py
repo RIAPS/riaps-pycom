@@ -476,7 +476,7 @@ class SimplexBindPort(Port):
     
 class SimplexConnPort(Port):
     '''
-        Uni-directional 'connect' port
+    Uni-directional 'connect' port
     '''
     def __init__(self, parentComponent, portName, portSpec):
         '''
@@ -488,6 +488,7 @@ class SimplexConnPort(Port):
         self.deadline = portSpec.get("deadline",0) * 0.001  # msec
         parentActor = parentComponent.parent
         self.portScope = parentActor.messageScope(self.type)
+        self.servers = set()
         
     def setupConnSocket(self,owner,zmqType,portKind,sockopts=[]):
         self.setOwner(owner)
@@ -506,7 +507,32 @@ class SimplexConnPort(Port):
         self.info = PortInfo(portKind=portKind, portScope=self.portScope, portName=self.name, 
                              msgType=self.type, portHost=self.host, portNum=self.portNum)
         return self.info
-
+    
+    def resetConnSocket(self,zmqType,sockopts=[]):
+        newSocket =  self.context.socket(zmqType)
+        newSocket.setsockopt(zmq.SNDTIMEO, self.sendTimeout)
+        newSocket.setsockopt(zmq.RCVTIMEO, self.recvTimeout)
+        self.socket.setsockopt(zmq.LINGER, 0)
+        for (host,port) in self.servers:
+            srvPort = "tcp://" + str(host) + ":" + str(port)
+            self.socket.disconnect(srvPort)
+        self.owner.replaceSocket(self, newSocket)
+        self.socket = newSocket
+        self.set_sockoptions(sockopts)
+        self.setupCurve(False)
+        for (host,port) in self.servers:
+            srvPort = "tcp://" + str(host) + ":" + str(port)
+            self.socket.connect(srvPort)
+    
+    def update(self, host, port):
+        '''
+        Update the client -- connect its socket to a server
+        '''
+        if (host,port) not in self.servers:
+            srvPort = "tcp://" + str(host) + ":" + str(port)
+            self.servers.add((host,port))
+            self.socket.connect(srvPort)
+            
 class DuplexBindPort(Port):
     '''
     Bi-directional 'bind' port
@@ -563,6 +589,7 @@ class DuplexConnPort(Port):
         rep_scope = parentActor.messageScope(self.rep_type)
         assert req_scope == rep_scope
         self.portScope = req_scope
+        self.servers = set()
         self.info = None    
     
     def setupConnSocket(self,owner,zmqType,portKind,sockopts=[]):
@@ -585,5 +612,29 @@ class DuplexConnPort(Port):
                              portHost=self.host, portNum=self.portNum) 
         return self.info
     
-
+    def resetConnSocket(self,zmqType,sockopts=[]):
+        newSocket =  self.context.socket(zmqType)
+        newSocket.setsockopt(zmq.SNDTIMEO, self.sendTimeout)
+        newSocket.setsockopt(zmq.RCVTIMEO, self.recvTimeout)
+        self.socket.setsockopt(zmq.LINGER, 0)
+        for (host,port) in self.servers:
+            srvPort = "tcp://" + str(host) + ":" + str(port)
+            self.socket.disconnect(srvPort)
+        self.owner.replaceSocket(self, newSocket)
+        self.socket = newSocket
+        self.set_sockoptions(sockopts)
+        self.setupCurve(False)
+        for (host,port) in self.servers:
+            srvPort = "tcp://" + str(host) + ":" + str(port)
+            self.socket.connect(srvPort)
     
+    def update(self, host, port):
+        '''
+        Update the client -- connect its socket to a server
+        '''
+        if (host,port) not in self.servers:
+            srvPort = "tcp://" + str(host) + ":" + str(port)
+            self.servers.add((host,port))
+            self.socket.connect(srvPort)
+
+            

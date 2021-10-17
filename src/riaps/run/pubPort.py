@@ -20,7 +20,7 @@ except:
 
 class PubPort(SimplexBindPort):
     '''
-    classdocs
+    Publisher port
     '''
 
     def __init__(self, parentComponent, portName, portSpec):

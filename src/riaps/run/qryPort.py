@@ -32,8 +32,7 @@ class QryPort(DuplexConnPort):
         # rep_kind = parentActor.messageKind(self.rep_type)
         # assert req_kind == rep_kind
         # self.portKind = req_kind
-        self.serverHost = None
-        self.serverPort = None
+        # self.answers = set()
         self.info = None
 
     def setup(self):
@@ -67,7 +66,17 @@ class QryPort(DuplexConnPort):
         # return self.info
     
     def reset(self):
-        pass
+        self.resetConnSocket(zmq.DEALER,[(zmq.IDENTITY,str(id(self)))] )
+        # self.socket.setsockopt(zmq.LINGER, 0)
+        # for (host,port) in self.answers:
+        #     ansPort = "tcp://" + str(host) + ":" + str(port)
+        #     self.socket.disconnect(ansPort)
+        # self.owner.replaceSocket(self, newSocket)
+        # self.socket = newSocket
+        # self.setupCurve(False)
+        # for (host,port) in self.answers:
+        #     ansPort = "tcp://" + str(host) + ":" + str(port)
+        #     self.socket.disconnect(ansPort)
     
     def getSocket(self):
         '''
@@ -81,46 +90,50 @@ class QryPort(DuplexConnPort):
         '''
         return True
     
-    def update(self, host, port):
-        '''
-        Update the query -- connect its socket to a server
-        '''
-        srvPort = "tcp://" + str(host) + ":" + str(port)
-        self.serverHost = host
-        self.serverPort = port
-        self.socket.connect(srvPort)
+    # def update(self, host, port):
+    #     '''
+    #     Update the query -- connect its socket to a server
+    #     '''
+    #     if (host,port) not in self.answers:
+    #         ansPort = "tcp://" + str(host) + ":" + str(port)
+    #         self.answers.add((host,port))
+    #         self.socket.connect(ansPort)
     
     def recv_pyobj(self):
         '''
         Receive an object through this port
         '''
-        if self.serverHost == None or self.serverPort == None:
+        if len(self.servers) == 0:
             return None
-        return self.port_recv(True)
+        else:
+            return self.port_recv(True)
     
     def send_pyobj(self, msg):
         '''
         Send an object through this port
         '''
-        if self.serverHost == None or self.serverPort == None:
+        if len(self.servers) == 0:
             return False
-        return self.port_send(msg, True)              
+        else:
+            return self.port_send(msg, True)              
     
     def recv(self):
         '''
         Receive a bytes through this port
         '''
-        if self.serverHost == None or self.serverPort == None:
+        if len(self.servers) == 0:
             return None
-        return self.port_recv(False)
+        else:
+            return self.port_recv(False)
     
     def send(self, msg):
         '''
         Send bytes through this port
         '''
-        if self.serverHost == None or self.serverPort == None:
-            return None
-        return self.port_send(msg, False) 
+        if len(self.servers) == 0:
+            return False
+        else:
+            return self.port_send(msg, False) 
     
     def getInfo(self):
         '''

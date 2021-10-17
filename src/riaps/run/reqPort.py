@@ -9,7 +9,6 @@ from riaps.run.exc import OperationError
 from riaps.utils.config import Config
 from zmq.error import ZMQError
 
-
 class ReqPort(DuplexConnPort):
     '''
     Similar to a client port
@@ -29,14 +28,12 @@ class ReqPort(DuplexConnPort):
         # rep_kind = parentActor.messageKind(self.rep_type)
         # assert req_kind == rep_kind
         # self.portKind = req_kind
-        self.replyHost = None
-        self.replyPort = None
 
     def setup(self):
         pass
   
     def setupSocket(self, owner):
-        return self.setupConnSocket(owner,zmq.REQ,'req')
+        return self.setupConnSocket(owner,zmq.REQ,'req',[(zmq.REQ_RELAXED,1),(zmq.REQ_CORRELATE,1)])
         # self.setOwner(owner)
         # self.socket = self.context.socket(zmq.REQ)
         # self.socket.setsockopt(zmq.SNDTIMEO, self.sendTimeout)
@@ -56,19 +53,7 @@ class ReqPort(DuplexConnPort):
         # return self.info
     
     def reset(self):
-        newSocket = self.context.socket(zmq.REQ)
-        newSocket.setsockopt(zmq.SNDTIMEO, self.sendTimeout)
-        newSocket.setsockopt(zmq.RCVTIMEO, self.recvTimeout)
-        self.socket.setsockopt(zmq.LINGER, 0)
-        if self.replyHost != None and self.replyPort != None:
-            repPort = "tcp://" + str(self.replyHost) + ":" + str(self.replyPort)
-            self.socket.disconnect(repPort)
-        self.owner.replaceSocket(self, newSocket)
-        self.socket = newSocket
-        self.setupCurve(False)
-        if self.replyHost != None and self.replyPort != None:
-            repPort = "tcp://" + str(self.replyHost) + ":" + str(self.replyPort)
-            self.socket.connect(repPort)
+        self.resetConnSocket(zmq.REQ)
     
     def getSocket(self):
         return self.socket
@@ -76,23 +61,35 @@ class ReqPort(DuplexConnPort):
     def inSocket(self):
         return True
     
-    def update(self, host, port):
-        repPort = "tcp://" + str(host) + ":" + str(port)
-        self.replyHost = host
-        self.replyPort = port
-        self.socket.connect(repPort)
+    # def update(self, host, port):
+    #     if (host,port) not in self.repliers:
+    #         repPort = "tcp://" + str(host) + ":" + str(port)
+    #         self.repliers.add((host,port))
+    #         self.socket.connect(repPort)
         
     def recv_pyobj(self):
-        return self.port_recv(True)
+        if len(self.servers) == 0:
+            return None
+        else:
+            return self.port_recv(True)
     
     def send_pyobj(self, msg):
-        return self.port_send(msg, True)              
+        if len(self.servers) == 0:
+            return False
+        else:
+            return self.port_send(msg, True)              
     
     def recv(self):
-        return self.port_recv(False)
+        if len(self.repliers) == 0:
+            return None
+        else:
+            return self.port_recv(False)
     
     def send(self, msg):
-        return self.port_send(msg, False) 
+        if len(self.repliers) == 0:
+            return False
+        else:
+            return self.port_send(msg, False) 
 
     def getInfo(self):
         return self.info 

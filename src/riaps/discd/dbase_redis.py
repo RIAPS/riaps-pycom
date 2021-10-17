@@ -52,20 +52,31 @@ class RedisDbase(DiscoDbase):
             raise DatabaseError("db connection lost")
         except OSError:
             raise DatabaseError("OS error")    
-        self.subKeys = [ ]                          # List of all keys subscribed to by this disco instance
+        self.subKeys = set()                            # Set of all keys subscribed to by this disco instance
         
 
-    def updateSubs(self,newKey):
+    def addSub(self,newKey):
         '''
          Update the list of subscribed keys with the new key
         '''
-        self.logger.info("updateSubs: %s" % newKey)
+        self.logger.info("addSub: %s" % newKey)
         if newKey in self.subKeys:
             return
-        self.subKeys.append(newKey)
+        self.subKeys.add(newKey)
         fullKey = '__keyspace@0__:' + newKey        # Redis-specific: reference to a key in the 'keyspace'  
         self.notesPubSub.subscribe(fullKey)
 
+    def delSub(self,key):
+        '''
+        Delete subscription to key
+        '''
+        self.logger.info("delSub: %s" % key)
+        if key not in self.subKeys:
+            return
+        self.subKeys.remove(key)
+        fullKey = '__keyspace@0__:' + key           # Redis-specific: reference to a key in the 'keyspace'  
+        self.notesPubSub.unsubscribe(fullKey)        
+        
     # 
     def fetchUpdates(self):
         '''
@@ -93,6 +104,7 @@ class RedisDbase(DiscoDbase):
                 for value in values:
                     valueString = value.decode('utf-8')
                     res.append((key, valueString, clientsToNotify))
+            self.logger.info("fetchUpdates:%r" % res)
             return res
         except redis.exceptions.ConnectionError:
             raise DatabaseError("db connection lost")
@@ -125,7 +137,7 @@ class RedisDbase(DiscoDbase):
         Fetch value(s) under key. Add client to list of clients interested in the value
         '''
         self.logger.info("fetch %s for %s" % (repr(key),repr(client)))
-        self.updateSubs(key)
+        self.addSub(key)
         try:
             if self.r.exists(key):          
                 values = self.r.smembers(key)
@@ -150,6 +162,7 @@ class RedisDbase(DiscoDbase):
             self.r.srem(key,value)
             values = self.r.smembers(key)
             values = list(map(lambda s:s.decode('utf-8'),values))
+            if len(values) == 0: self.delSub(key)
             return values
         except redis.exceptions.ConnectionError:
             raise DatabaseError("db connection lost")
@@ -165,6 +178,7 @@ class RedisDbase(DiscoDbase):
             self.rLocal.delete(key)
             clientsKey = key + "_client"
             self.r.delete(clientsKey)
+            self.delSub(key)
         except redis.exceptions.ConnectionError:
             raise DatabaseError("db connection lost")
         except OSError:

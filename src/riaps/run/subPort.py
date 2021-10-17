@@ -18,7 +18,7 @@ except:
 
 class SubPort(SimplexConnPort):
     '''
-    classdocs
+    Subscriber port
     '''
 
     def __init__(self, parentComponent, portName, portSpec):
@@ -26,7 +26,7 @@ class SubPort(SimplexConnPort):
         Constructor
         '''
         super().__init__(parentComponent, portName, portSpec)
-        self.pubs = []
+        self.pubs = set()
     
     def setup(self):
         pass
@@ -51,7 +51,7 @@ class SubPort(SimplexConnPort):
         # return self.info
     
     def reset(self):
-        pass
+        self.resetConnSocket(zmq.SUB,[(zmq.SUBSCRIBE,'')])
     
     def getSocket(self):
         return self.socket
@@ -59,10 +59,11 @@ class SubPort(SimplexConnPort):
     def inSocket(self):
         return True
     
-    def update(self, host, port):
-        pubPort = "tcp://" + str(host) + ":" + str(port)
-        self.pubs.append((host, port))
-        self.socket.connect(pubPort)
+    # def update(self, host, port):
+    #     if (host,port) not in self.pubs:
+    #         pubPort = "tcp://" + str(host) + ":" + str(port)
+    #         self.pubs.add((host, port))
+    #         self.socket.connect(pubPort)
     
     def recv_pyobj(self):
         return self.port_recv(True)
