@@ -61,6 +61,8 @@ class Port(object):
         self.globalIface = None
         self.sendTimeout = Config.SEND_TIMEOUT
         self.recvTimeout = Config.RECV_TIMEOUT
+        self.sendhwm = Config.SEND_HWM
+        self.recvhwm = Config.RECV_HWM
         self.sendTime = 0.0
         self.recvTime = 0.0
         self.socket = None
@@ -431,7 +433,18 @@ class Port(object):
         self.sendTimeout = -1 if sto == None else int(sto * 1000)
         self.socket.setsockopt(zmq.SNDTIMEO, self.sendTimeout)
         
+    def get_hwm(self):
+        ''' Retrieve the high-water mark for the socket.
+        '''
+        return None if self.socket is None else self.socket.get_hwm()
+
     def set_sockoptions(self,sockopts):
+        for (k,v) in [(zmq.SNDTIMEO, self.sendTimeout),
+                      (zmq.RCVTIMEO, self.recvTimeout),
+                      (zmq.RCVHWM,self.sendhwm),
+                      (zmq.SNDHWM,self.recvhwm)]:
+            self.socket.setsockopt(k,v)
+            
         for (k,v) in sockopts:
             if type(v) == str:
                 self.socket.setsockopt_string(k,v)
@@ -439,7 +452,7 @@ class Port(object):
                 self.socket.setsockopt(k,v)
             else:
                 pass                # Error
-    
+            
 class SimplexBindPort(Port):
     '''
     Uni-directional 'binder' port
@@ -457,7 +470,6 @@ class SimplexBindPort(Port):
     def setupBindSocket(self, owner,zmqType, portKind,sockopts=[]):
         self.setOwner(owner)
         self.socket = self.context.socket(zmqType)
-        self.socket.setsockopt(zmq.SNDTIMEO, self.sendTimeout) 
         self.set_sockoptions(sockopts)
         self.host = ''
         self.portNum = -1
@@ -510,8 +522,6 @@ class SimplexConnPort(Port):
     
     def resetConnSocket(self,zmqType,sockopts=[]):
         newSocket =  self.context.socket(zmqType)
-        newSocket.setsockopt(zmq.SNDTIMEO, self.sendTimeout)
-        newSocket.setsockopt(zmq.RCVTIMEO, self.recvTimeout)
         self.socket.setsockopt(zmq.LINGER, 0)
         for (host,port) in self.servers:
             srvPort = "tcp://" + str(host) + ":" + str(port)
@@ -556,7 +566,6 @@ class DuplexBindPort(Port):
     def setupBindSocket(self,owner,zmqType,portKind,sockopts=[]):
         self.setOwner(owner)
         self.socket = self.context.socket(zmqType)
-        self.socket.setsockopt(zmq.SNDTIMEO, self.sendTimeout)
         self.set_sockoptions(sockopts)
         self.setupCurve(True)
         self.host = ''
@@ -595,7 +604,6 @@ class DuplexConnPort(Port):
     def setupConnSocket(self,owner,zmqType,portKind,sockopts=[]):
         self.setOwner(owner)
         self.socket = self.context.socket(zmqType)
-        self.socket.setsockopt(zmq.SNDTIMEO, self.sendTimeout)
         self.set_sockoptions(sockopts)
         self.setupCurve(False)   
         self.host = ''
@@ -614,8 +622,6 @@ class DuplexConnPort(Port):
     
     def resetConnSocket(self,zmqType,sockopts=[]):
         newSocket =  self.context.socket(zmqType)
-        newSocket.setsockopt(zmq.SNDTIMEO, self.sendTimeout)
-        newSocket.setsockopt(zmq.RCVTIMEO, self.recvTimeout)
         self.socket.setsockopt(zmq.LINGER, 0)
         for (host,port) in self.servers:
             srvPort = "tcp://" + str(host) + ":" + str(port)

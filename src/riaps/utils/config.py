@@ -19,10 +19,12 @@ class Config(object):
     TARGET_USER = 'riaps'
     SEND_TIMEOUT = -1
     RECV_TIMEOUT = -1
+    SEND_HWM = 100            # Send water mark
+    RECV_HWM = 100            # Receive high water mark
     NIC_NAME = None
-    NIC_RATE = '118kbps'  # 90% of 1 gigabits per sec
-    NIC_CEIL = '131kbps'  # 1 gigabits per sec
-    DISCO_TYPE = 'redis'  # or 'opendht'
+    NIC_RATE = '118kbps'    # 90% of 1 gigabits per sec
+    NIC_CEIL = '131kbps'    # 1 gigabits per sec
+    DISCO_TYPE = 'redis'    # or 'opendht'
     CTRL_DEBUG_SERVER = ''
     DEPLO_DEBUG_SERVER = ''
     DISCO_DEBUG_SERVER = ''
