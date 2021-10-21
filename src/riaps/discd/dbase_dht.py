@@ -471,7 +471,7 @@ class DhtDbase(DiscoDbase):
                 pass
             else:
                 self.updates += [(key,value_)]
-            if self.isDelValue(value_):
+            if expired or self.isDelValue(value_):
                 _value = self.orgValue(value_)
                 self.deletedMap[key] = _value
                 self.updates = [(k,v) for (k,v) in self.updates if k != key and v != _value]
@@ -544,6 +544,7 @@ class DhtDbase(DiscoDbase):
             self.republisher.run()                      # Run scheduler
             self.republisherStart.clear()
             if self.republisherStop: break              # Stop when flag is set 
+            self.logger.info('republisher cycle')
             
     def dhtRepublish(self,key,value):           
         '''

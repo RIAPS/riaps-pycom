@@ -88,7 +88,7 @@ class RedisDbase(DiscoDbase):
         try:
             while True:
                 msg = self.notesPubSub.get_message(True)    # Use redis pubsub feature to check for a notification
-                if not msg:
+                if msg is None:
                     break
                 else:
                     channel = msg['channel'].decode('utf-8')

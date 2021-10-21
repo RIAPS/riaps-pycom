@@ -1,0 +1,12 @@
+ h1 xterm -T "Control"  -e ./riaps-mn.ctrl &
+sh sleep 1
+ h1 xterm -T h1 -e ./riaps-mn.node &
+ h2 xterm -T h2 -e ./riaps-mn.node &
+ h3 xterm -T h3 -e ./riaps-mn.node &
+ h4 xterm -T h4 -e ./riaps-mn.node &
+ h5 xterm -T h5 -e ./riaps-mn.node &
+ h6 xterm -T h6 -e ./riaps-mn.node &
+ h7 xterm -T h7 -e ./riaps-mn.node &
+ h8 xterm -T h8 -e ./riaps-mn.node &
+
+ 
