@@ -542,6 +542,12 @@ class SimplexConnPort(Port):
             srvPort = "tcp://" + str(host) + ":" + str(port)
             self.servers.add((host,port))
             self.socket.connect(srvPort)
+    
+    def connected(self):
+        '''
+        Return the number of servers this port is connected to. 
+        '''
+        return len(self.servers)
             
 class DuplexBindPort(Port):
     '''
@@ -643,4 +649,10 @@ class DuplexConnPort(Port):
             self.servers.add((host,port))
             self.socket.connect(srvPort)
 
-            
+    def connected(self):
+        '''
+        Return the number of servers this port is connected to. 
+        '''
+        return len(self.servers)
+    
+    
