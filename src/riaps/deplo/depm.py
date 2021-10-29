@@ -756,13 +756,14 @@ class DeploymentManager(threading.Thread):
             record = self.actors[qualName]
             device = record.device
             if device:
-                # _control = record.control
-                # _monitor = record.monitor
-                # TODO: Stop the zmqdevice, disconnect/destroy sockets
-                device._context.term()           # Terminate context for zmqDevice
-                device.join()
-                # control.close()                # TODO remove sockets from poller
-            # monitor.close()                
+                _control = record.control
+                _control.close(); del _control
+                _monitor = record.monitor
+                self.delMonitor(appName,actorName,_monitor)
+                _monitor.close(); del _monitor
+                # TODO: Stop the zmqdevice
+                # device.join()
+                del device                
             del self.actors[qualName]
             self.procm.release(qualName)
             firewall = self.appDbase.getAppActor(appName, actorName).firewall
@@ -968,12 +969,18 @@ class DeploymentManager(threading.Thread):
                     self.logger.error("recovery failed: actor = %s.%s" % (appName,actName))
                     self.appDbase.delAppActor(appName,actName)
     
-    def pollMonitor(self,appName,actorName,sock):
+    def addMonitor(self,appName,actorName,sock):
         if self.poller != None:
             self.monitors[(appName,actorName)] = sock
             self.monitors[sock] = (appName,actorName)
             self.poller.register(sock,zmq.POLLIN)
-
+            
+    def delMonitor(self,appName,actorName,sock):
+        if self.poller != None:
+            del self.monitors[(appName,actorName)]
+            del self.monitors[sock]
+            self.poller.unregister(sock)
+        
     def run(self):
         '''
         Main loop of the depl service
@@ -1160,7 +1167,7 @@ class DeploymentManager(threading.Thread):
         actorMonitor.setsockopt(zmq.SUBSCRIBE, b'')
         actorMonitor.connect(monAddr)
         
-        self.pollMonitor(appName,appActorName,actorMonitor)
+        self.addMonitor(appName,appActorName,actorMonitor)
         self.fm.addClientDevice(appName,appActorName,zmqDevice)
         
         time.sleep(0.1)
