@@ -5,7 +5,7 @@ from fabric.context_managers import hide
 import os,csv,itertools,configparser
 
 # Prevent namespace errors by explicitly defining which tasks belong to this file
-__all__ = ['check', 'shutdown', 'reboot', 'clearJournal', 'run', 'sudo', 'hosts', 'get', 'put', 'arch', 'setup_cython', 'flushIPTables']
+__all__ = ['check', 'shutdown', 'reboot', 'clearJournal', 'run', 'sudo', 'hosts', 'get', 'put', 'arch', 'setup_cython', 'flushIPTables', 'journalLogSize', 'getDebugInfo']
 
 # Check that all RIAPS nodes are communicating
 @task
@@ -119,3 +119,30 @@ def setup_cython():
 def flushIPTables():
     """Flush the iptables"""
     sudo('iptables --flush')
+
+@task
+def journalLogSize(size):
+    """Adjust journalctl log file size:<size>"""
+    newSize = f'SystemMaxUse={size}M'
+    sudo(f'sed -i "/SystemMaxUse/c\{newSize}" /etc/systemd/journald.conf')
+
+@task
+def getDebugInfo():
+    """Get Debug Info from Connected Nodes"""
+    run('echo "#SystemInfo" >> /home/riaps/.riaps/sysdebug.log')
+    run('uname -a >> /home/riaps/.riaps/sysdebug.log')
+    run('lsb_release -a >> /home/riaps/.riaps/sysdebug.log')
+    run('cat /etc/hostname >> /home/riaps/.riaps/sysdebug.log')
+    run('echo "\n" >> /home/riaps/.riaps/sysdebug.log')')
+    run('echo "#Installed Apt Package Info" >> /home/riaps/.riaps/sysdebug.log')
+    run('dpkg -l | grep zmq >> /home/riaps/.riaps/sysdebug.log')
+    run('dpkg -l | grep riaps >> /home/riaps/.riaps/sysdebug.log')
+    run('echo "\n" >> /home/riaps/.riaps/sysdebug.log')')
+    run('echo "#Installed PIP3 Package Info" >> /home/riaps/.riaps/sysdebug.log')
+    run('pip3 list >> /home/riaps/.riaps/sysdebug.log')
+    run('echo "\n" >> /home/riaps/.riaps/sysdebug.log')')
+    run('echo "#RIAPS Compiled Package Info" >> /home/riaps/.riaps/sysdebug.log')
+    run('ls /usr/local/lib >> /home/riaps/.riaps/sysdebug.log')
+    run('echo "\n" >> /home/riaps/.riaps/sysdebug.log')')
+    run('echo "#RIAPS Configuration" >> /home/riaps/.riaps/sysdebug.log')
+    sudo('cat /etc/riaps/riaps.conf >> /home/riaps/.riaps/sysdebug.log')
