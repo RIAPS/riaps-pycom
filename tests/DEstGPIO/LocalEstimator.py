@@ -14,24 +14,30 @@ class LocalEstimator(Component):
         self.freq = frqArg
         self.numQueries = 0
         self.queryRate = 2.0  # 2 Hz update rate based on on_ready
-     
+
 
     def on_ready(self):
         msg = self.ready.recv_pyobj()
         self.logger.info("PID (%s) - on_ready():%s" % (str(self.pid), str(msg)))
+
+        # Check if the 'query' port is connected, if not, return
+        if self.query.connected() == 0:
+            self.logger.info('Not yet connected!')
+            return
+
         while self.pending > 0:     # Handle the case when there is a pending request
             self.on_query()
         msg = "sensor_query"
         if self.query.send_pyobj(msg):
-            self.pending += 1 
-            
+            self.pending += 1
+
 
     def on_query(self):
         req = self.query.recv_pyobj()
         #self.logger.info("PID (%s) - on_query():%s",str(self.pid),str(req))
         (sTime,sensorVal) = req
         self.pending -= 1
-       
+
         ''' Send message at frequency indicated in the deployment model '''
         self.numQueries += 1
         if self.numQueries == (self.queryRate / self.freq):
@@ -41,7 +47,6 @@ class LocalEstimator(Component):
             self.numQueries = 0
             msg = 'BLINK'
             self.blink.send_pyobj(msg)            # Send it to the internal thread
-    
+
     def __destroy__(self):
-        self.logger.info("(PID %s) - stopping LocalEstimator" % str(self.pid))   	        	        
-                       
+        self.logger.info("(PID %s) - stopping LocalEstimator" % str(self.pid))

@@ -21,13 +21,13 @@ class IODeviceThread(threading.Thread):
         self.terminated.clear()
         self.trigger = trigger              # inside RIAPS port
         self.port = port                    # port number for socket to connect to connect to console client
-        self.plug = None 
+        self.plug = None
         self.plug_identity = None
         self.context = zmq.Context()
-        self.cons = self.context.socket(zmq.REP)    # Create zmq REP socket 
+        self.cons = self.context.socket(zmq.REP)    # Create zmq REP socket
         self.cons.bind("tcp://*:%s" % self.port)
         self.logger.info('IODeviceThread _init()_ed')
-    
+
     def get_identity(self,ins_port):
         if self.plug_identity is None:
             while True:
@@ -36,7 +36,7 @@ class IODeviceThread(threading.Thread):
                     break
                 time.sleep(0.1)
         return self.plug_identity
-    
+
     def run(self):
         self.logger.info('IODeviceThread starting')
         self.plug = self.trigger.setupPlug(self)    # Ask RIAPS port to make a plug (zmq socket) for this end
@@ -58,16 +58,16 @@ class IODeviceThread(threading.Thread):
                     message = self.plug.recv_pyobj()
                     self.cons.send_pyobj(message)                           # Send it to the console
         self.logger.info('IODeviceThread ended')
-               
+
 
     def activate(self):
         self.active.set()
         self.logger.info('IODeviceThread activated')
-                    
+
     def deactivate(self):
         self.active.clear()
         self.logger.info('IODeviceThread deactivated')
-    
+
     def terminate(self):
         self.active.set()
         self.terminated.set()
@@ -78,7 +78,7 @@ class IODevice(Component):
         super(IODevice, self).__init__()
         self.logger.info("IODevice - starting")
         self.port = port
-        self.IODeviceThread = None  # Cannot manipulate ports in constructor or start threads, use clock pulse 
+        self.IODeviceThread = None  # Cannot manipulate ports in constructor or start threads, use clock pulse
 
     def on_clock(self):
         if self.IODeviceThread == None: # First clock pulse
@@ -95,12 +95,18 @@ class IODevice(Component):
         self.IODeviceThread.terminate()
         self.IODeviceThread.join()
         self.logger.info("__destroy__ed")
-        
+
     def on_trigger(self):                       # Internally triggered operation (
         msg = self.trigger.recv_pyobj()         # Receive message from internal thread
         self.logger.info('on_trigger():%s' % msg)
+
+        # Check if the 'echo' port is connected, if not, return
+        if self.echo.connected() == 0:
+            self.logger.info('Not yet connected!')
+            return
+
         self.echo.send_pyobj(msg)               # Send it to the echo server
-        
+
     def on_echo(self):
         msg = self.echo.recv_pyobj()            # Receive response from echo server
         self.logger.info('on_echo():%s' % msg)
