@@ -9,7 +9,7 @@ class LocalEstimator(Component):
     def __init__(self,frqArg):
         super(LocalEstimator, self).__init__()
         self.pid = os.getpid()
-        self.logger.info("(PID %s) - starting LocalEstimator(frqArq=%f)",str(self.pid),frqArg)
+        self.logger.info("(PID %s) - starting LocalEstimator(frqArq=%f)" % (str(self.pid),frqArg))
         self.pending = 0
         self.freq = frqArg
         self.numQueries = 0
