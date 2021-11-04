@@ -80,13 +80,13 @@ class ReqPort(DuplexConnPort):
             return self.port_send(msg, True)              
     
     def recv(self):
-        if len(self.repliers) == 0:
+        if len(self.servers) == 0:
             return None
         else:
             return self.port_recv(False)
     
     def send(self, msg):
-        if len(self.repliers) == 0:
+        if len(self.servers) == 0:
             return False
         else:
             return self.port_send(msg, False) 
