@@ -32,6 +32,11 @@ class client(Component):
         now = self.poller.recv_pyobj()
         self.logger.info(f"client poll")
 
+        # make sure qry/ans ports are connected before proceeding
+        if self.qry_port.connected() == 0:
+            self.logger.info('Not yet connected!')
+            return
+
         if self.connected:
             self.poller.deactivate()
             self.logger.info(f"client connected - Deactivate poller")

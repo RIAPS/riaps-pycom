@@ -100,9 +100,9 @@ class WReporterThread(threading.Thread):
         self.terminated.set()
 
 class WeatherReporter(Component):
-    def __init__(self, port="ttyO2", baudrate=115200, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE, serialTimeout=0):
+    def __init__(self, port="ttyS2", baudrate=115200, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE, serialTimeout=0):
         super().__init__()
-        self.logger.setLevel(logging.DEBUG)
+        self.logger.set_level(logging.DEBUG)
         self.pid = os.getpid()
         self.port = "/dev/" + port
         self.baudrate = baudrate

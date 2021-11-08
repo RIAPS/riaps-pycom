@@ -1,5 +1,5 @@
 app INVERT{
-    on (172.21.20.53) system_actor1(name = "sys1");
-    on (172.21.20.54) system_actor2(name = "sys2");
-    on (172.21.20.55) controller_actor;
+    on (172.21.20.53) client_actor1(name = "sys1");
+    on (172.21.20.54) client_actor2(name = "sys2");
+    on (172.21.20.55) server_actor;
 }
