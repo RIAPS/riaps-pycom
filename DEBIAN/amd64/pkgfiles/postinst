@@ -47,5 +47,7 @@ systemctl enable riaps-rm-cgroups.service
 systemctl start riaps-rm-cgroups.service || true
 systemctl enable riaps-rm-quota.service
 systemctl start riaps-rm-quota.service || true
+systemctl enable riaps-deplo.service
+systemctl start riaps-deplo.service || true
 systemctl enable riaps-rpyc-registry.service
 systemctl start riaps-rpyc-registry.service || true
