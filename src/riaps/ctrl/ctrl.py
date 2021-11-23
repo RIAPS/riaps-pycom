@@ -21,8 +21,10 @@ import json
 import git
 from git import Repo
 import datetime
+import importlib
 import yaml
 import ipaddress
+import socket
 import tempfile
 import shutil
 # from collections import namedtuple
@@ -124,7 +126,11 @@ class Controller(object):
         self.appInfo = {}           # Info about apps 
         self.launchList = []        # List of launch operations
         self.setupHostKeys()
-        self.discoType = None        
+        self.discoType = None     
+        try:
+            self.fabModule = importlib.util.find_spec('riaps.fabfile').submodule_search_locations[0]
+        except:
+            self.fabModule = 'fabfile'
 
     def setupIfaces(self):
         '''
@@ -140,7 +146,8 @@ class Controller(object):
         globalMAC = globalMACs[0]
         self.hostAddress = globalIP
         self.macAddress = globalMAC
-        self.nodeName = str(self.hostAddress)
+        self.nodeAddr = str(self.hostAddress)
+        self.nodeName = socket.gethostbyaddr(self.nodeAddr)[0]
         self.service = None
         
     def startService(self):

@@ -1,13 +1,16 @@
 # Fabric commands for managing RIAPS installs and applications
 from . import deplo
 from .sys import run, sudo, put, get, arch
-from fabric.api import env, task, hosts, local, execute
+from fabric.api import env, task, hosts, roles, local, execute
 from fabric.contrib.files import sed
 import os
+import time
 from riaps.consts.defs import *
 
 # Prevent namespace errors by explicitly defining which tasks belong to this file
-__all__ = ['update','updateRemoteNodeKey','updateAptKey','install','uninstall','kill','reset', 'updateConfig','updateLogConfig','getSystemdLogs','getAppLogs','ctrl', 'configRouting', 'securityOff', 'securityOn']
+__all__ = ['update','updateNodeKey','updateAptKey','install','uninstall','reset',
+           'updateConfig','updateLogConfig', 'getSystemLogs', 'getAppLogs',
+           'ctrl', 'configRouting', 'securityOff', 'securityOn']
 
 # RIAPS packages
 packages = [
@@ -17,6 +20,7 @@ packages = [
 
 # RIAPS update (from release)
 @task
+@roles('nodes','control','remote','all')
 def update():
     """Update RIAPS packages from official release"""
     sudo('apt-get update')
@@ -27,8 +31,9 @@ def update():
         sudo('apt-get install ' + package + ' -y')
 
 @task
-def updateRemoteNodeKey():
-    """Rekey the remote RIAPS nodes with new generated keys"""
+@roles('remote')
+def updateNodeKey():
+    """Rekey the remote nodes with newly generated keys"""
     etc_key_path = "/etc/riaps/"
     ssh_key_path = "/home/riaps/.ssh/"
     ssh_pubkey_name = os.path.join(ssh_key_path, str(const.ctrlPublicKey))
@@ -68,12 +73,14 @@ def updateRemoteNodeKey():
     sudo('passwd -q -d riaps')
 
 @task
+@roles('nodes','control','remote','all')
 def updateAptKey():
     """Update RIAPS apt key"""
     sudo('wget -qO - https://riaps.isis.vanderbilt.edu/keys/riapspublic.key | apt-key add -')
 
 # RIAPS install (from local host)
 @task
+@roles('nodes','control','remote','all')
 def install():
     """Install RIAPS packages from development host"""
     global packages
@@ -84,9 +91,11 @@ def install():
         put(package)
         sudo('dpkg -i '+ package + ' > riaps-install-' + hostname + '-' + package + '.log')
         sudo('rm -f %s' %(package))
+        local('mkdir -p logs')
         get('riaps-install-' + hostname + '-' + package + '.log', 'logs/')
 
 @task
+@roles('nodes','control','remote','all')
 def uninstall():
     """Uninstall all RIAPS packages"""
     global packages
@@ -96,55 +105,9 @@ def uninstall():
         sudo('apt-get remove -y ' + package)
 
 @task
-def kill():
-    """Kills any hanging processes. deplo.stop should be called first"""
-    deplo.stop()
-
-    pgrepResult = sudo('pgrep \'riaps_\' -l')
-    pgrepEntries = pgrepResult.rsplit('\n')
-    processList = []
-
-    print(f"pgrepResult: {pgrepResult}")
-
-    for process in pgrepEntries:
-        if process != "" and process.split()[1] != "riaps_fab":
-            processList.append(process.split()[1])
-
-    print(f"processList: {processList}")
-
-    for process in processList:
-        sudo('pkill -SIGKILL ' + process)
-
-    pgrepPost = sudo('pgrep \'riaps_\' -l')
-    pgrepPostEntries = pgrepPost.rsplit('\n')
-    post_process_list = []
-    print(f"pgrepPostEntries: {pgrepPostEntries}")
-    print(f"type(pgrepPostEntries): {type(pgrepPostEntries)}")
-    for process in pgrepPostEntries:
-        if process != "" and process.split()[1] != "riaps_fab":
-            post_process_list.append(process.split()[1])
-
-    if post_process_list:
-        print("\033[93m processes still running \033[0m")
-    else:
-        print("\033[92m processes terminated \033[0m")
-
-    cmd = 'python3 -c "from riaps.utils.config import Config; c=Config(); print(c.NIC_NAME)"'
-    nic_name = sudo(cmd)
-    cmd = 'ip link show %s | awk \'/ether/ {print $2}\'' % nic_name
-    mac = sudo(cmd)
-    host_last_4 = mac[-5:-3] + mac[-2:]
-    # Get last for digits of mac address since that is how apps and users are named.
-
-
-    apps = sudo('\ls ' + env.riapsApps).split()  # \ls bypasses alias to ls with color formatting
-    for app in apps:
-        sudo('rm -R /home/riaps/riaps_apps/' + app + '/')
-        if app != 'riaps-apps.lmdb':
-            sudo('userdel ' + app.lower() + host_last_4)
-@task
+@roles('nodes','remote')
 def reset():
-    """Reset target nodes: kill riaps_*, clean, restart riaps_*"""
+    """Kill riaps_, clean, restart riaps_*"""
     deplo.stop()            # stop deplo service
     
     sudo('pkill -SIGKILL "(riaps_deplo|riaps_disco|riaps_actor|riaps_device)"')
@@ -158,6 +121,7 @@ def reset():
         host_last_4 = hostname[-4:]
     else:
         # If it doesn't start with riaps, assume it is a development VM
+        # Get last for digits of mac address since that is how apps and users are named.
         cmd = 'python3 -c "from riaps.utils.config import Config; c=Config(); print(c.NIC_NAME)"'
         nic_name = sudo(cmd)
         if nic_name != None: 
@@ -166,17 +130,16 @@ def reset():
             host_last_4 = mac[-5:-3] + mac[-2:]
         else:                           # Should have set the NIC_NAME ...
             host_last_4 = '0000'
-    # Get last for digits of mac address since that is how apps and users are named.
 
     apps = sudo('\ls ' + env.riapsApps).split()  # \ls bypasses alias to ls with color formatting
+    apps = list(set(apps).difference(set('riaps-apps.lmdb','riaps-disco.lmdb')))
     for app in apps:
         sudo('rm -R /home/riaps/riaps_apps/' + app + '/')
-        if app not in ('riaps-apps.lmdb','riaps-disco.lmdb'):
-            sudo('userdel ' + app.lower() + host_last_4)    # May fail if dev vm
-   
+        sudo('userdel ' + app.lower() + host_last_4)    # May fail if dev vm
     deplo.start()
-    
+
 @task
+@roles('nodes','remote')
 def updateConfig():
     """"Place local riaps.conf on all remote hosts"""
     if(os.path.isfile(os.path.join(os.getcwd(), "riaps.conf"))):
@@ -185,9 +148,10 @@ def updateConfig():
         sudo('chown root:root /etc/riaps/riaps.conf')
         sudo('rm riaps.conf')
     else:
-        print("Local riaps.conf doesn't exist!")
+        print("Local ./riaps.conf doesn't exist!")
 
 @task
+@roles('nodes','remote')
 def updateLogConfig():
     """"Places local riaps-log.conf on all remote hosts"""
     if(os.path.isfile(os.path.join(os.getcwd(), "riaps-log.conf"))):
@@ -195,37 +159,40 @@ def updateLogConfig():
         sudo('cp riaps-log.conf /etc/riaps/')
         sudo('chown root:root /etc/riaps/riaps-log.conf')
         sudo('rm riaps-log.conf')
-
     else:
-        print("Local riaps-log.conf doesn't exist!")
+        print("Local ./riaps-log.conf doesn't exist!")
 
 # If using riaps-deplo.service, the log data is being recorded in a system journal.
 # This function pulls that data from the system journal and places them in a log file
 @task
-def getSystemdLogs():
+@roles('nodes','control','remote','all')
+def getSystemLogs():
     """Get deployment logs and save them to logs/"""
     hostname = env.host_string
     sudo('journalctl -u riaps-deplo.service --since today > riaps-deplo-' + hostname + '.log')
+    local('mkdir -p logs')
     get('riaps-deplo-' + hostname + '.log','logs/')
 
 @task
+@roles('nodes','control','remote','all')
 def getAppLogs(app_name):
     """Get deployment logs and save them to logs/"""
-    get('/home/riaps/riaps_apps/'+app_name+'/*.log')
+    local('mkdir -p logs')
+    get('/home/riaps/riaps_apps/'+app_name+'/*.log', 'logs/')
 
 @task
-@hosts('localhost')
+# @hosts('localhost')
+@roles('control')
 def ctrl():
     """Launch RIAPS controller"""
     local('riaps_ctrl')
 
-# Find IP address of primary network interface
+# Find IP address of primary network interface, typically eth0
 import socket
 def get_ip():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
-        # doesn't even have to be reachable
-        s.connect(('10.255.255.255', 1))
+        s.connect(('10.255.255.255', 1))    # doesn't even have to be reachable
         IP = s.getsockname()[0]
     except:
         IP = '127.0.0.1'
@@ -235,8 +202,9 @@ def get_ip():
 
 # Setup hosts routing, if needed.  Configure to your system's setup
 @task
+@roles('remote')
 def configRouting():
-    """Configure BBBs to use this host as their default gateway"""
+    """Configure RIAPS nodes (eth0) to use control host as their default gateway"""
     env.warn_only = True
     # ---- EDIT HERE ----
     hostIP = get_ip()
@@ -257,6 +225,7 @@ def configRouting():
 
 # Turn off RIAPS security feature
 @task
+@roles('nodes','control','remote','all')
 def securityOff():
     """Turn RIAPS security feature off"""
     execute(deplo.stop)
@@ -266,6 +235,7 @@ def securityOff():
 
 # Turn on RIAPS security feature
 @task
+@roles('nodes','control','remote','all')
 def securityOn():
     """Turn RIAPS security feature on"""
     execute(deplo.stop)

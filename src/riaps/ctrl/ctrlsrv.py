@@ -199,7 +199,7 @@ class ControllerService(rpyc.Service):
             theController.delClient(clientName)
         self.client = ServiceClient(clientName, async_(callback),self,appFolder)   # Register client's callback
         theController.addClient(clientName,self.client)
-        dbaseNode = theController.nodeName      # The (redis) database is running on this same node
+        dbaseNode = theController.nodeAddr          # The (redis) database is running on this same node
         if theController.discoType == 'redis':
             dbasePort = const.discoRedisPort
         elif theController.discoType == 'opendht':

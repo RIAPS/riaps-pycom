@@ -17,7 +17,9 @@ import logging
 import subprocess
 import shlex
 from riaps.lang.gviz import gviz
-import riaps.fabfile
+import toml
+import tempfile 
+import socket
 
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, GLib, Gdk, GObject
@@ -148,7 +150,7 @@ class ControlGUIClient(object):
             except zmq.error.ZMQError:
                 break
         return True
-            
+    
     def on_ConsoleEntry(self, *args):
         '''
         Called when the console entry receives an 'activate' event
@@ -158,17 +160,25 @@ class ControlGUIClient(object):
         if len(fabcmd) == 0: fabcmd = "help"
         fcmd = "fab"
         fflag = "-f"
-        fhost = "-H"
-        fhosts = str.join(',',self.controller.getClients())
-        fpath = os.path.dirname(riaps.fabfile.__file__)
-        if len(fhosts) == 0:
+        fpath = self.controller.fabModule
+        hosts = self.controller.getClients()
+        tPath = None
+        if len(hosts) == 0:
             self.log('? No hosts connected - using default')
             cmd = str.join(' ',(fcmd, fflag, fpath, fabcmd))
         else:
-            cmd = str.join(' ',(fcmd, fflag, fpath, fabcmd, fhost, fhosts))
+            cHost = self.controller.nodeName
+            hNames = [ socket.gethostbyaddr(host)[0] for host in hosts]
+            hConf =  { 'RIAPS' : { 'nodes' : hNames, 'control' : cHost }}
+            _drop, tPath = tempfile.mkstemp(text=True)
+            with open(tPath,"w") as tFd:
+                toml.dump(hConf,tFd)
+            fhostsFile = ("--set hostsFile=" + tPath)
+            cmd = str.join(' ',(fcmd, fflag, fpath, fabcmd, fhostsFile))
         self.log(cmd)
         proc = subprocess.run(shlex.split(cmd),stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
         resp = proc.stdout.decode('utf-8')
+        if tPath: os.unlink(tPath)
         # print(resp)
         # self.log(resp,': ')
         for line in resp.split('\n'):
