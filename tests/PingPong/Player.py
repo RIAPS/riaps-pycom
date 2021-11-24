@@ -5,6 +5,7 @@
 from riaps.run.fsm import FSM
 from enum import Enum, auto
 import logging
+import time
 
 class Player(FSM):
     '''
@@ -50,13 +51,14 @@ class Player(FSM):
         self.logger.info('handleMemberJoined[%s]: %s' % (group.getGroupName(),str(memberId)))
         self.partner = True
     
-    def has_partner(self):
+    def is_ready(self):
         '''
-        Return True if we have a partner
+        Return True if we have a partner AND we are connected
         '''
-        return self.partner
+        # self.logger.info('%s partner=%r,=%r' % (self.name,self.partner, self.catch.connected()))
+        return self.partner and self.catch.connected() > 1
     
-    @FSM.on(event=events.tick,state=states.initial,guard=lambda self: self.has_partner())
+    @FSM.on(event=events.tick,state=states.initial,guard=lambda self: self.is_ready())
     def start(self):
         '''
         WHEN the tick event arrives AND we are in the initial state AND we have a partner
@@ -65,7 +67,7 @@ class Player(FSM):
         self.state = Player.states.has_ball if self.ball else Player.states.no_ball # This is a shortcut to change state
         self.logger.info('%s started in state %r' % (self.name,self.state))
         
-    @FSM.on(event=events.tick,state=states.has_ball,guard=lambda self: self.has_partner(),then=states.no_ball)
+    @FSM.on(event=events.tick,state=states.has_ball,guard=lambda self: self.is_ready(),then=states.no_ball)
     def has_it(self):
         '''
         WHEN the tick event arrives AND we have the ball AND we have a partner
@@ -98,6 +100,7 @@ class Player(FSM):
         WHEN  we catch a ball AND we are in the no_ball state AND it is not our own ball
         THEN we got to the has_ball state
         '''
+        self.partner = True
         self.logger.info('%s got ball' % self.name)
         
     @FSM.on(event=events.catch,state=states.has_ball)
@@ -107,6 +110,7 @@ class Player(FSM):
         print an error message
         '''
         msg = self.catch.msg_pyobj()
+        self.partner = True
         self.logger.info('%s got another ball? %r' % (self.name,msg))
     
     @FSM.on(event=events.catch,state=states.initial,then=states.has_ball)
@@ -115,6 +119,7 @@ class Player(FSM):
         WHEN we catch a ball AND we are in the initial state
         THEN we go to the has_ball state 
         '''
+        self.partner = True
         self.logger.info('%s got [initial] ball' % self.name)
         
         

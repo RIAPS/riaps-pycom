@@ -88,11 +88,14 @@ def install():
     architecture = arch()
     for pack in packages:
         package = pack + architecture + '.deb'
-        put(package)
-        sudo('dpkg -i '+ package + ' > riaps-install-' + hostname + '-' + package + '.log')
-        sudo('rm -f %s' %(package))
-        local('mkdir -p logs')
-        get('riaps-install-' + hostname + '-' + package + '.log', 'logs/')
+        try:
+            put(package)
+            sudo('dpkg -i '+ package + ' > riaps-install-' + hostname + '-' + package + '.log')
+            sudo('rm -f %s' %(package))
+            local('mkdir -p logs')
+            get('riaps-install-' + hostname + '-' + package + '.log', 'logs/')
+        except Exception as e:
+            print("install exception: %r" % e)            
 
 @task
 @roles('nodes','control','remote','all')
@@ -101,8 +104,11 @@ def uninstall():
     global packages
     architecture = arch()
     for pack in reversed(packages):
-        package = pack + architecture
-        sudo('apt-get remove -y ' + package)
+        try:
+            package = pack + architecture
+            sudo('apt-get remove -y ' + package)
+        except Exception as e:
+            print("uninstall exception: %r" % e)
 
 @task
 @roles('nodes','remote')
@@ -132,10 +138,11 @@ def reset():
             host_last_4 = '0000'
 
     apps = sudo('\ls ' + env.riapsApps).split()  # \ls bypasses alias to ls with color formatting
-    apps = list(set(apps).difference(set('riaps-apps.lmdb','riaps-disco.lmdb')))
+    apps = list(set(apps).difference(set(['riaps-apps.lmdb','riaps-disco.lmdb'])))
     for app in apps:
         sudo('rm -R /home/riaps/riaps_apps/' + app + '/')
         sudo('userdel ' + app.lower() + host_last_4)    # May fail if dev vm
+    sudo('rm -R /home/riaps/riaps_apps/*.lmdb')
     deplo.start()
 
 @task
