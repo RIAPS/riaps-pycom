@@ -109,7 +109,7 @@ riaps_fab sys.put:<fileName>
 ```
 - Get files from all or specific hosts. This example shows how to grab application saved log files from the application deployment folder (the folder is protected, so sudo=true)
 ```
-riaps_fab sys.get:riaps_apps/<appname>/log/alogfile.log,.,true -H <hostname>
+riaps_fab sys.get:/home/riaps/riaps_apps/<appname>/log/alogfile.log,.,true -H <hostname>
 ```
 - Running system commands can be done by providing the complete command lined as an 
 argument to the command.   

@@ -170,11 +170,15 @@ class ControlGUIClient(object):
             cHost = self.controller.nodeName
             hNames = [ socket.gethostbyaddr(host)[0] for host in hosts]
             hConf =  { 'RIAPS' : { 'nodes' : hNames, 'control' : cHost }}
+            fAppsFolder = ""
+            if cHost in hNames:
+                appsFolder = os.getenv('riapsApps',None)
+                fAppsFolder = "--set RIAPSAPPS=%s" % appsFolder if appsFolder else ""
             _drop, tPath = tempfile.mkstemp(text=True)
             with open(tPath,"w") as tFd:
                 toml.dump(hConf,tFd)
             fhostsFile = ("--set hostsFile=" + tPath)
-            cmd = str.join(' ',(fcmd, fflag, fpath, fabcmd, fhostsFile))
+            cmd = str.join(' ',(fcmd, fflag, fpath, fabcmd, fhostsFile, fAppsFolder))
         self.log(cmd)
         proc = subprocess.run(shlex.split(cmd),stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
         resp = proc.stdout.decode('utf-8')

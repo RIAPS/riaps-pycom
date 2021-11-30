@@ -1,6 +1,6 @@
 # Fabric commands for performing system tasks
 from fabric import api, operations
-from fabric.api import task, env, settings, roles, hosts
+from fabric.api import task, env, settings, roles, local, hosts
 from fabric.context_managers import hide
 import os 
 import toml
@@ -116,6 +116,7 @@ def hosts(hosts_file,validate=False):
                         roledefs[key].remove(host) 
     else:                           # Hosts/roles from file
         roledefs = load_hosts(hosts_file,validate)
+        if not roledefs: return
         if env.roles:               # If roles from command, keep only those roles
             for key in [key for key in roledefs if key not in env.roles]: 
                 roledefs[key] = []
@@ -123,7 +124,6 @@ def hosts(hosts_file,validate=False):
     env.hosts = []
     env.roles = []
     env.roledefs = roledefs
-
 
 # Check that all RIAPS nodes are communicating
 @task
@@ -181,7 +181,6 @@ def sudo(command):
             print(result)
         return result
 
-
 @task
 # @hosts('localhost')
 @roles('control')
@@ -194,7 +193,7 @@ def get(fileName, local_path='', use_sudo=False):
 # If transferring to a system location, use_sudo=True
 @task
 # @hosts('localhost')
-@roles('nodes','control','remote','all')
+@roles('control')
 def put(fileName, remote_path='', use_sudo=False):
     """Upload file to hosts:<file name>,[remote path],[use sudo]"""
     use_sudo = use_sudo in ['True', 'true', 'Yes', 'yes', 'y']
@@ -262,4 +261,5 @@ def getConfig():
                 'echo "`cat /etc/redis/redis.conf`"'
                 ]:
         runCmd(cmd,confFile)
-    get(confFile,'./')
+    local('mkdir -p logs')
+    get(confFile,'logs/')

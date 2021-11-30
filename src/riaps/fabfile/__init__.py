@@ -30,11 +30,17 @@ env.localPath = os.getcwd() + '/'   # Path on localhost
 env.nodePath = '/home/riaps/'       # Path on target
 
 # RIAPS directories
-env.riapsHome = riaps_folder = os.getenv('RIAPSHOME')
-if riaps_folder == None:
+env.riapsHome = os.getenv('RIAPSHOME')
+if env.riapsHome  == None:
         print("RIAPS Configuration - RIAPSHOME is not set, using ./")
         env.riapsHome = './'
-env.riapsApps = '/home/riaps/riaps_apps'
+
+if 'riapsApps' not in env:
+    env.riapsApps = os.getenv('RIAPSAPPS')
+    if env.riapsApps  == None:
+        print("RIAPS Configuration - RIAPSAPPS  is not set, using /home/riaps/riaps_apps")
+        env.riapsApps = '/home/riaps/riaps_apps'
+
 env.riapsLib = '/usr/local/lib'
 
 # Use RIAPS SSH key

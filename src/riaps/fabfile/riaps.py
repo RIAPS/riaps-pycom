@@ -78,6 +78,8 @@ def updateAptKey():
     """Update RIAPS apt key"""
     sudo('wget -qO - https://riaps.isis.vanderbilt.edu/keys/riapspublic.key | apt-key add -')
 
+# See https://raphaelhertzog.com/2010/09/21/debian-conffile-configuration-file-managed-by-dpkg/
+
 # RIAPS install (from local host)
 @task
 @roles('nodes','control','remote','all')
@@ -90,7 +92,7 @@ def install():
         package = pack + architecture + '.deb'
         try:
             put(package)
-            sudo('dpkg -i '+ package + ' > riaps-install-' + hostname + '-' + package + '.log')
+            sudo('dpkg -i '+ '--force-confold ' + package + ' > riaps-install-' + hostname + '-' + package + '.log')
             sudo('rm -f %s' %(package))
             local('mkdir -p logs')
             get('riaps-install-' + hostname + '-' + package + '.log', 'logs/')
@@ -140,9 +142,9 @@ def reset():
     apps = sudo('\ls ' + env.riapsApps).split()  # \ls bypasses alias to ls with color formatting
     apps = list(set(apps).difference(set(['riaps-apps.lmdb','riaps-disco.lmdb'])))
     for app in apps:
-        sudo('rm -R /home/riaps/riaps_apps/' + app + '/')
+        sudo('rm -R ' + env.riapsApps + '/' + app + '/')
         sudo('userdel ' + app.lower() + host_last_4)    # May fail if dev vm
-    sudo('rm -R /home/riaps/riaps_apps/*.lmdb')
+    sudo('rm -R' + env.riapsApps + '/riaps*.lmdb')
     deplo.start()
 
 @task
@@ -185,7 +187,7 @@ def getSystemLogs():
 def getAppLogs(app_name):
     """Get deployment logs and save them to logs/"""
     local('mkdir -p logs')
-    get('/home/riaps/riaps_apps/'+app_name+'/*.log', 'logs/')
+    get(env.riapsApps + '/' + app_name + '/*.log', 'logs/')
 
 @task
 # @hosts('localhost')
