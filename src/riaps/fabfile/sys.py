@@ -45,8 +45,13 @@ def load_hosts(hosts_file,validate=False):
     
     # control is optional     
     control = spec.get('control', None)
+    
+    if type(control) != str:
+        print("String is expected: %r" % control)
+        return None
+
     if control in {'localhost', '127.0.0.1'}:
-        print("Control should be a hostname or IP address, not %s " % control)
+        print("Control hostname or IP address is expected: %r " % control)
         return None
     else:
         control = socket.gethostname() if control is None else control
@@ -107,7 +112,7 @@ def hosts(hosts_file,validate=False):
                         "all" : list(nodeS.union(controlS)) }
         else:                       # Roles on command line (to be used in tasks)                           
             roledefs = load_hosts(hosts_file,validate)
-            if not roledefs: return
+            if roledefs is None: return
             for key in [key for key in roledefs if key not in env.roles]: 
                 roledefs[key] = []          # Clear roles not on command line
             for key in roledefs:            # Remove hosts not on command line
@@ -116,7 +121,7 @@ def hosts(hosts_file,validate=False):
                         roledefs[key].remove(host) 
     else:                           # Hosts/roles from file
         roledefs = load_hosts(hosts_file,validate)
-        if not roledefs: return
+        if roledefs is None: return
         if env.roles:               # If roles from command, keep only those roles
             for key in [key for key in roledefs if key not in env.roles]: 
                 roledefs[key] = []

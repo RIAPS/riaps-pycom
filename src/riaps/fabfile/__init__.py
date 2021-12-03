@@ -2,6 +2,7 @@
 # fabfile for RIAPS tasks
 #
 from fabric.api import env
+from fabric.utils import abort
 from riaps.consts.defs import *
 import os
 
@@ -49,6 +50,7 @@ validate = True if 'validate' in env else False
 
 # If a no command line roles or hosts are passed (i.e. -R or -H), only then use listed hosts
 # Allows for passing of individual hosts or roles on which to run tasks
+env.roledefs = None
 if 'hostsFile' in env:
     if os.path.isfile(env.hostsFile):
         sys.hosts(env.hostsFile,validate)
@@ -60,4 +62,6 @@ elif not [s for s in env.tasks if 'sys.hosts' in s]:
     riaps_conf = os.path.join(env.riapsHome,'etc/riaps-hosts.conf')
     sys.hosts(riaps_conf,validate)
 
+if env.roledefs is None:
+    abort('Bad configuration/hosts/roles')
 #

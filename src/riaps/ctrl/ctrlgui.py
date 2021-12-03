@@ -151,6 +151,23 @@ class ControlGUIClient(object):
                 break
         return True
     
+    def isIPaddress(self,addr):
+        try:
+            socket.inet_aton(addr)
+            return True
+        except socket.error:
+            return False
+        
+    def getIPaddress(self,hName):
+        if self.isIPaddress(hName):
+            return hName
+        else:
+            try:
+                ipAddr = socket.gethostbyname(hName)
+                return ipAddr
+            except socket.error:
+                return hName
+    
     def on_ConsoleEntry(self, *args):
         '''
         Called when the console entry receives an 'activate' event
@@ -167,8 +184,8 @@ class ControlGUIClient(object):
             self.log('? No hosts connected - using default')
             cmd = str.join(' ',(fcmd, fflag, fpath, fabcmd))
         else:
-            cHost = self.controller.nodeName
-            hNames = [ socket.gethostbyaddr(host)[0] for host in hosts]
+            cHost = self.getIPaddress(self.controller.nodeName)
+            hNames = [ self.getIPaddress(socket.getfqdn(host)) for host in hosts]
             hConf =  { 'RIAPS' : { 'nodes' : hNames, 'control' : cHost }}
             fAppsFolder = ""
             if cHost in hNames:

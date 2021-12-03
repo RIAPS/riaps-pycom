@@ -83,7 +83,7 @@ def updateAptKey():
 # RIAPS install (from local host)
 @task
 @roles('nodes','control','remote','all')
-def install():
+def install(keepConfig=False):
     """Install RIAPS packages from development host"""
     global packages
     hostname = env.host_string
@@ -92,7 +92,8 @@ def install():
         package = pack + architecture + '.deb'
         try:
             put(package)
-            sudo('dpkg -i '+ '--force-confold ' + package + ' > riaps-install-' + hostname + '-' + package + '.log')
+            keep = '--force-confold' if keepConfig else '--force-confnew'
+            sudo('dpkg -i '+ keep + package + ' > riaps-install-' + hostname + '-' + package + '.log')
             sudo('rm -f %s' %(package))
             local('mkdir -p logs')
             get('riaps-install-' + hostname + '-' + package + '.log', 'logs/')
