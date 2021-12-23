@@ -2,13 +2,13 @@
 from fabric import api, operations
 from fabric.api import task, env, settings, roles, local, hosts
 from fabric.context_managers import hide
-import os 
+import os
 import toml
 import socket
 
 
 # Prevent namespace errors by explicitly defining which tasks belong to this file
-__all__ = ['hosts', 'check', 'shutdown', 'reboot', 'clearJournal', 'run', 'sudo', 'get', 'put', 'arch', 
+__all__ = ['hosts', 'check', 'shutdown', 'reboot', 'clearJournal', 'run', 'sudo', 'arch',
            'flushIPTables', 'setJournalLogSize', 'getConfig']
 
 def catch(func, *args, **kwargs):
@@ -23,29 +23,29 @@ def isIPaddress(addr):
         return True
     except socket.error:
         return False
-    
+
 def load_hosts(hosts_file,validate=False):
     '''
     Load a hosts file, construct role definitions
     '''
     if not os.path.isfile(hosts_file):
         print('Hosts configuration file doesn\'t exist: %s' % hosts_file)
-        return None 
+        return None
     try:
         config = toml.load(hosts_file)
     except Exception as e:
         print(' Hosts configuration file %s has a problem: %s.' % (hosts_file, str(e)))
-        return None    
-    
+        return None
+
     spec = config.get('RIAPS',None)
 
-    if spec is None: 
+    if spec is None:
         print('Hosts configuration file %s is missing [RIAPS] section.' % (hosts_file))
-        return None 
-    
-    # control is optional     
+        return None
+
+    # control is optional
     control = spec.get('control', None)
-    
+
     if type(control) != str:
         print("String is expected: %r" % control)
         return None
@@ -55,77 +55,77 @@ def load_hosts(hosts_file,validate=False):
         return None
     else:
         control = socket.gethostname() if control is None else control
-    
-    control_ = control if control.endswith('.local') or isIPaddress(control) else control + '.local'  
-    
+
+    control_ = control if control.endswith('.local') or isIPaddress(control) else control + '.local'
+
     if validate:
         # Validate control host name
         try:
             _control = catch(socket.gethostbyname,control_)
         except Exception as e:
             print('Control host name %s cannot be resolved.' % str(e))
-    #   return None 
+    #   return None
 
     # nodes are required
     nodes = spec.get('nodes', None)
     if nodes is None:
         print("No nodes specified in %s." % (hosts_file))
-        return None    
-    
-    if type(nodes) == str: nodes = [nodes]    
-    
+        return None
+
+    if type(nodes) == str: nodes = [nodes]
+
     if validate:
         # Validate target host names
-        for node in nodes: 
+        for node in nodes:
             try:
                 _nodes = catch(socket.gethostbyname,node)
             except Exception as e:
                 print('Host name %s cannot be resolved.' % str(e))
-                # return None 
-    
-    nodes = [node if node != control else control_ for node in nodes] 
-    
+                # return None
+
+    nodes = [node if node != control else control_ for node in nodes]
+
     nodeS,controlS = set(nodes), set([control_])
-    
+
     roledefs = {"nodes" : nodes,                            # Nodes that run apps
                 "control" : [control_],                     # Control host
                 "remote" : list(nodeS.difference(controlS)),# Only the remote nodes
                 "all" : list(nodeS.union(controlS))         # All nodes
                 }
     return roledefs
-    
+
 @task
 # @('localhost')
 def hosts(hosts_file,validate=False):
     """
-    Load hosts from file, setup hosts, roles, and role definitions 
+    Load hosts from file, setup hosts, roles, and role definitions
     """
     if env.hosts:                   # Hosts on command line
         if not env.roles:           # No roles set
             control = socket.gethostname()  # Control on the same subnet
-            control_ = control if control.endswith('.local') else control + '.local'  
-            nodes = [node if node != control else control_ for node in env.hosts] 
+            control_ = control if control.endswith('.local') else control + '.local'
+            nodes = [node if node != control else control_ for node in env.hosts]
             nodeS,controlS = set(nodes),set([control_])
             roledefs = {"nodes" : nodeS,
                         "control" : [control_],
-                        "remote" : list(nodeS.difference(controlS)),   
+                        "remote" : list(nodeS.difference(controlS)),
                         "all" : list(nodeS.union(controlS)) }
-        else:                       # Roles on command line (to be used in tasks)                           
+        else:                       # Roles on command line (to be used in tasks)
             roledefs = load_hosts(hosts_file,validate)
             if roledefs is None: return
-            for key in [key for key in roledefs if key not in env.roles]: 
+            for key in [key for key in roledefs if key not in env.roles]:
                 roledefs[key] = []          # Clear roles not on command line
             for key in roledefs:            # Remove hosts not on command line
                 for host in roledefs[key]:
                     if host not in env.hosts:
-                        roledefs[key].remove(host) 
+                        roledefs[key].remove(host)
     else:                           # Hosts/roles from file
         roledefs = load_hosts(hosts_file,validate)
         if roledefs is None: return
         if env.roles:               # If roles from command, keep only those roles
-            for key in [key for key in roledefs if key not in env.roles]: 
+            for key in [key for key in roledefs if key not in env.roles]:
                 roledefs[key] = []
-    
+
     env.hosts = []
     env.roles = []
     env.roledefs = roledefs
@@ -152,7 +152,7 @@ def reboot():
     """Reboot the hosts"""
     sudo('reboot &')
 
-# The system journal run continuously with no regard to login session. 
+# The system journal run continuously with no regard to login session.
 # So to isolate testing data, the system journal can be cleared.
 @task
 @roles('nodes','control','remote','all')
@@ -236,7 +236,7 @@ def runCmd(cmd,log=None,sudo=False):
         sudo(cmdLine)
     else:
         run(cmdLine)
-        
+
 @task
 @roles('nodes','remote','all')
 def getConfig():
