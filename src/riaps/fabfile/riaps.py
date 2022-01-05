@@ -32,8 +32,8 @@ def update():
 
 @task
 @roles('remote')
-def updateNodeKey():
-    """Rekey the remote nodes with newly generated keys"""
+def updateNodeKey(keepPasswd=False):
+    """Rekey the remote nodes with newly generated keys:[True to keep passwd enabled (defaults False)]"""
     etc_key_path = "/etc/riaps/"
     ssh_key_path = "/home/riaps/.ssh/"
     ssh_pubkey_name = os.path.join(ssh_key_path, str(const.ctrlPublicKey))
@@ -70,7 +70,9 @@ def updateNodeKey():
     sudo('chmod 444 ' + riaps_zmqcert_name)
     run('rm ' + ssh_zmqcert_name)
 
-    sudo('passwd -q -d riaps')
+    # Defaults to remove password to remote nodes, user can request to keep the password enabled
+    if not keepPasswd:
+        sudo('passwd -q -d riaps')
 
 @task
 @roles('nodes','control','remote','all')
@@ -98,7 +100,7 @@ def install(keepConfig=False):
             local('mkdir -p logs')
             get('riaps-install-' + hostname + '-' + package + '.log', 'logs/')
         except Exception as e:
-            print("install exception: %r" % e)            
+            print("install exception: %r" % e)
 
 @task
 @roles('nodes','control','remote','all')
@@ -118,7 +120,7 @@ def uninstall():
 def reset():
     """Kill riaps_, clean, restart riaps_*"""
     deplo.stop()            # stop deplo service
-    
+
     sudo('pkill -SIGKILL "(riaps_deplo|riaps_disco|riaps_actor|riaps_device)"')
 
     remains = sudo('pgrep -l riaps_')
@@ -126,14 +128,14 @@ def reset():
         print("=== Still alive: " + remains)
 
     hostname = run('hostname')
-    if hostname[0:4] == 'riaps':    
+    if hostname[0:4] == 'riaps':
         host_last_4 = hostname[-4:]
     else:
         # If it doesn't start with riaps, assume it is a development VM
         # Get last for digits of mac address since that is how apps and users are named.
         cmd = 'python3 -c "from riaps.utils.config import Config; c=Config(); print(c.NIC_NAME)"'
         nic_name = sudo(cmd)
-        if nic_name != None: 
+        if nic_name != None:
             cmd = 'ip link show %s | awk \'/ether/ {print $2}\'' % nic_name
             mac = sudo(cmd)
             host_last_4 = mac[-5:-3] + mac[-2:]
@@ -145,7 +147,7 @@ def reset():
     for app in apps:
         sudo('rm -R ' + env.riapsApps + '/' + app + '/')
         sudo('userdel ' + app.lower() + host_last_4)    # May fail if dev vm
-    sudo('rm -R' + env.riapsApps + '/riaps*.lmdb')
+    sudo('rm -R ' + env.riapsApps + '/riaps*.lmdb')
     deplo.start()
 
 @task
@@ -186,9 +188,10 @@ def getSystemLogs():
 @task
 @roles('nodes','control','remote','all')
 def getAppLogs(app_name):
-    """Get deployment logs and save them to logs/"""
-    local('mkdir -p logs')
-    get(env.riapsApps + '/' + app_name + '/*.log', 'logs/')
+    """Get deployment logs and save them to logs/:app_name"""
+    hostname = env.host_string
+    local('mkdir -p logs/' + hostname)
+    get(env.riapsApps + '/' + app_name + '/*.log', 'logs/' + hostname + '/')
 
 @task
 # @hosts('localhost')
