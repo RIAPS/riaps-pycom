@@ -33,7 +33,7 @@ def update():
 @task
 @roles('remote')
 def updateNodeKey(keepPasswd=False):
-    """Rekey the remote nodes with newly generated keys:[True to keep passwd enabled (defaults False)]"""
+    """Rekey the remote nodes with newly generated keys:[keepPasswd]"""
     etc_key_path = "/etc/riaps/"
     ssh_key_path = "/home/riaps/.ssh/"
     ssh_pubkey_name = os.path.join(ssh_key_path, str(const.ctrlPublicKey))
@@ -86,7 +86,7 @@ def updateAptKey():
 @task
 @roles('nodes','control','remote','all')
 def install(keepConfig=False):
-    """Install RIAPS packages from development host"""
+    """Install RIAPS packages from development host:[keepConfig]"""
     global packages
     hostname = env.host_string
     architecture = arch()
@@ -153,7 +153,7 @@ def reset():
 @task
 @roles('nodes','remote')
 def updateConfig():
-    """"Place local riaps.conf on all remote hosts"""
+    """"Place local riaps.conf on all nodes"""
     if(os.path.isfile(os.path.join(os.getcwd(), "riaps.conf"))):
         put('riaps.conf')
         sudo('cp riaps.conf /etc/riaps/')

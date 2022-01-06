@@ -8,7 +8,7 @@ import socket
 
 
 # Prevent namespace errors by explicitly defining which tasks belong to this file
-__all__ = ['hosts', 'check', 'shutdown', 'reboot', 'clearJournal', 'run', 'sudo', 'arch',
+__all__ = ['check', 'shutdown', 'reboot', 'clearJournal', 'run', 'sudo', 'arch',
            'flushIPTables', 'setJournalLogSize', 'getConfig']
 
 def catch(func, *args, **kwargs):
@@ -226,7 +226,7 @@ def flushIPTables():
 @task
 @roles('remote')
 def setJournalLogSize(size):
-    """Adjust journalctl log file size:<size>"""
+    """Adjust journalctl log file size:size"""
     newSize = f'SystemMaxUse={size}M'
     sudo(f'sed -i "/SystemMaxUse/c\{newSize}" /etc/systemd/journald.conf')
 
