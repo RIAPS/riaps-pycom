@@ -48,7 +48,7 @@ env.riapsLib = '/usr/local/lib'
 #env.key_filename = os.path.join(env.riapsHome,"keys/" + str(const.ctrlPrivateKey))
 validate = True if 'validate' in env else False
 
-# If a no command line roles or hosts are passed (i.e. -R or -H), only then use listed hosts
+# If no command line roles or hosts are passed (i.e. -R or -H), only then use listed hosts
 # Allows for passing of individual hosts or roles on which to run tasks
 env.roledefs = None
 if 'hostsFile' in env:
@@ -57,7 +57,7 @@ if 'hostsFile' in env:
     else:
         print("Given hosts file \"%s\" does not exist, exiting..." % env.hostsFile)
 # elif not env.roles and not env.hosts and not [s for s in env.tasks if 'sys.hosts' in s]:
-elif not [s for s in env.tasks if 'sys.hosts' in s]:
+else:
     # Task is not sys.hosts
     riaps_conf = os.path.join(env.riapsHome,'etc/riaps-hosts.conf')
     sys.hosts(riaps_conf,validate)
