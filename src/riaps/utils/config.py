@@ -10,6 +10,7 @@ from os.path import join
 import logging
 import logging.config
 
+
 class Config(object):
     '''
     Configuration database for RIAPS tools
@@ -18,9 +19,12 @@ class Config(object):
     TARGET_USER = 'riaps'
     SEND_TIMEOUT = -1
     RECV_TIMEOUT = -1
+    SEND_HWM = 100            # Send water mark
+    RECV_HWM = 100            # Receive high water mark
     NIC_NAME = None
-    NIC_RATE = '118kbps'   # 90% of 1 gigabits per sec
-    NIC_CEIL = '131kbps'   # 1 gigabits per sec
+    NIC_RATE = '118kbps'    # 90% of 1 gigabits per sec
+    NIC_CEIL = '131kbps'    # 1 gigabits per sec
+    DISCO_TYPE = 'redis'    # or 'opendht'
     CTRL_DEBUG_SERVER = ''
     DEPLO_DEBUG_SERVER = ''
     DISCO_DEBUG_SERVER = ''
@@ -41,18 +45,17 @@ class Config(object):
             print("RIAPS Configuration - RIAPSHOME is not set, using ./")
             riaps_folder = './'
         
-        riaps_logconf = join(riaps_folder,'etc/riaps-log.conf')
+        riaps_logconf = join(riaps_folder, 'etc/riaps-log.conf')
         
         try:
             logging.config.fileConfig(riaps_logconf)
         except Exception as e:
             logging.warning(' Log configuration file %s has a problem: %s.' % (riaps_logconf, str(e)))
             pass
-
         
         logger = logging.getLogger(__name__)
         
-        riaps_conf = join(riaps_folder,'etc/riaps.conf')
+        riaps_conf = join(riaps_folder, 'etc/riaps.conf')
         c_parse = configparser.ConfigParser()
     
         try:
@@ -68,12 +71,12 @@ class Config(object):
         
         try: 
             for item in c_parse.items(riaps_section):
-                key,arg = item
+                key, arg = item
                 opt = key.upper()
             
-                if hasattr(Config,opt):
-                    optType = type(getattr(Config,opt))
-                    optValue = getattr(Config,opt)
+                if hasattr(Config, opt):
+                    optType = type(getattr(Config, opt))
+                    optValue = getattr(Config, opt)
                     try:
                         if optType == str:
                             optValue = str(arg)
@@ -81,7 +84,7 @@ class Config(object):
                             optValue = int(arg)
                         elif optType == bool:
                             try:
-                                optValue = c_parse.getboolean(riaps_section,key)
+                                optValue = c_parse.getboolean(riaps_section, key)
                             except:
                                 print (1)
                                 pass
@@ -89,7 +92,7 @@ class Config(object):
                             optValue = float(arg)
                         else:
                             optValue = arg
-                        setattr(Config,opt,optValue)
+                        setattr(Config, opt, optValue)
                     except:
                         print(2)
                         logger.warning('Formal and actual type of configuration argument %s differ %s - ignored'

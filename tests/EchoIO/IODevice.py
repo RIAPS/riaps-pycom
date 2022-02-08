@@ -20,13 +20,23 @@ class IODeviceThread(threading.Thread):
         self.terminated = threading.Event()
         self.terminated.clear()
         self.trigger = trigger              # inside RIAPS port
-        self.port = port                    # port number for socket to connect to connect to console client 
+        self.port = port                    # port number for socket to connect to connect to console client
+        self.plug = None
+        self.plug_identity = None
         self.context = zmq.Context()
-        self.cons = self.context.socket(zmq.REP)    # Create zmq REP socket 
+        self.cons = self.context.socket(zmq.REP)    # Create zmq REP socket
         self.cons.bind("tcp://*:%s" % self.port)
         self.logger.info('IODeviceThread _init()_ed')
 
-    
+    def get_identity(self,ins_port):
+        if self.plug_identity is None:
+            while True:
+                if self.plug != None:
+                    self.plug_identity = ins_port.get_plug_identity(self.plug)
+                    break
+                time.sleep(0.1)
+        return self.plug_identity
+
     def run(self):
         self.logger.info('IODeviceThread starting')
         self.plug = self.trigger.setupPlug(self)    # Ask RIAPS port to make a plug (zmq socket) for this end
@@ -37,7 +47,7 @@ class IODeviceThread(threading.Thread):
             self.active.wait(None)                  # Events to handle activation/termination
             if self.terminated.is_set(): break
             if self.active.is_set():                # If we are active
-                socks = dict(self.poller.poll(1000.0))  # Run the poller: wait input from either side, timeout if none
+                socks = dict(self.poller.poll(5000.0))  # Run the poller: wait input from either side, timeout if none
                 if len(socks) == 0:
                     self.logger.info('IODeviceThread timeout')
                 if self.terminated.is_set(): break
@@ -48,16 +58,16 @@ class IODeviceThread(threading.Thread):
                     message = self.plug.recv_pyobj()
                     self.cons.send_pyobj(message)                           # Send it to the console
         self.logger.info('IODeviceThread ended')
-               
+
 
     def activate(self):
         self.active.set()
         self.logger.info('IODeviceThread activated')
-                    
+
     def deactivate(self):
         self.active.clear()
         self.logger.info('IODeviceThread deactivated')
-    
+
     def terminate(self):
         self.active.set()
         self.terminated.set()
@@ -68,13 +78,13 @@ class IODevice(Component):
         super(IODevice, self).__init__()
         self.logger.info("IODevice - starting")
         self.port = port
-        self.IODeviceThread = None  # Cannot manipulate ports in constructor or start threads, use clock pulse 
+        self.IODeviceThread = None  # Cannot manipulate ports in constructor or start threads, use clock pulse
 
     def on_clock(self):
         if self.IODeviceThread == None: # First clock pulse
             self.IODeviceThread = IODeviceThread(self.trigger,self.port,self.logger) # Inside port, external zmq port
-            self.IODeviceThread.start() # Start thread
-            time.sleep(0.1)
+            self.IODeviceThread.start() # St
+            self.trigger.set_identity(self.IODeviceThread.get_identity(self.trigger))
             self.trigger.activate()
         now = self.clock.recv_pyobj()   # Receive time (as float)
         self.clock.halt()               # Halt this timer (don't need it anymore)
@@ -85,12 +95,18 @@ class IODevice(Component):
         self.IODeviceThread.terminate()
         self.IODeviceThread.join()
         self.logger.info("__destroy__ed")
-        
+
     def on_trigger(self):                       # Internally triggered operation (
         msg = self.trigger.recv_pyobj()         # Receive message from internal thread
         self.logger.info('on_trigger():%s' % msg)
+
+        # Check if the 'echo' port is connected, if not, return
+        if self.echo.connected() == 0:
+            self.logger.info('Not yet connected!')
+            return
+
         self.echo.send_pyobj(msg)               # Send it to the echo server
-        
+
     def on_echo(self):
         msg = self.echo.recv_pyobj()            # Receive response from echo server
         self.logger.info('on_echo():%s' % msg)

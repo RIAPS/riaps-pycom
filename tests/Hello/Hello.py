@@ -10,5 +10,3 @@ class Hello(Component):
         now = self.clock.recv_pyobj()   # Receive time.time() as float
         self.logger.info('on_clock(): %s' % str(now))
     
-
-

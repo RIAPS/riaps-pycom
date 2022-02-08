@@ -21,8 +21,10 @@ import json
 import git
 from git import Repo
 import datetime
+import importlib
 import yaml
 import ipaddress
+import socket
 import tempfile
 import shutil
 # from collections import namedtuple
@@ -31,11 +33,14 @@ from Cryptodome.Signature import PKCS1_v1_5
 from Cryptodome.Hash import SHA256
 # import zmq
 import zmq.auth
+
+import opendht as dht
+
 from threading import RLock
 from enum import Enum, auto, unique 
 
 from riaps.consts.defs import *
-from riaps.utils.ifaces import getNetworkInterfaces
+from riaps.utils.ifaces import getNetworkInterfaces,get_random_port
 from riaps.utils.config import Config 
 from riaps.utils.appdesc import AppDescriptor
 from riaps.ctrl.ctrlsrv import ServiceThread, ServiceClient
@@ -65,7 +70,7 @@ class AppInfo(object):
         self.model = model
         self.depl= depl
         self.status = status
-        self.clients = []
+        self.clients = set()
     
 ctrlLock = RLock()
 
@@ -112,6 +117,7 @@ class Controller(object):
         self.gui = None
         self.clientMap = { }        # Maps hostIP -> ServiceClient 
         self.riaps_Folder = os.getenv('RIAPSHOME', './')
+        self.riaps_appFolder = None
         self.keyFile = os.path.join(self.riaps_Folder,"keys/" + str(const.ctrlPrivateKey))
         self.certFile = os.path.join(self.riaps_Folder,"keys/" + str(const.ctrlCertificate))
 #         self.riaps_appName = None   # App name
@@ -120,6 +126,11 @@ class Controller(object):
         self.appInfo = {}           # Info about apps 
         self.launchList = []        # List of launch operations
         self.setupHostKeys()
+        self.discoType = None     
+        try:
+            self.fabModule = importlib.util.find_spec('riaps.fabfile').submodule_search_locations[0]
+        except:
+            self.fabModule = 'fabfile'
 
     def setupIfaces(self):
         '''
@@ -135,7 +146,8 @@ class Controller(object):
         globalMAC = globalMACs[0]
         self.hostAddress = globalIP
         self.macAddress = globalMAC
-        self.nodeName = str(self.hostAddress)
+        self.nodeAddr = str(self.hostAddress)
+        self.nodeName = socket.gethostbyaddr(self.nodeAddr)[0]
         self.service = None
         
     def startService(self):
@@ -147,9 +159,9 @@ class Controller(object):
         self.service.start()
         time.sleep(0.001)           # Yield to thread to enable 
         
-    def startDbase(self):
+    def startRedis(self):
         '''
-        Start the (redis) database
+        Start Redis (for discovery)
         ''' 
         dbase_config = join(self.riaps_Folder,"etc/redis.conf")
         # Launch the database process
@@ -159,6 +171,16 @@ class Controller(object):
         except:
             self.logger.error("Error when starting database: %s", sys.exc_info()[0])
             raise
+        
+    def startDht(self):
+        '''
+        Start Dht node (for discovery)
+        '''
+        config = dht.DhtConfig()
+        config.setBootstrapMode(False)  # Server 
+        self.dht = dht.DhtRunner()
+        self.dhtPort = get_random_port()
+        self.dht.run(port=self.dhtPort,ipv4=self.hostAddress,config=config)
         
     def startUI(self):
         '''
@@ -173,7 +195,14 @@ class Controller(object):
         '''
         Start up everything in the controller
         '''
-        self.startDbase()
+        if Config.DISCO_TYPE == 'redis':
+            self.startRedis()
+            self.discoType = 'redis'
+        elif Config.DISCO_TYPE == 'opendht':
+            self.startDht()
+            self.discoType = 'opendht'
+        else:
+            self.logger.error("Unknown riaps_disco type %s", Config.DISCO_TYPE)
         self.startUI()
         self.startService()
         
@@ -242,6 +271,11 @@ class Controller(object):
         '''
         with ctrlLock:
             if clientName in self.clientMap:
+                client = self.clientMap[clientName]
+                apps = [app for (_,app) in self.appInfo.items() if client in app.clients]
+                for app in apps:
+                    app.clients.remove(client)
+                    if len(app.clients) == 0: app.status = AppStatus.NotLoaded
                 del self.clientMap[clientName]
     
     def isClient(self,clientName):
@@ -272,8 +306,9 @@ class Controller(object):
             client.kill()
     
     def cleanAll(self):
-        for client in self.clientMap.values():
-            self.removeAppFromClient(client, appName='')
+        appNames = [app for app in self.appInfo.keys()]
+        for appName in appNames:
+            self.removeAppByName(appName)
                 
     def setupHostKeys(self):
         # get host key, if we know one
@@ -465,7 +500,7 @@ class Controller(object):
             cltList = []
             for client in clients:
                 if client.stale:
-                    self.log('S %s',client.name)    # Stale client, we don't deploy
+                    self.log('S %s'% client.name)    # Stale client, we don't deploy
                 else:
                     ok = self.downloadAppToClient(appName,tgz_file,sha_file,client,resList)
                     if ok: cltList += [client.name]
@@ -557,6 +592,10 @@ class Controller(object):
         download = []
         if appName not in self.appInfo:
             return noresult
+        
+        if not self.riaps_appFolder:
+            return noresult
+        
         appInfo = self.appInfo[appName]
         appNameJSON = appName + ".json"
         
@@ -680,6 +719,8 @@ class Controller(object):
         clientActorMap = { }
         for clientName in self.clientMap:
             clientActorMap[clientName] = set()
+        # Keep track of clients the app is deployed on
+        appInfo = self.appInfo[appName]
         # Process the deployment and launch all actors.
         appNameJSON = appName + ".json"
         for depl in depls:
@@ -690,6 +731,7 @@ class Controller(object):
                     for clientName in self.clientMap:
                         client = self.clientMap[clientName]
                         client.setupApp(appName,appNameJSON)
+                        success = True
                         for actor in actors:
                             actorName = actor["name"]
                             if actorName in clientActorMap[clientName]:
@@ -703,14 +745,22 @@ class Controller(object):
                                 self.launchList.append([client,appName,actorName])
                                 self.log("L %s %s %s %s" % (clientName,appName,actorName,str(actualArgs)))
                                 clientActorMap[clientName].add(actorName)
+                                success &= True
                             except Exception:
                                 info = sys.exc_info()[1].args[0]
                                 self.log("? %s" % info)
+                                success = False
+                        if success:
+                            appInfo.clients.add(client)
+                        else:
+                            # Should retract partial deployment
+                            pass
                 else:
                     for target in targets:                      # Deploy on selected targets
                         client = self.findClient(target)
                         if client != None:
                             client.setupApp(appName,appNameJSON)
+                            success = True
                             for actor in actors:
                                 actorName = actor["name"]
                                 if actorName in clientActorMap[client.name]:
@@ -724,9 +774,13 @@ class Controller(object):
                                     self.launchList.append([client,appName,actorName])
                                     self.log("L %s %s %s %s" % (client.name,appName,actorName,str(actualArgs)))
                                     clientActorMap[client.name].add(actorName)
+                                    success &= True
                                 except Exception:
                                     info = sys.exc_info()[1].args[0]
                                     self.log("? %s" % info)
+                                    success = False
+                            if success:
+                                appInfo.clients.add(client)
                         else:
                             self.log('? %s ' % target)
         return True
@@ -737,14 +791,17 @@ class Controller(object):
         '''
         newLaunchList = []
         clientList = []
+        found = False
         for elt in self.launchList:
             client,appName,actorName = elt[0], elt[1], elt[2]
             if appName == appNameToHalt:
                 client.halt(appName,actorName)
                 self.log("H %s %s %s" % (client.name,appName,actorName))
                 clientList.append(client)
+                found = True
             else:
                 newLaunchList.append(elt)
+        if not found: return
         for client in clientList:
             res = client.reclaim(appName)
             if res == None: continue
@@ -830,6 +887,7 @@ class Controller(object):
         os.remove(const.sigFile)
             
     def removeApp(self, appName):
+        self.haltByName(appName)
         status = self.appInfo[appName].status if appName in self.appInfo else AppStatus.NotLoaded
         files,libraries,clients = [],[],[]
         if status == AppStatus.Loaded: 
@@ -865,7 +923,7 @@ class Controller(object):
             appName,_actors = item[0],item[1]
             if appName not in self.appInfo:
                 self.appInfo[appName] = AppInfo(model=None,depl=None,appFolder=None,status = AppStatus.Recovered)
-            self.appInfo[appName].clients += [client]
+            self.appInfo[appName].clients.add(client)
     
     def compileApplication(self,appModelName,appFolder):
         '''

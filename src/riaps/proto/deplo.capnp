@@ -28,7 +28,8 @@ struct DeviceGetReq {
   appName @0 : Text;
   modelName @1 : Text;
   typeName @2 : Text;
-  deviceArgs @3 : List(DeviceArg); 
+  instName @3 : Text;
+  deviceArgs @4 : List(DeviceArg); 
 }
 
 struct DeviceGetRep {
@@ -39,6 +40,7 @@ struct DeviceRelReq {
   appName @0 : Text;
   modelName @1 : Text;
   typeName @2 : Text;
+  instName @3 : Text;
 }
 
 struct DeviceRelRep {

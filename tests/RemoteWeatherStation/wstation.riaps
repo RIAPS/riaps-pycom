@@ -3,19 +3,19 @@
 app RemoteWeatherStation {
     message DataFrame; // data received from UART2
     message DataAck;   // writing message out UART2 (just to test writing capability)
-     
+
 	// Weather Station device interface - UART2
-    device WeatherReporter(port='ttyO2', baudrate=115200) {
+    device WeatherReporter(port='ttyS2', baudrate=115200) {
       // Inside port for forwarding messages coming from an internal thread.
       // The 'default' is optional, it implies a 1 sec timer/ticker thread.
       inside dataIn_queue; 	 // Receive data from UART1 and send to component
       inside dataOut_queue;  // Receive from component and write to UART1
-      
+
       timer clock 2000;
       pub reportedData : DataFrame ;	// Publish port for Weather Station data messages (data read from UART)
       sub listenerAck  : DataAck   ;    // Received Acknowledgement back from WeatherListener (write data to UART)
     }
-    
+
     // Weather Listener component
     component WeatherListener() {
       sub weatherDataReady : DataFrame ;	// Subscriber port to trigger component with reported weather data messages
@@ -27,8 +27,8 @@ app RemoteWeatherStation {
     actor RemoteWeatherStationActor() {
        local DataFrame, DataAck;	// Local message types
        {
-       	  reporter : WeatherReporter(port='ttyO2', baudrate=115200);
-          listener : WeatherListener(); 		
+       	  reporter : WeatherReporter(port='ttyS2', baudrate=115200);
+          listener : WeatherListener();
        }
     }
 }

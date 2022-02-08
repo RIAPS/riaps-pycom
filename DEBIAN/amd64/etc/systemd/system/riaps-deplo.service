@@ -1,6 +1,8 @@
 [Unit]
 Description=RIAPS Deployment Manager Service
 Requires=riaps-rm-cgroups.service riaps-rm-quota.service
+Wants=network-online.target
+After=network-online.target
 
 [Service]
 Type=simple

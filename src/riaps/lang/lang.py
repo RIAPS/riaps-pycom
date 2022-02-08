@@ -384,12 +384,27 @@ def op_port_obj_processor(port):
         unit = 'msec' if port.unit == None else port.unit
         port.deadline = RiapsModel2JSON.convertTime(spec,unit)
 
-# Object processor for io component instances: messages must be local
+# Object processor for actors: local and internal messages must be distinct
+def actor_obj_processor(actor):
+    localMessages = actor.locals
+    localMessageNames = set([localMessage.name for localMessage in localMessages])
+    internalMessages = actor.internals 
+    internalMessageNames = set([internalMessage.name for internalMessage in internalMessages])
+    sharedMessageNames = localMessageNames.intersection(internalMessageNames)
+    if len(sharedMessageNames) != 0:
+        raise TextXSemanticError('%s: Actor local and internal messages must be distinct - shared: %r' 
+                                 % (actor.name,sharedMessageNames))
+    else:
+        actor._messageNames = localMessageNames.union(internalMessageNames)
+    
+# Object processor for io component instances: messages must be local or internal
 def instance_obj_processor(instance):
     component = instance.type
     if component.ioComponent:
-        localMessages = instance.parent.locals
-        localMessageNames = [localMessage.name for localMessage in localMessages]
+        actor = instance.parent
+        if not hasattr(actor,'_messageNames'):
+            actor_obj_processor(actor)
+        messageNames = actor._messageNames
         portMessageNames = []
         for port in component.ports:
             if hasattr(port, 'type'):
@@ -401,8 +416,8 @@ def instance_obj_processor(instance):
             else:
                 pass
         for portMessageName in portMessageNames:
-            if portMessageName not in localMessageNames:
-                raise TextXSemanticError('Non-local message type %s for IO component %s:%s' 
+            if portMessageName not in messageNames:
+                raise TextXSemanticError('Non-(local/internal) message type %s for IO component %s:%s' 
                                          % (portMessageName,instance.name,component.name))
     else:
         pass
@@ -452,6 +467,7 @@ def compileModel(modelFileName,verbose=False,debug=False,generate=True):
         'TimPort': timport_obj_processor,
          # 'InsPort': op_port_obj_processor, # Inside port cannot be timed / have deadline
         'Instance': instance_obj_processor,
+        'Actor'   : actor_obj_processor,
         'PubPort' : timed_port_obj_processor,
         'SubPort' : op_port_obj_processor,
         'ClntPort': timed_port_obj_processor,

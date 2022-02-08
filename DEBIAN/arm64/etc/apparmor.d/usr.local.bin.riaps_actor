@@ -1,9 +1,11 @@
-# Last Modified: Apr 29, 2019
+# Last Modified: Mar 12 2021
 # Initial AppArmor security profile for RIAPS actors
+#
+# *** NOT RECOMMENDED FOR USE IN ENFORCE MODE WHILE DEVELOPING A RIAPS APP ***
+#
 # To install:
-# - Edit the 3 variables at the top for the final installation
+# - Edit the 4 variables at the top for the final installation
 # - Edit the main profile name (s.t. it refers to the riaps_actor executable script)
-# - For strict enforcement change the 'complain' flags to 'enforce'
 # - Rename the file corresponding to the value of @{RIAPSEXEC}/riaps_actor
 #   According to the AppArmor spec, all '/' must be replace with '.' , except the first one
 # - Copy the resulting file into /etc/apparmor.d, or load it into the kernel using apparmor_parser
@@ -14,7 +16,8 @@
 @{RIAPSAPPS}=/home/riaps/riaps_apps
 # Location of RIAPS scripts (i.e riaps_actor)
 @{RIAPSEXEC}=/usr/local/bin
-# Location of RIAPS externals
+# Python version
+@{PYTHONVERSION}=3.8
 
 #include <tunables/global>
 
@@ -39,8 +42,16 @@ profile /usr/local/bin/riaps_actor {
   /etc/** r,
   owner /proc/** rw,
   /usr/local/lib/** mr,
-  /usr/local/lib/python3.6/dist-packages/** mr,
+  /usr/local/lib/python@{PYTHONVERSION}/dist-packages/** mr,
   /usr/share/dpkg/** mr,
+  /usr/local/include/** mr,
+  /usr/local/** mr,
+  /usr/** mr,
+  / r,
+
+  /bin/* ix,
+  /usr/bin/* ix,
+  /usr/local/bin/* ix,
 
    # Script file
   /usr/local/bin/riaps_actor r,

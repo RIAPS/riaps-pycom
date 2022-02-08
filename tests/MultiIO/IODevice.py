@@ -16,7 +16,7 @@ def get_random_string(length):
     letters = string.ascii_lowercase
     res = ''.join(random.choice(letters) for i in range(length))
     return res
-    
+
 class IODeviceThread(threading.Thread):
     '''
     Inner IODevice thread
@@ -37,7 +37,7 @@ class IODeviceThread(threading.Thread):
 
     def get_plug(self):
         return self.plug
-    
+
     def run(self):
         self.logger.info('IODeviceThread[%d] starting' % self.ident)
         self.plug = self.trigger.setupPlug(self)    # Ask RIAPS port to make a plug (zmq socket) for this end
@@ -57,7 +57,7 @@ class IODeviceThread(threading.Thread):
                     self.plug.send_pyobj(message)       # Send random string to component thread
                     self.past.append(message)
                 elif self.plug in socks and socks[self.plug] == zmq.POLLIN:   # Input from the plug
-                    message = self.plug.recv_pyobj()    # Receive messages 
+                    message = self.plug.recv_pyobj()    # Receive messages
                     self.logger.info("IODeviceThread[%d] recv = %s" % (self.ident,message))
                     if len(self.past) > 0:
                         sent = self.past.popleft()
@@ -65,16 +65,16 @@ class IODeviceThread(threading.Thread):
                     else:
                         pass
         self.logger.info('IODeviceThread ended')
-               
+
 
     def activate(self):
         self.active.set()
         self.logger.info('IODeviceThread[%d] activated' % self.ident)
-                    
+
     def deactivate(self):
         self.active.clear()
         self.logger.info('IODeviceThread[%d] deactivated' % self.ident)
-    
+
     def terminate(self):
         self.active.set()
         self.terminated.set()
@@ -98,8 +98,8 @@ class IODevice(Component):
                     time.sleep(0.1)
                     plug = thread.get_plug()
                     if plug != None:            # Retrieve the 'plug' of the inner thread
-                        identity = self.trigger.get_plug_identity(plug) # Retrieve the identity of the thread's plug 
-                        self.ioPlugs[identity] = thread # Map the plug's identity to the inner thread 
+                        identity = self.trigger.get_plug_identity(plug) # Retrieve the identity of the thread's plug
+                        self.ioPlugs[identity] = thread # Map the plug's identity to the inner thread
                         break
             self.trigger.activate()
         now = self.clock.recv_pyobj()   # Receive time (as float)
@@ -107,10 +107,10 @@ class IODevice(Component):
         for (thread_id,thread) in self.ioThreads.items():  # Send an initial message to the inner threads
                 plug = thread.get_plug()
                 if plug != None:            # Retrieve the 'plug' of the inner thread
-                    plug_identity = self.trigger.get_plug_identity(plug) # Retrieve the identity of the thread's plug 
+                    plug_identity = self.trigger.get_plug_identity(plug) # Retrieve the identity of the thread's plug
                     msg = "first msg to %s" % str(thread_id)
                     # Before sending the message we have to set the identity - this will ensure that it gets sent to the correct thread
-                    self.trigger.set_identity(plug_identity)  
+                    self.trigger.set_identity(plug_identity)
                     self.trigger.send_pyobj(msg)
 
     def __destroy__(self):
@@ -120,20 +120,24 @@ class IODevice(Component):
             thread.terminate()
             thread.join()
         self.logger.info("__destroy__ed")
-        
-    def on_trigger(self):                       # Internally triggered operation 
+
+    def on_trigger(self):                       # Internally triggered operation
         msg = self.trigger.recv_pyobj()         # Receive message from an inner thread
-       # Each plug (of an inner thread) has an identity that can be retrieved after receiving the message 
-        src_plug_id = self.trigger.get_identity()   
-        src_thread_id = self.ioPlugs[src_plug_id].ident 
+       # Each plug (of an inner thread) has an identity that can be retrieved after receiving the message
+        src_plug_id = self.trigger.get_identity()
+        src_thread_id = self.ioPlugs[src_plug_id].ident
         self.logger.info('on_trigger(): from %d recv = %s' % (src_thread_id,msg))
+        # Check if the 'echo' port is connected, if not, return
+        if self.echo.connected() == 0:
+            self.logger.info('Not yet connected!')
+            return
         msg_out = (src_plug_id, msg)                # We pass along the identity (and we will get it back from the the echo server)
         self.echo.send_pyobj(msg_out)               # Send it to the echo server
-        
+
     def on_echo(self):
         (dst_plug_id,msg) = self.echo.recv_pyobj()    # Receive response from echo server (including the sender's identity)
         dst_thread_id = self.ioPlugs[dst_plug_id].ident
         self.logger.info('on_echo(): to %d %s' % (dst_thread_id,msg))
         # Before sending the message we have to set the identity - this will ensure that it gets sent to the correct thread
-        self.trigger.set_identity(dst_plug_id)  
+        self.trigger.set_identity(dst_plug_id)
         self.trigger.send_pyobj(msg)            # Send it to the internal thread

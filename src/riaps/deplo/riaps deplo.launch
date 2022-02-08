@@ -7,6 +7,8 @@
         <listEntry value="1"/>
     </listAttribute>
     <mapAttribute key="org.eclipse.debug.core.environmentVariables">
+        <mapEntry key="PATH" value="${env_var:PATH}:${workspace_loc:RIAPS/src/scripts}"/>
+        <mapEntry key="PWD" value="${workspace_loc:RIAPS/tmp}"/>
         <mapEntry key="RIAPSAPPS" value="${workspace_loc:RIAPS/tmp}"/>
         <mapEntry key="RIAPSHOME" value="${workspace_loc:RIAPS/src/riaps}"/>
     </mapAttribute>

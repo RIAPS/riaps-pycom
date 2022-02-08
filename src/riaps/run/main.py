@@ -32,11 +32,12 @@ from riaps.utils.trace import riaps_trace
 
 from .actor import Actor
 
-#: Singleton Actor object
+# : Singleton Actor object
 theActor = None
 
-#: Singleton Config object, holds the configuration information. 
+# : Singleton Config object, holds the configuration information. 
 theConfig = None 
+
 
 def interact():
     ''' Interactive console for debugging (not used)
@@ -44,7 +45,8 @@ def interact():
     import code
     code.InteractiveConsole(locals=globals()).interact()
 
-def termHandler(signal,frame):
+
+def termHandler(signal, frame):
     '''Actor termination handler, attached to SIGTERM.
     
     Simply calls the Actor.terminate() method.
@@ -63,6 +65,7 @@ def termHandler(signal,frame):
 # def sigXSPCHandler(signal,frame):
 #     global theActor
 #     theActor.handleSpcLimit()
+
     
 def main(debug=True):
     ''' main() entry point for riaps_actor. 
@@ -74,22 +77,22 @@ def main(debug=True):
     '''
     
     parser = argparse.ArgumentParser()
-    parser.add_argument("app", help="app name")             # App name
-    parser.add_argument("model", help="model file name")    # Model file argument
-    parser.add_argument("actor", help="actor name")         # Actor name argument
-    parser.add_argument("-t","--trace",help="debug server on host:port")
-    (args,rest) = parser.parse_known_args()
+    parser.add_argument("app", help="app name")  # App name
+    parser.add_argument("model", help="model file name")  # Model file argument
+    parser.add_argument("actor", help="actor name")  # Actor name argument
+    parser.add_argument("-t", "--trace", help="debug server on host:port")
+    (args, rest) = parser.parse_known_args()
     
     # Read configuration    
     global theConfig
     theConfig = Config()
-    traced = riaps_trace(args.trace,'ACTOR_DEBUG_SERVER')
+    traced = riaps_trace(args.trace, 'ACTOR_DEBUG_SERVER')
     
     appFolder = os.getenv('RIAPSAPPS', './')
-    appFolder = join(appFolder,args.app)
-    modelFileName = join(appFolder,args.model) 
+    appFolder = join(appFolder, args.app)
+    modelFileName = join(appFolder, args.model) 
     try:
-        fp = open(modelFileName,'r')           # Load model file
+        fp = open(modelFileName, 'r')  # Load model file
         model = json.load(fp)
         aName = args.actor
     except IOError as e:
@@ -98,22 +101,22 @@ def main(debug=True):
     except: 
         print ("Unexpected error:", sys.exc_info()[0])
         os._exit(1)
-    sys.path.append(appFolder)   # Ensure load_module works from current directory
+    sys.path.append(appFolder)  # Ensure load_module works from current directory
     
     # Setup the logger formatter 
     logging.Formatter.default_time_format = '%H:%M:%S'
     logging.Formatter.default_msec_format = '%s,%03d'
 
     global theActor
-    theActor = Actor(model,args.model,aName,rest)   # Construct the Actor
-    signal.signal(signal.SIGTERM,termHandler)       # Termination signal handler
+    theActor = Actor(model, args.model, aName, rest)  # Construct the Actor
+    signal.signal(signal.SIGTERM, termHandler)  # Termination signal handler
 #     signal.signal(signal.SIGXCPU,sigXCPUHandler)    # CPU limit exceeded handler 
 #     signal.signal(signal.SIGUSR1,sigXMEMHandler)    # Mem limit exceeded handler 
 #     signal.signal(signal.SIGUSR2,sigXSPCHandler)    # Spc limit exceeded handler     
     try:
-        theActor.setup()                        # Setup the objects contained in the actor
-        theActor.activate()                     # Activate the components 
-        theActor.start()                        # Start the actor main loop
+        theActor.setup()  # Setup the objects contained in the actor
+        theActor.activate()  # Activate the components 
+        theActor.start()  # Start the actor main loop
     except:
         traceback.print_exc()
         info = sys.exc_info()
@@ -121,6 +124,7 @@ def main(debug=True):
         os._exit(1)
 #     if debug:
 #         interact()
+
 
 if __name__ == '__main__':
     main()
