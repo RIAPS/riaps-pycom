@@ -13,6 +13,7 @@ from pyroute2 import IPRSocket
 from pyroute2.netlink import rtnl 
 
 import ctypes
+import parse
 import os
 import czmq
 import zyre
@@ -26,7 +27,7 @@ import traceback
 
 class FMMonitor(threading.Thread):
     def __init__(self,context,hostAddress,riapsHome):
-        threading.Thread.__init__(self)
+        threading.Thread.__init__(self,daemon=True)
         self.logger = logging.getLogger(__name__)
         self.context = context
         self.hostAddress = hostAddress
@@ -77,6 +78,11 @@ class FMMonitor(threading.Thread):
             time.sleep(0.1)
             self.control.send_pyobj(('stop',))
     
+    def peerHeaderKey(self,ipAddress):
+        return b'riaps@' + ipAddress.encode('utf-8')
+    
+    PEERMARK = b'CAFE'
+    
     def groupName(self,appName):
         return b'riaps.' + appName.encode('utf-8')
         
@@ -96,8 +102,7 @@ class FMMonitor(threading.Thread):
             self.zyre.set_zcert(cert) 
         self.zyre.set_evasive_timeout(const.peerEvasiveTimeout)
         self.zyre.set_expired_timeout(const.peerExpiredTimeout)
-        self.zyre.set_header(b'riaps@' + self.hostAddress.encode('utf-8'),
-                             b'hello')
+        self.zyre.set_header(self.peerHeaderKey(self.hostAddress), self.PEERMARK)
         self.command = self.context.socket(zmq.PAIR)
         self.command.connect(const.fmMonitorEndpoint)
         self.zyre.start()
@@ -174,46 +179,70 @@ class FMMonitor(threading.Thread):
 #                              str(group),str(_headers),str(msg)))
                 if eType == b'ENTER':
                     self.logger.info("FMMon.ENTER %s from %s" % (str(pUUID),str(pAddr)))
-                    self.peers[pUUID] = pAddr
+                    try:
+                        pAddrStr = pAddr.decode('UTF-8')
+                        (peerIp,_peerPort) = parse.parse("tcp://{}:{}",pAddrStr)
+                        peerHeaderKey =  self.peerHeaderKey(peerIp)
+                        _value = _headers.lookup(peerHeaderKey)
+                        if (_value):
+                            try:
+                                value = ctypes.cast(_value,ctypes.c_char_p).value
+                                assert value == self.PEERMARK
+                                self.peers[pUUID] = pAddr
+                                self.logger.info("FMMon.ENTER valid peer")
+                            except:
+                                self.logger.info("FMMon.ENTER header value mismatch")
+                        else:
+                            self.logger.info("FMMon.ENTER header key mismatch")
+                    except:
+                        self.logger.info("FMMon.ENTER peer addr parsing error")
+                elif pUUID not in self.peers:   # Skip the rest if this is not a peer
+                    continue
                 elif eType == b'JOIN':
                     groupName = group.decode()
                     self.logger.info("FMMon.JOIN %s from %s" % (str(groupName), str(pUUID)))
                     if groupName == 'riaps':
                         continue                # Joined riaps group - should be validated
                     else:
-                        _,appName = groupName.split('.')
-                        if appName not in self.groups:
-                            self.groups[appName] = { pUUID }
-                            if appName not in self.actors:
-                                self.actors[appName] = set()
+                        _head,appName = groupName.split('.')
+                        if _head == 'riaps':
+                            if appName not in self.groups:
+                                self.groups[appName] = { pUUID }
+                                if appName not in self.actors:
+                                    self.actors[appName] = set()
+                            else:
+                                self.groups[appName].add(pUUID) 
+                            if appName in self.actors:
+                                peer = pUUID
+                                for actorName in self.actors[appName]:
+                                    arg = "+ %s.%s" % (appName,actorName)
+                                    self.logger.info("FMMon.JOIN.whisper: %s to %s " % (arg, str(peer)))
+                                    self.zyre.whispers(peer,arg.encode('utf-8'))
+                                    self.logger.info("FMMon.JOIN tell %s.%s has peer at %s" 
+                                          % (appName,actorName,str(peer))) 
+                                    info = ('peer+', appName, actorName, peer)
+                                    self.command.send_pyobj(info)
                         else:
-                            self.groups[appName].add(pUUID) 
-                        if appName in self.actors:
-                            peer = pUUID
-                            for actorName in self.actors[appName]:
-                                arg = "+ %s.%s" % (appName,actorName)
-                                self.logger.info("FMMon.JOIN.whisper: %s to %s " % (arg, str(peer)))
-                                self.zyre.whispers(peer,arg.encode('utf-8'))
-                                self.logger.info("FMMon.JOIN tell %s.%s has peer at %s" 
-                                      % (appName,actorName,str(peer))) 
-                                info = ('peer+', appName, actorName, peer)
-                                self.command.send_pyobj(info)
+                            pass
                 elif eType == b'LEAVE':
                     groupName = group.decode()
                     self.logger.info("FMMon.LEAVE %s from %s" % (str(pUUID),str(group)))
                     if groupName == 'riaps':
                         continue                # Left riaps group - should be validated
                     else:
-                        _,appName = groupName.split('.')
-                        if appName in self.groups:
-                            self.groups[appName].remove(pUUID)
-                        if appName in self.actors:
-                            for actorName in self.actors[appName]:
-                                peer = pUUID
-                                self.logger.info("FMMon.LEAVE tell %s.%s lost peer at %s" 
-                                      % (appName,actorName,str(peer))) 
-                                info = ('peer-', appName, actorName, peer)
-                                self.command.send_pyobj(info)
+                        _head,appName = groupName.split('.')
+                        if _head == 'riaps':
+                            if appName in self.groups:
+                                self.groups[appName].remove(pUUID)
+                            if appName in self.actors:
+                                for actorName in self.actors[appName]:
+                                    peer = pUUID
+                                    self.logger.info("FMMon.LEAVE tell %s.%s lost peer at %s" 
+                                          % (appName,actorName,str(peer))) 
+                                    info = ('peer-', appName, actorName, peer)
+                                    self.command.send_pyobj(info)
+                        else:
+                            pass
                 elif eType == b'EXIT':
                     self.logger.info("FMMon.EXIT %s " % (str(pUUID)))
                     for appName,group in self.groups.items():
@@ -227,11 +256,12 @@ class FMMonitor(threading.Thread):
                                     self.command.send_pyobj(info)
                     if pUUID in self.peers: del self.peers[pUUID]
                 elif eType == b'SHOUT' or eType == b'WHISPER':
+                    # IF SHOUT, verify that this is for us
                     arg = msg.popstr().decode()
                     self.logger.info("FMMon.SHOUT %s = %s " % (str(pUUID), arg))
                     peer = pUUID
                     cmd,pair = arg.split(' ')
-                    appName,actorName = pair.split('.')
+                    appName,actorName = pair.split('.',1)
                     head, cast = '?','?'
                     if cmd == '+': 
                         head,cast = 'peer+',' has peer '
@@ -262,7 +292,7 @@ class FMMonitor(threading.Thread):
         
 class NICMonitor(threading.Thread):
     def __init__(self,context):
-        threading.Thread.__init__(self)
+        threading.Thread.__init__(self,daemon=True)
         self.logger = logging.getLogger(__name__)
         self.context = context
         self.ip = IPRSocket()

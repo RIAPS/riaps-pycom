@@ -23,6 +23,7 @@ class SpcLimit(Component):
     def waste(self):
         try:
             cmd = 'dd if=/dev/zero of=%s bs=1M count=%d' % (self.name,self.size)
+            self.logger.info('%s' % cmd)
             res = os.system(cmd)
         except:     
             self.logger.info("waste: op failed at %d" % (self.size))
@@ -37,9 +38,16 @@ class SpcLimit(Component):
         
     def handleSpcLimit(self):
         self.logger.info('handleSpcLimit() ')
-        os.remove(self.name)
+        try:
+            os.remove(self.name)
+        except:
+            pass
         self.size = self.delta
    
     def __destroy__(self):
-        os.remove(self.name)
+        try:
+            os.remove(self.name)
+        except:
+            pass
         self.logger.info("__destroy__")
+        

@@ -1,0 +1,6 @@
+// RIAPS Multi IO 
+// Example for app with device component with multiple internal threads 
+
+app MultiIO {
+	on all EchoIO(nthreads=3);
+}

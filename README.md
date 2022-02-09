@@ -166,3 +166,6 @@ A typical good place for the **settrace()** statement is the component construct
 4) When the component code is running and it reaches the settrace() statement, it stops and links up with the debug server running in Eclipse. From this point one can control the execution of the component code: can set breakpoints, single step, etc. - just like in a normal debugging session.
 
 ## [RIAPS on a single VM Host](mininet.md)
+
+See mn/README.md
+

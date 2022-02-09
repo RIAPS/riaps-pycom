@@ -3,7 +3,7 @@ Created on Oct 10, 2016
 
 @author: riaps
 '''
-from .port import Port
+from .port import Port,PortScope,PortInfo
 import threading
 import zmq
 import time
@@ -11,9 +11,11 @@ import logging
 import struct
 from .exc import OperationError
 
+
 class TimerThread(threading.Thread):
-    def __init__(self,parent):
-        threading.Thread.__init__(self)
+
+    def __init__(self, parent):
+        threading.Thread.__init__(self,daemon=True)
         self.logger = logging.getLogger(__name__)
         self.name = parent.instName
         self.context = parent.context
@@ -21,7 +23,7 @@ class TimerThread(threading.Thread):
             self.period = None
             self.periodic = False
         else:
-            self.period = parent.period * 0.001 # millisec
+            self.period = parent.period * 0.001  # millisec
             self.periodic = True
         self.delay = None
         self.active = threading.Event()
@@ -34,34 +36,34 @@ class TimerThread(threading.Thread):
         self.started.clear()
         
     def run(self):
-        self.socket = self.context.socket(zmq.PAIR) # PUB
+        self.socket = self.context.socket(zmq.PAIR)  # PUB
         self.socket.bind('inproc://timer_' + self.name)     
         while 1:
-            self.active.wait(None)                  # Wait for activation
-            if self.terminated.is_set(): break      # If terminated, we exit
-            if self.periodic:                       # Periodic timer
+            self.active.wait(None)  # Wait for activation
+            if self.terminated.is_set(): break  # If terminated, we exit
+            if self.periodic:  # Periodic timer
                 self.started.wait(None)  
                 if self.terminated.is_set(): break        
-                self.waiting.wait(self.period)      # Wait for period
+                self.waiting.wait(self.period)  # Wait for period
                 if self.terminated.is_set(): break  
-                if self.waiting.is_set():           # Period was cancelled
-                    self.waiting.clear()            # Start next period, but do not send tick
+                if self.waiting.is_set():  # Period was cancelled
+                    self.waiting.clear()  # Start next period, but do not send tick
                     continue
-                if self.active.is_set() and self.started.is_set():            # Send tick (if active)
+                if self.active.is_set() and self.started.is_set():  # Send tick (if active)
                     value = time.time()
                     self.socket.send_pyobj(value)
-            else:                                   # One shot timer
+            else:  # One shot timer
                 while 1:
-                    self.started.wait(None)         # Wait for start
+                    self.started.wait(None)  # Wait for start
                     if self.terminated.is_set(): break
                     assert self.delay != None and self.delay > 0.0
-                    self.waiting.wait(self.delay)   # Wait for the delay
-                    if self.terminated.is_set() : break  
-                    self.started.clear()            # We are not started anymore
-                    if self.waiting.is_set():       # Delay was cancelled
-                        self.waiting.clear()        # Enable next waiting, but  do not send tick
+                    self.waiting.wait(self.delay)  # Wait for the delay
+                    if self.terminated.is_set(): break  
+                    self.started.clear()  # We are not started anymore
+                    if self.waiting.is_set():  # Delay was cancelled
+                        self.waiting.clear()  # Enable next waiting, but  do not send tick
                         continue
-                    if self.active.is_set():        # Send tick (if active)
+                    if self.active.is_set():  # Send tick (if active)
                         value = time.time()
                         self.socket.send_pyobj(value)
         pass
@@ -85,7 +87,7 @@ class TimerThread(threading.Thread):
         '''
         Terminate the timer 
         '''
-        self.started.set()          # Get out of wait if we are not started
+        self.started.set()  # Get out of wait if we are not started
         self.terminated.set()
         self.waiting.set()
     
@@ -95,7 +97,7 @@ class TimerThread(threading.Thread):
         '''
         return self.period
     
-    def setPeriod(self,_period):
+    def setPeriod(self, _period):
         ''' 
         Set the period - will be changed after the next firing.
         Period must be positive
@@ -109,7 +111,7 @@ class TimerThread(threading.Thread):
         '''
         return self.delay
     
-    def setDelay(self,_delay):
+    def setDelay(self, _delay):
         '''
         Set the current delay (for sporadic timer)
         '''
@@ -133,15 +135,16 @@ class TimerThread(threading.Thread):
         Cancel the sporadic timer
         '''
         if self.started.is_set():
-            self.waiting.set()      # Go to wait mode if started
+            self.waiting.set()  # Go to wait mode if started
         else:
-            pass                    # Ignore if not started
+            pass  # Ignore if not started
         
     def halt(self):
         '''
         Halt the timer
         '''
         self.started.clear()
+
         
 class TimPort(Port):
     '''
@@ -152,11 +155,11 @@ class TimPort(Port):
         '''
         Constructor
         '''
-        super(TimPort,self).__init__(parentPart,portName,portSpec)
+        super(TimPort, self).__init__(parentPart, portName, portSpec)
         self.logger = logging.getLogger(__name__)
         self.instName = self.parent.name + '.' + self.name
         self.period = portSpec["period"]
-        self.deadline = portSpec["deadline"] * 0.001 # msec
+        self.deadline = portSpec.get("deadline",0) * 0.001  # msec
         self.thread = None
         self.info = None
 
@@ -164,13 +167,14 @@ class TimPort(Port):
         self.thread = TimerThread(self)
         self.thread.start() 
     
-    def setupSocket(self,owner):
+    def setupSocket(self, owner):
         self.setOwner(owner)
         assert self.instName == self.thread.name       
-        self.socket = self.context.socket(zmq.PAIR) # SUB
+        self.socket = self.context.socket(zmq.PAIR)  # SUB
         self.socket.connect('inproc://timer_' + self.instName)
         # self.socket.setsockopt_string(zmq.SUBSCRIBE, u'')
-        self.info = ('tim',self.name)
+        self.info = PortInfo(portKind='tim', portScope=PortScope.INTERNAL, portName=self.name, 
+                             msgType='tick', portHost='', portNum=-1)
         return self.info
 
     def reset(self):
@@ -210,7 +214,7 @@ class TimPort(Port):
         else:
             return None
     
-    def setPeriod(self,_period):
+    def setPeriod(self, _period):
         ''' 
         Set the period - will be changed after the next firing.
         Period must be positive
@@ -229,7 +233,7 @@ class TimPort(Port):
         else:
             return None
     
-    def setDelay(self,_delay):
+    def setDelay(self, _delay):
         '''
         Set the current delay (for sporadic timer)
         '''
@@ -278,7 +282,7 @@ class TimPort(Port):
         res = self.socket.recv_pyobj()
         return res
     
-    def send_pyobj(self,msg):
+    def send_pyobj(self, msg):
         raise OperationError("attempt to send through a timer port")
     
     def recv(self):
@@ -294,5 +298,4 @@ class TimPort(Port):
     
     def getInfo(self):
         return self.info
-    
     

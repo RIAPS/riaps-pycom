@@ -31,7 +31,12 @@ def visualize_messages(G,appModel,msgMap, msgMapUsed):
     G.add_subgraph(msgs)
     return msgs
 
-def findMsgNode(msgType,actorLocals,actorLocalMessageNodes,msgMap,msgMapUsed,msgGraph):
+def findMsgNode(msgType,
+                actorLocals,actorLocalMessageNodes,
+                actorInternals,actorInternalMessageNodes,
+                msgMap,msgMapUsed,
+                localMsgGraph,
+                internalMsgGraph):
     msgNode = None
     if msgType in actorLocals:
         if msgType in actorLocalMessageNodes:
@@ -39,15 +44,26 @@ def findMsgNode(msgType,actorLocals,actorLocalMessageNodes,msgMap,msgMapUsed,msg
         else: 
             msgNode = pydot.Node(unique(msgType), label=msgType)
             msgNode.set('shape','ellipse')
-            msgGraph.add_node(msgNode)
+            localMsgGraph.add_node(msgNode)
             actorLocalMessageNodes[msgType] = msgNode
+    elif msgType in actorInternals:
+        if msgType in actorInternalMessageNodes:
+            msgNode = actorInternalMessageNodes[msgType]
+        else: 
+            msgNode = pydot.Node(unique(msgType), label=msgType)
+            msgNode.set('shape','ellipse')
+            internalMsgGraph.add_node(msgNode)
+            actorInternalMessageNodes[msgType] = msgNode
     else:
         msgNode = msgMap[msgType]
         msgMapUsed[msgType] = True
     return msgNode
 
-def findMsgNodePair(msgType,actorLocals,actorLocalMessageNodes,msgMap,
-                    localMsgGraph,globalMsgGraph):
+def findMsgNodePair(msgType,
+                    actorLocals,actorLocalMessageNodes,
+                    actorInternals,actorInternalMessageNodes,
+                    msgMap,
+                    localMsgGraph,internalMsgGraph,globalMsgGraph):
     msgNode = None
     reqType,repType = msgType
     msgPair = str(reqType) + '_' + str(repType)
@@ -60,6 +76,14 @@ def findMsgNodePair(msgType,actorLocals,actorLocalMessageNodes,msgMap,
             msgNode.set('shape','Mrecord')
             localMsgGraph.add_node(msgNode)
             actorLocalMessageNodes[msgPair] = msgNode
+    elif (reqType in actorInternals) and (repType in actorInternals):
+        if msgPair in actorInternalMessageNodes:
+            msgNode = actorInternalMessageNodes[msgPair]
+        else:
+            msgNode = pydot.Node(unique(msgPair), label=msgLabel)
+            msgNode.set('shape','Mrecord')
+            internalMsgGraph.add_node(msgNode)
+            actorInternalMessageNodes[msgPair] = msgNode      
     else:
         if msgPair in msgMap:
             msgNode = msgMap[msgPair]
@@ -75,22 +99,37 @@ def visualize_actors(G,appModel,hostName,hostLabel,actors,msgMap,msgMapUsed,glob
     actorModels = appModel['actors']
     componentModels = appModel['components']
     deviceModels = appModel['devices']
-
+    
+    actorLocals = [] 
+    actorLocalMessageNodes = { }
+    localMsgSubgraph = None
+    
+    # Locals 
     for actor in actors:
         actorName = actor['name']
-#         actorNode = pydot.Node(unique(actorName),label=actorName)
-#         actorNode.set('shape','box3d')
-        actorCluster = pydot.Cluster(graph_name=unique(actorName), label=actorName, style='rounded')
         actorModel = actorModels[actorName]
-        actorLocals = [] 
         for localMessage in actorModel['locals']:
             actorLocals.append(localMessage['type'])
-        actorLocalMessageNodes = { }
-        if len(actorLocals) != 0:
-            localMsgSubgraph = pydot.Subgraph(unique(actorName + '_msgs'),rank='min') #,rankdir='LR')
+    if len(actorLocals) != 0:
+            localMsgSubgraph = pydot.Subgraph(unique(hostName + '_msgs'),rank='min') #,rankdir='LR')
             host.add_subgraph(localMsgSubgraph)
+    
+    for actor in actors:
+        actorName = actor['name']
+        # actorNode = pydot.Node(unique(actorName),label=actorName)
+        # actorNode.set('shape','box3d')
+        actorCluster = pydot.Cluster(graph_name=unique(actorName), label=actorName, style='rounded')
+        actorModel = actorModels[actorName]
+        # Internals
+        actorInternals = []
+        for internalMessage in actorModel['internals']:
+            actorInternals.append(internalMessage['type'])
+        actorInternalMessageNodes = { }
+        if len(actorInternals) != 0:
+            internalMsgSubgraph = pydot.Subgraph(unique(actorName + '_msgs'),rank='min') #,rankdir='LR')
+            actorCluster.add_subgraph(internalMsgSubgraph)
         else:
-            localMsgSubgraph = None
+            internalMsgSubgraph = None 
         for instName,instObj in actorModel['instances'].items():
             instType = instObj['type']
             compName = instName + '_' + instType
@@ -106,45 +145,63 @@ def visualize_actors(G,appModel,hostName,hostLabel,actors,msgMap,msgMapUsed,glob
             compPorts = compType['ports']
             for _key,value in compPorts['pubs'].items():
                 msgType = value['type']
-                msgNode = findMsgNode(msgType,actorLocals,actorLocalMessageNodes,
-                                      msgMap,msgMapUsed,localMsgSubgraph)
+                msgNode = findMsgNode(msgType,
+                                      actorLocals,actorLocalMessageNodes,
+                                      actorInternals,actorInternalMessageNodes,
+                                      msgMap,msgMapUsed,localMsgSubgraph,internalMsgSubgraph)
                 G.add_edge(pydot.Edge(compNode,msgNode))
             for _key,value in compPorts['subs'].items():
                 msgType = value['type']
-                msgNode = findMsgNode(msgType,actorLocals,actorLocalMessageNodes,
-                                      msgMap,msgMapUsed,localMsgSubgraph)
+                msgNode = findMsgNode(msgType,
+                                      actorLocals,actorLocalMessageNodes,
+                                      actorInternals,actorInternalMessageNodes,
+                                      msgMap,msgMapUsed,localMsgSubgraph,internalMsgSubgraph)
                 G.add_edge(pydot.Edge(msgNode,compNode))
             for _key,value in compPorts['qrys'].items():
                 msgType = (value['req_type'],value['rep_type'])
-                msgNode = findMsgNodePair(msgType,actorLocals,actorLocalMessageNodes,
-                                          msgMap,localMsgSubgraph,globalMsgSubgraph)
+                msgNode = findMsgNodePair(msgType,
+                                          actorLocals,actorLocalMessageNodes,
+                                          actorInternals,actorInternalMessageNodes,
+                                          msgMap,
+                                          localMsgSubgraph,internalMsgSubgraph,globalMsgSubgraph)
                 G.add_edge(pydot.Edge(compNode,msgNode))
             for _key,value in compPorts['anss'].items():
                 msgType = (value['req_type'],value['rep_type'])
-                msgNode = findMsgNodePair(msgType,actorLocals,actorLocalMessageNodes,
-                                          msgMap,localMsgSubgraph,globalMsgSubgraph)
+                msgNode = findMsgNodePair(msgType,
+                                          actorLocals,actorLocalMessageNodes,
+                                          actorInternals,actorInternalMessageNodes,
+                                          msgMap,
+                                          localMsgSubgraph,internalMsgSubgraph,globalMsgSubgraph)
                 G.add_edge(pydot.Edge(msgNode,compNode))
                 
             for _key,value in compPorts['reqs'].items():
                 msgType = (value['req_type'],value['rep_type'])
-                msgNode = findMsgNodePair(msgType,actorLocals,actorLocalMessageNodes,
-                                          msgMap,localMsgSubgraph,globalMsgSubgraph)
+                msgNode = findMsgNodePair(msgType,
+                                          actorLocals,actorLocalMessageNodes,
+                                          actorInternals,actorInternalMessageNodes,
+                                          msgMap,localMsgSubgraph,internalMsgSubgraph,globalMsgSubgraph)
                 G.add_edge(pydot.Edge(compNode,msgNode))
             for _key,value in compPorts['reps'].items():
                 msgType = (value['req_type'],value['rep_type'])
-                msgNode = findMsgNodePair(msgType,actorLocals,actorLocalMessageNodes,
-                                          msgMap,localMsgSubgraph,globalMsgSubgraph)
+                msgNode = findMsgNodePair(msgType,
+                                          actorLocals,actorLocalMessageNodes,
+                                          actorInternals,actorInternalMessageNodes,
+                                          msgMap,localMsgSubgraph,internalMsgSubgraph,globalMsgSubgraph)
                 G.add_edge(pydot.Edge(msgNode,compNode))
 
             for _key,value in compPorts['clts'].items():
                 msgType = (value['req_type'],value['rep_type'])
-                msgNode = findMsgNodePair(msgType,actorLocals,actorLocalMessageNodes,
-                                          msgMap,localMsgSubgraph,globalMsgSubgraph)
+                msgNode = findMsgNodePair(msgType,
+                                          actorLocals,actorLocalMessageNodes,
+                                          actorInternals,actorInternalMessageNodes,
+                                          msgMap,localMsgSubgraph,internalMsgSubgraph,globalMsgSubgraph)
                 G.add_edge(pydot.Edge(compNode,msgNode))
             for _key,value in compPorts['srvs'].items():
                 msgType = (value['req_type'],value['rep_type'])
-                msgNode = findMsgNodePair(msgType,actorLocals,actorLocalMessageNodes,
-                                          msgMap,localMsgSubgraph,globalMsgSubgraph)
+                msgNode = findMsgNodePair(msgType,
+                                          actorLocals,actorLocalMessageNodes,
+                                          actorInternals,actorInternalMessageNodes,
+                                          msgMap,localMsgSubgraph,internalMsgSubgraph,globalMsgSubgraph)
                 G.add_edge(pydot.Edge(msgNode,compNode))
                            
         host.add_subgraph(actorCluster)

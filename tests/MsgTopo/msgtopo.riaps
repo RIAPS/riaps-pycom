@@ -1,0 +1,89 @@
+// RIAPS MsgTopo 
+// Message topology test
+
+app MsgTopo {
+    message GlobalPubSub;
+    message LocalPubSub;
+    message InternalPubSub;
+    message GlobalQry;
+    message GlobalAns;
+    message LocalQry;
+    message LocalAns;
+    message InternalQry;
+    message InternalAns;
+     
+	// Device
+    device Devc(name) {			
+      timer clock 1000;	
+      // sub globalSub : GlobalPubSub;				// Global pub/sub messages - error for devices
+      // pub globalPub : GlobalPubSub;
+      // qry globalQry : (GlobalQry,GlobalAns);		// Global qry/ans messages - error for devices
+      // ans globalAns : (GlobalQry,GlobalAns);	
+      pub localPub : LocalPubSub;					// Local pub/sub messages
+	  sub localSub : LocalPubSub;				
+      qry localQry : (LocalQry,LocalAns);			// Local qry/ans messages
+      ans localAns : (LocalQry,LocalAns);		
+      pub internalPub : InternalPubSub;				// Internal pub/sub messages
+      sub internalSub : InternalPubSub;
+      qry internalQry : (InternalQry,InternalAns);	// Internal qry/ans messages
+      ans internalAns : (InternalQry,InternalAns); 
+
+    }
+    
+    // Component
+    component Comp(name) {
+      timer clock 3000;								// A periodic timer - heartbeat
+      sub globalSub : GlobalPubSub;					// Global pub/sub messages
+      pub globalPub : GlobalPubSub;
+      qry globalQry : (GlobalQry,GlobalAns);		// Global qry/ans messages
+      ans globalAns : (GlobalQry,GlobalAns);	
+      pub localPub : LocalPubSub;					// Local pub/sub messages
+	  sub localSub : LocalPubSub;				
+      qry localQry : (LocalQry,LocalAns);			// Local qry/ans messages
+      ans localAns : (LocalQry,LocalAns);		
+      pub internalPub : InternalPubSub;				// Internal pub/sub messages
+      sub internalSub : InternalPubSub;
+      qry internalQry : (InternalQry,InternalAns);	// Internal qry/ans messages
+      ans internalAns : (InternalQry,InternalAns);  
+    }
+
+    // Actors
+    actor Actor_1_1(cname,dname) {
+      local LocalPubSub, LocalQry,LocalAns;				// Local message types
+      internal InternalPubSub,InternalQry,InternalAns; 	// Internal message types
+       {
+       	  devc : Devc(name=dname);
+          comp : Comp(name=cname); 		
+       }
+    }
+    actor Actor_1_2(cname1,cname2,dname1,dname2) {
+      local LocalPubSub, LocalQry,LocalAns;				// Local message types
+      internal InternalPubSub,InternalQry,InternalAns; 	// Internal message types
+       {
+       	  devc1 : Devc(name=dname1);
+          comp1 : Comp(name=cname1); 
+          devc2 : Devc(name=dname2);
+          comp2 : Comp(name=cname2); 		
+       }
+    }
+    actor ActorA_1_2(cname1,cname2,dname1,dname2) {
+      local LocalPubSub, LocalQry,LocalAns;				// Local message types
+      internal InternalPubSub,InternalQry,InternalAns; 	// Internal message types
+       {
+       	  devc1 : Devc(name=dname1);
+          comp1 : Comp(name=cname1); 
+          devc2 : Devc(name=dname2);
+          comp2 : Comp(name=cname2); 		
+       }
+    }
+    actor ActorB_1_2(cname1,cname2,dname1,dname2) {
+      local LocalPubSub, LocalQry,LocalAns;				// Local message types
+      internal InternalPubSub,InternalQry,InternalAns; 	// Internal message types
+       {
+       	  devc1 : Devc(name=dname1);
+          comp1 : Comp(name=cname1); 
+          devc2 : Devc(name=dname2);
+          comp2 : Comp(name=cname2); 		
+       }
+    }
+}

@@ -3,11 +3,14 @@
 app QryAns {
     message QryReq; 
     message AnsRep;
-     
+    message Msg;
+        
     // Query
-    component Query {
+    component Query(cnt) {
     	qry cltQryPort : (QryReq,AnsRep) timed; 
     	timer clock 1000;
+    	pub pubPort : Msg;
+    	sub subPort : Msg; 
     }
     
     // Answer
@@ -15,9 +18,22 @@ app QryAns {
     	ans srvAnsPort : (QryReq, AnsRep) timed;
     }
     
+    // Relay
+    component Relay {
+    	pub pubPort : Msg;
+    	sub subPort : Msg; 
+    }
+    
     actor QueryActor {
     	{ 
-    		Client : Query;
+    		Client : Query(cnt=1);
+    		// Client1000 : Query(cnt=1000);
+    	}
+    }    
+    
+    actor RelayActor {
+    	{
+    		Relay_ : Relay;
     	}
     }
     

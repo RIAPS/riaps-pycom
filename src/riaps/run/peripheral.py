@@ -19,12 +19,14 @@ from .exc import ControlError
 from .exc import BuildError
 import logging
 
+
 class Peripheral(object):
     '''
     Peripheral class to encapsulate access to a device component
     Note: implements a public interface compatible with a part 
     '''
-    class State(Enum):          # Component state codes
+
+    class State(Enum):  # Component state codes
         Starting = 0
         Initial = 1
         Ready = 2
@@ -35,11 +37,13 @@ class Peripheral(object):
         Destroyed = 7
         
     _mods = {}
+
     @property
     def mods(self):
         return self._mods
+
     @mods.setter
-    def mods(self,val):
+    def mods(self, val):
         self._mods = val
 
     def __init__(self, parentActor, iTypeDef, iName, iTypeName, iArgs):
@@ -47,7 +51,7 @@ class Peripheral(object):
         Construct the Peripheral object
         '''
         self.logger = logging.getLogger(__name__)
-        self.logger.info("building device component %s:%s" % (iName,iTypeName))
+        self.logger.info("building device component %s:%s" % (iName, iTypeName))
         self.state = Peripheral.State.Starting
         self.name = iName
         self.parent = parentActor
@@ -67,26 +71,25 @@ class Peripheral(object):
             raise StateError("Invalid state %s in setup()" % self.state)
         self.logger.info("setting up device component")
         # Ask parent actor to contact devm to start our dca
-        msg = (self.typeName,self.args)
-        _resp = self.parent.registerDevice(msg)
+        msg = (self.typeName, self.name, self.args)
+        _resp = self.parent.requestDevice(msg)
 
         self.state = Peripheral.State.Ready
         
-    def handleUpdate(self,msg):
+    def handlePortUpdate(self, _portName, _host, _port):
         '''
         Handle an update message coming from the devm service
         '''
-        # print(msg)
-        pass
+        self.logger.error("Peripheral.handlePortUpdate() called")
+        raise StateError("Peripheral does not implement portUpdate")
       
     def activate(self):
         '''
         Activate this peripheral
         '''
-        if not self.state in (Peripheral.State.Ready,Peripheral.State.Passive,Peripheral.State.Inactive):
+        if not self.state in (Peripheral.State.Ready, Peripheral.State.Passive, Peripheral.State.Inactive):
             raise StateError("Invalid state %s in activate()" % self.state)
         # Now we are active
- 
         self.state = Peripheral.State.Active
 
     def deactivate(self):
@@ -135,15 +138,15 @@ class Peripheral(object):
     def handleNetLimit(self):
         pass
 
-    def handleNICStateChange(self,state):
+    def handleNICStateChange(self, state):
         pass
         
-    def handlePeerStateChange(self,state,uuid):
+    def handlePeerStateChange(self, state, uuid):
         pass
     
     def terminate(self):
         self.logger.info("terminating %s" % self.typeName)
-        msg = (self.typeName,)
-        resp = self.parent.unregisterDevice(msg)
+        msg = (self.typeName,self.name)
+        resp = self.parent.releaseDevice(msg)
         self.logger.info("terminating %s" % self.typeName)
     

@@ -12,6 +12,7 @@ import zmq
 import time
 from riaps.run.disco import DiscoClient
 from riaps.run.deplc import DeplClient
+from riaps.run.port import PortScope
 from riaps.proto import disco_capnp
 from riaps.proto import deplo_capnp
 from riaps.consts.defs import *
@@ -34,6 +35,7 @@ from riaps.utils.appdesc import AppDescriptor
 import zmq.auth
 from zmq.auth.thread import ThreadAuthenticator
 
+
 class Actor(object):
     '''The actor class implements all the management and control functions over its components
     
@@ -47,6 +49,7 @@ class Actor(object):
     :type list:
          
     '''          
+
     def __init__(self, gModel, gModelName, aName, sysArgv):
         '''
         Constructor
@@ -59,12 +62,14 @@ class Actor(object):
         self.pid = os.getpid()
         self.uuid = None
         self.setupIfaces()
+        self.disco = None 
+        self.deplc = None 
         # Assumption : pid is a 4 byte int
-        self.actorID = ipaddress.IPv4Address(self.globalHost).packed + self.pid.to_bytes(4,'big')
+        self.actorID = ipaddress.IPv4Address(self.globalHost).packed + self.pid.to_bytes(4, 'big')
         self.suffix = ""
         if aName not in gModel["actors"]:
             raise BuildError('Actor "%s" unknown' % aName)
-        self.model = gModel["actors"][aName]                # Fetch the relevant content from the model
+        self.model = gModel["actors"][aName]  # Fetch the relevant content from the model
         
         self.INT_RE = re.compile(r"^[-]?\d+$")
         self.parseParams(sysArgv)
@@ -72,31 +77,31 @@ class Actor(object):
         # Use czmq's context
         czmq_ctx = Zsys.init()
         self.context = zmq.Context.shadow(czmq_ctx.value)
-        Zsys.handler_reset()                                # Reset previous signal handler
+        Zsys.handler_reset()  # Reset previous signal handler
         
         # Context for app sockets
         self.appContext = zmq.Context()
         
         if Config.SECURITY:
-            (self.public_key,self.private_key) = zmq.auth.load_certificate(const.appCertFile)
+            (self.public_key, self.private_key) = zmq.auth.load_certificate(const.appCertFile)
             _public = zmq.curve_public(self.private_key)
             if(self.public_key != _public):
                 self.logger.error("bad security key(s)")
                 raise BuildError("invalid security key(s)")  
             hosts = ['127.0.0.1']
             try:
-                with open(const.appDescFile,'r') as f:
+                with open(const.appDescFile, 'r') as f:
                     content = yaml.load(f, Loader=yaml.Loader)
                     hosts += content.hosts
             except:
-                self.logger.error("Error loading app descriptor:%s",str(sys.exc_info()[1]))
+                self.logger.error("Error loading app descriptor:%s", str(sys.exc_info()[1]))
 
             self.auth = ThreadAuthenticator(self.appContext)
             self.auth.start()
             self.auth.allow(*hosts)
             self.auth.configure_curve(domain='*', location=zmq.auth.CURVE_ALLOW_ANY)
         else:
-            (self.public_key,self.private_key) = (None,None)
+            (self.public_key, self.private_key) = (None, None)
             self.auth = None
             self.appContext = self.context
 
@@ -106,45 +111,47 @@ class Actor(object):
         except Exception as e:
             self.logger.error("error while configuring componentLogger: %s" % repr(e))  
         
-        messages = gModel["messages"]                       # Global message types (global on the network)
+        messages = gModel["messages"]  # Global message types (global on the network)
         self.messageNames = []
         for messageSpec in messages:
             self.messageNames.append(messageSpec["name"])
         
-        locals_ = self.model["locals"]                       # Local message types (local to the host)
+        locals_ = self.model["locals"]  # Local message types (local to the host)
         self.localNames = []
         for messageSpec in locals_:
-            self.localNames.append(messageSpec["type"]) 
+            self.localNames.append(messageSpec["type"])
+        self.localNams = set(self.localNames)
             
-        internals = self.model["internals"]                 # Internal message types (internal to the actor process)
+        internals = self.model["internals"]  # Internal message types (internal to the actor process)
         self.internalNames = []
         for messageSpec in internals:
             self.internalNames.append(messageSpec["type"])
+        self.internalNames = set(self.internalNames)
             
         groups = gModel["groups"]
         self.groupTypes = {} 
         for group in groups:
             self.groupTypes[group["name"]] = { 
-                "kind" : group["kind"],
-                "message" :  group["message"],
-                "timed" : group["timed"]
+                "kind": group["kind"],
+                "message": group["message"],
+                "timed": group["timed"]
             }
 
-        self.rt_actor = self.model.get("real-time")         # If real time actor, set scheduler (if specified)
+        self.rt_actor = self.model.get("real-time")  # If real time actor, set scheduler (if specified)
         if self.rt_actor:
             sched = self.model.get("scheduler")
             if (sched):
                 _policy = sched.get("policy")
-                policy = { "rr" : os.SCHED_RR, "pri" : os.SCHED_FIFO}.get(_policy,None)
-                priority = sched.get("priority",None)
+                policy = { "rr": os.SCHED_RR, "pri": os.SCHED_FIFO}.get(_policy, None)
+                priority = sched.get("priority", None)
                 if policy and priority:
                     try:
                         param = os.sched_param(priority)
-                        os.sched_setscheduler(0,policy,param)
+                        os.sched_setscheduler(0, policy, param)
                     except Exception as e:
-                        self.logger.error("Can't set up real-time scheduling '%r %r':\n   %r" % (_policy,priority,e))
+                        self.logger.error("Can't set up real-time scheduling '%r %r':\n   %r" % (_policy, priority, e))
             try:
-                prctl.cap_effective.limit()                     # Drop all capabilities
+                prctl.cap_effective.limit()  # Drop all capabilities
                 prctl.cap_permitted.limit()
                 prctl.cap_inheritable.limit()
             except Exception as e:
@@ -153,7 +160,7 @@ class Actor(object):
         instSpecs = self.model["instances"]
         compSpecs = gModel["components"]
         ioSpecs = gModel["devices"]
-        for instName in instSpecs:                          # Create the component instances: the 'parts'
+        for instName in instSpecs:  # Create the component instances: the 'parts'
             instSpec = instSpecs[instName]
             instType = instSpec['type']
             if instType in compSpecs:
@@ -163,10 +170,10 @@ class Actor(object):
                 typeSpec = ioSpecs[instType]
                 ioComp = True
             else:
-                raise BuildError('Component type "%s" for instance "%s" is undefined' % (instType,instName))
+                raise BuildError('Component type "%s" for instance "%s" is undefined' % (instType, instName))
             instFormals = typeSpec['formals']
             instActuals = instSpec['actuals']
-            instArgs = self.buildInstArgs(instName,instFormals,instActuals)
+            instArgs = self.buildInstArgs(instName, instFormals, instActuals)
 
             # Check whether the component is C++ component
             ccComponentFile = 'lib' + instType.lower() + '.so'
@@ -174,21 +181,20 @@ class Actor(object):
             try:
                 if not ioComp:
                     if ccComp:
-                        modObj= importlib.import_module('lib'+instType.lower())
-                        self.components[instName] = modObj.create_component_py(self,self.model,
-                                                                               typeSpec,instName,
-                                                                               instType,instArgs,
-                                                                               self.appName,self.name,groups)
+                        modObj = importlib.import_module('lib' + instType.lower())
+                        self.components[instName] = modObj.create_component_py(self, self.model,
+                                                                               typeSpec, instName,
+                                                                               instType, instArgs,
+                                                                               self.appName, self.name, groups)
                     else:
-                        self.components[instName]= Part(self,typeSpec,instName, instType, instArgs)
+                        self.components[instName] = Part(self, typeSpec, instName, instType, instArgs)
                 else: 
-                    self.components[instName] = Peripheral(self,typeSpec,instName, instType, instArgs)         
+                    self.components[instName] = Peripheral(self, typeSpec, instName, instType, instArgs)         
             except Exception as e:
                 traceback.print_exc()
-                self.logger.error("Error while constructing part '%s.%s': %s" % (instType,instName,str(e)))
-                
+                self.logger.error("Error while constructing part '%s.%s': %s" % (instType, instName, str(e)))
            
-    def getParameterValueType(self,param,defaultType):
+    def getParameterValueType(self, param, defaultType):
         ''' Infer the type of a parameter from its value unless a default type is provided. \
             In the latter case the parameter's value is converted to that type.
             
@@ -205,28 +211,28 @@ class Actor(object):
             if defaultType == str:
                 paramValue, paramType = param, str
             elif defaultType == int:
-                paramValue, paramType = int(param),int
+                paramValue, paramType = int(param), int
             elif defaultType == float:
-                paramValue, paramType = float(param),float
+                paramValue, paramType = float(param), float
             elif defaultType == bool:
                 paramType = bool
                 paramValue = False if param == "False" else True if param == "True" else None
-                paramValue, paramType = bool(param),float
+                paramValue, paramType = bool(param), float
         else:
             if param == 'True':
                 paramValue, paramType = True, bool
             elif param == 'False':
                 paramValue, paramType = True, bool
             elif self.INT_RE.match(param) is not None:
-                paramValue, paramType = int(param),int
+                paramValue, paramType = int(param), int
             else:
                 try:
-                    paramValue, paramType = float(param),float
+                    paramValue, paramType = float(param), float
                 except:
-                    paramValue,paramType = str(param), str
-        return (paramValue,paramType)
+                    paramValue, paramType = str(param), str
+        return (paramValue, paramType)
 
-    def parseParams(self,sysArgv):
+    def parseParams(self, sysArgv):
         '''Parse actor arguments from the command line
         
         Compares the actual arguments to the formal arguments (from the model) and
@@ -243,20 +249,20 @@ class Actor(object):
             self.params[key] = default
             optList.append("%s=" % key) 
         try:
-            opts,_args = getopt.getopt(sysArgv, '', optList)
+            opts, _args = getopt.getopt(sysArgv, '', optList)
         except:
             self.logger.info("Error parsing actor options %s" % str(sysArgv))
             return
         for opt in opts:
-            optName2,optValue = opt 
-            optName = optName2[2:] # Drop two leading dashes 
+            optName2, optValue = opt 
+            optName = optName2[2:]  # Drop two leading dashes 
             if optName in self.params:
                 defaultType = None if self.params[optName] == None else type(self.params[optName])
-                paramValue,paramType = self.getParameterValueType(optValue,defaultType)
+                paramValue, paramType = self.getParameterValueType(optValue, defaultType)
                 if self.params[optName] != None:
                     if paramType != type(self.params[optName]):
                         raise BuildError("Type of default value does not match type of argument %s" 
-                                         % str((optName,optValue)))
+                                         % str((optName, optValue)))
                 self.params[optName] = paramValue
             else:
                 self.logger.info("Unknown argument %s - ignored" % optName)
@@ -264,7 +270,7 @@ class Actor(object):
             if self.params[param] == None:
                 raise BuildError("Required parameter %s missing" % param) 
 
-    def buildInstArgs(self,instName,formals,actuals):
+    def buildInstArgs(self, instName, formals, actuals):
         args = {}
         for formal in formals:
             argName = formal['name']
@@ -281,7 +287,7 @@ class Actor(object):
                         argValue = self.params[paramName]
                     else:
                         raise BuildError("Unspecified parameter %s referenced in %s" 
-                                         %(paramName,instName))
+                                         % (paramName, instName))
                 elif 'value' in actual:
                     argValue = actual['value']
                 else:
@@ -289,22 +295,21 @@ class Actor(object):
             elif defaultValue != None:
                 argValue = defaultValue
             else:
-                raise BuildError("Argument %s in %s has no defined value" % (argName,instName))
+                raise BuildError("Argument %s in %s has no defined value" % (argName, instName))
             args[argName] = argValue
         return args
     
-    def isLocalMessage(self,msgTypeName):
+    def messageScope(self, msgTypeName):
         '''Return True if the message type is local
         
         '''
-        return msgTypeName in self.localNames
-
-    def isInnerMessage(self,msgTypeName):
-        '''Return True if the message type is internal
-        
-        '''
-        return msgTypeName in self.internalNames
-        
+        if msgTypeName in self.localNames:
+            return PortScope.LOCAL
+        elif msgTypeName in self.internalNames:
+            return PortScope.INTERNAL
+        else:
+            return PortScope.GLOBAL
+   
     def getLocalIface(self):
         '''Return the IP address of the host-local network interface (usually 127.0.0.1) 
         '''
@@ -333,7 +338,7 @@ class Actor(object):
         '''
         return self.actorID
     
-    def setUUID(self,uuid):
+    def setUUID(self, uuid):
         '''Sets the UUID for this actor.
         
         The UUID is dynamically generated (by the peer-to-peer network system)
@@ -350,7 +355,7 @@ class Actor(object):
         '''Find the IP addresses of the (host-)local and network(-global) interfaces
         
         '''
-        (globalIPs,globalMACs,_globalNames,localIP) = getNetworkInterfaces()
+        (globalIPs, globalMACs, _globalNames, localIP) = getNetworkInterfaces()
         try:
             assert len(globalIPs) > 0 and len(globalMACs) > 0
         except:
@@ -361,7 +366,10 @@ class Actor(object):
         self.localHost = localIP
         self.globalHost = globalIP
         self.macAddress = globalMAC
-               
+    
+    def isDevice(self):
+        return False 
+    
     def setup(self):
         '''Perform a setup operation on the actor, after  the initial construction 
         but before the activation of parts
@@ -369,14 +377,14 @@ class Actor(object):
         '''
         self.logger.info("setup")
         self.suffix = self.macAddress
-        self.disco = DiscoClient(self,self.suffix)
+        self.disco = DiscoClient(self, self.suffix)
         self.disco.start()                  # Start the discovery service client
-        self.disco.registerApp()            # Register this actor with the discovery service
+        self.disco.registerActor()          # Register this actor with the discovery service
         self.logger.info("actor registered with disco")
-        self.deplc = DeplClient(self,self.suffix)
+        self.deplc = DeplClient(self, self.suffix)
         self.deplc.start()
-        ok = self.deplc.registerApp()
-        self.logger.info("actor %s registered with depl" % ("is" if ok else "is not"))
+        ok = self.deplc.registerActor()  # Register this actor with the deplo service
+        self.logger.info("actor %s registered with deplo" % ("is" if ok else "is not"))
             
         self.controls = { }
         self.controlMap = { }
@@ -391,32 +399,34 @@ class Actor(object):
             else:
                 self.components[inst].setup()
     
-    def registerEndpoint(self,bundle):
+    def registerEndpoint(self, bundle):
         '''
         Relay the endpoint registration message to the discovery service client 
         '''
         self.logger.info("registerEndpoint")
         result = self.disco.registerEndpoint(bundle)
         for res in result:
-            (partName,portName,host,port) = res
-            self.updatePart(partName,portName,host,port)
+            (partName, portName, host, port) = res
+            self.updatePart(partName, portName, host, port)
     
-    def registerDevice(self,bundle):
-        '''Relay the device registration message to the device interface service client
+    def requestDevice(self, bundle):
+        '''Relay the device request message to the deplo client
         
         '''
-        typeName,args = bundle
-        msg = (self.appName,self.modelName,typeName,args)
-        result = self.deplc.registerDevice(msg)
+        typeName, instName, args = bundle
+        instName ="%s.%s" % (self.name, instName)
+        msg = (self.appName, self.modelName, typeName, instName, args)
+        result = self.deplc.requestDevice(msg)
         return result
 
-    def unregisterDevice(self,bundle):
-        '''Relay the device unregistration message to the device interface service client
+    def releaseDevice(self, bundle):
+        '''Relay the device release message to the deplo client
         
         '''
-        typeName, = bundle
-        msg = (self.appName,self.modelName,typeName)
-        result = self.deplc.unregisterDevice(msg)
+        typeName,instName = bundle
+        instName ="%s.%s" % (self.name, instName)
+        msg = (self.appName, self.modelName, typeName, instName)
+        result = self.deplc.releaseDevice(msg)
         return result
     
     def activate(self):
@@ -435,7 +445,7 @@ class Actor(object):
         for inst in self.components:
             self.components[inst].deactivate()
             
-    def recvChannelMessages(self,channel):
+    def recvChannelMessages(self, channel):
         '''Collect all messages from the channel queue and return them in a list
         '''
         msgs = []
@@ -452,44 +462,43 @@ class Actor(object):
         Start and operate the actor (infinite polling loop)
         '''
         self.logger.info("starting")
-        self.discoChannel = self.disco.channel              # Private channel to the discovery service
+        self.discoChannel = self.disco.channel  # Private channel to the discovery service
         self.deplChannel = self.deplc.channel
            
-        self.poller = zmq.Poller()                          # Set up the poller
-        self.poller.register(self.deplChannel,zmq.POLLIN)
-        self.poller.register(self.discoChannel,zmq.POLLIN)
+        self.poller = zmq.Poller()  # Set up the poller
+        self.poller.register(self.deplChannel, zmq.POLLIN)
+        self.poller.register(self.discoChannel, zmq.POLLIN)
         for control in self.controls:
-            self.poller.register(self.controls[control],zmq.POLLIN)
+            self.poller.register(self.controls[control], zmq.POLLIN)
         
         while 1:
             sockets = dict(self.poller.poll())              
-            if self.discoChannel in sockets:                # If there is a message from a service, handle it
+            if self.discoChannel in sockets:  # If there is a message from a service, handle it
                 msgs = self.recvChannelMessages(self.discoChannel)
                 for msg in msgs:
-                    self.handleServiceUpdate(msg)           # Handle message from disco service
+                    self.handleServiceUpdate(msg)  # Handle message from disco service
                 del sockets[self.discoChannel]    
             elif self.deplChannel in sockets:
                 msgs = self.recvChannelMessages(self.deplChannel)
                 for msg in msgs:
-                    self.handleDeplMessage(msg)             # Handle message from depl service
+                    self.handleDeplMessage(msg)  # Handle message from depl service
                 del sockets[self.deplChannel]
-            else:                                           # Handle messages from the components.  
+            else:  # Handle messages from the components.  
                 toDelete = []
                 for s in sockets:
                     if s in self.controls.values():
                         part = self.controlMap[id(s)]
-                        msg = s.recv_pyobj()                # receive python object from component
-                        self.handleReport(part,msg)         # handle report
+                        msg = s.recv_pyobj()  # receive python object from component
+                        self.handleReport(part, msg)  # handle report
                     toDelete += [s]
                 for s in toDelete:
                     del sockets[s]
-
             
-    def handleServiceUpdate(self,msgBytes):
+    def handleServiceUpdate(self, msgBytes):
         '''
         Handle a service update message from the discovery service
         '''
-        msgUpd = disco_capnp.DiscoUpd.from_bytes(msgBytes)     # Parse the incoming message
+        msgUpd = disco_capnp.DiscoUpd.from_bytes(msgBytes)  # Parse the incoming message
 
         which = msgUpd.which()
         if which == 'portUpdate':
@@ -506,26 +515,26 @@ class Actor(object):
             socket = msg.socket
             host = socket.host
             port = socket.port 
-            if scope == "local":
-                assert host == self.localHost
-            self.updatePart(instanceName,portName,host,port)    # Update the selected part
+            if scope != "global":
+                assert host == self.localHost                   # Local/internal ports ar host-local
+            self.updatePart(instanceName, portName, host, port) # Update the selected part
         elif which == 'groupUpdate':
             msg = msg.groupUpdate
             self.logger.info('handleServiceUpdate():groupUpdate')
     
-    def updatePart(self,instanceName,portName,host,port):
+    def updatePart(self, instanceName, portName, host, port):
         '''
         Ask a part to update itself
         '''
-        self.logger.info("updatePart %s" % str((instanceName,portName,host,port)))
+        self.logger.info("updatePart %s" % str((instanceName, portName, host, port)))
         part = self.components[instanceName]
-        part.handlePortUpdate(portName,host,port)
+        part.handlePortUpdate(portName, host, port)
         
-    def handleDeplMessage(self,msgBytes):
+    def handleDeplMessage(self, msgBytes):
         '''
         Handle a message from the deployment service
         '''
-        msgUpd = deplo_capnp.DeplCmd.from_bytes(msgBytes)     # Parse the incoming message
+        msgUpd = deplo_capnp.DeplCmd.from_bytes(msgBytes)  # Parse the incoming message
 
         which = msgUpd.which()
         if which == 'resourceMsg':
@@ -543,7 +552,7 @@ class Actor(object):
                 pass
         elif which == 'reinstateCmd':
             self.handleReinstate()
-        elif which == 'nicStateMsg' :
+        elif which == 'nicStateMsg':
             stateMsg = msgUpd.nicStateMsg
             state = str(stateMsg.nicState)
             self.handleNICStateChange(state)
@@ -551,7 +560,7 @@ class Actor(object):
             peerMsg = msgUpd.peerInfoMsg
             state = str(peerMsg.peerState)
             uuid = peerMsg.uuid
-            self.handlePeerStateChange(state,uuid)
+            self.handlePeerStateChange(state, uuid)
         else:
             self.logger.error("unknown msg from deplo: '%s'" % which)
             pass
@@ -561,11 +570,11 @@ class Actor(object):
         self.poller.unregister(self.discoChannel)
         self.disco.reconnect()
         self.discoChannel = self.disco.channel
-        self.poller.register(self.discoChannel,zmq.POLLIN)
+        self.poller.register(self.discoChannel, zmq.POLLIN)
         for inst in self.components:
             self.components[inst].handleReinstate()
     
-    def handleNICStateChange(self,state):
+    def handleNICStateChange(self, state):
         '''
         Handle the NIC state change message: notify components   
         ''' 
@@ -573,13 +582,13 @@ class Actor(object):
         for component in self.components.values():
             component.handleNICStateChange(state)
             
-    def handlePeerStateChange(self,state,uuid):
+    def handlePeerStateChange(self, state, uuid):
         '''
         Handle the peer state change message: notify components   
         ''' 
         self.logger.info("handlePeerStateChange")
         for component in self.components.values():
-            component.handlePeerStateChange(state,uuid)
+            component.handlePeerStateChange(state, uuid)
     
     def handleCPULimit(self):
         '''
@@ -617,7 +626,7 @@ class Actor(object):
         for component in self.components.values():
             component.handleNetLimit()
     
-    def handleReport(self,part,msg):
+    def handleReport(self, part, msg):
         '''Handle report from a part
         If it is a group message, it is forwarded to the disco service,
         otherwise it is forwarded to the deplo service. 
@@ -627,10 +636,10 @@ class Actor(object):
         if msg[0] == 'group':
             result = self.disco.registerGroup(msg)
             for res in result:
-                (partName,portName,host,port) = res
-                self.updatePart(partName,portName,host,port)
+                (partName, portName, host, port) = res
+                self.updatePart(partName, portName, host, port)
         else:
-            bundle = (partName,typeName,) + (msg,)
+            bundle = (partName, typeName,) + (msg,)
             self.deplc.reportEvent(bundle)
             
     def terminate(self):
@@ -643,8 +652,8 @@ class Actor(object):
         for component in self.components.values():
             component.terminate()
         time.sleep(1.0)
-        self.deplc.terminate()
-        self.disco.terminate()
+        if self.deplc: self.deplc.terminate()
+        if self.disco: self.disco.terminate()
         if self.auth:
             self.auth.stop()
         # Clean up everything
@@ -652,6 +661,4 @@ class Actor(object):
         # time.sleep(1.0)
         self.logger.info("terminated")
         os._exit(0)
-
-    
     

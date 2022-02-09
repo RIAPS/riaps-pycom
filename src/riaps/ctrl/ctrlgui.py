@@ -17,7 +17,9 @@ import logging
 import subprocess
 import shlex
 from riaps.lang.gviz import gviz
-import riaps.fabfile
+import toml
+import tempfile 
+import socket
 
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, GLib, Gdk, GObject
@@ -58,11 +60,11 @@ class ControlGUIClient(object):
                                       "onSelectApplication": self.on_SelectApplication,
                                       "onSelectDeployment": self.on_SelectDeployment,
                                       "onFolderEntryActivate": self.on_folderEntryActivate,
-                                      "onKill": self.on_Kill,
-                                      "onClean": self.on_Clean,
+                                      "onResetAll": self.on_resetAll,
+                                      "onHaltAll": self.on_haltAll,
                                       "onQuit": self.on_Quit,
-                                      "onLoadApplication": self.on_LoadApplication,
-                                      "onViewApplication": self.on_ViewApplication,
+                                      "onLoadApplication": self.on_loadApplication,
+                                      "onViewApplication": self.on_viewApplication,
                                       "onLogChanged" : self.on_LogChanged
                                       })
 
@@ -148,7 +150,24 @@ class ControlGUIClient(object):
             except zmq.error.ZMQError:
                 break
         return True
-            
+    
+    def isIPaddress(self,addr):
+        try:
+            socket.inet_aton(addr)
+            return True
+        except socket.error:
+            return False
+        
+    def getIPaddress(self,hName):
+        if self.isIPaddress(hName):
+            return hName
+        else:
+            try:
+                ipAddr = socket.gethostbyname(hName)
+                return ipAddr
+            except socket.error:
+                return hName
+    
     def on_ConsoleEntry(self, *args):
         '''
         Called when the console entry receives an 'activate' event
@@ -158,21 +177,34 @@ class ControlGUIClient(object):
         if len(fabcmd) == 0: fabcmd = "help"
         fcmd = "fab"
         fflag = "-f"
-        fhost = "-H"
-        fhosts = str.join(',',self.controller.getClients())
-        if len(fhosts) == 0:
-            self.log('? No hosts connected')
+        fpath = self.controller.fabModule
+        hosts = self.controller.getClients()
+        tPath = None
+        if len(hosts) == 0:
+            self.log('? No hosts connected - using default')
+            cmd = str.join(' ',(fcmd, fflag, fpath, fabcmd))
         else:
-            fpath = os.path.dirname(riaps.fabfile.__file__)
-            cmd = str.join(' ',(fcmd, fflag, fpath, fabcmd, fhost, fhosts))
-            # print("=== "+cmd)
-            proc = subprocess.run(shlex.split(cmd),stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
-            resp = proc.stdout.decode('utf-8')
-            # print(resp)
-            # self.log(resp,': ')
-            for line in resp.split('\n'):
-                if len(line) > 0: 
-                    self.log(line,': ')
+            cHost = self.getIPaddress(self.controller.nodeName)
+            hNames = [ self.getIPaddress(socket.getfqdn(host)) for host in hosts]
+            hConf =  { 'RIAPS' : { 'nodes' : hNames, 'control' : cHost }}
+            fAppsFolder = ""
+            if cHost in hNames:
+                appsFolder = os.getenv('riapsApps',None)
+                fAppsFolder = "--set RIAPSAPPS=%s" % appsFolder if appsFolder else ""
+            _drop, tPath = tempfile.mkstemp(text=True)
+            with open(tPath,"w") as tFd:
+                toml.dump(hConf,tFd)
+            fhostsFile = ("--set hostsFile=" + tPath)
+            cmd = str.join(' ',(fcmd, fflag, fpath, fabcmd, fhostsFile, fAppsFolder))
+        self.log(cmd)
+        proc = subprocess.run(shlex.split(cmd),stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+        resp = proc.stdout.decode('utf-8')
+        if tPath: os.unlink(tPath)
+        # print(resp)
+        # self.log(resp,': ')
+        for line in resp.split('\n'):
+            if len(line) > 0: 
+                self.log(line,': ')
         self.consoleIn.delete_text(0,-1)
 
     def selectFile(self, title, patterns):
@@ -232,7 +264,7 @@ class ControlGUIClient(object):
         '''
         App selection. Sets the app entry and calls the controller to compile the app model.
         '''
-        fileName = self.selectFile("application", ["*.riaps","*.json"])
+        fileName = self.selectFile("application model", ["*.riaps","*.json"])
         if fileName != None:
             self.appNameEntry.set_text(os.path.basename(fileName))
             self.controller.compileApplication(fileName, self.folderEntry.get_text())
@@ -251,7 +283,7 @@ class ControlGUIClient(object):
         Deployment selection. Sets the deployment entry and calls the controller
         to compile the deployment model.
         '''
-        fileName = self.selectFile("application", ["*.depl","*.json"])
+        fileName = self.selectFile("deployment", ["*.depl","*.json"])
         if fileName != None:
             self.deplNameEntry.set_text(os.path.basename(fileName))
             self.appToLoad = self.controller.compileDeployment(fileName)
@@ -269,20 +301,21 @@ class ControlGUIClient(object):
         '''
         App folder selection. Called when the folder entry or the folder button is activated.
         '''
-        folderName = self.selectFolder("application folder")
+        folderName = self.selectFolder("application directory")
         if folderName != None:
             self.folderEntry.set_text(folderName)
             self.controller.setAppFolder(folderName)
 
-    def on_Kill(self, *args):
+    def on_haltAll(self, *args):
         '''
-        Kill all connected deplos
+        Reset and halt all connected clients. Deplos maybe restarted automatically. 
         '''
+        self.controller.cleanAll()
         self.controller.killAll()
         
-    def on_Clean(self, *args):
+    def on_resetAll(self, *args):
         '''
-        Clean all connected deplos
+        Clean all connected deplos (stop/remove apps)
         '''
         self.controller.cleanAll()
 
@@ -503,7 +536,7 @@ class ControlGUIClient(object):
 
         self.gridScrollWindow.show_all()
 
-    def on_LoadApplication(self, widget):
+    def on_loadApplication(self, widget):
         '''
         Load the selected application onto to the network
         '''
@@ -514,9 +547,9 @@ class ControlGUIClient(object):
         self.add_app(self.appToLoad)
         self.clearApplication()
         self.clearDeployment()
-        self.appToLoad = ''
+        self.appToLoad = None
 
-    def on_ViewApplication(self, widget):
+    def on_viewApplication(self, widget):
         '''
         View the selected application as to be deployed
         '''
@@ -619,10 +652,10 @@ class ControlGUIClient(object):
     ''' Cell helper functions'''
     def modify_text_cell_color(self, cell, bg='', fg=''):
         if cell is not None:
-            if bg is not '':
+            if bg != '':
                 cell.modify_bg(Gtk.StateType.NORMAL, Gdk.color_parse(bg))
 
-            if fg is not '':
+            if fg != '':
                 cell.modify_fg(Gtk.StateType.NORMAL, Gdk.color_parse(fg))
 
 

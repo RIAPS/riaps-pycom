@@ -4,7 +4,9 @@
 import zmq
 import time
 import struct
-from .exc import SetupError,OperationError,PortError
+from collections import namedtuple
+from enum import IntEnum, auto
+from .exc import SetupError, OperationError, PortError
 from riaps.utils.config import Config
 import logging
 
@@ -14,6 +16,20 @@ try:
 except:
     cPickle = None
     import pickle
+
+# Port information tuple
+PortInfo = namedtuple('PortInfo', 'portKind portScope portName msgType portHost portNum')
+
+class PortScope(IntEnum):
+    GLOBAL = auto()
+    LOCAL = auto()
+    INTERNAL = auto()
+
+    def scope(self):
+        return { PortScope.GLOBAL : "global" , 
+                 PortScope.LOCAL : "local" ,
+                 PortScope.INTERNAL : "internal"                
+                 } [self.value] 
     
 class Port(object):
     '''Base class for all Port objects. 
@@ -37,14 +53,16 @@ class Port(object):
         self.logger = logging.getLogger(__name__)
         self.parent = parentPart
         self.name = portName
-        self.index = portSpec.get('index',None) if portSpec else None
+        self.index = portSpec.get('index', None) if portSpec else None
         self.context = parentPart.appContext
-        (self.public_key,self.private_key) = (parentPart.parent.public_key,parentPart.parent.private_key)
+        (self.public_key, self.private_key) = (parentPart.parent.public_key, parentPart.parent.private_key)
         self.security = (self.public_key != None) and (self.private_key != None)
         self.localIface = None
         self.globalIface = None
         self.sendTimeout = Config.SEND_TIMEOUT
         self.recvTimeout = Config.RECV_TIMEOUT
+        self.sendhwm = Config.SEND_HWM
+        self.recvhwm = Config.RECV_HWM
         self.sendTime = 0.0
         self.recvTime = 0.0
         self.socket = None
@@ -52,8 +70,9 @@ class Port(object):
         self.deadline = 0.0
         self.info = None
         self.owner = None
+        # print("Port.__init__(%r)" % self)
     
-    def setupCurve(self,server):
+    def setupCurve(self, server):
         if self.socket and self.security:
             self.socket.curve_secretkey = self.private_key
             self.socket.curve_publickey = self.public_key
@@ -62,7 +81,7 @@ class Port(object):
             else:
                 self.socket.curve_serverkey = self.public_key
                 
-    def setupSocket(self,owner):
+    def setupSocket(self, owner):
         ''' Setup the socket. Abstract, subclasses must implement this method.
         
         :param owner: The Component the port belongs to. This operation must be called from the component thread only. 
@@ -71,7 +90,7 @@ class Port(object):
         '''
         pass
     
-    def setOwner(self,owner):
+    def setOwner(self, owner):
         ''' Save owner thread into a data member.
         
         :param owner: The ComponentThread the port is handled in.
@@ -169,13 +188,16 @@ class Port(object):
         Abstract, subclasses must implement this method.
         
         :returns: a tuple containing the name of the port's type: 
-                req,rep,clt,srv,qry,ans,pub,sub,ins,or tim; the name of the
-                port object, and the name of the message type the port handles.  
-        :rtype: a tuple (portType, portName, msgType)
+                req,rep,clt,srv,qry,ans,pub,sub,ins,or tim; 
+                the kind of the port (global, local, internal);
+                the name of the port object; 
+                the name of the message type;
+                the host and the port number.  
+        :rtype: PortInfo
         '''
-        return ("port",None,None)
+        raise SetupError
     
-    def update(self,host,port):
+    def update(self, host, port):
         ''' 
         Update the socket with information from the discovery service.
         Abstract, subclasses must implement this method.
@@ -213,7 +235,7 @@ class Port(object):
         '''
         pass
     
-    def send_pyobj(self,msg):
+    def send_pyobj(self, msg):
         '''Send a Python data object (if possible) out through the port. 
         Abstract, subclasses must implement this method.
         
@@ -239,7 +261,7 @@ class Port(object):
         '''
         return None
 
-    def send_capnp(self,msg):
+    def send_capnp(self, msg):
         '''DEPRECATED. Send a byte array (if possible) out through the port
         '''
         self.logger.warning("send_capnp: deprecated, use send() instead")
@@ -251,7 +273,7 @@ class Port(object):
         self.logger.warning("recv_capnp: deprecated, use recv() instead")
         return None
     
-    def send(self,msg):
+    def send(self, msg):
         '''Send a byte array (if possible) out through the port.
 
         Used for sending a message that has been serialized into bytes previously.
@@ -273,7 +295,7 @@ class Port(object):
         '''
         return None
     
-    def port_send(self,msg,is_pyobj):
+    def port_send(self, msg, is_pyobj):
         '''Lowest level message sending operation.
         Subclasses can override this operation.
         
@@ -307,7 +329,7 @@ class Port(object):
             raise PortError("send error (%d)" % e.errno, e.errno) from e
         return True
     
-    def port_recv(self,is_pyobj):
+    def port_recv(self, is_pyobj):
         '''Lowest level message receiving operation.
         Subclasses can override this operation.
         
@@ -384,7 +406,7 @@ class Port(object):
         sto = None if self.sendTimeout == -1 else self.sendTimeout * 0.001
         return sto
     
-    def set_recv_timeout(self,rto):
+    def set_recv_timeout(self, rto):
         '''Set the receive timeout for the port.
         
         Receive timeout determines how long a receive operation will block before
@@ -396,9 +418,9 @@ class Port(object):
         '''
         assert rto == None or (type(rto) == float and rto >= 0.0)
         self.recvTimeout = -1 if rto == None else int(rto * 1000)
-        self.socket.setsockopt(zmq.RCVTIMEO,self.recvTimeout)
+        self.socket.setsockopt(zmq.RCVTIMEO, self.recvTimeout)
 
-    def set_send_timeout(self,sto):
+    def set_send_timeout(self, sto):
         '''Set the send timeout for the port.
         
         Send timeout determines how long a send operation will block before
@@ -410,5 +432,161 @@ class Port(object):
         '''
         assert sto == None or (type(sto) == float and sto >= 0.0)
         self.sendTimeout = -1 if sto == None else int(sto * 1000)
-        self.socket.setsockopt(zmq.SNDTIMEO,self.sendTimeout)
+        self.socket.setsockopt(zmq.SNDTIMEO, self.sendTimeout)
+        
+    def get_hwm(self):
+        ''' Retrieve the high-water mark for the socket.
+        '''
+        return None if self.socket is None else self.socket.get_hwm()
+
+    def set_sockoptions(self,sockopts):
+        for (k,v) in [(zmq.SNDTIMEO, self.sendTimeout),
+                      (zmq.RCVTIMEO, self.recvTimeout),
+                      (zmq.RCVHWM,self.sendhwm),
+                      (zmq.SNDHWM,self.recvhwm)]:
+            self.socket.setsockopt(k,v)
+            
+        for (k,v) in sockopts:
+            if type(v) == str:
+                self.socket.setsockopt_string(k,v)
+            elif type(v) == int:
+                self.socket.setsockopt(k,v)
+            else:
+                pass                # Error
+
+class SimplexPort(Port):
+    def __init__(self, parentComponent, portName, portSpec):
+        '''
+        SimplexPort constructor
+        '''
+        super().__init__(parentComponent, portName,portSpec)
+        self.type = portSpec["type"]
+        self.isTimed = portSpec["timed"]
+        self.deadline = portSpec.get("deadline",0) * 0.001  # msec
+        parentActor = parentComponent.parent
+        self.portScope = parentActor.messageScope(self.type)
+        self.msgType = self.type
+        # print("SimplexPort.__init__()")
+        
+class DuplexPort(Port):
+    def __init__(self, parentComponent, portName, portSpec):
+        '''
+        DuplexPort constructor
+        '''
+        super().__init__(parentComponent, portName, portSpec)
+        self.req_type = portSpec["req_type"]
+        self.rep_type = portSpec["rep_type"]
+        self.isTimed = portSpec["timed"]
+        self.deadline = portSpec.get("deadline",0) * 0.001  # msec
+        parentActor = parentComponent.parent
+        req_scope = parentActor.messageScope(self.req_type)
+        rep_scope = parentActor.messageScope(self.rep_type)
+        assert req_scope == rep_scope
+        self.portScope = req_scope
+        self.msgType = str(self.req_type) + '#' + str(self.rep_type)
+        print("DuplexPort.__init__()")
+
+class BindPort(Port):
+    def __init__(self, parentComponent, portName, portSpec):
+        '''
+        BindPort constructor
+        '''
+        super().__init__(parentComponent, portName, portSpec)
+        # print("BindPort.__init__()")
+        
+    def setupBindSocket(self, owner,zmqType, portKind,sockopts=[]):
+        '''
+        Set up a bind socket
+        '''
+        self.setOwner(owner)
+        self.socket = self.context.socket(zmqType)
+        self.set_sockoptions(sockopts)
+        self.host = ''
+        self.portNum = -1
+        self.setupCurve(True) 
+        if self.portScope == PortScope.GLOBAL:
+            globalHost = self.getGlobalIface()
+            self.portNum = self.socket.bind_to_random_port("tcp://" + globalHost)
+            self.host = globalHost
+        else:
+            localHost = self.getLocalIface()
+            self.portNum = self.socket.bind_to_random_port("tcp://" + localHost)
+            self.host = localHost
+        self.info = PortInfo(portKind = portKind, portScope=self.portScope, portName=self.name, 
+                             msgType=self.msgType, portHost=self.host, portNum=self.portNum)
+        return self.info
+
+class ConnPort(Port):
+    def __init__(self, parentComponent, portName, portSpec):
+        '''
+        ConnPort constructor
+        '''
+        super().__init__(parentComponent, portName, portSpec)
+        self.servers = set()
+        # print("ConnPort.__init__()")
+            
+    def setupConnSocket(self,owner,zmqType,portKind,sockopts=[]):
+        '''
+        Setup a conn socket
+        '''
+        self.setOwner(owner)
+        self.socket = self.context.socket(zmqType)
+        self.set_sockoptions(sockopts)
+        self.setupCurve(False)
+        self.host = ''
+        if self.portScope == PortScope.GLOBAL:
+            globalHost = self.getGlobalIface()
+            self.portNum = -1 
+            self.host = globalHost
+        else:
+            localHost = self.getLocalIface()
+            self.portNum = -1 
+            self.host = localHost
+        self.info = PortInfo(portKind=portKind, portScope=self.portScope, portName=self.name, 
+                             msgType=self.msgType, portHost=self.host, portNum=self.portNum)
+        return self.info
     
+    def resetConnSocket(self,zmqType,sockopts=[]):
+        '''
+        Reset a conn socket: remove and recreate
+        '''
+        newSocket =  self.context.socket(zmqType)
+        self.socket.setsockopt(zmq.LINGER, 0)
+        for (host,port) in self.servers:
+            srvPort = "tcp://" + str(host) + ":" + str(port)
+            self.socket.disconnect(srvPort)
+        self.owner.replaceSocket(self, newSocket)
+        self.socket = newSocket
+        self.set_sockoptions(sockopts)
+        self.setupCurve(False)
+        for (host,port) in self.servers:
+            srvPort = "tcp://" + str(host) + ":" + str(port)
+            self.socket.connect(srvPort)
+    
+    def update(self, host, port):
+        '''
+        Update the client -- connect its socket to a server
+        '''
+        if (host,port) not in self.servers:
+            srvPort = "tcp://" + str(host) + ":" + str(port)
+            self.servers.add((host,port))
+            self.socket.connect(srvPort)
+            
+    def connected(self):
+        '''
+        Return the number of servers this port is connected to. 
+        '''
+        return len(self.servers)
+        
+class SimplexBindPort(BindPort,SimplexPort):
+    pass
+
+class SimplexConnPort(ConnPort,SimplexPort):
+    pass
+
+class DuplexBindPort(BindPort,DuplexPort):
+    pass
+
+class DuplexConnPort(ConnPort,DuplexPort):
+    pass
+

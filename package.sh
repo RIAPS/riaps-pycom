@@ -6,6 +6,7 @@ mkdir -p package/riaps-pycom-amd64/etc/
 mkdir -p package/riaps-pycom-amd64/etc/riaps/
 mkdir -p package/riaps-pycom-amd64/opt/riaps-pycom/
 mkdir -p package/riaps-pycom-amd64/usr/local/riaps/etc/
+mkdir -p package/riaps-pycom-amd64/usr/local/riaps/keys/
 mkdir -p package/riaps-pycom-amd64/usr/local/riaps/lang/
 
 cp -r DEBIAN/amd64/pkgfiles/* package/riaps-pycom-amd64/DEBIAN/.
@@ -15,8 +16,8 @@ cp -r src package/riaps-pycom-amd64/opt/riaps-pycom/.
 cp -r src/riaps/etc/riaps.conf package/riaps-pycom-amd64/etc/riaps/.
 cp -r src/riaps/etc/riaps-log.conf package/riaps-pycom-amd64/etc/riaps/.
 cp -r src/riaps/etc/riaps-hosts.conf package/riaps-pycom-amd64/etc/riaps/.
-cp -r src/riaps/etc/redis.conf package/riaps-pycom-amd64/usr/local/riaps/etc/.
-cp -r src/riaps/etc/riaps-ctrl.glade package/riaps-pycom-amd64/usr/local/riaps/etc/.
+cp -r src/riaps/etc/redis.conf package/riaps-pycom-amd64/etc/riaps/.
+cp -r src/riaps/etc/riaps-ctrl.glade package/riaps-pycom-amd64/etc/riaps/.
 cp -r src/riaps/lang/riaps.tx package/riaps-pycom-amd64/usr/local/riaps/lang/.
 cp -r src/riaps/lang/depl.tx package/riaps-pycom-amd64/usr/local/riaps/lang/.
 cp -r src/riaps/keys/id_rsa.key package/riaps-pycom-amd64/etc/riaps/.
@@ -36,6 +37,7 @@ mkdir -p package/riaps-pycom-armhf/etc/
 mkdir -p package/riaps-pycom-armhf/etc/riaps/
 mkdir -p package/riaps-pycom-armhf/opt/riaps-pycom/
 mkdir -p package/riaps-pycom-armhf/usr/local/riaps/etc/
+mkdir -p package/riaps-pycom-armhf/usr/local/riaps/keys/
 mkdir -p package/riaps-pycom-armhf/usr/local/riaps/lang/
 
 cp -r DEBIAN/armhf/pkgfiles/* package/riaps-pycom-armhf/DEBIAN/.
@@ -43,7 +45,7 @@ cp -r DEBIAN/armhf/etc/* package/riaps-pycom-armhf/etc/.
 cp -r src package/riaps-pycom-armhf/opt/riaps-pycom/.
 cp -r src/riaps/etc/riaps.conf package/riaps-pycom-armhf/etc/riaps/.
 cp -r src/riaps/etc/riaps-log.conf package/riaps-pycom-armhf/etc/riaps/.
-cp -r src/riaps/etc/redis.conf package/riaps-pycom-armhf/usr/local/riaps/etc/.
+cp -r src/riaps/etc/redis.conf package/riaps-pycom-armhf/etc/riaps/.
 cp -r src/riaps/lang/riaps.tx package/riaps-pycom-armhf/usr/local/riaps/lang/.
 cp -r src/riaps/lang/depl.tx package/riaps-pycom-armhf/usr/local/riaps/lang/.
 cp -r src/riaps/keys/id_rsa.key package/riaps-pycom-armhf/etc/riaps/.
@@ -63,6 +65,7 @@ mkdir -p package/riaps-pycom-arm64/etc/
 mkdir -p package/riaps-pycom-arm64/etc/riaps/
 mkdir -p package/riaps-pycom-arm64/opt/riaps-pycom/
 mkdir -p package/riaps-pycom-arm64/usr/local/riaps/etc/
+mkdir -p package/riaps-pycom-arm64/usr/local/riaps/keys/
 mkdir -p package/riaps-pycom-arm64/usr/local/riaps/lang/
 
 cp -r DEBIAN/arm64/pkgfiles/* package/riaps-pycom-arm64/DEBIAN/.
@@ -71,8 +74,8 @@ cp -r src package/riaps-pycom-arm64/opt/riaps-pycom/.
 cp -r src/riaps/etc/riaps.conf package/riaps-pycom-arm64/etc/riaps/.
 cp -r src/riaps/etc/riaps-log.conf package/riaps-pycom-arm64/etc/riaps/.
 cp -r src/riaps/etc/riaps-hosts.conf package/riaps-pycom-arm64/etc/riaps/.
-cp -r src/riaps/etc/redis.conf package/riaps-pycom-arm64/usr/local/riaps/etc/.
-cp -r src/riaps/etc/riaps-ctrl.glade package/riaps-pycom-arm64/usr/local/riaps/etc/.
+cp -r src/riaps/etc/redis.conf package/riaps-pycom-arm64/etc/riaps/.
+cp -r src/riaps/etc/riaps-ctrl.glade package/riaps-pycom-arm64/etc/riaps/.
 cp -r src/riaps/lang/riaps.tx package/riaps-pycom-arm64/usr/local/riaps/lang/.
 cp -r src/riaps/lang/depl.tx package/riaps-pycom-arm64/usr/local/riaps/lang/.
 cp -r src/riaps/keys/id_rsa.key package/riaps-pycom-arm64/etc/riaps/.

@@ -1,0 +1,42 @@
+app INVERT{
+
+    message qry_msg;
+    message ans_msg;
+    message evnt;
+
+    component client(name){
+        qry qry_port: (qry_msg, ans_msg);
+        timer poller 2000 msec; // miss first 0-1 messages
+        sub event_port: evnt;
+        // timer poller 1000 msec; // miss first 1 messages
+        //timer poller 500 msec; // miss first 3 messages
+        // timer poller 50 msec; // miss first 30 messages
+        // timer poller 10 msec; // miss first ~145 messages and every other message
+
+    }
+
+    component server{
+        ans ans_port: (qry_msg, ans_msg);
+        timer poller 5 sec;
+        pub event_port: evnt;
+    }
+
+    actor client_actor1(name){
+        {
+            clnt: client(name=name);
+        }
+    }
+
+    actor client_actor2(name){
+        {
+            clnt: client(name=name);
+        }
+    }
+
+    actor server_actor{
+        {
+            srvr: server;
+        }
+    }
+
+}

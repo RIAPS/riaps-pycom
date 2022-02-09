@@ -34,7 +34,7 @@ from riaps.utils.names import *
 
 class SpcMonitorThread(threading.Thread):
     def __init__(self, parent):
-        threading.Thread.__init__(self)
+        threading.Thread.__init__(self,daemon=True)
         self.logger = logging.getLogger(__name__)
         self.parent = parent
         self.context = self.parent.context

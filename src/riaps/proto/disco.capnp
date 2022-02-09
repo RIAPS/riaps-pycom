@@ -9,13 +9,14 @@ $Cxx.namespace("riaps::discovery");
 
 enum Status { ok @0; err @1; }
 enum Kind { none @0; pub @1; sub @2; clt @3; srv @4; req @5; rep @6; qry @7; ans @8; gpub @9; gsub @10; }
-enum Scope { none @0; global @1; local @2; }
+enum Scope { none @0; global @1; local @2; internal @3; }
 
 struct ActorRegReq {
   appName @0 : Text;
   version @1 : Text;
   actorName @2 : Text;
   pid @3 : Int32;
+  isDevice @4 : Bool;
 }
 
 struct ActorRegRep {

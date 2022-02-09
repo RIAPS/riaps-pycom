@@ -1,16 +1,15 @@
 set -e
+
+# Install riaps-pycom pip package
 pip3 install /opt/riaps-pycom/src --verbose --no-index
+
+# Make sure key directories are available
 mkdir -p /usr/local/riaps/keys/
+mkdir -p /usr/local/riaps/etc/
 
-rm -f /usr/local/riaps/etc/riaps.conf || true
-rm -f /usr/local/riaps/etc/riaps-log.conf || true
-rm -f /usr/local/riaps/etc/riaps-hosts.conf || true
-rm -f /usr/local/riaps/keys/id_rsa.key || true
-rm -f /usr/local/riaps/keys/id_rsa.pub || true
-rm -f /usr/local/riaps/keys/riaps-sys.cert || true
-rm -f /usr/local/riaps/keys/x509.pem || true
-
-if [ -d "/home/riaps/.ssh/riaps_keys" ]; then
+# Restore saved security keys
+PREV_KEYS_PATH="/home/riaps/.ssh/riaps_keys"
+if [ -d $PREV_KEYS_PATH ] && [ "$(ls -A $PREV_KEYS_PATH)" ]; then
   echo "Restoring saved security keys"
   sudo cp /home/riaps/.ssh/riaps_keys/id_rsa.key /etc/riaps/id_rsa.key
   sudo cp /home/riaps/.ssh/riaps_keys/id_rsa.pub /etc/riaps/id_rsa.pub
@@ -18,6 +17,7 @@ if [ -d "/home/riaps/.ssh/riaps_keys" ]; then
   sudo cp /home/riaps/.ssh/riaps_keys/x509.pem /etc/riaps/x509.pem
 fi
 
+# Set permissions for security keys
 chown root:riaps /etc/riaps/id_rsa.key
 chown root:riaps /etc/riaps/id_rsa.pub
 chown root:riaps /etc/riaps/riaps-sys.cert
@@ -27,20 +27,21 @@ chmod 440 /etc/riaps/id_rsa.pub
 chmod 444 /etc/riaps/riaps-sys.cert
 chmod 440 /etc/riaps/x509.pem
 
+# Soft link conf files and security keys
 ln -s /etc/riaps/riaps.conf /usr/local/riaps/etc/riaps.conf
 ln -s /etc/riaps/riaps-log.conf /usr/local/riaps/etc/riaps-log.conf
 ln -s /etc/riaps/riaps-hosts.conf /usr/local/riaps/etc/riaps-hosts.conf
+ln -s /etc/riaps/redis.conf /usr/local/riaps/etc/redis.conf
+ln -s /etc/riaps/riaps-ctrl.glade /usr/local/riaps/etc/riaps-ctrl.glade
 ln -s /etc/riaps/id_rsa.key /usr/local/riaps/keys/id_rsa.key
 ln -s /etc/riaps/id_rsa.pub /usr/local/riaps/keys/id_rsa.pub
 ln -s /etc/riaps/riaps-sys.cert /usr/local/riaps/keys/riaps-sys.cert
 ln -s /etc/riaps/x509.pem /usr/local/riaps/keys/x509.pem
 
-#Create soft link from rdiscoveryd to run as default
-mv /usr/local/bin/riaps_disco /usr/local/bin/riaps_disco_redis
-ln -s /usr/local/bin/rdiscoveryd /usr/local/bin/riaps_disco
-
+# Remove location used while installing riaps-pycom package
 rm -rf /opt/riaps-pycom/ || true
 
+# Enable and start RIAPS services
 systemctl daemon-reload
 systemctl enable riaps-rm-cgroups.service
 systemctl start riaps-rm-cgroups.service || true

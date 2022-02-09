@@ -12,6 +12,14 @@ const.discoEndpoint = 'tcp://127.0.0.1:9700'    # 'ipc:///tmp/riaps-disco'
 const.discoEndpointRecvTimeout = -1
 const.discoEndpointSendTimeout = -1
 
+# Default host for disco dht host
+const.discoDhtHost = 'localhost'
+# Default port number for disco dhthost
+const.discoDhtPort = 4222
+# Dht republisher timeout (in sec) - less than dht timeout
+const.discoDhtRepublishTimeout = 595
+const.discoDhtPeerMonEndpoint = 'inproc://dht-mon'
+
 # Name of endpoint for actor-depl communication
 const.deplEndpoint = 'tcp://127.0.0.1:9780'     # 'ipc:///tmp/riaps-depl'
 # Timeout for actor-depl communication (-1: wait forever)
@@ -69,6 +77,10 @@ const.peerExpiredTimeout = 5000
 # App database
 const.appDb = 'riaps-apps.lmdb'     # Under RIAPSAPPS
 const.appDbSize = 16                # Mbytes 
+
+# Reg database
+const.regDb = 'riaps-disco.lmdb'    # Under RIAPSAPPS
+const.appDBsize = 4                 # Mbytes
 
 # App descriptor file name
 const.appDescFile = 'riaps.yaml'
