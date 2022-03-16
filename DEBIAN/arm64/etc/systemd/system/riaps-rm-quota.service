@@ -5,6 +5,7 @@ Description=RIAPS Resource Management Quota Service
 [Service]
 Type=oneshot
 SyslogIdentifier=RIAPS-RM-QUOTA
+ExecStartPre=ln -s /dev/sda2 /dev/root
 ExecStartPre=/sbin/quotaoff -a
 ExecStart=/sbin/quotacheck -vaugm
 ExecStartPost=/sbin/quotaon -a
@@ -12,4 +13,3 @@ RemainAfterExit=yes
 
 [Install]
 WantedBy=multi-user.target
-
