@@ -1,5 +1,3 @@
-[![Build Status](https://travis-ci.com/RIAPS/riaps-pycom.svg?token=pyUEeBLkG7FqiYPhyfxp&branch=master)](https://travis-ci.com/RIAPS/riaps-pycom)
-
 # riaps-pycom
 
 ## Security Note
