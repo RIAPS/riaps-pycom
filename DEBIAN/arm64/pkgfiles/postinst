@@ -1,7 +1,7 @@
 set -e
 
 # Install riaps-pycom pip package
-pip3 install /opt/riaps-pycom/src --verbose --no-index
+sudo pip3 install /opt/riaps-pycom/src --verbose --no-index
 
 # Make sure key directories are available
 mkdir -p /usr/local/riaps/keys/
