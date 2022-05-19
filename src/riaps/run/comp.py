@@ -461,7 +461,7 @@ class Component(object):
     
     def handlePassivate(self):
         '''
-        Default activation handler
+        Default passivate handler
         '''
         pass
     
