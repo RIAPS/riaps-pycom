@@ -20,7 +20,9 @@ class SporadicTimer(Component):
         if self.sporadic.running():
             self.logger.info("canceling sporadic")
             self.sporadic.cancel()
-        self.sporadic.setDelay(1.0)                 # Set the sporadic timer delay 
-        self.sporadic.launch()                      # Launch the sproadic timer
+        else:
+            self.logger.info("launching sporadic")
+            self.sporadic.setDelay(1.0)                 # Set the sporadic timer delay 
+            self.sporadic.launch()                      # Launch the sproadic timer
         
 

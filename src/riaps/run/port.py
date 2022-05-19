@@ -484,7 +484,7 @@ class DuplexPort(Port):
         assert req_scope == rep_scope
         self.portScope = req_scope
         self.msgType = str(self.req_type) + '#' + str(self.rep_type)
-        print("DuplexPort.__init__()")
+        # print("DuplexPort.__init__()")
 
 class BindPort(Port):
     def __init__(self, parentComponent, portName, portSpec):

@@ -33,7 +33,7 @@ class ComponentThread(threading.Thread):
         self.instance = parent.instance
         self.schedulerType = parent.scheduler
         self.control = None
-
+    
     def setupControl(self):
         '''
         Create the control socket and connect it to the socket in the parent part
@@ -85,7 +85,7 @@ class ComponentThread(threading.Thread):
 
     def replaceSocket(self, portObj, newSocket):
         portName = portObj.name
-        oldSocket = portObj.getSocket()
+        oldSocket = portObj.getSocket() 
         del self.sock2PortMap[oldSocket]
         if portObj.inSocket():
             self.poller.register(oldSocket, 0)
@@ -122,14 +122,18 @@ class ComponentThread(threading.Thread):
             res = True
         elif msg == "activate":
             self.logger.info("activate")
-            self.instance.handleActivate()
+            self.instance.handleActivate()      
+            for portName in self.parent.ports:
+                self.parent.ports[portName].activate()
         elif msg == "deactivate":
             self.logger.info("deactivate")
-            self.instance.handleDeactivate()
+            for portName in self.parent.ports:
+                self.parent.ports[portName].deactivate()
+            self.instance.handleDeactivate()     
         elif msg == "passivate":
             self.logger.info("passivate")
-            self.instance.handlePassivate()
-        else:
+            self.instance.handlePassivate()                
+        else: 
             cmd = msg[0]
             if cmd == "portUpdate":
                 self.logger.info("portUpdate: %s" % str(msg))
@@ -178,7 +182,7 @@ class ComponentThread(threading.Thread):
                 self.logger.info("unknown command %s" % cmd)
                 pass  # Should report an error
         return res
-
+    
     def getInfo(self):
         info = []
         for (_portName, portObj) in self.parent.ports:
@@ -192,8 +196,8 @@ class ComponentThread(threading.Thread):
     def executeHandlerFor(self, socket):
         '''
         Execute the handler for the socket
-
-        The handler is always allowed to run to completion, the operation is never preempted.
+        
+        The handler is always allowed to run to completion, the operation is never preempted. 
         '''
         if socket in self.sock2PortMap:
             portName = self.sock2NameMap[socket]
@@ -232,20 +236,20 @@ class ComponentThread(threading.Thread):
     def batchScheduler(self, sockets):
         '''
         Batch scheduler for the component message processing.
-
-        The dictionary containing the active sockets is scanned and the associated handler is invoked.
-
+        
+        The dictionary containing the active sockets is scanned and the associated handler is invoked. 
+        
         '''
         for socket in sockets:
             self.executeHandlerFor(socket)
             
     def rrScheduler(self, sockets):
         '''
-        Round-robin scheduler for the component message processing.
-
+        Round-robin scheduler for the component message processing. 
+        
         The round-robin order is determined by the order of component ports. The dictionary of active sockets is scanned, and the \
         associated handlers are invoked in round-robin order. After each invocation, the inputs are polled (in a no-wait operation) \
-        and the round-robin queue is updated.
+        and the round-robin queue is updated. 
         '''
         while True:
             jobs = []
@@ -289,11 +293,11 @@ class ComponentThread(threading.Thread):
                   
     def priorityScheduler(self, sockets):
         '''
-        priority scheduler for the component message processing.
-
+        priority scheduler for the component message processing. 
+        
         The priority order is determined by the order of component ports. The dictionary of active sockets is scanned, and the \
         they are inserted into a priority queue (according to their priority value). The queue is processed (in order of \
-        priority). After each invocation, the inputs are polled (in a no-wait operation) and the priority queue is updated.
+        priority). After each invocation, the inputs are polled (in a no-wait operation) and the priority queue is updated. 
         '''
         while True:
             for socket in sockets:
@@ -326,7 +330,7 @@ class ComponentThread(threading.Thread):
     
     def setupScheduler(self):
         '''
-        Select the message scheduler algorithm based on the model.
+        Select the message scheduler algorithm based on the model. 
         '''
         if self.schedulerType == 'default':
             self.scheduler = self.batchScheduler
@@ -341,7 +345,7 @@ class ComponentThread(threading.Thread):
         else:
             self.logger.error('Unknown scheduler type: %r' % self.schedulerType)
             self.scheduler = None
-
+            
     def run(self):
         self.setupControl()
         self.setupSockets()
@@ -400,19 +404,19 @@ class Component(object):
         # print  ( "Component() : '%s'" % self )
         self.coord = Coordinator(self)
         self.thread = None
-
+ 
     def getName(self):
         '''
         Return the name of the component (as in model)
         '''
         return self.owner.getName()
-
+    
     def getTypeName(self):
         '''
-        Return the name of the type of the component (as in model)
+        Return the name of the type of the component (as in model) 
         '''
         return self.owner.getTypeName()
-
+    
     def getLocalID(self):
         '''
         Return a locally unique ID (int) of the component. The ID is unique within the actor.
@@ -424,25 +428,25 @@ class Component(object):
         Return the name of the parent actor (as in model)
         '''
         return self.owner.getActorName()
-
+    
     def getAppName(self):
         '''
         Return the name of the parent application (as in model)
         '''
         return self.owner.getAppName()
-
+    
     def getActorID(self):
         '''
-        Return a globally unique ID (8 bytes) for the parent actor.
+        Return a globally unique ID (8 bytes) for the parent actor. 
         '''
         return self.owner.getActorID()
-
+    
     def getUUID(self):
         '''
         Return the network unique ID for the parent actor
         '''
         return self.owner.getUUID()
-
+    
     def handleActivate(self):
         '''
         Default activation handler
@@ -454,33 +458,33 @@ class Component(object):
         Default deactivation handler
         '''
         pass
-
+    
     def handlePassivate(self):
         '''
         Default passivation handler
         '''
         pass
-
+    
     def handleCPULimit(self):
-        '''
+        ''' 
         Default handler for CPU limit exceed
         '''
         pass
-
+    
     def handleMemLimit(self):
-        '''
+        ''' 
         Default handler for memory limit exceed
         '''
         pass
-
+    
     def handleSpcLimit(self):
-        '''
+        ''' 
         Default handler for space limit exceed
         '''
         pass
-
+        
     def handleNetLimit(self):
-        '''
+        ''' 
         Default handler for space limit exceed
         '''
         pass
@@ -506,14 +510,14 @@ class Component(object):
     def handleGroupMessage(self, _group):
         '''
         Default handler for group messages.
-        Implementation must immediately call recv/recv_pyobj on the group to obtain message.
+        Implementation must immediately call recv/recv_pyobj on the group to obtain message. 
         '''
         pass
     
     def handleVoteRequest(self, group, rfvId):
         '''
         Default handler for vote requests (in member)
-        Implementation must recv/recv_pyobj to obtain the topic.
+        Implementation must recv/recv_pyobj to obtain the topic. 
         '''
         pass
     
@@ -526,46 +530,46 @@ class Component(object):
     def handleActionVoteRequest(self, group, rfvId, when):
         '''
         Default handler for request to vote an action in the future (in member)
-        Implementation must recv/recv_pyobj to obtain the action topic.
+        Implementation must recv/recv_pyobj to obtain the action topic. 
         '''
         pass
         
     def handleMessageToLeader(self, group):
         '''
         Default handler for messages sent to the leader (in leader)
-        Leader implementation must immediately call recv/recv_pyobj on the group to obtain message.
+        Leader implementation must immediately call recv/recv_pyobj on the group to obtain message. 
         '''
         pass
     
     def handleMessageFromLeader(self, group):
         '''
-        Default handler for messages received from the leader (in member)
-        Member implementation must immediately call recv/recv_pyobj on the group to obtain message.
+        Default handler for messages received from the leader (in member) 
+        Member implementation must immediately call recv/recv_pyobj on the group to obtain message. 
         '''
         pass
     
     def handleMemberJoined(self, group, memberId):
         '''
         Default handler for 'member join' events
-        '''
+        '''  
         pass
     
     def handleMemberLeft(self, group, memberId):
         '''
         Default handler for 'member leave' events
-        '''
+        '''          
         pass
     
     def handleLeaderElected(self, group, leaderId):
         '''
         Default handler for 'leader elected' events
-        '''
+        '''  
         pass
     
     def handleLeaderExited(self, group, leaderId):
         '''
         Default handler for 'leader exited' events
-        '''
+        '''  
         pass
     
     def joinGroup(self, groupName, instName, groupPriority=GROUP_PRIORITY_MIN):
@@ -585,4 +589,5 @@ class Component(object):
             self.thread.delGroupSocket(group)
             self.coord.leaveGroup(self.thread, groupName, instName, self.getLocalID())
         return None
+    
     

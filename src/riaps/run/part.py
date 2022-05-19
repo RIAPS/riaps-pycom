@@ -210,34 +210,35 @@ class Part(object):
         # else:
         #    pass
 
-    def activatePorts(self, ports):
-        '''
-        Activate all ports of this part
-        '''
-        for portName in ports:
-            ports[portName].activate()
-        
+    # def activatePorts(self, ports):
+    #     '''
+    #     Activate all ports of this part
+    #     '''
+    #     for portName in ports:
+    #         ports[portName].activate()
+    #
+
     def activate(self):
         '''
         Activate this part
         '''
         if not self.state in (Part.State.Ready, Part.State.Passive, Part.State.Inactive):
             raise StateError("Invalid state %s in activate()" % self.state)
-        self.activatePorts(self.ports)      # Activate parts
+        # self.activatePorts(self.ports)      # Activate parts
         self.sendControl("activate", -1)    # Send activation command to component thread
         self.state = Part.State.Active
 
-    def deactivatePorts(self, ports):
-        '''
-        Deactivate all ports
-        '''
-        for portName in ports:
-            ports[portName].deactivate()
+    # def deactivatePorts(self, ports):
+    #     '''
+    #     Deactivate all ports
+    #     '''
+    #     for portName in ports:
+    #         ports[portName].deactivate()
             
     def deactivate(self):
         if self.state != Part.State.Active:
             raise StateError("Invalid state %s in deactivate()" % self.state)
-        self.deactivatePorts(self.ports)
+        # self.deactivatePorts(self.ports)
         self.sendControl("deactivate", -1)  # Send deactivation command to component thread
         self.state = Part.State.Inactive
     

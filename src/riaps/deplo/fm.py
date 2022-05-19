@@ -320,16 +320,17 @@ class NICMonitor(threading.Thread):
                 for info in infos:
                     attrs = dict(info['attrs'])
                     ifname = attrs['IFLA_IFNAME']
-                    state = attrs['IFLA_OPERSTATE']
-                    carrier = attrs['IFLA_CARRIER']
-                    if ifname == Config.NIC_NAME and state != self.state and carrier != self.carrier:
-                        self.logger.info("NICMonitor: state has changed (%s,%d)" % (state,carrier))
-                        if state != 'UP' or carrier != 1:       # NIC down and/or carrier lost
-                            info = ('nic-',)
-                            self.command.send_pyobj(info)
-                        elif state == 'UP' and carrier == 1:    # NIC UP and carrier is on
-                            info = ('nic+',)
-                            self.command.send_pyobj(info)       
+                    if ifname == Config.NIC_NAME:
+                        state = attrs['IFLA_OPERSTATE']
+                        carrier = attrs['IFLA_CARRIER']
+                        if state != self.state and carrier != self.carrier:
+                            self.logger.info("NICMonitor: state has changed (%s,%d)" % (state,carrier))
+                            if state != 'UP' or carrier != 1:       # NIC down and/or carrier lost
+                                info = ('nic-',)
+                                self.command.send_pyobj(info)
+                            elif state == 'UP' and carrier == 1:    # NIC UP and carrier is on
+                                info = ('nic+',)
+                                self.command.send_pyobj(info)       
                         self.state,self.carrier = state, carrier
                 del sockets[self.ip._sock.fileno()]
             elif self.command in sockets:
