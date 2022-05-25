@@ -62,7 +62,10 @@ class AnsPort(DuplexBindPort):
         #                      msgType=str(self.req_type) + '#' + str(self.rep_type), 
         #                      portHost=self.host, portNum=self.portNum)
         # return self.info
-
+    
+    def closeSocket(self):
+        self.closeBindSocket()
+        
     def update(self, host, port):
         raise OperationError("Unsupported update() on AnsPort")
     

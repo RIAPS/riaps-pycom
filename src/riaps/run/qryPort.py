@@ -64,7 +64,10 @@ class QryPort(DuplexConnPort):
         #                      msgType=str(self.req_type) + '#' + str(self.rep_type), 
         #                      host=self.host, portNum=self.portNum)
         # return self.info
-    
+
+    def closeSocket(self):
+        self.closeConnSocket()
+        
     def reset(self):
         self.resetConnSocket(zmq.DEALER,[(zmq.IDENTITY,str(id(self)))] )
         # self.socket.setsockopt(zmq.LINGER, 0)

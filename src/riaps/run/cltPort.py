@@ -62,6 +62,9 @@ class CltPort(DuplexConnPort):
         #                      host=self.host, portNum=self.portNum) 
         # return self.info
 
+    def closeSocket(self):
+        self.closeConnSocket()
+    
     def reset(self):
         self.resetConnSocket(zmq.REQ)
         # newSocket = self.setupConnSocket(self.owner,zmq.REQ,'clt')

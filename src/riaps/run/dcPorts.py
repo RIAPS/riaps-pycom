@@ -12,7 +12,7 @@ import time
 import logging
 import struct
 import traceback
-from riaps.run.port import Port,PortInfo,PortScope
+from riaps.run.port import Port,PortInfo,PortScope,BindPort,ConnPort
 from riaps.consts.defs import *
 from riaps.utils import spdlog_setup
 import spdlog
@@ -30,8 +30,19 @@ except:
     cPickle = None
     import pickle
 
-
-class GroupPubPort(Port):
+class GroupSimplexPort(Port):
+    def __init__(self, parentComponent, portName, groupSpec):
+        '''
+        GroupSimplexPort constructor
+        '''
+        super().__init__(parentComponent, portName)
+        self.type = groupSpec["message"]
+        self.isTimed = groupSpec["timed"]
+        self.portScope = PortScope.GLOBAL
+        self.msgType = self.type
+        self.info = None
+            
+class GroupPubPort(BindPort,GroupSimplexPort):
     '''
     Group Publisher port is for publishing application and housekeeping messages for all group members.
     '''
@@ -40,29 +51,31 @@ class GroupPubPort(Port):
         '''
         Constructor
         '''
-        super(GroupPubPort, self).__init__(parentPart, portName)
-        self.type = groupSpec["message"]
-        self.isTimed = groupSpec["timed"]
-        self.portScope = PortScope.GLOBAL
-        self.info = None
-    
+        super(GroupPubPort, self).__init__(parentPart, portName,groupSpec)
+           
     def setup(self):
         pass
         
     def setupSocket(self, owner):
-        self.setOwner(owner)
-        self.socket = self.context.socket(zmq.PUB)
-        self.socket.setsockopt(zmq.SNDTIMEO, self.sendTimeout) 
-        self.host = ''
-        self.portNum = -1
-        self.setupCurve(True) 
-        globalHost = self.getGlobalIface()
-        self.portNum = self.socket.bind_to_random_port("tcp://" + globalHost)
-        self.host = globalHost
-        self.info = PortInfo(portKind='gpub', portScope=self.portScope, portName=self.name, 
-                             msgType=self.type, 
-                             portHost=self.host, portNum=self.portNum)
-        return self.info
+        return self.setupBindSocket(owner, zmq.PUB, 'gpub',[(zmq.SNDTIMEO,self.sendTimeout)])
+    
+        # self.setOwner(owner)
+        # self.socket = self.context.socket(zmq.PUB)
+        # self.socket.setsockopt(zmq.SNDTIMEO, self.sendTimeout) 
+        # self.host = ''
+        # self.portNum = -1
+        # self.setupCurve(True) 
+        # globalHost = self.getGlobalIface()
+        # self.bindAddr = "tcp://" + globalHost
+        # self.portNum = self.socket.bind_to_random_port(self.bindAddr)
+        # self.host = globalHost
+        # self.info = PortInfo(portKind='gpub', portScope=self.portScope, portName=self.name, 
+        #                      msgType=self.type, 
+        #                      portHost=self.host, portNum=self.portNum)
+        # return self.info
+        
+    def closeSocket(self):
+        self.closeBindSocket()
         
     def reset(self):
         pass
@@ -106,9 +119,8 @@ class GroupPubPort(Port):
     
     def getInfo(self):
         return self.info
-
-    
-class GroupSubPort(Port):
+   
+class GroupSubPort(ConnPort,GroupSimplexPort):
     '''
     Group subscriber port is for receiving application and housekeeping messages from all group members.
     '''
@@ -117,12 +129,12 @@ class GroupSubPort(Port):
         '''
         Constructor
         '''
-        super(GroupSubPort, self).__init__(parentPart, portName)
-        self.type = groupSpec["message"]
-        self.isTimed = groupSpec["timed"]
+        super(GroupSubPort, self).__init__(parentPart, portName,groupSpec)
+        # self.type = groupSpec["message"]
+        # self.isTimed = groupSpec["timed"]
         self.deadline = None
-        self.portScope = PortScope.GLOBAL
-        self.pubs = []
+        # self.portScope = PortScope.GLOBAL
+        # self.pubs = []
         self.sendTime = 0.0
         self.recvTime = 0.0
         self.info = None
@@ -131,21 +143,25 @@ class GroupSubPort(Port):
         pass
        
     def setupSocket(self, owner):
-        self.setOwner(owner)
-        self.socket = self.context.socket(zmq.SUB)
-        self.socket.setsockopt_string(zmq.SUBSCRIBE, '')
-        self.setupCurve(False)
-        self.host = ''
-        globalHost = self.getGlobalIface()
-        self.portNum = -1 
-        self.host = globalHost
-        self.info = PortInfo(portKind='gsub', portScope=self.portScope, portName=self.name, 
-                             msgType=self.type, 
-                             portHost=self.host, portNum=self.portNum)
-        return self.info
+        return self.setupConnSocket(owner,zmq.SUB,'gsub',[(zmq.SUBSCRIBE,'')])
+        # self.setOwner(owner)
+        # self.socket = self.context.socket(zmq.SUB)
+        # self.socket.setsockopt_string(zmq.SUBSCRIBE, '')
+        # self.setupCurve(False)
+        # self.host = ''
+        # globalHost = self.getGlobalIface()
+        # self.portNum = -1 
+        # self.host = globalHost
+        # self.info = PortInfo(portKind='gsub', portScope=self.portScope, portName=self.name, 
+        #                      msgType=self.type, 
+        #                      portHost=self.host, portNum=self.portNum)
+        # return self.info
     
+    def closeSocket(self):
+        self.closeConnSocket()
+        
     def reset(self):
-        pass
+        self.resetConnSocket(zmq.SUB,[(zmq.SUBSCRIBE,'')])
     
     def getSocket(self):
         return self.socket
@@ -153,10 +169,10 @@ class GroupSubPort(Port):
     def inSocket(self):
         return True
     
-    def update(self, host, port):
-        pubPort = "tcp://" + str(host) + ":" + str(port)
-        self.pubs.append((host, port))
-        self.socket.connect(pubPort)
+    # def update(self, host, port):
+    #     pubPort = "tcp://" + str(host) + ":" + str(port)
+    #     self.pubs.append((host, port))
+    #     self.socket.connect(pubPort)
     
     def recv_pyobj(self):
         raise OperationError("Unsupported recv_pyobj() on GroupSubPort")
@@ -190,10 +206,22 @@ class GroupSubPort(Port):
     def getInfo(self):
         return self.info
      
-
-class GroupAnsPort(Port):
+class GroupDuplexPort(Port):
+    def __init__(self, parentComponent, portName, groupSpec):
+        '''
+        GroupDuplexPort constructor
+        '''
+        super().__init__(parentComponent, portName)
+        self.req_type = 'group-mtl'
+        self.rep_type = 'group-mfl'
+        self.isTimed = groupSpec["timed"]
+        self.portScope = PortScope.GLOBAL
+        self.msgType = str(self.req_type) + '#' + str(self.rep_type)
+        self.info = None
+        
+class GroupAnsPort(BindPort,GroupDuplexPort):
     '''
-    Group answer port is for the leader to receive messages from members members. Based on a DEALER socket.  
+    Group answer port is for the leader to receive messages from members. Based on a DEALER socket.  
     Group-internal communication port for messaging with the leader, no message type, but can be timed. 
     '''
 
@@ -201,20 +229,22 @@ class GroupAnsPort(Port):
         '''
         Constructor
         '''
-        super(GroupAnsPort, self).__init__(parentPart, portName)
-        self.req_type = 'group-mtl'
-        self.rep_type = 'group-mfl'
-        self.isTimed = groupSpec["timed"]
-        self.portScope = PortScope.GLOBAL
+        super(GroupAnsPort, self).__init__(parentPart, portName, groupSpec)
+        # self.req_type = 'group-mtl'
+        # self.rep_type = 'group-mfl'
+        # self.isTimed = groupSpec["timed"]
+        # self.portScope = PortScope.GLOBAL
         self.identity = None
         self.socket = None
         self.portNum = None
-        self.info = None
+        self.bindAddr = None
+        self.poller = None
+        # self.info = None
 
     def setup(self):
         pass
   
-    def setupSocket(self, owner):
+    def setupSocket(self, owner):   
         self.setOwner(owner)
         self.socket = self.context.socket(zmq.ROUTER)
         self.socket.setsockopt(zmq.SNDTIMEO, self.sendTimeout)
@@ -227,20 +257,31 @@ class GroupAnsPort(Port):
                              portHost=self.host, portNum=self.portNum)
         return self.info
 
+    def closeSocket(self):
+        if self.portNum != None:
+            self.socket.setsockopt(zmq.LINGER, 0)
+            self.socket.unbind(self.bindAddr)
+            self.portNum = None
+        if self.socket != None:
+            self.socket.close()  # Close and destroy old socket
+            del self.socket
+            self.socket = None
+        
     def update(self):
         raise OperationError("Unsupported update() on GroupAnsPort")
     
     def updatePoller(self, poller):
         if self.portNum != None:
             self.socket.setsockopt(zmq.LINGER, 0)
-            self.poller.register(self.self.socket, 0)  # Unregister old socket as tainted
+            poller.register(self.self.socket, 0)  # Unregister old socket as tainted
             self.socket.close()  # Close and destroy old socket
             del self.socket
             self.socket = self.context.socket(zmq.ROUTER)  # Create new socket
             self.setupCurve(True)  # Set up encryption
-            self.poller.register(self.socket, zmq.POLLIN)  # Register with poller
-        port = self.socket.bind_to_random_port("tcp://%s" % self.host)
-        self.portNum = port
+            poller.register(self.socket, zmq.POLLIN)  # Register with poller
+        bindAddr = "tcp://" + self.host
+        self.portNum = self.socket.bind_to_random_port(bindAddr)
+        self.bindAddr = "%s:%d" % (bindAddr, self.portNum)
         self.info = PortInfo(portKind='gans', portScope=self.portScope, portName=self.name, 
                              msgType=str(self.req_type) + '#' + str(self.rep_type), 
                              portHost=self.host, portNum=self.portNum)
@@ -314,7 +355,7 @@ class GroupAnsPort(Port):
         return self.info
     
 
-class GroupQryPort(Port):
+class GroupQryPort(ConnPort, GroupDuplexPort):
     '''
     Group query port is for accessing the leader from members. Based on a DEALER socket.  
     Group-internal communication port for messaging with the leader, no message type, but can be timed. 
@@ -324,12 +365,12 @@ class GroupQryPort(Port):
         '''
         Initialize the query port object.
         '''
-        super(GroupQryPort, self).__init__(parentPart, portName)
+        super(GroupQryPort, self).__init__(parentPart, portName, groupSpec)
         
-        self.req_type = 'group-mtl'
-        self.rep_type = 'group-mfl'
-        self.isTimed = groupSpec["timed"]
-        self.portScope = PortScope.GLOBAL
+        # self.req_type = 'group-mtl'
+        # self.rep_type = 'group-mfl'
+        # self.isTimed = groupSpec["timed"]
+        # self.portScope = PortScope.GLOBAL
         self.serverHost = None
         self.serverPort = None
         self.info = None
@@ -357,6 +398,16 @@ class GroupQryPort(Port):
                              msgType=str(self.req_type) + '#' + str(self.rep_type), 
                              portHost=self.host, portNum=self.portNum)
         return self.info
+    
+    def closeSocket(self):
+        if self.socket != None:
+            if self.serverHost != None and self.serverPort != None:  # Old connection
+                self.socket.setsockopt(zmq.LINGER, 0)
+                oldConn = "tcp://" + str(self.serverHost) + ":" + str(self.serverPort)
+                self.socket.disconnect(oldConn)
+            self.socket.close()
+            del self.socket
+            self.socket = None
     
     def reset(self):
         pass
