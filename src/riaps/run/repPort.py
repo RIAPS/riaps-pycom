@@ -54,6 +54,9 @@ class RepPort(DuplexBindPort):
         #                      host=self.host, portNum=self.portNum) 
         # return self.info
     
+    def closeSocket(self):
+        self.closeBindSocket()
+    
     def reset(self):
         pass
     

@@ -161,6 +161,7 @@ class GroupThread(threading.Thread):
         '''
         Handle a message coming from the component
         '''
+        toStop = False
         msgFrames = self.groupSocket.recv_multipart()
         cmd = msgFrames[0]
         if cmd == Group.GROUP_UPD:  # Update message for sub port
@@ -262,8 +263,14 @@ class GroupThread(threading.Thread):
                 except zmq.error.ZMQError as e:
                     self.groupSocket.send_multipart([zmq.Frame(Group.GROUP_ERR), zmq.Frame(pickle.dumps(e))])
                     self.logger.error("error sending GROUP_RTC:%s", str(e)) 
+        elif cmd == Group.GROUP_MLT:    # Our component is leaving the group
+            self.logger.info("GroupThread.handleCompMessage(GROUP_MLT,...)")
+            self.pubPort.sendGroup(Group.GROUP_MLT,zmq.Frame(self.ownId))
+            toStop = True 
         else:
             self.logger.error("GroupThread.handleCompMessage() - unknown message type: %s", str(cmd))
+        return toStop
+            
         
     def randomTimeout(self):
         '''
@@ -389,6 +396,12 @@ class GroupThread(threading.Thread):
             if self.coordinated:
                 self.updateTimeout(now)
             return 
+        elif cmd == Group.GROUP_MLT:    # One of our peers left the group
+            frame = msgFrames[1]
+            leaver = struct.unpack('!16s', frame)[0]
+            self.sendChangeMessage(Group.GROUP_MLT,leaver)
+            del self.peers[leaver] 
+            self.numPeers = len(self.peers)
         if self.coordinated:  # Non-data messages are meaningful only for coordinated groups 
             assert(now != None)
             frame = msgFrames[1]
@@ -752,6 +765,8 @@ class GroupThread(threading.Thread):
                         self.handleMessageForMember()
                         # del sockets[self.qrySocket]
             if toStop: break
+        self.done = False
+        self.group.unsetup(self)
 
 
 class Group(object):
@@ -813,11 +828,12 @@ class Group(object):
         self.thread.sendControl(msg)
         time.sleep(1.0)  # 
     
-    def __del__(self):
-        self.logger.info("Group.__del__: %s - TODO" % self.groupInstanceName)
-        # Send out message the component is leaving group
-        # Stop and terminate Group thread
-        # Discard sockets
+    def leave(self):
+        self.logger.info("Group.leave(): %s" % self.groupInstanceName)
+        msgFrames = [zmq.Frame(Group.GROUP_MLT)]    # Send out message the component is leaving group
+        self.compSocket.send_multipart(msgFrames)
+        self.groupThread.join()
+        self.compSocket.close()
     
     def getGroupName(self):
         '''
@@ -859,6 +875,18 @@ class Group(object):
         self.groupSocket = self.context.socket(zmq.PAIR)
         self.groupSocket.connect('inproc://%s' % self.groupSocketName(self.groupType, self.groupInstance, self.componentId))
         self.done = True
+    
+    def unsetup(self,groupThread):
+        '''
+        Discard all the sockets used in worker thread
+        Runs in group thread
+        '''
+        self.pubPort.closeSocket()
+        self.subPort.closeSocket()
+        if self.coordinated:
+            self.qryPort.closeSocket()
+            self.ansPort.closeSocket()
+        self.groupSocket.close()
         
     def update(self, host, port):
         '''
@@ -867,7 +895,6 @@ class Group(object):
         to connect to by the client (sub) 
         Runs in component thread
         '''
-        # In comp thread
         self.logger.info("Group.update(%s,%d)" % (host, port))
         msgFrames = [zmq.Frame(Group.GROUP_UPD), zmq.Frame(host.encode('utf-8')), zmq.Frame(struct.pack("d", port))]
         self.compSocket.send_multipart(msgFrames)
@@ -1113,7 +1140,7 @@ class Group(object):
         '''
         Return the size of the group (>= 1).  
         '''
-        return self.groupThread.numPeers + 1 
+        return self.groupThread.numPeers 
     
     def getGroupId(self):
         return self.groupThread.ownId
@@ -1298,6 +1325,8 @@ class Coordinator(object):
         '''
         groupName = group.getGroupName()
         self.logger.info("Coordinator.leaveGroup(%s)" % groupName)
-        del group           
+        group.leave()
+        del self.groupMembers[groupName]
+        del group
         
     

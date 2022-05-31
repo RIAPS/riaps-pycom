@@ -16,7 +16,7 @@ import traceback
 from .exc import BuildError
 from riaps.utils import spdlog_setup
 import spdlog
-from .dc import Coordinator
+from .dc import Coordinator,Group
 
 
 class ComponentThread(threading.Thread):
@@ -461,7 +461,7 @@ class Component(object):
     
     def handlePassivate(self):
         '''
-        Default passivation handler
+        Default activation handler
         '''
         pass
     
@@ -581,13 +581,12 @@ class Component(object):
             self.thread.addGroupSocket(group, groupPriority)
         return group
             
-    def leaveGroup(self, groupName, instName):
+    def leaveGroup(self,group):
+        assert type(group) == Group
         if self.thread == None:
             self.thread = self.owner.thread
-        group = self.coord.getGroup(groupName, instName)
-        if group != None:
-            self.thread.delGroupSocket(group)
-            self.coord.leaveGroup(self.thread, groupName, instName, self.getLocalID())
-        return None
+        self.thread.delGroupSocket(group)
+        self.coord.leaveGroup(group)
+        return True
     
     

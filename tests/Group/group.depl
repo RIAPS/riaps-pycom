@@ -1,7 +1,7 @@
 // 
 app GroupApp {
 	// Message test
-	on all GroupActorA(gs='12',tl='m'), GroupActorB(gs='23',tl='m'), GroupActorC(gs='13',tl='m');	
+	// on all GroupActorA(gs='12',tl='m'), GroupActorB(gs='23',tl='m'), GroupActorC(gs='13',tl='m');	
 	// Leader message test
 	// on all GroupActorA(gs='1',tl='l'), GroupActorB(gs='1',tl='l'), GroupActorC(gs='1',tl='l');	
 	
@@ -10,4 +10,7 @@ app GroupApp {
 
 	// Vote test (action)
 	// on all GroupActorA(gs='1',tl='t'), GroupActorB(gs='1',tl='t'), GroupActorC(gs='1',tl='t');
+	
+	// Group leave test (with messages)
+	on all GroupActorA(gs='1',tl='cdm'), GroupActorB(gs='1',tl='cdm'), GroupActorC(gs='1',tl='cdm');
 }

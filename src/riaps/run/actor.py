@@ -519,7 +519,7 @@ class Actor(object):
                 assert host == self.localHost                   # Local/internal ports ar host-local
             self.updatePart(instanceName, portName, host, port) # Update the selected part
         elif which == 'groupUpdate':
-            msg = msg.groupUpdate
+            msg = msgUpd.groupUpdate                            # Placeholder 
             self.logger.info('handleServiceUpdate():groupUpdate')
     
     def updatePart(self, instanceName, portName, host, port):
