@@ -31,6 +31,8 @@ class Config(object):
     ACTOR_DEBUG_SERVER = ''
     DEVICE_DEBUG_SERVER = ''
     APP_LOGS = ''
+    CTRL_HEARTBEAT = True
+    NODE_HEARTBEAT = True
     SECURITY = True
     
     def __init__(self):

@@ -88,7 +88,7 @@
                     </child>
                     <child>
                       <object class="GtkImageMenuItem" id="imagemenuitem2">
-                        <property name="label" translatable="yes">Reset</property>
+                        <property name="label" translatable="yes">Reset nodes</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="image">image3</property>
@@ -98,7 +98,7 @@
                     </child>
                     <child>
                       <object class="GtkImageMenuItem" id="imagemenuitem15">
-                        <property name="label">Halt</property>
+                        <property name="label">Stop nodes</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="image">image2</property>

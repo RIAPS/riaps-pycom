@@ -4,6 +4,7 @@ from .sys import run, sudo, put, get, arch
 from fabric.api import env, task, hosts, roles, local, execute
 from fabric.contrib.files import sed
 import os
+import os.path
 import time
 from riaps.consts.defs import *
 
@@ -14,8 +15,8 @@ __all__ = ['update','updateNodeKey','updateAptKey','install','uninstall','reset'
 
 # RIAPS packages
 packages = [
-            'riaps-pycom-',
-            'riaps-timesync-'
+            'riaps-timesync-',
+            'riaps-pycom-'
             ]
 
 # RIAPS update (from release)
@@ -86,16 +87,17 @@ def updateAptKey():
 @task
 @roles('nodes','control','remote','all')
 def install(keepConfig=False):
-    """Install RIAPS packages from development host:[keepConfig]"""
+    """Install RIAPS packages from host:[keepConfig]"""
     global packages
     hostname = env.host_string
     architecture = arch()
     for pack in packages:
         package = pack + architecture + '.deb'
         try:
+            if not os.path.exists(package): continue
             put(package)
             keep = '--force-confold' if keepConfig else '--force-confnew'
-            sudo('dpkg -i '+ keep + package + ' > riaps-install-' + hostname + '-' + package + '.log')
+            sudo('dpkg -i '+ keep + ' ' + package + ' > riaps-install-' + hostname + '-' + package + '.log')
             sudo('rm -f %s' %(package))
             local('mkdir -p logs')
             get('riaps-install-' + hostname + '-' + package + '.log', 'logs/')
@@ -104,23 +106,30 @@ def install(keepConfig=False):
 
 @task
 @roles('nodes','control','remote','all')
-def uninstall():
-    """Uninstall all RIAPS packages"""
+def uninstall(keepConfig=False):
+    """Uninstall all RIAPS packages from nodes:"""
     global packages
     architecture = arch()
     for pack in reversed(packages):
+        package = pack + architecture
         try:
-            package = pack + architecture
             sudo('apt-get remove -y ' + package)
         except Exception as e:
             print("uninstall exception: %r" % e)
+        if keepConfig: continue
+        try:
+            sudo('dpkg --purge ' + package)
+        except Exception as e:
+            print("purge exception: %r" % e)
+    # run('rm -f riaps*.log')
 
 @task
 @roles('nodes','remote')
 def reset():
     """Kill riaps_, clean, restart riaps_*"""
     deplo.stop()            # stop deplo service
-
+    deplo.disable()
+    
     sudo('pkill -SIGKILL "(riaps_deplo|riaps_disco|riaps_actor|riaps_device)"')
 
     remains = sudo('pgrep -l riaps_')
@@ -148,6 +157,8 @@ def reset():
         sudo('rm -R ' + env.riapsApps + '/' + app + '/')
         sudo('userdel ' + app.lower() + host_last_4)    # May fail if dev vm
     sudo('rm -R ' + env.riapsApps + '/riaps*.lmdb')
+    
+    deplo.enable()
     deplo.start()
 
 @task

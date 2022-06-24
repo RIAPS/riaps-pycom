@@ -19,6 +19,7 @@ rpyc.core.protocol.DEFAULT_CONFIG['allow_pickle'] = True
 
 from riaps.consts.defs import *
 from riaps.utils.config import Config
+from riaps.utils.ticker import Ticker
 from riaps.run.exc import *
 from riaps.utils.ifaces import getNetworkInterfaces
 # from riaps.deplo.devm import DeviceManager
@@ -27,6 +28,7 @@ from riaps.deplo.resm import ResourceManager
 from riaps.deplo.fm import FaultManager
 from riaps.utils.singleton import singleton
 from czmq import Zsys
+import threading
 
 import traceback
 
@@ -56,20 +58,22 @@ class DeploService(object):
         self.ctrlrPort = port
         self.conn = None
         self.bgsrv = None
+        self.bgexc = False
+        self.ticker = None
+        self.setupIfaces()
+        self.suffix = self.macAddress
+        singleton('riaps_deplo',self.suffix)
         # self.context = zmq.Context() - Use czmq's context (see fm / zyre socket)
         czmq_ctx = Zsys.init()
         self.context = zmq.Context.shadow(czmq_ctx.value)
         Zsys.handler_reset()            # Reset previous signal 
-        self.setupIfaces()
-        self.suffix = self.macAddress
-        singleton('riaps_deplo',self.suffix)
         self.depmCommandEndpoint = 'inproc://depm-command'
         # self.devmCommandEndpoint = 'inproc://devm-command'
         self.procMonEndpoint = 'inproc://procmon'
         self.resm = ResourceManager(self.context)
         self.fm = FaultManager(self,self.context)
         # self.devm = DeviceManager(self)
-        self.depm = DeploymentManager(self,self.resm,self.fm)   
+        self.depm = DeploymentManager(self,self.resm,self.fm)
 
     def setupIfaces(self):
         '''
@@ -83,12 +87,19 @@ class DeploService(object):
             raise
         globalIP = globalIPs[0]
         globalMAC = globalMACs[0]
-        if Config.NIC_NAME == None:
+        if Config.NIC_NAME != globalNames[0]:
             Config.NIC_NAME = globalNames[0]
         self.hostAddress = globalIP
         self.macAddress = globalMAC
         self.nodeName = str(self.hostAddress)
            
+    def heartbeat(self):
+        try:
+            self.conn.ping()
+        except:
+            self.logger.info('heartbeat ping failed')
+            self.bgexc = True
+                
     def login(self,retry = True):
         '''
         Log in to the controller. First try to reach the controller via the standard service registry, 
@@ -100,35 +111,19 @@ class DeploService(object):
             self.conn = None
             try:
                 addrs = rpyc.utils.factory.discover(const.ctrlServiceName)
-                for host,port in addrs:
-                    try:
-                        if Config.SECURITY:
-                            self.conn = rpyc.ssl_connect(host,port,
-                                                         keyfile = self.keyFile, certfile = self.certFile,
-                                                         cert_reqs=ssl.CERT_REQUIRED,ca_certs=self.certFile,
-                                                         ssl_version = ssl.PROTOCOL_TLSv1_2,
-                                                         config = {"allow_public_attrs" : True})
-                        else:
-                            self.conn = rpyc.connect(host,port,
-                                                     config = {"allow_public_attrs" : True})
-                    except socket.error as e:
-                        self.logger.info('Failed to connect via rpyc[%s:%s]: %s' % (str(host),str(port),str(e)))
-                        pass
-                    if self.conn: break
             except DiscoveryError as e:
                 self.logger.info('Discovery error: %s' % (str(e)))
-                pass
-            if self.conn: break
-            if self.ctrlrHost and self.ctrlrPort:
+                addrs = [(self.ctrlrHost,self.ctrlrPort)] if self.ctrlrHost and self.ctrlrPort else []
+            for host,port in addrs:
                 try:
                     if Config.SECURITY:
-                        self.conn = rpyc.ssl_connect(self.ctrlrHost,self.ctrlrPort,
+                        self.conn = rpyc.ssl_connect(host,port,
                                                      keyfile = self.keyFile, certfile = self.certFile,
                                                      cert_reqs=ssl.CERT_REQUIRED,ca_certs=self.certFile,
-                                                     ssl_version=ssl.PROTOCOL_TLSv1_2,
+                                                     ssl_version = ssl.PROTOCOL_TLSv1_2,
                                                      config = {"allow_public_attrs" : True})
                     else:
-                        self.conn = rpyc.connect(self.ctrlrHost,self.ctrlrPort,
+                        self.conn = rpyc.connect(host,port,
                                                  config = {"allow_public_attrs" : True})
                 except socket.error as e:
                     self.logger.info('Failed to connect via rpyc[%s:%s]: %s' % (str(host),str(port),str(e)))
@@ -137,34 +132,38 @@ class DeploService(object):
             if retry == False:
                 return False
             else:
-                time.sleep(5)
+                time.sleep(3)
                 continue
         self.logger.info("connected [%s:%s]" % (str(host),str(port)))
         self.bgsrv = rpyc.BgServingThread(self.conn,self.handleBgServingThreadException)
+        self.bgexc = False
+        time.sleep(0.01)    # Allow time for bg thread to wake up
+        if Config.NODE_HEARTBEAT and const.deploHeartbeat != 0:
+            self.ticker = Ticker(const.deploHeartbeat,self.heartbeat)
+            self.ticker.start()
+        else:
+            self.ticker = None
         resp = None
         try:       
             resp = self.conn.root.login(self.hostAddress,self.callback,self.riapsApps)
         except:
             pass
+        res = False
         if type(resp) == tuple and resp[0] == 'dbase':   # Expected response: (redis) database host:port pair
             if self.depm != None:
                 self.depm.callCommand(('setDisco',) + resp[1:])
-            return True
+            res = True
         else:
             pass    # Ignore any other response
-            return False
+        return res
         
     def setup(self):
         '''
-        Start device and deployment managers
-        '''
-#         try:
-#             self.devm.start()
-#         except:
-#             self.logger.error("Error while starting devm: %s" % sys.exc_info()[0])
-#             raise    
+        Start the deployment manager thread
+        '''  
         try:
             self.depm.start()
+            time.sleep(1.0)
         except:
             self.logger.error("Error while starting depm: %s" % sys.exc_info()[0])
             raise
@@ -179,30 +178,26 @@ class DeploService(object):
         ok = True
         while True:     # Placeholder code
             time.sleep(1.0)
-            # Poll controlled actors for messages
-            #             sockets = dict(self.poller.poll(1000.0))
-            #             if len(sockets) == 0:
-            #                 pass
-            #             else:
-            #                 pass
             if self.killed:
                 time.sleep(0.1)
                 break
-            # If background server 
-            if self.bgsrv == None and self.conn == None: 
+            if self.bgexc == True:          # Exception: pinger failed or bgthread exception 
+                if self.ticker: self.ticker.cancel()
+                if self.bgsrv: self.bgsrv.stop()
                 if ok: 
                     self.logger.info("Connection to controller lost - retrying")
-                ok = self.login(retry=False)
+                ok = self.login()
         self.terminate()
 
     def handleBgServingThreadException(self):
         '''
         Background thread exception server. Called when the thread is about to terminate due 
-        to, e.g. loss of connection to the controller. The setting of the bgsrv/conn to None 
+        to, e.g. loss of connection to the controller. The setting of the bgexc to True
         indicates to the main thread that connectivity is lost and should be re-built. 
         '''
+        self.logger.info('bg thread exception: %r' % sys.exc_info()[1].args[0])
+        self.bgexc = True
         self.bgsrv = None
-        self.conn = None
         
     def callback(self,msg):
         '''
@@ -210,6 +205,7 @@ class DeploService(object):
         '''
         assert type(msg) == tuple
         reply = None
+        self.logger.info('callback thread id: %r' % threading.get_native_id())
         try: 
             cmd = msg[0]
             if cmd in ('launch','halt','setupApp','cleanupApp','cleanupApps', \
@@ -236,6 +232,8 @@ class DeploService(object):
         self.depm.terminate()   # Terminate deployment manager
         self.depm.join() 
         self.fm.terminate()     # Terminate fault manager
+        if self.bgsrv: self.bgsrv.stop()
+        if self.ticker: self.ticker.cancel()
         # self.context.destroy()
         time.sleep(0.1)
         self.logger.info("terminated")

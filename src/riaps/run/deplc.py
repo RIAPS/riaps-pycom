@@ -250,6 +250,6 @@ class DeplClient(object):
             return False
     
     def terminate(self):
-        self.logger.info("terminating")
+        self.logger.info("terminated")
         pass
     

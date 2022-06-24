@@ -194,7 +194,7 @@ class NHMonitorRecord(ctypes.Structure):
 class NetMonitorThread(threading.Thread):
 
     def __init__(self,parent):
-        threading.Thread.__init__(self,daemon=True)
+        threading.Thread.__init__(self,name='NetMonitor',daemon=True)
         self.logger = logging.getLogger(__name__)
         self.parent = parent
         self.context = self.parent.context
@@ -308,6 +308,7 @@ class NetMonitorThread(threading.Thread):
                     time.sleep(0.1)  
         
     def run(self):
+        self.name = 'NetMonitor-%r' % self.ident
         self.notifier = self.context.socket(zmq.ROUTER)
         # self.notifier.setsockopt(zmq.SNDTIMEO,const.deplEndpointSendTimeout)
         self.notifierPort = self.notifier.bind_to_random_port('tcp://127.0.0.1') 

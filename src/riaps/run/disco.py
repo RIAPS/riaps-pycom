@@ -31,6 +31,7 @@ class DiscoClient(object):
         self.localNames = parentActor.localNames
         self.internalNames = parentActor.internalNames
         self.context = zmq.Context()
+        self.pendingRpc = False
         
     def start(self):
         self.logger.info("starting")
@@ -66,7 +67,9 @@ class DiscoClient(object):
     def rpcDisco(self,msgBytes,loc,shut):
         if self.sendToDisco(msgBytes,loc,shut) is False: 
             raise SetupError("%s: Can't send to disco" % loc)
+        self.pendingRpc = True
         respBytes = self.recvFromDisco(loc,True)
+        self.pendingRpc = False
         if respBytes is None: 
             raise SetupError("%s: Can't receive from disco" %loc)
         return respBytes
@@ -248,27 +251,33 @@ class DiscoClient(object):
         appMessage = reqt.init('actorUnreg')
         appMessage.appName = self.appName
         appMessage.version = '0.0.0'
-        appMessage.actorName = self.actor.name # "%s.%s" % (self.actor.name,self.actor.iName) if self.actor.isDevice() else self.actor.name
+        appMessage.actorName = self.actor.name 
+        # "%s.%s" % (self.actor.name,self.actor.iName) if self.actor.isDevice() else self.actor.name
         appMessage.pid = self.actor.pid
                   
         msgBytes = reqt.to_bytes()
-        respBytes = self.rpcDisco(msgBytes,"unregister",True)
-        resp = disco_capnp.DiscoRep.from_bytes(respBytes)
         
-        which = resp.which()
-        if which == 'actorUnreg':
-            respMessage = resp.actorUnreg
-            status = respMessage.status
-            port = respMessage.port
-            if status == 'ok':
-                self.logger.info("terminate: disconnecting 127.0.0.1:%s" % str(port))
-                try:
-                    self.channel.disconnect("tcp://127.0.0.1:" + str(port))
-                except:
-                    pass
-            else:
-                raise SetupError("terminate: Error response from disco")
-        else:
-            raise SetupError("terminate: Unexpected response from disco")
+        try:
+            if self.pendingRpc:             # Discard pending Rpc result
+                self.logger.info("terminate: pending rpc")
+                _discard = self.recvFromDisco("unregister",True) 
+            self.logger.info("terminate: unregistering")
+            respBytes = self.rpcDisco(msgBytes,"unregister",True)
+            resp = disco_capnp.DiscoRep.from_bytes(respBytes)
+            
+            which = resp.which()
+            if which == 'actorUnreg':
+                respMessage = resp.actorUnreg
+                status = respMessage.status
+                port = respMessage.port
+                if status == 'ok':
+                    self.logger.info("terminate: disconnecting 127.0.0.1:%s" % str(port))
+                    try:
+                        self.channel.disconnect("tcp://127.0.0.1:" + str(port))
+                    except:
+                        pass
+        except:
+            pass                # Ignore all errors if disco is not running anymore
+
         self.logger.info("terminated")
     

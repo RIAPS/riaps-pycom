@@ -367,7 +367,7 @@ class DhtDbase(DiscoDbase):
             self.dht.run(port=self.dhtPort,config=config)  # Run on a random, free port
         except Exception:
             raise DatabaseError("dht.start: %s" % sys.exc_info()[0])
-        if bootHost and bootPort:
+        if const.discoDhtBoot and bootHost and bootPort:
             try:    
                 self.dht.bootstrap(str(bootHost),str(bootPort))
             except Exception:
@@ -639,7 +639,7 @@ class DhtDbase(DiscoDbase):
         '''
         Remove value from values under key.
         '''
-        self.logger.info("dht.remove[%r]:%r" % (value,key))
+        self.logger.info("dht.remove[%r]:%r" % (key,value))
         try:
             self.delFromRepublish(key,value)                    # Delete k/v from republisher
             self.regDb.delKeyValue(key, value)                  # Delete k/v from db
