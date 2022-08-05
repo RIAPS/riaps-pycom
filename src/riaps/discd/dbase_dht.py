@@ -123,10 +123,10 @@ class DhtPeerMon(threading.Thread):
                 group = event.group()
                 _headers = event.headers()
                 msg = event.get_msg()
-                if eType != b'EVASIVE':
-                    print("# %s %s %s %s %s %s %s" 
-                          % (str(eType),str(_pName),str(pUUID),str(pAddr),
-                             str(group),str(_headers),str(msg)))
+                # if eType != b'EVASIVE':
+                #     print("# %s %s %s %s %s %s %s" 
+                #           % (str(eType),str(_pName),str(pUUID),str(pAddr),
+                #              str(group),str(_headers),str(msg)))
                 if eType == b'ENTER':
                     self.logger.info("DhtPeerMon.ENTER %s from %s" % (pUUID.decode('utf-8'),pAddr.decode('utf-8')))
                     try:

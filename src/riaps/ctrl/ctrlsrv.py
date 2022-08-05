@@ -59,6 +59,7 @@ class ServiceClient(object):
         Logs out a node from service. Called when connection to the deployment service is lost. 
         '''
         self.close()
+        theController.delClient(self.name)
                 
     def log(self, text):
         '''
@@ -187,8 +188,7 @@ class ControllerService(rpyc.Service):
         if ControllerService.STOPPING: return
         if self.client:
             self.client.exposed_logout()
-            theController.delClient(self.client.name)
-
+            
     def addClient(self):
         time.sleep(0.5)
         theController.addClient(self.client)

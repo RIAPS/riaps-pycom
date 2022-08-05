@@ -860,7 +860,7 @@ class DeploymentManager(threading.Thread):
         # This should be self.actors 
         for key in self.launchMap.keys():
             appName,actorName = key.split('.',1)
-            if key in self.devices: pass
+            if key in self.devices: continue
             if appName in reply.keys():
                 actors = reply[appName]
                 actors += [actorName]

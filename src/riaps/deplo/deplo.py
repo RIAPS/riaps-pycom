@@ -29,6 +29,7 @@ from riaps.deplo.fm import FaultManager
 from riaps.utils.singleton import singleton
 from czmq import Zsys
 import threading
+import errno
 
 import traceback
 
@@ -75,6 +76,8 @@ class DeploService(object):
         # self.devm = DeviceManager(self)
         self.depm = DeploymentManager(self,self.resm,self.fm)
 
+    NETERRORS = {errno.ENETDOWN,errno.ENETUNREACH,errno.ENETRESET, errno.ECONNABORTED, errno.ECONNRESET}
+    
     def setupIfaces(self):
         '''
         Find the IP addresses of the (host-)local and network(-global) interfaces
@@ -114,6 +117,12 @@ class DeploService(object):
             except DiscoveryError as e:
                 self.logger.info('Discovery error: %s' % (str(e)))
                 addrs = [(self.ctrlrHost,self.ctrlrPort)] if self.ctrlrHost and self.ctrlrPort else []
+            except OSError as e:
+                self.logger.info('OS error: %s' % (str(e)))
+                if e.errno in DeploService.NETERRORS:
+                    addrs = []
+                else:
+                    raise
             for host,port in addrs:
                 try:
                     if Config.SECURITY:
