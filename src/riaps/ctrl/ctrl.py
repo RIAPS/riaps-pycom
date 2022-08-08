@@ -770,7 +770,7 @@ class Controller(object):
                             self.log('? %s ' % target)
         return True
 
-    def haltByName(self, appNameToHalt):
+    def haltByName(self, appNameToHalt, logErr=True):
         '''
         Halt (terminate) all launched actors of an app
         '''
@@ -789,13 +789,16 @@ class Controller(object):
                     self.log("? %r" % exc)
             else:
                 newLaunchList.append(elt)
-        if not found: return
+        if not found:
+            if logErr: self.log("? %r" % appNameToHalt)
+            return False
         for client in clientList:
             try:
                 _res = self.callClient(client.reclaim,[appName]) # const.ctrlClientTimeout
             except Exception as exc:
                 self.log("? Reclaim: %r" % exc)
         self.launchList = newLaunchList
+        return True
 
     def addToLaunchList(self,clientName,appName,actorName):
         client = self.clientMap[clientName]
@@ -889,7 +892,7 @@ class Controller(object):
         os.remove(const.sigFile)
             
     def removeApp(self, appName):
-        self.haltByName(appName)
+        self.haltByName(appName,False)
         status = self.appInfo[appName].status if appName in self.appInfo else AppStatus.NotLoaded
         files,libraries,clients = [],[],[]
         if status == AppStatus.Loaded: 
@@ -914,9 +917,11 @@ class Controller(object):
 
     def removeAppByName(self, appName):
         ok = self.removeApp(appName)
-        if not ok: self.log("? %s " % appName)  # Flag a problem (redundant) 
-        self.log("R %s " % appName)             # Make gui update
-        del self.appInfo[appName]               # remove app info
+        if ok:
+            self.log("R %s " % appName)     # Flag a problem (redundant) 
+        else: 
+            self.log("? %s " % appName)     # Make gui update
+        del self.appInfo[appName]           # remove app info
 
     def setAppFolder(self,appFolderPath):
         self.riaps_appFolder = appFolderPath
