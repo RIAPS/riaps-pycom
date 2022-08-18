@@ -4,6 +4,7 @@ Created on Oct 20, 2016
 
 @author: riaps
 '''
+import logging.handlers
 import riaps.consts.const as const
 
 # Name of endpoint for actor-disco communication
@@ -90,6 +91,9 @@ const.appCertFile = 'riaps-app.cert'
 
 # Log configuration
 const.logConfFile = 'riaps-log.conf'
+const.logServerHost = 'localhost'
+const.logServerPort = logging.handlers.DEFAULT_TCP_LOGGING_PORT
+const.logVisualizer = "tmux"
 
 # Group coordination: default timing values (in msec)
 const.groupHeartbeat = 1000                 # Group heartbeat period
