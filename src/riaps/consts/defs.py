@@ -94,6 +94,9 @@ const.logConfFile = 'riaps-log.conf'
 const.logServerHost = 'localhost'
 const.logServerPort = logging.handlers.DEFAULT_TCP_LOGGING_PORT
 const.logVisualizer = "tmux"
+const.applogServerHost = 'localhost'
+const.applogServerPort = 12345
+const.applogVisualizer = "componentLogger"
 
 # Group coordination: default timing values (in msec)
 const.groupHeartbeat = 1000                 # Group heartbeat period
