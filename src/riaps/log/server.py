@@ -42,7 +42,6 @@ class LogRecordStreamHandler(socketserver.StreamRequestHandler):
             node_name = self.client_address[0]
 
             if node_name not in theViewer.nodes:
-                self.logger.info(f"client address: {node_name}")
                 theViewer.add_node_display(node_name=node_name)
 
             # self.handle_log_record(record)

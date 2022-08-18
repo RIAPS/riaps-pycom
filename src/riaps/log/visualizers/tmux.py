@@ -1,11 +1,13 @@
 import libtmux
 import subprocess
 from riaps.log.visualizers.base_view import BaseView
+import logging
 
 
 class View(BaseView):
 
     def __init__(self, session_name):
+        self.logger = logging.getLogger(__name__)
         super(View, self).__init__(session_name)
         self.server = libtmux.Server()
         session = self.get_session()
@@ -23,6 +25,7 @@ class View(BaseView):
         subprocess.run(["tmux", "select-pane", "-t", f"{pane_id}", "-T", f"{pane_name}"])
 
     def add_node_display(self, node_name):
+        self.logger.info(f"client address: {node_name}")
         pane = self.window.split_window(attach=False,
                                         vertical=False)
         self.set_pane(pane, node_name=node_name)
