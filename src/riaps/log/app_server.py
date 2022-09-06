@@ -21,7 +21,7 @@ class MyTCPHandler(socketserver.StreamRequestHandler):
             if not data_bytes:
                 break
             data_string = data_bytes.decode("utf-8")
-            data = f"{data_string}: client_address: {self.client_address}"
+            data = f"{data_string}"
             node_name = self.client_address[0]
             if self.client_address[0] not in theViewer.nodes:
                 theViewer.add_node_display(node_name=node_name)
