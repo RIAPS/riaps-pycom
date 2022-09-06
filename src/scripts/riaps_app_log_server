@@ -1,7 +1,4 @@
-#!/home/riaps/projects/RIAPS/riaps-pycom-feature-log-server/venv/bin/python3
-'''
 #!/usr/bin/python3
-'''
 '''
 Top level script to start the framework log server
 
