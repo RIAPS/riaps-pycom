@@ -14,8 +14,12 @@ from rpyc import async_
 from rpyc.utils.server import ThreadedServer
 from rpyc.utils.authenticators import SSLAuthenticator
 from riaps.utils.config import Config
+from riaps.consts.defs import *
 import ssl
+import time
+import threading
 import traceback
+from threading import RLock
 
 rpyc.core.protocol.DEFAULT_CONFIG['allow_pickle'] = True
 
@@ -38,25 +42,30 @@ class ServiceClient(object):
         self.socket.connect(theController.endpoint)
         self.log("+ %s" %(self.name,))
 
+    def close(self):
+        if self.stale: return
+        self.stale = True
+        self.callback = None
+        self.log("- %s " % (self.name,))    
+        self.socket.disconnect(theController.endpoint)
+        self.socket.close()
+        
+    def ping(self):
+        if self.stale: return
+        self.parent.conn.ping(timeout=const.ctrlClientPing)
+        
     def exposed_logout(self):
         '''
         Logs out a node from service. Called when connection to the deployment service is lost. 
         '''
-        if self.stale:
-            return
-        self.stale = True
-        self.callback = None
-        self.log("- %s " % (self.name,))    
-        self.socket.close()
+        self.close()
+        theController.delClient(self.name)
                 
     def log(self, text):
         '''
         Adds a log message to the GUI
         '''
         self.socket.send_pyobj(text)
-#         global guiClient
-#         if guiClient != None:
-#             guiClient.callback(text)
     
     def setupApp(self,appName,appNameJSON):
         '''
@@ -152,7 +161,7 @@ class ServiceClient(object):
         if self.callback != None:
             res = self.callback(('reclaim',appName))
         return res
-            
+    
 class ControllerService(rpyc.Service):
     '''
     Controller Service implementation (rpyc service)
@@ -161,8 +170,8 @@ class ControllerService(rpyc.Service):
     ALIASES = ["RIAPSCONTROL"]              # Registry name for the service
     
     STOPPING = None
-    
-    def on_connect(self,_conn = None):
+     
+    def on_connect(self,conn):
         '''
         Called when a client connects. Subsequently the client must login. 
         '''
@@ -170,16 +179,20 @@ class ControllerService(rpyc.Service):
         self.client = None
         self.logger = logging.getLogger('riapsCtrl')
         self.socket = None
+        self.conn = conn
 
-    def on_disconnect(self,_conn = None):
+    def on_disconnect(self,_conn):
         '''
         Called when a client disconnects
         '''
         if ControllerService.STOPPING: return
         if self.client:
             self.client.exposed_logout()
-            theController.delClient(self.client.name)
-
+            
+    def addClient(self):
+        time.sleep(0.5)
+        theController.addClient(self.client)
+        
     def exposed_login(self,clientName,callback,appFolder=None):
         '''
         Log into the service. 
@@ -195,17 +208,17 @@ class ControllerService(rpyc.Service):
         if (self.client and not self.client.stale) or theController.isClient(clientName):
             # raise ValueError("already logged in")
             oldClient = theController.getClient(clientName)
-            oldClient.exposed_logout()
+            oldClient.close()
             theController.delClient(clientName)
         self.client = ServiceClient(clientName, async_(callback),self,appFolder)   # Register client's callback
-        theController.addClient(clientName,self.client)
         dbaseNode = theController.nodeAddr          # The (redis) database is running on this same node
         if theController.discoType == 'redis':
             dbasePort = const.discoRedisPort
         elif theController.discoType == 'opendht':
             dbasePort = theController.dhtPort
         else:
-            dbasePort = -1        
+            dbasePort = -1     
+        threading.Thread(target=self.addClient).start()   
         return ('dbase',str(dbaseNode),str(dbasePort))  # Reply to the client
 
 class ServiceThread(threading.Thread):

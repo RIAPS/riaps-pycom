@@ -19,6 +19,7 @@ const.discoDhtPort = 4222
 # Dht republisher timeout (in sec) - less than dht timeout
 const.discoDhtRepublishTimeout = 595
 const.discoDhtPeerMonEndpoint = 'inproc://dht-mon'
+const.discoDhtBoot = False
 
 # Name of endpoint for actor-depl communication
 const.deplEndpoint = 'tcp://127.0.0.1:9780'     # 'ipc:///tmp/riaps-depl'
@@ -33,7 +34,7 @@ const.depmSendTimeout = 3000
 # Timeout for actor/device start by deplo (sec)
 const.depmStartTimeout = 1.0
 # Timeout for actor/device termination by deplo (sec)
-const.depmTermTimeout = 5.0
+const.depmTermTimeout = 10.0
 
 # Fault monitor endpoints
 const.fmNICMonitorEndpoint = 'inproc://fm-nic'
@@ -50,7 +51,7 @@ const.ctrlNode = 'localhost'
 const.ctrlPort = 8888
 
 # Control service name
-const.ctrlServiceName = 'RIAPSControl'
+const.ctrlServiceName = 'RIAPSCONTROL'
 
 # Keys and cert for ctrl/deplo connection
 const.ctrlPrivateKey = 'id_rsa.key'
@@ -61,8 +62,7 @@ const.zmqCertificate = 'riaps-sys.cert'
 
 # SSH port
 const.ctrlSSHPort = 22
-# Control/deplo delay (in msec) - time allowed for recovered apps to start
-const.ctrlDeploDelay = 3000
+
 
 # Nethog
 const.nethogLibrary = 'libnethogs.so'
@@ -98,4 +98,14 @@ const.groupElectionMax = 2000               # Maximum leader election timeout
 const.groupPeerTimeout = 3000               # Peer is declared lost after this timeout
 const.groupConsensusTimeout = 1500          # Deadline for consensus vote 
 
-
+# Heartbeat period for ctrl and deplo (in sec) - 0 means disabled 
+const.ctrlHeartbeat = 3
+const.deploHeartbeat = 3
+# Control's timeout for client - not used for now
+const.ctrlQueryTimeout = 10.0
+const.ctrlClientTimeout = 5.0
+const.ctrlInstallTimeout = 5.0
+const.ctrlLaunchTimeout = 5.0
+const.ctrlHaltTimeout = 10.0
+const.ctrlReclaimTimeout = 5.0
+const.ctrlClientPing = 1.0

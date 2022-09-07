@@ -399,8 +399,9 @@ class GroupThread(threading.Thread):
         elif cmd == Group.GROUP_MLT:    # One of our peers left the group
             frame = msgFrames[1]
             leaver = struct.unpack('!16s', frame)[0]
-            self.sendChangeMessage(Group.GROUP_MLT,leaver)
-            del self.peers[leaver] 
+            if leaver in self.peers:
+                self.sendChangeMessage(Group.GROUP_MLT,leaver)
+                del self.peers[leaver] 
             self.numPeers = len(self.peers)
         if self.coordinated:  # Non-data messages are meaningful only for coordinated groups 
             assert(now != None)
@@ -599,16 +600,17 @@ class GroupThread(threading.Thread):
         '''
         self.logger.info("GroupThread.checkPoll()")
         res = False
-        if poll.allVoted():  # All voted
+        if poll.expired(now):  # Poll has expired
+            self.logger.info("... voting timeout")
+            self.announceConsensus(poll.rfvId, 'timeout')       
+            res = True        
+        elif poll.allVoted():  # All voted
             self.logger.info("... all have voted")
             self.announceConsensus(poll.rfvId, 'yes' if poll.result() else 'no')
             res = True
         else:
             self.logger.info("... not all have voted: %d vs. %d", poll.voteCnt, poll.numPeers)
-        if poll.expired(now):  # Poll has expired
-            self.logger.info("... voting timeout")
-            self.announceConsensus(poll.rfvId, 'timeout')       
-            res = True
+            pass
         return res
     
     def checkAllPolls(self, now):

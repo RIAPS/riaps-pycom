@@ -78,6 +78,7 @@ class DhtPeerMon(threading.Thread):
     
     PEERMARK = b'CAFE'
     PEERGROUP = b'riaps_disco'
+    PEERGROUP_STR = PEERGROUP.decode('utf-8')
     
     def run(self):
         self.zyre = Zyre(None)
@@ -122,22 +123,22 @@ class DhtPeerMon(threading.Thread):
                 group = event.group()
                 _headers = event.headers()
                 msg = event.get_msg()
-#                 if eType != b'EVASIVE':
-#                     print("# %s %s %s %s %s %s %s" 
-#                           % (str(eType),str(_pName),str(pUUID),str(pAddr),
-#                              str(group),str(_headers),str(msg)))
+                # if eType != b'EVASIVE':
+                #     print("# %s %s %s %s %s %s %s" 
+                #           % (str(eType),str(_pName),str(pUUID),str(pAddr),
+                #              str(group),str(_headers),str(msg)))
                 if eType == b'ENTER':
-                    self.logger.info("DhtPeerMon.ENTER %s from %s" % (str(pUUID),str(pAddr)))
+                    self.logger.info("DhtPeerMon.ENTER %s from %s" % (pUUID.decode('utf-8'),pAddr.decode('utf-8')))
                     try:
                         pAddrStr = pAddr.decode('UTF-8')
-                        (peerIp,_peerPort) = parse.parse("tcp://{}:{}",pAddrStr)
+                        (peerIp,peerPort) = parse.parse("tcp://{}:{}",pAddrStr)
                         peerHeaderKey =  self.peerHeaderKey(peerIp)
                         _value = _headers.lookup(peerHeaderKey)
                         if (_value):
                             try:
                                 value = ctypes.cast(_value,ctypes.c_char_p).value
                                 assert value == self.PEERMARK
-                                self.peers[pUUID] = peerIp
+                                self.peers[pUUID] = (peerIp,peerPort)
                                 self.logger.info("DhtPeerMon.ENTER valid peer")
                             except:
                                 self.logger.info("DhtPeerMon.ENTER header value mismatch")
@@ -150,21 +151,22 @@ class DhtPeerMon(threading.Thread):
                 elif eType == b'JOIN':
                     groupName = group.decode()
                     peer = pUUID
-                    self.logger.info("DhtPeerMon.JOIN %s from %s" % (str(groupName), str(pUUID)))
-                    if groupName != self.PEERGROUP:
+                    self.logger.info("DhtPeerMon.JOIN %s from %s" % (groupName, pUUID.decode('utf-8'))) 
+                    if group != self.PEERGROUP:
                         self.logger.info("DhtPeerMon.JOIN another group")
                         pass     
                     else:
                         self.peerGroup.add(peer)
-                        self.zyre.whispers(peer,("%s://%d" % (self.PEERGROUP,self.dhtPort)).encode('utf-8'))
+                        self.zyre.whispers(peer,("%s://%d" % (self.PEERGROUP_STR,self.dhtPort)).encode('utf-8'))
                 elif eType == b'SHOUT' or eType == b'WHISPER':
                     arg = msg.popstr().decode()
-                    self.logger.info("DhtPeerMon.SHOUT %s = %s " % (str(pUUID), arg))
+                    self.logger.info("DhtPeerMon.SHOUT %s = %s " % (pUUID.decode('utf-8'), arg))
                     try:
-                        pAddrStr = pAddr.decode('UTF-8')
-                        (peerIp,_peerPort) = parse.parse("tcp://{}:{}",pAddrStr)
-                        assert peerIp == self.peers[pUUID]
-                        peerDhtPort = parse.parse("%s://{}" % self.PEERGROUP,arg)
+                        # pAddrStr = pAddr.decode('UTF-8')
+                        # (peerIp,_peerPort) = parse.parse("tcp://{}:{}",pAddrStr)
+                        # assert peerIp == self.peers[pUUID]
+                        (peerIp,peerPort) = self.peers[pUUID]
+                        (peerDhtPort,) = parse.parse("%s://{}" % self.PEERGROUP_STR,arg)
                         if peerDhtPort:
                             self.logger.info("DhtPeerMon.bootstrap %s:%s" % (peerIp,peerDhtPort))
                             self.dht.bootstrap(str(peerIp),str(peerDhtPort))
@@ -172,8 +174,8 @@ class DhtPeerMon(threading.Thread):
                         self.logger.error("DhtPeerMon.bootstrap failed")
                 elif eType == b'LEAVE':
                     groupName = group.decode()
-                    self.logger.info("DhtPeerMon.LEAVE %s from %s" % (str(pUUID),str(group)))
-                    if groupName != self.PEERGROUP:
+                    self.logger.info("DhtPeerMon.LEAVE %s from %s" % (pUUID.decode('utf-8'),groupName))
+                    if group != self.PEERGROUP:
                         self.logger.info("DhtPeerMon.LEAVE another group")
                         pass 
                     else:
@@ -367,7 +369,7 @@ class DhtDbase(DiscoDbase):
             self.dht.run(port=self.dhtPort,config=config)  # Run on a random, free port
         except Exception:
             raise DatabaseError("dht.start: %s" % sys.exc_info()[0])
-        if bootHost and bootPort:
+        if const.discoDhtBoot and bootHost and bootPort:
             try:    
                 self.dht.bootstrap(str(bootHost),str(bootPort))
             except Exception:
@@ -639,7 +641,7 @@ class DhtDbase(DiscoDbase):
         '''
         Remove value from values under key.
         '''
-        self.logger.info("dht.remove[%r]:%r" % (value,key))
+        self.logger.info("dht.remove[%r]:%r" % (key,value))
         try:
             self.delFromRepublish(key,value)                    # Delete k/v from republisher
             self.regDb.delKeyValue(key, value)                  # Delete k/v from db

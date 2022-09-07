@@ -12,9 +12,9 @@ import time
 import hashlib
 import paramiko
 import socket
+import rpyc
 from os.path import join
 import subprocess
-from threading import Timer
 import functools
 import logging
 import json
@@ -43,18 +43,14 @@ from riaps.consts.defs import *
 from riaps.utils.ifaces import getNetworkInterfaces,get_random_port
 from riaps.utils.config import Config 
 from riaps.utils.appdesc import AppDescriptor
+from riaps.utils.ticker import Ticker
 from riaps.ctrl.ctrlsrv import ServiceThread, ServiceClient
 from riaps.ctrl.ctrlgui import ControlGUIClient
 from riaps.ctrl.ctrlcli import ControlCLIClient
 from riaps.lang.lang import compileModel
 from riaps.lang.depl import DeploymentModel
 from riaps.run.exc import BuildError
-
-# import gi
 import tarfile
-
-# gi.require_version('Gtk', '3.0')
-# from gi.repository import Gtk
 
 # App status
 @unique
@@ -172,6 +168,10 @@ class Controller(object):
             self.logger.error("Error when starting database: %s", sys.exc_info()[0])
             raise
         
+    def stopRedis(self):
+        if self.dbase:
+            self.dbase.kill()
+            
     def startDht(self):
         '''
         Start Dht node (for discovery)
@@ -180,7 +180,11 @@ class Controller(object):
         config.setBootstrapMode(False)  # Server 
         self.dht = dht.DhtRunner()
         self.dhtPort = get_random_port()
-        self.dht.run(port=self.dhtPort,ipv4=self.hostAddress,config=config)
+        if const.discoDhtBoot:
+            self.dht.run(port=self.dhtPort,ipv4=self.hostAddress,config=config)
+    
+    def stopDht(self):
+        self.dht.shutdown()
         
     def startUI(self):
         '''
@@ -205,12 +209,28 @@ class Controller(object):
             self.logger.error("Unknown riaps_disco type %s", Config.DISCO_TYPE)
         self.startUI()
         self.startService()
-        
+    
+    def heartbeat(self):
+        try:
+            self.pingClients()
+        except:
+            pass
+            
     def run(self):
         '''
         Yield control to the main GUI loop. When the loop terminates this operation will return
         '''
+        if Config.CTRL_HEARTBEAT and const.ctrlHeartbeat != 0:
+            self.hbTimer = Ticker(const.ctrlHeartbeat,self.heartbeat)
+            self.hbTimer.start()
+        else:
+            self.hbTimer = None
         self.gui.run()
+        try:
+            if self.hbTimer:
+                self.hbTimer.cancel()
+        except:
+            pass
             
     def log(self,msg):
         '''
@@ -223,46 +243,23 @@ class Controller(object):
         
     def stop(self):
         '''
-        Stop everything started by this class
+        Stop everything started
         '''
-        if self.dbase != None:
-            self.dbase.kill()
+        if Config.DISCO_TYPE == 'redis':
+            self.stopRedis()
+        elif Config.DISCO_TYPE == 'opendht':
+            self.stopDht() 
         if self.service != None:
             self.service.stop()
-            
-    def updateClient(self,clientName,client,res):
-        if not res or res.error:
-            self.log('? Query')
-            return
-        if not self.gui:
-            return
-        if res.ready:
-            value = res.value
-            if not value: return
-            data = value 
-            self.addRecoveredAppInfo(data,client)
-            self.gui.update_node_apps(clientName,data)
-        else:
-            exe = functools.partial(self.updateClient,  # Keep waiting if result not ready yet
-                                    clientName=clientName,client=client,res=res)
-            timeout = const.ctrlDeploDelay/1000.0
-            Timer(timeout, exe).start()
-        
-    def queryClient(self,clientName,client):
-        '''
-        Query the client for apps already running
-        '''
-        res = client.query()
-        self.updateClient(clientName,client,res)
-            
-    def addClient(self,clientName,client):
+
+    def addClient(self,client):
         '''
         Add a client object, representing a RIAPS node to the list. The operation is called
         from the service thread, so it is protected by the lock
         '''
         with ctrlLock:
-            self.clientMap[clientName] = client
-            self.queryClient(clientName,client)
+            self.clientMap[client.name] = client
+            self.queryClient(client)
         
     def delClient(self,clientName):
         '''
@@ -272,10 +269,11 @@ class Controller(object):
         with ctrlLock:
             if clientName in self.clientMap:
                 client = self.clientMap[clientName]
-                apps = [app for (_,app) in self.appInfo.items() if client in app.clients]
+                apps = [app for (_tmp,app) in self.appInfo.items() if client in app.clients]
                 for app in apps:
                     app.clients.remove(client)
                     if len(app.clients) == 0: app.status = AppStatus.NotLoaded
+                self.delFromLaunchList(client)
                 del self.clientMap[clientName]
     
     def isClient(self,clientName):
@@ -296,20 +294,73 @@ class Controller(object):
                 res = self.clientMap[clientName]
         return res
 
+    def dropClient(self,client):
+        client.close()
+        self.delClient(client.name)
+        
+    def callClient(self,call,args=[],timeout=None):
+        '''
+        Executes a client call, with timeout. If timeout expires
+        or if the call fails re-raises the exception, 
+        otherwise returns the result 
+        '''
+        res = call(*args)
+        if res is None: return
+        if timeout: res.set_expiry(timeout)
+        try:
+            res.wait()
+            return res
+        except Exception:
+            raise
+            
     def getClients(self):
         with ctrlLock:
             res = [client for client in self.clientMap]
         return res
                 
     def killAll(self):
-        for client in self.clientMap.values():
-            client.kill()
+        clients = []
+        with ctrlLock:
+            for client in self.clientMap.values():
+                try:
+                    _res = self.callClient(client.kill)
+                    clients += [client]
+                except:
+                    pass
+            for client in clients:
+                self.dropClient(client)
     
+    def pingClients(self):
+        drops = []
+        with ctrlLock:
+            for client in self.clientMap.values():
+                try:
+                    client.ping()
+                except:
+                    drops += [client]
+        for client in drops:
+            self.dropClient(client)
+                
     def cleanAll(self):
         appNames = [app for app in self.appInfo.keys()]
         for appName in appNames:
             self.removeAppByName(appName)
-                
+    
+    def queryClient(self,client):
+        '''
+        Query the client for apps already running
+        '''
+        try:
+            res = self.callClient(client.query,[],None) # const.ctrlQueryTimeout
+            value = res.value
+            if not self.gui: return
+            if not value: return
+            self.addRecoveredAppInfo(value,client)
+            self.gui.update_node_apps(client.name,value)
+        except Exception as ex:
+            self.dropClient(client)
+            self.log('? Query: %r' % ex)
+        
     def setupHostKeys(self):
         # get host key, if we know one
         self.hostKeys = {}
@@ -409,19 +460,6 @@ class Controller(object):
         with open(sha_file,'wb') as f: f.write(sign)
         return (tgz_file, sha_file)
 
-    def installClientComplete(self,client,appName,res):
-        if not res or res.error:
-            self.log('? Install on %s failed' % client.name)
-            res.value = False
-            return
-        if res.ready:
-            return
-        else:
-            exe = functools.partial(self.installClientComplete,  # Keep waiting if result not ready yet
-                                    client=client,appName=appName,res=res)
-            timeout = const.ctrlDeploDelay/1000.0
-            Timer(timeout, exe).start()
-            
     def downloadAppToClient(self,appName,tgz_file,sha_file,client,resList):
 
         # Transfer package
@@ -441,46 +479,16 @@ class Controller(object):
                 remoteFile = os.path.join(appFolderRemote, os.path.basename(fileName))                
                 self.logger.info ('Copying' + str(localFile) + ' to ' + str(remoteFile))
                 sftpClient.put(localFile, remoteFile)
-            res = client.install(appName)
-            self.installClientComplete(client, appName, res)
+            res = None
+            resMsg = ''
+            try:
+                res = self.callClient(client.install,[appName]) # const.ctrlInstallTimeout
+            except Exception as ex:
+                resMsg = "%r" % ex
+            if res.error:
+                res.value = resMsg
             resList += [res]
             
-            # Old method = transfer files one by one
-#             sftpClient.mkdir(dirRemote,ignore_existing=True)
-# 
-#             for fileName in files:
-#                 isUptodate = False
-#                 #localFile = os.path.join(self.riaps_appFolder,fileName)
-#                 localFile = os.path.join(appFolder, fileName)
-#                 remoteFile = dirRemote + '/' + os.path.basename(fileName)
-# 
-#                 #if remote file exists
-#                 try:
-#                     if sftpClient.stat(remoteFile):
-#                         localFileData = open(localFile, "rb").read()
-#                         remoteFileData = sftpClient.open(remoteFile).read()
-#                         md1 = hashlib.md5(localFileData).digest()
-#                         md2 = hashlib.md5(remoteFileData).digest()
-#                         if md1 == md2:
-#                             isUptodate = True
-#                             self.logger.info ("Unchanged: %s" % os.path.basename(fileName))
-#                         else:
-#                             self.logger.info ("Modified: %s" % os.path.basename(fileName))
-#                 except:
-#                     self.logger.info ("New: %s" % os.path.basename(fileName))
-# 
-#                 if not isUptodate:
-#                     self.logger.info ('Copying' + str(localFile) + ' to ' + str(remoteFile))
-#                     sftpClient.put(localFile, remoteFile)
-# 
-#             for libraryName in libraries:
-#                 localDir = os.path.join(self.riaps_appFolder,libraryName)
-#                 remoteDir = os.path.join(dirRemote,libraryName)
-#                 sftpClient.mkdir(remoteDir,ignore_existing=True)
-#                 self.logger.info ('Copying' + str(localDir) + ' to ' + str(remoteDir))
-#                 sftpClient.put_dir(localDir,remoteDir)
-            # End old method
-
             transport.close()
             return True
         
@@ -506,7 +514,7 @@ class Controller(object):
                     if ok: cltList += [client.name]
                     result = result and ok
             for res,clt in zip(resList,cltList):
-                while not res.ready: time.sleep(0.5)
+                # while not res.ready: time.sleep(0.5)
                 value = res.value
                 if value == True:
                     self.log('I %s %s' % (clt,appName))
@@ -627,7 +635,7 @@ class Controller(object):
                     self.log("Error: Actor '%s' not found in model" % actorName)
                     return noresult
                 
-        # Collect all app components (python and c++)
+        # Collect all app components (Python and c++)
         for component in appObj["components"]:
             pyComponentFile = str(component) + ".py"
             ccComponentFile = "lib" + str(component).lower() + ".so"
@@ -726,25 +734,30 @@ class Controller(object):
         for depl in depls:
             targets = depl['target']
             actors = depl['actors']
+            targets = [*self.clientMap.keys()] if len(targets) == 0 else targets # All clients if no targets 
             with ctrlLock:
-                if targets == []:                               # Deploy on all clients
-                    for clientName in self.clientMap:
-                        client = self.clientMap[clientName]
-                        client.setupApp(appName,appNameJSON)
+                for target in targets:                      
+                    client = self.findClient(target)
+                    if client != None:
+                        try:
+                            _res = self.callClient(client.setupApp,[appName,appNameJSON]) # const.ctrlClientTimeout
+                        except Exception as exc:
+                            info = sys.exc_info()[1].args[0]
+                            self.log("? %s" % info)
+                            continue
                         success = True
                         for actor in actors:
                             actorName = actor["name"]
-                            if actorName in clientActorMap[clientName]:
-                                self.log("? %s => %s " % (actorName,clientName))
+                            if actorName in clientActorMap[client.name]:
+                                self.log("? %s => %s " % (actorName,client.name))
                                 continue
                             actuals = actor["actuals"]
                             actualArgs = self.buildArgs(actuals)
                             try:
-                                res = client.launch(appName,appNameJSON,actorName,actualArgs)
-                                _tmp = res.value
+                                _res = self.callClient(client.launch,[appName,appNameJSON,actorName,actualArgs]) # const.ctrlLaunchTimeout
                                 self.launchList.append([client,appName,actorName])
-                                self.log("L %s %s %s %s" % (clientName,appName,actorName,str(actualArgs)))
-                                clientActorMap[clientName].add(actorName)
+                                self.log("L %s %s %s %s" % (client.name,appName,actorName,str(actualArgs)))
+                                clientActorMap[client.name].add(actorName)
                                 success &= True
                             except Exception:
                                 info = sys.exc_info()[1].args[0]
@@ -753,39 +766,11 @@ class Controller(object):
                         if success:
                             appInfo.clients.add(client)
                         else:
-                            # Should retract partial deployment
-                            pass
-                else:
-                    for target in targets:                      # Deploy on selected targets
-                        client = self.findClient(target)
-                        if client != None:
-                            client.setupApp(appName,appNameJSON)
-                            success = True
-                            for actor in actors:
-                                actorName = actor["name"]
-                                if actorName in clientActorMap[client.name]:
-                                    self.log("? %s => %s " % (actorName,client.name))
-                                    continue
-                                actuals = actor["actuals"]
-                                actualArgs = self.buildArgs(actuals)
-                                try:
-                                    res = client.launch(appName,appNameJSON,actorName,actualArgs)
-                                    _tmp = res.value
-                                    self.launchList.append([client,appName,actorName])
-                                    self.log("L %s %s %s %s" % (client.name,appName,actorName,str(actualArgs)))
-                                    clientActorMap[client.name].add(actorName)
-                                    success &= True
-                                except Exception:
-                                    info = sys.exc_info()[1].args[0]
-                                    self.log("? %s" % info)
-                                    success = False
-                            if success:
-                                appInfo.clients.add(client)
-                        else:
+                            # TODO: Retract partial deployment
                             self.log('? %s ' % target)
         return True
 
-    def haltByName(self, appNameToHalt):
+    def haltByName(self, appNameToHalt, logErr=True):
         '''
         Halt (terminate) all launched actors of an app
         '''
@@ -795,24 +780,44 @@ class Controller(object):
         for elt in self.launchList:
             client,appName,actorName = elt[0], elt[1], elt[2]
             if appName == appNameToHalt:
-                client.halt(appName,actorName)
-                self.log("H %s %s %s" % (client.name,appName,actorName))
-                clientList.append(client)
-                found = True
+                try:
+                    _res = self.callClient(client.halt,[appName,actorName]) # const.ctrlHaltTimeout
+                    self.log("H %s %s %s" % (client.name,appName,actorName))
+                    if client not in clientList: clientList.append(client)
+                    found = True
+                except Exception as exc:
+                    self.log("? %r" % exc)
             else:
                 newLaunchList.append(elt)
-        if not found: return
+        if not found:
+            if logErr: self.log("? %r" % appNameToHalt)
+            return False
         for client in clientList:
-            res = client.reclaim(appName)
-            if res == None: continue
-            if res.error:
-                self.log('? Query')
-            while not res.ready: time.sleep(1.0)
+            try:
+                _res = self.callClient(client.reclaim,[appName]) # const.ctrlClientTimeout
+            except Exception as exc:
+                self.log("? Reclaim: %r" % exc)
         self.launchList = newLaunchList
+        return True
 
     def addToLaunchList(self,clientName,appName,actorName):
         client = self.clientMap[clientName]
         self.launchList.append([client,appName,actorName])
+        
+    def delFromLaunchList(self, dClient):
+        '''
+        Delete all actors from the launch list that were running on the (disconnected) client
+        '''
+        newLaunchList = []
+        found = False
+        for elt in self.launchList:
+            client = elt[0]
+            if dClient == client: 
+                found = True
+            else:
+                newLaunchList.append(elt)
+        if not found: return
+        self.launchList = newLaunchList
     
     def isdir(self,sftp,path):
         '''
@@ -887,7 +892,7 @@ class Controller(object):
         os.remove(const.sigFile)
             
     def removeApp(self, appName):
-        self.haltByName(appName)
+        self.haltByName(appName,False)
         status = self.appInfo[appName].status if appName in self.appInfo else AppStatus.NotLoaded
         files,libraries,clients = [],[],[]
         if status == AppStatus.Loaded: 
@@ -896,23 +901,27 @@ class Controller(object):
             # If it was recovered, we have only clients and appName. 
             files, libraries, clients = [], [], self.appInfo[appName].clients
         self.removeSignature()
+        ok = True
         with ctrlLock:
             for client in clients:
                 if client.stale:
                     self.log('? %s', client.name)  # Stale client, we don't remove
                 else:
-                    res = client.cleanupApp(appName)
-                    while not res.ready: time.sleep(1.0)
-                    ok = self.removeAppFromClient(client,appName,files,libraries)
-                    if not ok:
-                        return False
-        return True
+                    try:
+                        _res = self.callClient(client.cleanupApp,[appName]) # const.ctrlHaltTimeout
+                    except Exception as exc:
+                        self.log('? %s:%r', (client.name,exc))
+                    done = self.removeAppFromClient(client,appName,files,libraries)
+                    if not done: ok = False
+        return ok
 
     def removeAppByName(self, appName):
         ok = self.removeApp(appName)
-        if not ok: self.log("? %s " % appName)  # Flag a problem (redundant) 
-        self.log("R %s " % appName)             # Make gui update
-        del self.appInfo[appName]               # remove app info
+        if ok:
+            self.log("R %s " % appName)     # Flag a problem (redundant) 
+        else: 
+            self.log("? %s " % appName)     # Make gui update
+        del self.appInfo[appName]           # remove app info
 
     def setAppFolder(self,appFolderPath):
         self.riaps_appFolder = appFolderPath
@@ -921,8 +930,13 @@ class Controller(object):
     def addRecoveredAppInfo(self,data,client):
         for item in data:
             appName,_actors = item[0],item[1]
-            if appName not in self.appInfo:
+            appInfo = self.appInfo.get(appName,None)
+            if appInfo is None:
                 self.appInfo[appName] = AppInfo(model=None,depl=None,appFolder=None,status = AppStatus.Recovered)
+            elif appInfo.status == AppStatus.NotLoaded:
+                self.appInfo[appName].status = AppStatus.Loaded
+            else:
+                pass
             self.appInfo[appName].clients.add(client)
     
     def compileApplication(self,appModelName,appFolder):

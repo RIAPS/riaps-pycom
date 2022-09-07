@@ -32,46 +32,52 @@ class ProcessMonitor(threading.Thread):
     '''
     Thread for monitoring a process
     '''
-    def __init__(self,parent):
-        threading.Thread.__init__(self,daemon=True)
+    def __init__(self,parent,qualName):
+        threading.Thread.__init__(self,name='ProcessMonitor:%r' % qualName,daemon=True)
         self.logger = logging.getLogger(__name__)
         self.parent = parent
         self.context = parent.context
         self.endpoint = parent.endpoint
         self.proc = None
         self.command = None
-        self.name = None
+        self.proc_name = None
         self.terminated = threading.Event() # Thread must terminate
         self.terminated.clear()
         self.released = threading.Event()   # Process to be released 
         self.released.clear()
     
     def setup(self,record):
-        self.name = record.name
+        self.proc_name = record.name
         self.proc = record.proc
           
     def run(self):
         self.dealer = self.context.socket(zmq.DEALER)
-        self.dealer.setsockopt(zmq.IDENTITY, str(self.name).encode(encoding='utf_8'))
+        self.dealer.setsockopt(zmq.IDENTITY, str(self.proc_name).encode(encoding='utf_8'))
         self.dealer.connect(self.endpoint)
+        self.unexpected = False
         while True: 
             self.proc.wait()
             if self.terminated.is_set(): break
             if self.released.is_set(): 
-                self.logger.info("expected termination: %s" % self.name)
+                self.logger.info("expected termination: %s" % self.proc_name)
                 break
             else:
                 # Process termination was unexpected
-                self.logger.info("restarting process: %s" % self.name)
-                self.dealer.send_pyobj((self.name,))
+                self.unexpected = True
+                self.logger.info("unexpected termination: %s" % self.proc_name)
+                self.dealer.send_pyobj((self.proc_name,))
                 # Ask parent to restart, wait until completed
                 _resp = self.dealer.recv_pyobj()
+                self.unexpected = False
         self.dealer.close()
 
     def release(self):
         self.released.set()
-        self.logger.info("released proc %s" % self.name)
-        
+        self.logger.info("released proc %s" % self.proc_name)
+    
+    def error(self):
+        return self.unexpected 
+    
     def terminate(self):
         self.logger.info("terminating")
         self.terminated.set()
@@ -102,7 +108,7 @@ class ProcessManager(object):
                 old.thread.setup(new)
                 self.monitors[qualName] = new
             else:
-                thread = ProcessMonitor(self)
+                thread = ProcessMonitor(self,qualName)
                 record = ProcessMonitorRecord(name=qualName,proc=proc,thread=thread)
                 self.monitors[qualName] = record
                 thread.setup(record)
@@ -115,8 +121,9 @@ class ProcessManager(object):
             if qualName in self.monitors:
                 record = self.monitors[qualName]
                 thread = record.thread
-                thread.release()
-                del self.monitors[qualName]
+                if not thread.error():
+                    thread.release()
+                    del self.monitors[qualName]
             else:
                 self.logger.error(" unknown process %s" % qualName)
     

@@ -27,7 +27,7 @@ import traceback
 
 class FMMonitor(threading.Thread):
     def __init__(self,context,hostAddress,riapsHome):
-        threading.Thread.__init__(self,daemon=True)
+        threading.Thread.__init__(self,name='FMMonitor',daemon=True)
         self.logger = logging.getLogger(__name__)
         self.context = context
         self.hostAddress = hostAddress
@@ -88,7 +88,7 @@ class FMMonitor(threading.Thread):
         
     def run(self):
         self.zyre = Zyre(None)
-        if self.logger.level > 0:
+        if self.logger.getChild('zyre').level > 0:
             self.zyre.set_verbose()
             # Zsys.set_logsystem(1)
         else:
@@ -283,16 +283,17 @@ class FMMonitor(threading.Thread):
         for appName in self.actors:
             if appName in self.groups:
                 group = self.groupName(appName) 
-                arg = "- %s.%s" % (appName,actorName)
-                self.logger.info("FMMon.terminate.shout: %s" % arg)
-                self.zyre.shouts(group,arg.encode('utf-8')) 
+                for actorName in self.actors[appName]:
+                    arg = "- %s.%s" % (appName,actorName)
+                    self.logger.info("FMMon.terminate.shout: %s" % arg)
+                    self.zyre.shouts(group,arg.encode('utf-8')) 
         self.zyre.leave(b'riaps')
         self.zyre.stop()
 
         
 class NICMonitor(threading.Thread):
     def __init__(self,context):
-        threading.Thread.__init__(self,daemon=True)
+        threading.Thread.__init__(self,name='NICMonitor',daemon=True)
         self.logger = logging.getLogger(__name__)
         self.context = context
         self.ip = IPRSocket()

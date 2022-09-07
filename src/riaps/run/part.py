@@ -272,7 +272,7 @@ class Part(object):
         for portName in self.ports:
             port = self.ports[portName]
             info = port.getInfo()
-            portType = info.portType
+            portType = info.portKind
             if portType in {'pub', 'srv', 'rep', 'ans'}:
                 endp = [prefix, info]
                 self.parent.registerEndpoint(endp) 

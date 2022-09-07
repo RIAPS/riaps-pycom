@@ -115,16 +115,6 @@ class ControlGUIClient(object):
         self.messages.insert(self.messages.get_end_iter(), " "*256 + "\n")
         Gtk.main()
 
-#     def bg_server(self, source=None, cond=None):
-#         '''
-#         Check if there is something pending from the server thread. Called by the main GUI loop
-#         '''
-#         if self.conn:
-#             self.conn.poll_all()
-#             return True
-#         else:
-#             return False
-
     def log(self,text,prompt='> '):
         global guiLock
         with guiLock:
