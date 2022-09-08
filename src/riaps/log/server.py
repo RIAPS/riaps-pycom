@@ -7,7 +7,7 @@ import struct
 
 import riaps.log.visualizers.tmux as visualizer
 
-theViewer = visualizer.View(session_name="frameworkLogger")
+theViewer = visualizer.View(session_name="platformLogger")
 
 
 class LogRecordStreamHandler(socketserver.StreamRequestHandler):
