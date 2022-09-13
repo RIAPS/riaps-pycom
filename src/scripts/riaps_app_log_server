@@ -1,0 +1,18 @@
+#!/usr/bin/python3
+'''
+Top level script to start the framework log server
+
+Created on Sep 6, 2022
+
+Arguments
+--h HOST : The ip address of the interface that will receive the log messages. 
+-p (or --port) PORT : Port on which log server will receive log messages.
+-v (or --visualizer) : The name of the handler the server will use to process log messages (e.g., tmux)
+
+@author: riaps
+'''
+
+import riaps.log.app_server
+
+if __name__ == '__main__':
+    riaps.log.app_server.main()
