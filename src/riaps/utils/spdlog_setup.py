@@ -138,12 +138,12 @@ def add_syslog_sink_mt(s):
 def add_tcp_sink_st(s):
     return spdlog.tcp_sink_st(server_host=s["server_host"],
                                server_port=s["server_port"],
-                               lazy_connect=False)  # if true connect on first log call instead of on construction
+                               lazy_connect=True)  # Leave True. If the server is not ready False causes an exception. True connect on first log call instead of on construction. 
 
 def add_tcp_sink_mt(s):
     return spdlog.tcp_sink_mt(server_host=s["server_host"],
                               server_port=s["server_port"],
-                              lazy_connect=False)  # if true connect on first log call instead of on construction
+                              lazy_connect=True)  # Leave True. If the server is not ready False causes an exception. True connect on first log call instead of on construction. 
 
 types = {
         'stdout_sink_st': add_stdout_sink_st,
