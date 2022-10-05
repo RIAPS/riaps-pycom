@@ -225,9 +225,9 @@ class ActorResourceManager(object):
                     self.cpuMonitor.start()
             else:
                 if self.parent.cpuCGroup:
-                    self.cpuController.tasks = proc.pid
+                    self.cpuController.tasks = [proc.pid]
         if self.hasMem:
-            self.memController.tasks = proc.pid
+            self.memController.tasks = [proc.pid]
             self.memMonitor.setup(proc)
             if self.memMonitor.is_running():
                 self.memMonitor.restart()
@@ -238,7 +238,7 @@ class ActorResourceManager(object):
         if self.hasSpace:
             self.parent.spcMonitor.addProc(appName,actName,proc)
         if self.hasNet:
-            self.netController.tasks = proc.pid
+            self.netController.tasks = [proc.pid]
             self.parent.netMonitor.addProc(appName,actName,proc)
         self.proc = proc
         self.started = True

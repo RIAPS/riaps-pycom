@@ -289,7 +289,6 @@ class DeploymentManager(threading.Thread):
             self.disco = psutil.Popen(command,
                                       preexec_fn=self.demote(is_su,False,user_uid, user_gid), 
                                       cwd=user_cwd, env=user_env)
-    
         except FileNotFoundError:
             try:
                 command = ['python3',disco_mod] + command[1:]
@@ -297,6 +296,7 @@ class DeploymentManager(threading.Thread):
                                           preexec_fn=DeploymentManager.demote(is_su,False,user_uid, user_gid), 
                                           cwd=user_cwd, env=user_env)    
             except:
+                # traceback.print_exc()
                 self.logger.error("Error while starting disco: %s" % sys.exc_info()[0])
                 raise
         self.procm.monitor(self.DISCONAME,self.disco)
@@ -650,7 +650,6 @@ class DeploymentManager(threading.Thread):
                                 cwd=user_cwd, env=user_env,
                                 stdout=logFile,stderr=subprocess.STDOUT)
         except (FileNotFoundError,PermissionError):
-            self.logger.info("Error while starting actor: %s -- %s" % (command,sys.exc_info()[0]))
             try:
                 # if isPython:
                 command = ['python3',riaps_mod] + command[1:]
@@ -661,6 +660,7 @@ class DeploymentManager(threading.Thread):
                                     cwd=user_cwd, env=user_env,
                                     stdout=logFile,stderr=subprocess.STDOUT)
             except:
+                # traceback.print_exc()
                 self.logger.error("Error while starting actor: %s -- %s" % (command,sys.exc_info()[0]))
                 raise BuildError("Actor failed to start: %s.%s " % (appName,actorName))
         try:
@@ -767,13 +767,16 @@ class DeploymentManager(threading.Thread):
         with self.mapLock:
             # assert qualName in self.launchMap
             if qualName not in self.launchMap:
-                self.logger.error('Actor %s has not been started' % qualName)
+                self.logger.error('Actor %s has no process' % qualName)
                 return
             proc = self.launchMap[qualName]
             del self.launchMap[qualName]
         
         assert proc != None
-        assert qualName in self.actors      
+        if qualName not in self.actors:
+            self.logger.error('Actor %s has not been started' % qualName)
+            return
+        # assert qualName in self.actors      
         
         self.logger.info("Stopping actor %s" % qualName)
         self.resm.stopActor(appName, actorName, proc)
@@ -1328,6 +1331,8 @@ class DeploymentManager(threading.Thread):
                                         cwd=appFolder,env=dev_env,
                                         stdout=logFile, stderr=subprocess.STDOUT)
             except:
+                if self.logger.level >= logging.info: 
+                    traceback.print_exc()
                 self.logger.error("Error while starting device: %s -- %s" % (command,sys.exc_info()[0]))
                 raise BuildError("Device failed to start: %s" % (appName,instName))
         try:
