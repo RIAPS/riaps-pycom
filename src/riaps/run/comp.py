@@ -122,14 +122,14 @@ class ComponentThread(threading.Thread):
             res = True
         elif msg == "activate":
             self.logger.info("activate")
-            self.instance.handleActivate()      
             for portName in self.parent.ports:
                 self.parent.ports[portName].activate()
+            self.instance.handleActivate()  
         elif msg == "deactivate":
             self.logger.info("deactivate")
+            self.instance.handleDeactivate()   
             for portName in self.parent.ports:
                 self.parent.ports[portName].deactivate()
-            self.instance.handleDeactivate()     
         elif msg == "passivate":
             self.logger.info("passivate")
             self.instance.handlePassivate()                
