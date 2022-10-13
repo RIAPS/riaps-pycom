@@ -54,6 +54,7 @@ def main():
         traceback.print_exc()
         os._exit(0)
 
+
 def parse_args(server):
     host = server[0]
     try:
@@ -83,14 +84,16 @@ def setup(platform, app):
                                "view": view}
         p.start()
 
-    # if app:
-    #     app_log_server = BaseLogServer(server_address=app,
-    #                                    RequestHandlerClass=riaps.log.server.AppLogHandler,
-    #                                    view=visualizer.View(session_name="app"))
-    #     p = multiprocessing.Process(target=app_log_server.serve_until_stopped)
-    #     servers["app"] = {"server": app_log_server,
-    #                       "process": p}
-    #     p.start()
+    if app:
+        view = visualizer.View(session_name="app")
+        app_log_server = BaseLogServer(server_address=app,
+                                       RequestHandlerClass=riaps.log.server.AppLogHandler,
+                                       view=view)
+        p = multiprocessing.Process(target=app_log_server.serve_until_stopped)
+        servers["app"] = {"server": app_log_server,
+                          "process": p,
+                          "view": view}
+        p.start()
 
     def term_handler(signal, frame):
         print("\nCall term_handler")
