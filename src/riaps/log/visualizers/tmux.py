@@ -1,13 +1,17 @@
+import logging
+import sys
+
 import libtmux
+import libtmux.exc
 import subprocess
 from riaps.log.visualizers.base_view import BaseView
-import logging
+import logging as logger
 
 
 class View(BaseView):
 
     def __init__(self, session_name):
-        self.logger = logging.getLogger(__name__)
+        logger.basicConfig(level=logging.INFO)
         super(View, self).__init__(session_name)
         self.server = libtmux.Server()
         session = self.get_session()
@@ -25,16 +29,22 @@ class View(BaseView):
         subprocess.run(["tmux", "select-pane", "-t", f"{pane_id}", "-T", f"{pane_name}"])
 
     def add_node_display(self, node_name):
-        self.logger.info(f"client address: {node_name}")
-        pane = self.window.split_window(attach=False,
-                                        vertical=False)
-        self.set_pane(pane, node_name=node_name)
-        pane.window.select_layout(layout="tiled")
-        return pane
+        try:
+            pane = self.window.split_window(attach=False,
+                                            vertical=False)
+            self.set_pane(pane, node_name=node_name)
+            pane.window.select_layout(layout="tiled")
+            return
+        except libtmux.exc.LibTmuxException as e:
+            logger.error(e)
 
     def write_display(self, node_name, msg):
         pane_tty = self.nodes[node_name]["tty"]
-        subprocess.check_output(f"echo '{msg}' > {pane_tty}", shell=True)
+        try:
+            output = subprocess.check_output(f"echo '{msg}' > {pane_tty}", shell=True)
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Was the Tmux session closed?")
+            sys.exit(1)
 
     def start_session(self):
         subprocess.run(["tmux", "new-session", "-d", "-s", f"{self.session_name}", "-n", "main"])
@@ -50,4 +60,5 @@ class View(BaseView):
         return session
 
     def close_session(self):
+        logger.info("close_session")
         subprocess.run(["tmux", "kill-server"])
