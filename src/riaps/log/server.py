@@ -26,7 +26,7 @@ class BaseLogHandler(socketserver.StreamRequestHandler):
         pass
 
     def handle_log_record(self, data):
-        self.logger.info(f"client address: {self.client_address}")
+        self.logger.debug(f"client address: {self.client_address}")
         node_name = self.client_address[0]
         if node_name not in self.view.nodes:
             self.view.add_node_display(node_name=node_name)
@@ -65,7 +65,6 @@ class PlatformLogHandler(BaseLogHandler):
 class BaseLogServer(socketserver.ThreadingTCPServer):
 
     def __init__(self, server_address, RequestHandlerClass, view):
-        # logger.basicConfig(level=logging.INFO)
         self.allow_reuse_address = True
         self.logger = logging.getLogger(__name__)
         self.RequestHandlerClass = RequestHandlerClass
@@ -73,36 +72,9 @@ class BaseLogServer(socketserver.ThreadingTCPServer):
         super(BaseLogServer, self).__init__(server_address,
                                             RequestHandlerClass)
 
-    # def finish_request(self, request, client_address):
-    #     node_name = client_address[0]
-    #     try:
-    #         if node_name not in self.view.nodes:
-    #             self.logger.warning(f"\nclient_address: {client_address}"
-    #                                 f"\nNEW NODE: {node_name} "
-    #                                 f"\nALL NODES: {self.view.nodes.keys()}")
-    #
-    #             self.view.add_node_display(node_name=node_name)
-    #     except subprocess.CalledProcessError as e:
-    #         self.logger.error(f"Was the Tmux session closed?\n"
-    #                           f" {e}")
-    #
-    #     self.RequestHandlerClass(request, client_address, self)
-
     def serve_until_stopped(self):
         self.logger.info(f'About to start Log server {self.view.session_name}...')
-        # Activate the server; this will keep running until you
-        # interrupt the program with Ctrl-C
-        # self.serve_forever()
         self.serve_forever()
-
-    # def server_close(self):
-    #     # self.logger.info("Send shutdown to stop handling requests")
-    #     # self.shutdown()
-    #     # self.logger.info("Server is shutdown")
-    #     # super(BaseLogServer, self).server_close()
-    #     # self.logger.info("Log server closed")
-    #     self.view.close_session()
-
 
 
 if __name__ == '__main__':
