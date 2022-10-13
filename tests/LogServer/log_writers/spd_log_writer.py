@@ -1,11 +1,19 @@
 import platform
 import spdlog
-import struct
 import time
+
+
+def add_tcp_sink_st():
+    sink = spdlog.tcp_sink_st(server_host="172.21.20.70",
+                              server_port=12345,
+                              lazy_connect=True)  # if true connect on first log call instead of on construction
+    return sink
+
 
 sinks = [
     spdlog.stdout_sink_st(),
-    spdlog.tcp_sink_st("localhost", 12345, True),
+    add_tcp_sink_st(),
+
 ]
 
 logger = spdlog.SinkLogger("MyLogger", sinks)
@@ -29,4 +37,4 @@ def tcp_log(log_msg, level):
 
 for i in range(10):
     tcp_log(f"message: {i}", "info")
-    # time.sleep(5)
+    time.sleep(1)
