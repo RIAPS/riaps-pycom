@@ -1,33 +1,31 @@
 # Using RIAPS Log Servers
-RIAPS logs can be viewed in real-time for both local and remote nodes using the RIAPS log servers. There are two:
+RIAPS logs can be viewed in real-time for both local and remote nodes using the RIAPS log servers. 
+There are two, which can be started simultaneously if desired:
 
-- `riaps_app_log_server` shows logs written by RIAPS applications
-- `riaps_platform_log_server` shows logs written by the RIAPS platform itself
+- `riaps_log_server -p ${host} ${port}` captures logs written by RIAPS applications
+- `riaps_log_server -a ${host} ${port}` captures logs written by the RIAPS platform itself
 
 These servers create a `tmux` session for viewing all node logs in a single terminal window
 
 ---
 
-# Application Logs: `riaps_app_log_server`
+# Application Logs: `riaps_log_server -a ${host} ${port}`
 When developing RIAPS apps, viewing log output can be very useful. To view application logs, RIAPS nodes need:
-1. Network access to the `riaps_app_log_server` endpoint
+1. Network access to the `riaps_log_server` endpoint
 2. An application logging config file (`riaps-log.conf`)
 
 Start the log server with:
 ```bash
-$ riaps_app_log_server [--host HOST] [-p PORT] [-v VISUALIZER]
+$ riaps_log_server [-a APP] ${host} ${port}
 ```
-This creates a tmux session named "componentLogger". This name can be changed with the above `-v` flag.
+This creates a tmux session named "app".
 
 View the app logs by attaching to the tmux session with:
 ```bash
-$ tmux attach -t componentLogger
+$ tmux attach -t app
 ```
 
-## 1) Network access to the `riaps_app_log_server` endpoint  
-
-
-`riaps_app_log_server` binds to `localhost` by default, which works for RIAPS nodes running in the development environment. To use an IP accessible to remote nodes, use the `--host` flag. 
+## 1) Network access to the `riaps_log_server` endpoint
 
 If RIAPS has security enabled, each node **MUST** be given explicit access to the log server in the application deployment file. For example:
 ```
@@ -61,19 +59,16 @@ See the [RIAPS Component Logging Tutorial](https://riaps.github.io/tutorials/log
 
 ---
 
-# Platform Logs: `riaps_platform_log_server`
+# Platform Logs: `riaps_log_server -p ${host} ${port}`
 Sometimes it's useful to see log outputs from the RIAPS platform when debugging.
 Run:
 ```bash
-$ riaps_platform_log_server [--host HOST] [-p PORT]
+$ riaps_log_server [-p PLATFORM] ${host} ${port}
 ```
 Then view the platform logs by attaching tmux:
 ```bash
-$ tmux attach -t platformLogger
+$ tmux attach -t platform
 ```
-
-Default host: `localhost`
-Default port: 9020
 
 ## Configure Platform Logging
 Each remote node needs the following added to its `riaps-log.conf`. (Note: not the config with the application code, but the one in $RIAPSHOME/etc/)
