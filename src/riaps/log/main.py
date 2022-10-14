@@ -37,16 +37,14 @@ def main():
 
     traced = riaps_trace(args.trace, 'LOG_SERVER_DEBUG_SERVER')
 
-    p_host = None
-    p_port = None
-    a_host = None
-    a_port = None
+    platform = None
+    app = None
     try:
         if args.platform:
-            p_host, p_port = parse_args(args.platform)
+            platform = parse_args(args.platform)
         if args.app:
-            a_host, a_port = parse_args(args.app)
-        setup(platform=(p_host, p_port), app=(a_host, a_port))
+            app = parse_args(args.app)
+        setup(platform, app)
     except:
         traceback.print_exc()
         info = sys.exc_info()
@@ -111,7 +109,7 @@ def setup(platform, app):
 
 
 if __name__ == '__main__':
-    setup(("172.21.20.70", 9020),
-          None)
-    # main()
+    # setup(("10.0.0.246", 9020),
+        #   None)
+    main()
     # os._exit(0)
