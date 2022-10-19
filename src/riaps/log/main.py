@@ -15,6 +15,7 @@ import riaps.log.server
 from riaps.consts.defs import *
 from riaps.utils.config import Config
 from riaps.log.server import BaseLogServer
+from riaps.log.server import PlatformLogServer
 import riaps.log.visualizers.tmux as visualizer
 from riaps.utils.trace import riaps_trace
 
@@ -72,9 +73,9 @@ def setup(platform, app):
 
     if platform:
         view = visualizer.View(session_name="platform")
-        platform_log_server = BaseLogServer(server_address=platform,
-                                            RequestHandlerClass=riaps.log.server.PlatformLogHandler,
-                                            view=view)
+        platform_log_server = PlatformLogServer(server_address=platform,
+                                                RequestHandlerClass=riaps.log.server.PlatformLogHandler,
+                                                view=view)
 
         p = multiprocessing.Process(target=platform_log_server.serve_until_stopped)
         servers["platform"] = {"server": platform_log_server,
