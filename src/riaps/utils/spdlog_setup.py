@@ -203,6 +203,7 @@ def from_file(fname):
             if 'level' in l.keys():
                 logger.set_level(levels[l['level']])
             loggers[name] = logger
+    return loggers
 
 
 def get_logger(name):
