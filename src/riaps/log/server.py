@@ -74,8 +74,30 @@ class BaseLogServer(socketserver.ThreadingTCPServer):
 
     def serve_until_stopped(self):
         self.logger.info(f'About to start Log server {self.view.session_name}...')
-        self.serve_forever()
+        # self.serve_forever()
+        try:
+            self.serve_forever()
+        except KeyboardInterrupt:
+            pass
 
+
+class PlatformLogServer(BaseLogServer):
+    def __init__(self, server_address, RequestHandlerClass, view):
+        super(PlatformLogServer, self).__init__(server_address, RequestHandlerClass, view)
+        self.abort = 0
+
+    def serve_until_stopped(self):
+        self.logger.info(f'Starting {self.view.session_name} Log server...')
+        import select
+        abort = 0
+        while not abort:
+            rd, wr, ex = select.select([self.socket.fileno()],
+                                       [], [],
+                                       self.timeout)
+            if rd:
+                self.handle_request()
+            abort = self.abort
+        self.logger.info(f"Terminate log server {self.view.session_name}")
 
 if __name__ == '__main__':
     import multiprocessing
