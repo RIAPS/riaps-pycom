@@ -61,4 +61,5 @@ class View(BaseView):
 
     def close_session(self):
         logger.info("close_session")
-        subprocess.run(["tmux", "kill-server"])
+        self.server.kill_session(self.session_name)
+        # subprocess.run(["tmux", "kill-server"])
