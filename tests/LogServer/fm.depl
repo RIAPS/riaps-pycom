@@ -1,6 +1,11 @@
 // 
 app FmTest {
 	// Basic actor tests
+
+    host 172.21.20.50 {
+        network 172.21.20.70; //IP address of riaps_app_log_server
+    }
+
 	on (172.21.20.50) FmAppActor(test='');		// OK
 	// on all FmAppActor(test='e');		// Exit
 	// on all FmAppActor(test='a');		// Actor
