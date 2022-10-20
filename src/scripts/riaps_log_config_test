@@ -1,0 +1,35 @@
+#!/usr/bin/python3
+'''
+Script to test app log config file
+
+Created on Oct 20, 2022
+
+Arguments
+-p (or --platform) PLATFORM : The ip address and port for the platform log server. e.g., -p 10.0.0.1 9020
+-a (or --app) APP : The ip address and port for the platform log server. e.g., -a 10.0.0.1 12345
+@author: riaps
+'''
+
+import argparse
+import time
+import riaps.utils.spdlog_setup as spdlog_setup
+
+
+def test_loggers(loggers, msg):
+    for logger in loggers:
+        print(f"logger: {logger}")
+        loggers[logger].info(msg)
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-F", "--file", default="riaps-log.conf")
+    args = parser.parse_args()
+    print(args)
+
+    loggers = spdlog_setup.from_file(args.file)
+    for i in range(10):
+        test_loggers(loggers, f"message: {i}")
+        time.sleep(1)
+
+
