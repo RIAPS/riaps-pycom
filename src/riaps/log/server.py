@@ -2,11 +2,10 @@ import abc
 import logging
 import logging.handlers
 import pickle
+import queue
 import signal
 import socketserver
 import struct
-import subprocess
-import time
 
 import riaps.log.visualizers.tmux as visualizer
 
@@ -14,7 +13,6 @@ import riaps.log.visualizers.tmux as visualizer
 class BaseLogHandler(socketserver.StreamRequestHandler):
 
     def __init__(self, request, client_address, server):
-        self.view = server.view
         self.logger = logging.getLogger(__name__)
         super(BaseLogHandler, self).__init__(request, client_address, server)
 
@@ -28,9 +26,18 @@ class BaseLogHandler(socketserver.StreamRequestHandler):
     def handle_log_record(self, data):
         self.logger.debug(f"client address: {self.client_address}")
         node_name = self.client_address[0]
-        if node_name not in self.view.nodes:
-            self.view.add_node_display(node_name=node_name)
-        self.view.write_display(node_name=node_name, msg=data)
+
+        self.logger.info(f"qsize: {self.server.q.qsize()}")
+        msg = {"node_name": node_name,
+               "data": data}
+
+        self.server.q.put(msg)
+        # ^^^^^^^^^^^^^^^^^^^^
+        # self.server is set in BaseRequestHandler
+        # q is set in the server class
+        # a shared q is used to avoid creating multiple tmux panes which could happen if
+        # panes were created in this handler
+        # -------------------------------------
 
 
 class AppLogHandler(BaseLogHandler):
@@ -64,48 +71,73 @@ class PlatformLogHandler(BaseLogHandler):
 
 class BaseLogServer(socketserver.ThreadingTCPServer):
 
-    def __init__(self, server_address, RequestHandlerClass, view):
+    def __init__(self, server_address, RequestHandlerClass, view, q):
         self.allow_reuse_address = True
         self.logger = logging.getLogger(__name__)
         self.RequestHandlerClass = RequestHandlerClass
         self.view = view
+        self.q = q
         super(BaseLogServer, self).__init__(server_address,
                                             RequestHandlerClass)
 
+    def service_actions(self):
+        while True:
+            try:
+                msg = self.q.get(block=False)
+                self.logger.info(f"data: {msg}")
+                node_name = msg["node_name"]
+                if node_name not in self.view.nodes:
+                    self.view.add_node_display(node_name=node_name)
+                self.view.write_display(node_name=node_name, msg=msg["data"])
+            except queue.Empty as e:
+                break
+
     def serve_until_stopped(self):
         self.logger.info(f'About to start Log server {self.view.session_name}...')
-        # self.serve_forever()
         try:
             self.serve_forever()
         except KeyboardInterrupt:
             pass
 
 
-class PlatformLogServer(BaseLogServer):
-    def __init__(self, server_address, RequestHandlerClass, view):
-        super(PlatformLogServer, self).__init__(server_address, RequestHandlerClass, view)
-        self.abort = 0
+class AppLogServer(BaseLogServer):
 
-    def serve_until_stopped(self):
-        self.logger.info(f'Starting {self.view.session_name} Log server...')
-        import select
-        abort = 0
-        while not abort:
-            rd, wr, ex = select.select([self.socket.fileno()],
-                                       [], [],
-                                       self.timeout)
-            if rd:
-                self.handle_request()
-            abort = self.abort
-        self.logger.info(f"Terminate log server {self.view.session_name}")
+    def __init__(self, server_address, RequestHandlerClass, view, q):
+        super(AppLogServer, self).__init__(server_address, RequestHandlerClass, view, q)
+
+
+class PlatformLogServer(BaseLogServer):
+    def __init__(self, server_address, RequestHandlerClass, view, q):
+        super(PlatformLogServer, self).__init__(server_address, RequestHandlerClass, view, q)
+
+    # -----------------------------------------------------------------------------------
+    # Commented code below is left in case using serve_forever() ends up having an as yet
+    # undetected problem. It came from the original example.
+    # \/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/
+    # def serve_until_stopped(self):
+    #     self.logger.info(f'Starting Platform Log server...')
+    #     self.logger.info(threading.get_ident())
+    #     import select
+    #     abort = 0
+    #     while not abort:
+    #         rd, wr, ex = select.select([self.socket.fileno()],
+    #                                    [], [],
+    #                                    self.timeout)
+    #         if rd:
+    #             self.handle_request()
+    #         abort = self.abort
+    #     self.logger.info(f"Terminate Platform Log server")
+
 
 if __name__ == '__main__':
     import multiprocessing
     view = visualizer.View(session_name="platform")
-    theLogServer = BaseLogServer(server_address=("172.21.20.70",
-                                 logging.handlers.DEFAULT_TCP_LOGGING_PORT),
-                                 RequestHandlerClass=PlatformLogHandler,
-                                 view=view)
+    q = queue.Queue()
+    theLogServer = PlatformLogServer(server_address=("172.21.20.70",
+                                                     logging.handlers.DEFAULT_TCP_LOGGING_PORT),
+                                     RequestHandlerClass=PlatformLogHandler,
+                                     view=view,
+                                     q=q)
 
     logger = logging.getLogger(__name__)
     server = multiprocessing.Process(target=theLogServer.serve_until_stopped)
