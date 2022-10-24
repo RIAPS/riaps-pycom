@@ -29,7 +29,6 @@ if __name__ == '__main__':
     parser.add_argument("-F", "--file", default="riaps-log.conf")
     parser.add_argument("-s", "--spd", action='store_true')
     args = parser.parse_args()
-    print(args)
 
     if args.spd:
         loggers = spdlog_setup.from_file(args.file)
@@ -40,10 +39,11 @@ if __name__ == '__main__':
         for logger in loggers:
             loggers[logger] = logging.getLogger(logger)
         loggers["root"] = root_logger
-        print(loggers)
 
     for i in range(10):
         test_loggers(loggers, f"message: {i}")
         time.sleep(1)
+
+
 
 
