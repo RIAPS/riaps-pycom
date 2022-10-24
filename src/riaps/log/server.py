@@ -27,7 +27,6 @@ class BaseLogHandler(socketserver.StreamRequestHandler):
         self.logger.debug(f"client address: {self.client_address}")
         node_name = self.client_address[0]
 
-        self.logger.info(f"qsize: {self.server.q.qsize()}")
         msg = {"node_name": node_name,
                "data": data}
 
@@ -64,14 +63,38 @@ class PlatformLogHandler(BaseLogHandler):
             while len(chunk) < slen:
                 chunk += self.connection.recv(slen - len(chunk))
             obj = pickle.loads(chunk)
-            obj["msg"] = f"{obj['msg']}: {self.client_address}"
+
             record = logging.makeLogRecord(obj)
-            self.handle_log_record(data=record.getMessage())
+
+            logger = logging.getLogger(record.name)
+            handlers = self.getHandlers(logger)
+            handler = handlers[0]
+
+            assert type(handler) is logging.StreamHandler, \
+                "Handler type is not StreamHandler and may not support calling format"
+
+            msg = handler.format(record)
+
+            self.handle_log_record(data=msg)
+
+    def getHandlers(self, logger):
+        handlers = []
+        while logger:
+            if logger.handlers:
+                rv = True
+                handlers += logger.handlers
+                break
+            if not logger.propagate:
+                break
+            else:
+                logger = logger.parent
+        return handlers
 
 
 class BaseLogServer(socketserver.ThreadingTCPServer):
 
     def __init__(self, server_address, RequestHandlerClass, view, q):
+        self.logname = "riaps.log"
         self.allow_reuse_address = True
         self.logger = logging.getLogger(__name__)
         self.RequestHandlerClass = RequestHandlerClass
@@ -84,9 +107,9 @@ class BaseLogServer(socketserver.ThreadingTCPServer):
         while True:
             try:
                 msg = self.q.get(block=False)
-                self.logger.info(f"data: {msg}")
                 node_name = msg["node_name"]
                 if node_name not in self.view.nodes:
+                    self.logger.info(f"Add new node: {node_name}")
                     self.view.add_node_display(node_name=node_name)
                 self.view.write_display(node_name=node_name, msg=msg["data"])
             except queue.Empty as e:
