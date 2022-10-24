@@ -21,8 +21,17 @@ Note:
 Each node specified in `/etc/riaps/riaps-hosts.conf` needs the socketHandler to be added the list of `[handlers]` in the `/etc/riaps/riaps-log.conf` file and the `args` in the `[handler_socketHandler]` definition needs to be modified to match the ip of the node that will run the log server. To be explicit here is an example of those elements (The ip and port will need to be modified to match your node):
 ```conf
 ...
+[loggers]
+keys=root,riaps.deplo.spcmon
+...
 [handlers]
 keys=consoleHandler,socketHandler
+...
+[logger_riaps.deplo.spcmon]
+level=INFO
+handlers=consoleHandler,socketHandler
+qualname=riaps.deplo.spcmon
+propagate=0
 ...
 [handler_socketHandler]
 class=handlers.SocketHandler
