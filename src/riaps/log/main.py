@@ -33,7 +33,6 @@ def main():
     parser.add_argument("-t", "--trace", help="debug server on host:port")
     parser.add_argument('script', nargs='?', help='script name, or - for stdin')
     args = parser.parse_args()
-    print(args)
 
     sys.path.append(os.getcwd())   # Ensure load_module works from current directory
 
