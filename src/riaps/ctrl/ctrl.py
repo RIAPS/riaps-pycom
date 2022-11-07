@@ -27,6 +27,8 @@ import ipaddress
 import socket
 import tempfile
 import shutil
+import threading
+import concurrent.futures
 # from collections import namedtuple
 from Cryptodome.PublicKey import RSA
 from Cryptodome.Signature import PKCS1_v1_5
@@ -229,6 +231,7 @@ class Controller(object):
         try:
             if self.hbTimer:
                 self.hbTimer.cancel()
+                self.hbtimer.join()
         except:
             pass
             
@@ -460,12 +463,14 @@ class Controller(object):
         with open(sha_file,'wb') as f: f.write(sign)
         return (tgz_file, sha_file)
 
-    def downloadAppToClient(self,appName,tgz_file,sha_file,client,resList):
+    def downloadAppToClient(self,appName,tgz_file,sha_file,client):
 
         # Transfer package
+        resList = []
+        who = client.name
         transport = self.startClientSession(client)
         if transport == None:
-            return False
+            return (False,who,resList)
         try:
             _sftpSession = transport.open_session()
             sftpClient = RSFTPClient.from_transport(transport)
@@ -488,39 +493,43 @@ class Controller(object):
             if res.error:
                 res.value = resMsg
             resList += [res]
-            
             transport.close()
-            return True
-        
+            return (True,who,resList)
         except Exception as e:
             self.logger.warning('Caught exception: %s: %s' % (e.__class__, e))
             try:
                 transport.close()
             except:
                 pass
-            return False
+            return (False,who,resList)
 
     def downloadApp(self,files,libraries,clients,appName):
         result = True
         (tgz_file, sha_file) = self.buildPackage(appName,files,libraries)
         with ctrlLock:
-            resList = []
-            cltList = []
-            for client in clients:
-                if client.stale:
-                    self.log('S %s'% client.name)    # Stale client, we don't deploy
+            futures = []
+            with concurrent.futures.ThreadPoolExecutor(max_workers=len(clients)) as executor:
+                for client in clients:
+                    if client.stale:
+                        self.log('S %s'% client.name)    # Stale client, we don't deploy
+                    else:
+                        self.logger.info('downloading %r to %r' % (appName,client.name))
+                        future = executor.submit(self.downloadAppToClient,appName,tgz_file,sha_file,client)
+                        futures += [future]
+            done,_pending = concurrent.futures.wait(futures)
+            self.logger.info('... completed')
+            for future in done:
+                ok,client,resList = future.result()
+                result &= ok
+                if ok == True:
+                    self.log('I %s %s' % (client,appName))
                 else:
-                    ok = self.downloadAppToClient(appName,tgz_file,sha_file,client,resList)
-                    if ok: cltList += [client.name]
-                    result = result and ok
-            for res,clt in zip(resList,cltList):
-                # while not res.ready: time.sleep(0.5)
-                value = res.value
-                if value == True:
-                    self.log('I %s %s' % (clt,appName))
-                else:
-                    self.log('? %s on %s: %s' % (appName,clt,str(value)))
-                    result = False
+                    for res in resList:
+                        # while not res.ready: time.sleep(0.5)
+                        value = res.value
+                        if value != True:
+                            self.log('? %s on %s: %r' % (appName,client,str(value)))
+                            result = False
         os.remove(tgz_file)
         os.remove(sha_file)
         return result
@@ -694,12 +703,78 @@ class Controller(object):
         download.append(const.appCertFile)
         os.chmod(const.appCertFile,stat.S_IRUSR)
         return (download,libraries,clients,depls)
-
+    
+    
+    def launchAppClient(self,target,appName,appNameJSON,client,actors,lock):
+        self.logger.info('setup app %r on %r' % (appName,client.name))
+        try:
+            _res = self.callClient(client.setupApp,[appName,appNameJSON]) # const.ctrlClientTimeout
+        except Exception as _exc:
+            info = sys.exc_info()[1].args[0]
+            self.logger.info('... setup failed')
+            self.log("? %s" % info)
+            return
+        success = True
+        self.logger.info('... setup completed')
+        clientActors = set()                  # Set to guard against multiple deployments of the same actor on the same host
+        for actor in actors:
+            actorName = actor["name"]
+            if actorName in clientActors:
+                self.log("? %s => %s " % (actorName,client.name))
+                continue
+            actuals = actor["actuals"]
+            actualArgs = self.buildArgs(actuals)
+            self.logger.info('launch actor %r of app %r on %r' % (actorName,appName,client.name))
+            try:
+                _res = self.callClient(client.launch,[appName,appNameJSON,actorName,actualArgs]) # const.ctrlLaunchTimeout
+                clientActors.add(actorName)
+                with lock:
+                    self.launchList.append([client,appName,actorName])
+                self.log("L %s %s %s %s" % (client.name,appName,actorName,str(actualArgs)))
+                success &= True
+            except Exception:
+                info = sys.exc_info()[1].args[0]
+                self.logger.info('... actor launch failed')
+                self.log("? %s" % info)
+                success = False
+            self.logger.info('... actor launch completed')
+            if success:
+                with lock:              # The appInfo record keeps track of clients the app is deployed on
+                    self.appInfo[appName].clients.add(client)
+            else:
+                self.log('? %s: %s ' % (target,appName))  # TODO: Retract partial deployment
+                
+    def launchApp(self,appName,depls,lock):
+        # Launch app on clients
+        appNameJSON = appName + ".json"
+        t2AMap = { }
+        t2CMap = { }
+        # Collect deployments
+        for depl in depls:
+            targets = depl['target']
+            actors = depl['actors']
+            targets = [*self.clientMap.keys()] if len(targets) == 0 else targets # All clients if no targets 
+            with ctrlLock:
+                for target in targets:                      
+                    client = self.findClient(target)
+                    if client != None:
+                        if target not in t2AMap: t2AMap[target] = []
+                        if target not in t2CMap: t2CMap[target] = client
+                        t2AMap[target] += actors
+                    else:
+                        self.log("* App %r: no host %r" % (appName,target))
+        futures = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(t2AMap)) as executor:
+            for target in t2AMap:
+                client = t2CMap[target]
+                actors = t2AMap[target]
+                futures += [executor.submit(self.launchAppClient,target,appName,appNameJSON,client,actors,lock)]
+        _done,_pending = concurrent.futures.wait(futures)
+    
     def launchByName(self, appName):
         '''
-        Launch an app. The appInfo record holds information about the model and deployment.
+        Launch the named app 
         '''
-        
         status = self.appInfo[appName].status if appName in self.appInfo else AppStatus.NotLoaded
         if status == AppStatus.NotLoaded: 
             download,libraries,clients,depls = self.buildDownload(appName)
@@ -718,87 +793,71 @@ class Controller(object):
             depls = self.appInfo[appName].depl.getDeployments() if appName in self.appInfo else []
         elif status == AppStatus.Recovered:
             self.log("* App recovered - remove/deploy/launch again")
-            depls = []                  # TODO: recover actor parameter
+            depls = []                  # TODO: recover actor parameters
             return False
         else: 
             self.log("* App launch fault")
             return False
-        # Map to guard against multiple deployments of the same actor on the same host
-        clientActorMap = { }
-        for clientName in self.clientMap:
-            clientActorMap[clientName] = set()
-        # Keep track of clients the app is deployed on
-        appInfo = self.appInfo[appName]
-        # Process the deployment and launch all actors.
-        appNameJSON = appName + ".json"
-        for depl in depls:
-            targets = depl['target']
-            actors = depl['actors']
-            targets = [*self.clientMap.keys()] if len(targets) == 0 else targets # All clients if no targets 
-            with ctrlLock:
-                for target in targets:                      
-                    client = self.findClient(target)
-                    if client != None:
-                        try:
-                            _res = self.callClient(client.setupApp,[appName,appNameJSON]) # const.ctrlClientTimeout
-                        except Exception as exc:
-                            info = sys.exc_info()[1].args[0]
-                            self.log("? %s" % info)
-                            continue
-                        success = True
-                        for actor in actors:
-                            actorName = actor["name"]
-                            if actorName in clientActorMap[client.name]:
-                                self.log("? %s => %s " % (actorName,client.name))
-                                continue
-                            actuals = actor["actuals"]
-                            actualArgs = self.buildArgs(actuals)
-                            try:
-                                _res = self.callClient(client.launch,[appName,appNameJSON,actorName,actualArgs]) # const.ctrlLaunchTimeout
-                                self.launchList.append([client,appName,actorName])
-                                self.log("L %s %s %s %s" % (client.name,appName,actorName,str(actualArgs)))
-                                clientActorMap[client.name].add(actorName)
-                                success &= True
-                            except Exception:
-                                info = sys.exc_info()[1].args[0]
-                                self.log("? %s" % info)
-                                success = False
-                        if success:
-                            appInfo.clients.add(client)
-                        else:
-                            # TODO: Retract partial deployment
-                            self.log('? %s ' % target)
+        lock = threading.RLock()
+        self.launchApp(appName,depls,lock)
         return True
-
-    def haltByName(self, appNameToHalt, logErr=True):
+    
+    def haltAppClient(self,client,appName,actors):
+        for actorName in actors:
+            self.logger.info("halting app actor %r.%r on %r" % (appName,actorName,client.name))
+            try:
+                _res = self.callClient(client.halt,[appName,actorName]) # const.ctrlHaltTimeout
+                self.log("H %s %s %s" % (client.name,appName,actorName))
+            except Exception as exc:
+                self.log("? halt: %r" % exc)
+    
+    def reclaimAppClient(self,client,appName):
+        self.logger.info("reclaiming app %r on %r" % (appName,client.name))
+        try:
+            _res = self.callClient(client.reclaim,[appName]) # const.ctrlClientTimeout
+        except Exception as exc:
+            self.log("? reclaim: %r" % exc)
+    
+    def haltApp(self,appNameToHalt,logErr):
+        self.logger.info('halt app %r' % appNameToHalt)
+        launchList, haltMap, clients = [], {}, set()
+        found = False
+        # Gather all (client, actor*)* for the app
+        for elt in self.launchList:
+            client,appName,_actorName = elt[0], elt[1], elt[2]
+            if appName == appNameToHalt:
+                found = True
+                clients.add(client)
+                if client not in haltMap: haltMap[client] = []
+                haltMap[client] += [elt]
+            else:
+                launchList += [elt]
+        if not found:
+            if logErr: self.log("? not found: %r" % appNameToHalt)
+            return False
+        # Halt all of them in a thread
+        futures = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(haltMap)) as executor:
+            for (client,values) in haltMap.items():
+                actors = [ elt[2] for elt in values]
+                futures += [executor.submit(self.haltAppClient,client,appNameToHalt,actors)]
+        _done,_pending = concurrent.futures.wait(futures)
+        # Reclaim all apps on all clients
+        self.logger.info('reclaiming app %r' % appName)
+        futures = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(clients)) as executor:
+            for client in clients:
+                futures += [executor.submit(self.reclaimAppClient,client,appNameToHalt)]
+        _done,_pending = concurrent.futures.wait(futures)
+        self.launchList = launchList
+        self.logger.info('...done')
+        return True
+    
+    def haltByName(self, appName, logErr=True):
         '''
         Halt (terminate) all launched actors of an app
         '''
-        newLaunchList = []
-        clientList = []
-        found = False
-        for elt in self.launchList:
-            client,appName,actorName = elt[0], elt[1], elt[2]
-            if appName == appNameToHalt:
-                try:
-                    _res = self.callClient(client.halt,[appName,actorName]) # const.ctrlHaltTimeout
-                    self.log("H %s %s %s" % (client.name,appName,actorName))
-                    if client not in clientList: clientList.append(client)
-                    found = True
-                except Exception as exc:
-                    self.log("? %r" % exc)
-            else:
-                newLaunchList.append(elt)
-        if not found:
-            if logErr: self.log("? %r" % appNameToHalt)
-            return False
-        for client in clientList:
-            try:
-                _res = self.callClient(client.reclaim,[appName]) # const.ctrlClientTimeout
-            except Exception as exc:
-                self.log("? Reclaim: %r" % exc)
-        self.launchList = newLaunchList
-        return True
+        return self.haltApp(appName,logErr)
 
     def addToLaunchList(self,clientName,appName,actorName):
         client = self.clientMap[clientName]
@@ -903,15 +962,32 @@ class Controller(object):
         self.removeSignature()
         ok = True
         with ctrlLock:
-            for client in clients:
-                if client.stale:
-                    self.log('? %s', client.name)  # Stale client, we don't remove
+            futures = []
+            with concurrent.futures.ThreadPoolExecutor(max_workers=len(clients)) as executor:
+                for client in clients:
+                    if client.stale:
+                        self.log('? %s', client.name)  # Stale client, we don't remove
+                    else:
+                        futures += [executor.submit(self.callClient,client.cleanupApp,[appName])] # const.ctrlHaltTimeout
+            done,_pending = concurrent.futures.wait(futures)
+            for (future,client) in zip(done,clients):
+                exc = future.exception()
+                if exc: 
+                    self.log('? %s:%r', (client.name,exc))
                 else:
-                    try:
-                        _res = self.callClient(client.cleanupApp,[appName]) # const.ctrlHaltTimeout
-                    except Exception as exc:
-                        self.log('? %s:%r', (client.name,exc))
-                    done = self.removeAppFromClient(client,appName,files,libraries)
+                    pass
+            futures = []
+            with concurrent.futures.ThreadPoolExecutor(max_workers=len(clients)) as executor:
+                for client in clients:
+                    if not client.stale:
+                        futures += [executor.submit(self.removeAppFromClient,client,appName,files,libraries)]
+            done,_pending = concurrent.futures.wait(futures)
+            for (future,client) in zip(done,clients):
+                exc = future.exception()
+                if exc: 
+                    self.log('? %s:%r', (client.name,exc))
+                else:
+                    done = future.result()
                     if not done: ok = False
         return ok
 

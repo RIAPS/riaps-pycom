@@ -100,8 +100,8 @@ const.groupPeerTimeout = 3000               # Peer is declared lost after this t
 const.groupConsensusTimeout = 1500          # Deadline for consensus vote 
 
 # Heartbeat period for ctrl and deplo (in sec) - 0 means disabled 
-const.ctrlHeartbeat = 3
-const.deploHeartbeat = 3
+const.ctrlHeartbeat = 5
+const.deploHeartbeat = 5
 # Control's timeout for client - not used for now
 const.ctrlQueryTimeout = 10.0
 const.ctrlClientTimeout = 5.0

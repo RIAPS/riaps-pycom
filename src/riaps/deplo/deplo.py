@@ -184,7 +184,6 @@ class DeploService(object):
         '''
         self.poller = zmq.Poller()
         self.killed = False
-        ok = True
         while True:     # Placeholder code
             time.sleep(1.0)
             if self.killed:
@@ -193,9 +192,8 @@ class DeploService(object):
             if self.bgexc == True:          # Exception: pinger failed or bgthread exception 
                 if self.ticker: self.ticker.cancel()
                 if self.bgsrv: self.bgsrv.stop()
-                if ok: 
-                    self.logger.info("Connection to controller lost - retrying")
-                ok = self.login()
+                self.logger.info("Connection to controller lost - retrying")
+                self.login()
         self.terminate()
 
     def handleBgServingThreadException(self):
@@ -217,6 +215,7 @@ class DeploService(object):
         self.logger.info('callback thread id: %r' % threading.get_native_id())
         try: 
             cmd = msg[0]
+            self.logger.info('callback: %r' % cmd)
             if cmd in ('launch','halt','setupApp','cleanupApp','cleanupApps', \
                        'query','reclaim','install'):
                 reply = self.depm.callCommand(msg)

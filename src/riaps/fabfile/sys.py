@@ -46,7 +46,7 @@ def load_hosts(hosts_file,validate=False):
     # control is optional
     control = spec.get('control', None)
 
-    if type(control) != str:
+    if control and type(control) != str:
         print("String is expected: %r" % control)
         return None
 
