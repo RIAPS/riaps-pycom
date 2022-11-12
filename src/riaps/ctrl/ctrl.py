@@ -508,28 +508,30 @@ class Controller(object):
         (tgz_file, sha_file) = self.buildPackage(appName,files,libraries)
         with ctrlLock:
             futures = []
-            with concurrent.futures.ThreadPoolExecutor(max_workers=len(clients)) as executor:
-                for client in clients:
-                    if client.stale:
-                        self.log('S %s'% client.name)    # Stale client, we don't deploy
+            if len(clients) != 0: 
+                with concurrent.futures.ThreadPoolExecutor(max_workers=len(clients)) as executor:
+                    for client in clients:
+                        if client.stale:
+                            self.log('S %s'% client.name)    # Stale client, we don't deploy
+                        else:
+                            self.logger.info('downloading %r to %r' % (appName,client.name))
+                            future = executor.submit(self.downloadAppToClient,appName,tgz_file,sha_file,client)
+                            futures += [future]
+                    done,_pending = concurrent.futures.wait(futures)
+                    executor.shutdown()
+                self.logger.info('... completed')
+                for future in done:
+                    ok,client,resList = future.result()
+                    result &= ok
+                    if ok == True:
+                        self.log('I %s %s' % (client,appName))
                     else:
-                        self.logger.info('downloading %r to %r' % (appName,client.name))
-                        future = executor.submit(self.downloadAppToClient,appName,tgz_file,sha_file,client)
-                        futures += [future]
-            done,_pending = concurrent.futures.wait(futures)
-            self.logger.info('... completed')
-            for future in done:
-                ok,client,resList = future.result()
-                result &= ok
-                if ok == True:
-                    self.log('I %s %s' % (client,appName))
-                else:
-                    for res in resList:
-                        # while not res.ready: time.sleep(0.5)
-                        value = res.value
-                        if value != True:
-                            self.log('? %s on %s: %r' % (appName,client,str(value)))
-                            result = False
+                        for res in resList:
+                            # while not res.ready: time.sleep(0.5)
+                            value = res.value
+                            if value != True:
+                                self.log('? %s on %s: %r' % (appName,client,str(value)))
+                                result = False
         os.remove(tgz_file)
         os.remove(sha_file)
         return result
@@ -764,12 +766,14 @@ class Controller(object):
                     else:
                         self.log("* App %r: no host %r" % (appName,target))
         futures = []
-        with concurrent.futures.ThreadPoolExecutor(max_workers=len(t2AMap)) as executor:
-            for target in t2AMap:
-                client = t2CMap[target]
-                actors = t2AMap[target]
-                futures += [executor.submit(self.launchAppClient,target,appName,appNameJSON,client,actors,lock)]
-        _done,_pending = concurrent.futures.wait(futures)
+        if len(t2AMap) > 0:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=len(t2AMap)) as executor:
+                for target in t2AMap:
+                    client = t2CMap[target]
+                    actors = t2AMap[target]
+                    futures += [executor.submit(self.launchAppClient,target,appName,appNameJSON,client,actors,lock)]
+                _done,_pending = concurrent.futures.wait(futures)
+                executor.shutdown()
     
     def launchByName(self, appName):
         '''
@@ -836,19 +840,23 @@ class Controller(object):
             if logErr: self.log("? not found: %r" % appNameToHalt)
             return False
         # Halt all of them in a thread
-        futures = []
-        with concurrent.futures.ThreadPoolExecutor(max_workers=len(haltMap)) as executor:
-            for (client,values) in haltMap.items():
-                actors = [ elt[2] for elt in values]
-                futures += [executor.submit(self.haltAppClient,client,appNameToHalt,actors)]
-        _done,_pending = concurrent.futures.wait(futures)
+        if len(haltMap) > 0:
+            futures = []
+            with concurrent.futures.ThreadPoolExecutor(max_workers=len(haltMap)) as executor:
+                for (client,values) in haltMap.items():
+                    actors = [ elt[2] for elt in values]
+                    futures += [executor.submit(self.haltAppClient,client,appNameToHalt,actors)]
+                done,_pending = concurrent.futures.wait(futures)
+                executor.shutdown()
         # Reclaim all apps on all clients
         self.logger.info('reclaiming app %r' % appName)
-        futures = []
-        with concurrent.futures.ThreadPoolExecutor(max_workers=len(clients)) as executor:
-            for client in clients:
-                futures += [executor.submit(self.reclaimAppClient,client,appNameToHalt)]
-        _done,_pending = concurrent.futures.wait(futures)
+        if len(clients) > 0:
+            futures = []
+            with concurrent.futures.ThreadPoolExecutor(max_workers=len(clients)) as executor:
+                for client in clients:
+                    futures += [executor.submit(self.reclaimAppClient,client,appNameToHalt)]
+                _done,_pending = concurrent.futures.wait(futures)
+                executor.shutdown()
         self.launchList = launchList
         self.logger.info('...done')
         return True
@@ -963,32 +971,35 @@ class Controller(object):
         ok = True
         with ctrlLock:
             futures = []
-            with concurrent.futures.ThreadPoolExecutor(max_workers=len(clients)) as executor:
-                for client in clients:
-                    if client.stale:
-                        self.log('? %s', client.name)  # Stale client, we don't remove
+            if len(clients) > 0:
+                with concurrent.futures.ThreadPoolExecutor(max_workers=len(clients)) as executor:
+                    for client in clients:
+                        if client.stale:
+                            self.log('? %s', client.name)  # Stale client, we don't remove
+                        else:
+                            futures += [executor.submit(self.callClient,client.cleanupApp,[appName])] # const.ctrlHaltTimeout
+                    done,_pending = concurrent.futures.wait(futures)
+                    executor.shutdown()
+                for (future,client) in zip(done,clients):
+                    exc = future.exception()
+                    if exc: 
+                        self.log('? %s:%r', (client.name,exc))
                     else:
-                        futures += [executor.submit(self.callClient,client.cleanupApp,[appName])] # const.ctrlHaltTimeout
-            done,_pending = concurrent.futures.wait(futures)
-            for (future,client) in zip(done,clients):
-                exc = future.exception()
-                if exc: 
-                    self.log('? %s:%r', (client.name,exc))
-                else:
-                    pass
-            futures = []
-            with concurrent.futures.ThreadPoolExecutor(max_workers=len(clients)) as executor:
-                for client in clients:
-                    if not client.stale:
-                        futures += [executor.submit(self.removeAppFromClient,client,appName,files,libraries)]
-            done,_pending = concurrent.futures.wait(futures)
-            for (future,client) in zip(done,clients):
-                exc = future.exception()
-                if exc: 
-                    self.log('? %s:%r', (client.name,exc))
-                else:
-                    done = future.result()
-                    if not done: ok = False
+                        pass
+                futures = []
+                with concurrent.futures.ThreadPoolExecutor(max_workers=len(clients)) as executor:
+                    for client in clients:
+                        if not client.stale:
+                            futures += [executor.submit(self.removeAppFromClient,client,appName,files,libraries)]
+                    done,_pending = concurrent.futures.wait(futures)
+                    executor.shutdown()
+                for (future,client) in zip(done,clients):
+                    exc = future.exception()
+                    if exc: 
+                        self.log('? %s:%r', (client.name,exc))
+                    else:
+                        done = future.result()
+                        if not done: ok = False
         return ok
 
     def removeAppByName(self, appName):

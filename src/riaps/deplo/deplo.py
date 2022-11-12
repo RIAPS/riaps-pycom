@@ -61,6 +61,8 @@ class DeploService(object):
         self.bgsrv = None
         self.bgexc = False
         self.ticker = None
+        self.note = threading.Event()
+        self.note.clear()
         self.setupIfaces()
         self.suffix = self.macAddress
         singleton('riaps_deplo',self.suffix)
@@ -102,6 +104,7 @@ class DeploService(object):
         except:
             self.logger.info('heartbeat ping failed')
             self.bgexc = True
+            self.note.set()
                 
     def login(self,retry = True):
         '''
@@ -182,10 +185,9 @@ class DeploService(object):
         '''
         Main loop of the Deployment Service 
         '''
-        self.poller = zmq.Poller()
         self.killed = False
         while True:     # Placeholder code
-            time.sleep(1.0)
+            self.note.wait()
             if self.killed:
                 time.sleep(0.1)
                 break
@@ -194,6 +196,7 @@ class DeploService(object):
                 if self.bgsrv: self.bgsrv.stop()
                 self.logger.info("Connection to controller lost - retrying")
                 self.login()
+            self.note.clear()
         self.terminate()
 
     def handleBgServingThreadException(self):
@@ -205,6 +208,7 @@ class DeploService(object):
         self.logger.info('bg thread exception: %r' % sys.exc_info()[1].args[0])
         self.bgexc = True
         self.bgsrv = None
+        self.note.set()
         
     def callback(self,msg):
         '''
@@ -221,6 +225,7 @@ class DeploService(object):
                 reply = self.depm.callCommand(msg)
             elif cmd == "kill":
                 self.killed = True
+                self.note.set()
             else:
                 self.logger.error("unknown callback from control: %s" % str(msg))
                 pass                # Should flag an error

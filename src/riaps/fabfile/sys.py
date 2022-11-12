@@ -8,7 +8,8 @@ import socket
 
 
 # Prevent namespace errors by explicitly defining which tasks belong to this file
-__all__ = ['check', 'shutdown', 'reboot', 'clearJournal', 'run', 'sudo', 'arch',
+__all__ = ['check', 'shutdown', 'reboot', 'clearJournal', 
+           'run', 'sudo', 'arch', 'put', 'get',
            'flushIPTables', 'setJournalLogSize', 'getConfig']
 
 def catch(func, *args, **kwargs):

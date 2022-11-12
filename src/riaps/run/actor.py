@@ -650,6 +650,8 @@ class Actor(object):
         '''
         self.logger.info("terminating")
         for component in self.components.values():
+            component.deactivate()
+        for component in self.components.values():
             component.terminate()
         time.sleep(1.0)
         if self.deplc: self.deplc.terminate()

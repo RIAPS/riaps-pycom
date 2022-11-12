@@ -207,7 +207,8 @@ class NetMonitorThread(threading.Thread):
         self.alive = False
         self.rlock = RLock()
         self.device_names = [Config.NIC_NAME]
-        self.lib = ctypes.CDLL(const.nethogLibrary)
+        self.lib = ctypes.CDLL(const.nethogsLibrary)
+        assert const.nethogsTimeout >= 0 
         self.notifier = None
         self.notifierPort = None
         self.devices = { }              # app.actor -> (device,pid)
@@ -273,21 +274,22 @@ class NetMonitorThread(threading.Thread):
             devnames_arg, ctypes.POINTER(ctypes.c_char_p)
         )
 
-    def network_activity_callback(self,action, data):
+    def network_activity_callback(self,_action, data):
         # NHAction type is either SET or REMOVE. 
-        _action_type = NHAction.MAP.get(action, 'Unknown')
-        _record_id = data.contents.record_id
+        # _action_type = NHAction.MAP.get(_action, 'Unknown')
+        # _record_id = data.contents.record_id
         _name = data.contents.name
         _pid = data.contents.pid
         _uid = data.contents.uid
-        _device_name = data.contents.device_name.decode('ascii')
+        if ((_pid == 0) or (_uid == 0)): return
+        # _device_name = data.contents.device_name.decode('ascii')
         _sent_bytes = data.contents.sent_bytes
         _recv_bytes = data.contents.recv_bytes
         _sent_kbs = data.contents.sent_kbs  # KBytes/sec
         _recv_kbs = data.contents.recv_kbs  # KBytes/sec
-        if ((_pid == 0) or (_uid == 0)): return
+
         with self.rlock:
-            # print("callback %i,%i" % (int(_uid), int(_pid)))
+            # print("callback %i,%i" % (int(_uid), int(_pid)),flush=True)
             if _pid in self.pid2Key:
                 key = self.pid2Key[_pid]
                 rate = self.pid2Rate[_pid]
@@ -342,7 +344,8 @@ class NetMonitorThread(threading.Thread):
                         filter_arg,
                         devc,
                         devicenames,
-                        ctypes.c_bool(False)
+                        ctypes.c_bool(False),
+                        ctypes.c_int(const.nethogsTimeout)
                     )
                 if rc != NHLoopStatus.OK:
                     self.logger.info('nethogsmonitor_loop returned {}'.format(NHLoopStatus.MAP[rc]))
@@ -354,7 +357,7 @@ class NetMonitorThread(threading.Thread):
                 if self.terminated.is_set(): break
         except:
             self.logger.error("NetMonitorThread failure")
-            # traceback.print_exc()      
+            traceback.print_exc()     
         self.logger.info("NetMonitorThread stopped")
         
     def stop(self):
