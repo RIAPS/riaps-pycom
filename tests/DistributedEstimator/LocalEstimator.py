@@ -1,19 +1,22 @@
 #
-from riaps.run.comp import Component
 import logging
 import os
+from riaps.run.comp import Component
+
+
 
 class LocalEstimator(Component):
-    def __init__(self,iArg,fArg,sArg,bArg):
+    """"""
+    def __init__(self, iArg, fArg, sArg, bArg):
         super(LocalEstimator, self).__init__()
         self.pid = os.getpid()
         self.pending = 0
         self.logger.info("LocalEstimator(iArg=%d,fArg=%f,sArg=%s,bArg=%s)"
-                         %(iArg,fArg,sArg,str(bArg)))
+                         %(iArg, fArg, sArg, str(bArg)))
         self.logger.info("name,typeName,localID,actorName,appName,actorID = (%s,%s,%s,%s,%s,%s)"
-                         % (self.getName(),self.getTypeName(),hex(self.getLocalID()),
-                            self.getActorName(),self.getAppName(),
-                            hex(int.from_bytes(self.getActorID(),'big'))))
+                         % (self.getName(), self.getTypeName(), hex(self.getLocalID()),
+                            self.getActorName(), self.getAppName(),
+                            hex(int.from_bytes(self.getActorID(), 'big'))))
 
     def handleActivate(self):
         self.logger.info("activate: UUID = %s" % self.getUUID())
