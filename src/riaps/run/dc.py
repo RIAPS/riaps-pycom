@@ -832,9 +832,20 @@ class Group(object):
     
     def leave(self):
         self.logger.info("Group.leave(): %s" % self.groupInstanceName)
+        # 
+        comp = self.parent.parent
+        partName = comp.getName()
+        partType = comp.getTypeName()
+        portName = self.groupInstanceName
+        host, pubPort = self.pubInfo.portHost, self.pubInfo.portNum
+        comp = self.parent.parent
+        msg = ('ungroup', self.groupType, self.groupInstance, self.messageType, host, pubPort, partName, partType, portName) 
+        self.thread.sendControl(msg)
+        
         msgFrames = [zmq.Frame(Group.GROUP_MLT)]    # Send out message the component is leaving group
         self.compSocket.send_multipart(msgFrames)
         self.groupThread.join()
+
         self.compSocket.close()
     
     def getGroupName(self):

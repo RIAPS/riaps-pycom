@@ -516,7 +516,7 @@ class Actor(object):
             host = socket.host
             port = socket.port 
             if scope != "global":
-                assert host == self.localHost                   # Local/internal ports ar host-local
+                assert host == self.localHost                   # Local/internal ports are host-local
             self.updatePart(instanceName, portName, host, port) # Update the selected part
         elif which == 'groupUpdate':
             msg = msgUpd.groupUpdate                            # Placeholder 
@@ -632,12 +632,15 @@ class Actor(object):
         otherwise it is forwarded to the deplo service. 
         '''
         partName = part.getName()
-        typeName = part.getTypeName() 
-        if msg[0] == 'group':
+        typeName = part.getTypeName()
+        msg1 = msg[0] 
+        if msg1 == 'group':
             result = self.disco.registerGroup(msg)
             for res in result:
                 (partName, portName, host, port) = res
                 self.updatePart(partName, portName, host, port)
+        elif msg1 == 'ungroup':
+            result = self.disco.unregisterGroup(msg)
         else:
             bundle = (partName, typeName,) + (msg,)
             self.deplc.reportEvent(bundle)
