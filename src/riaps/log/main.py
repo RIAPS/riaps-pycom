@@ -17,7 +17,8 @@ from riaps.consts.defs import *
 from riaps.utils.config import Config
 from riaps.log.server import AppLogServer
 from riaps.log.server import PlatformLogServer
-import riaps.log.visualizers.tmux as visualizer
+# import riaps.log.visualizers.tmux as visualizer
+import riaps.log.handlers.factory as handler_factory
 from riaps.utils.trace import riaps_trace
 
 
@@ -29,6 +30,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", "--platform", nargs=2, metavar=("host", "port"))
     parser.add_argument("-a", "--app", nargs=2, metavar=("host", "port"))
+    parser.add_argument("-d", "--handler_type", default="tmux")
 
     parser.add_argument("-t", "--trace", help="debug server on host:port")
     parser.add_argument('script', nargs='?', help='script name, or - for stdin')
@@ -45,6 +47,7 @@ def main():
             platform = parse_args(args.platform)
         if args.app:
             app = parse_args(args.app)
+        handler_type = args.handler_type
         setup(platform, app)
     except:
         traceback.print_exc()
@@ -73,29 +76,31 @@ def setup(platform, app):
 
     if platform:
         q = queue.Queue()
-        view = visualizer.View(session_name="platform")
+        # view = visualizer.View(session_name="platform")
+        server_log_handler = handler_factory.get_handler(handler_type="tmux", session_name="platform")
         platform_log_server = PlatformLogServer(server_address=platform,
                                                 RequestHandlerClass=riaps.log.server.PlatformLogHandler,
-                                                view=view,
+                                                server_log_handler=server_log_handler,
                                                 q=q)
 
         p = multiprocessing.Process(target=platform_log_server.serve_until_stopped)
         servers["platform"] = {"server": platform_log_server,
                                "process": p,
-                               "view": view}
+                               "server_log_handler": server_log_handler}
         p.start()
 
     if app:
         q = queue.Queue()
-        view = visualizer.View(session_name="app")
+        # view = visualizer.View(session_name="app")
+        server_log_handler = handler_factory.get_handler(handler_type="tmux", session_name="app")
         app_log_server = AppLogServer(server_address=app,
                                       RequestHandlerClass=riaps.log.server.AppLogHandler,
-                                      view=view,
+                                      server_log_handler=server_log_handler,
                                       q=q)
         p = multiprocessing.Process(target=app_log_server.serve_until_stopped)
         servers["app"] = {"server": app_log_server,
                           "process": p,
-                          "view": view}
+                          "server_log_handler": server_log_handler}
         p.start()
 
     def term_handler(signal, frame):
@@ -104,7 +109,7 @@ def setup(platform, app):
             if obj["process"] is not None:
                 try:
                     obj["process"].terminate()
-                    obj["view"].close_session()
+                    obj["server_log_handler"].close()
                 except:
                     pass
         os._exit(0)
