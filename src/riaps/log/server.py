@@ -7,7 +7,7 @@ import signal
 import socketserver
 import struct
 
-import riaps.log.visualizers.tmux as visualizer
+import riaps.log.handlers.factory as handler_factory
 
 
 class BaseLogHandler(socketserver.StreamRequestHandler):
@@ -32,10 +32,14 @@ class BaseLogHandler(socketserver.StreamRequestHandler):
 
         self.server.q.put(msg)
         # ^^^^^^^^^^^^^^^^^^^^
-        # self.server is set in BaseRequestHandler
+        # self.server is passed in by the parent of the handler.
+        # https://github.com/python/cpython/blob/3.11/Lib/socketserver.py#L752
+        # and is set in the BaseRequestHandler of the socketserver class.
+        #
         # q is set in the server class
         # a shared q is used to avoid creating multiple tmux panes which could happen if
         # panes were created in this handler
+        # This handle is called in a new thread though, so that is why the queue is needed... right?
         # -------------------------------------
 
 
@@ -93,30 +97,30 @@ class PlatformLogHandler(BaseLogHandler):
 
 class BaseLogServer(socketserver.ThreadingTCPServer):
 
-    def __init__(self, server_address, RequestHandlerClass, view, q):
+    def __init__(self, server_address, RequestHandlerClass, server_log_handler, q):
         self.logname = "riaps.log"
         self.allow_reuse_address = True
         self.logger = logging.getLogger(__name__)
         self.RequestHandlerClass = RequestHandlerClass
-        self.view = view
+        self.server_log_handler = server_log_handler
         self.q = q
         super(BaseLogServer, self).__init__(server_address,
                                             RequestHandlerClass)
 
     def service_actions(self):
+        """
+        service actions is a method of the socketserver class that may be overridden
+        https://github.com/python/cpython/blob/3.11/Lib/socketserver.py#L255
+        """
         while True:
             try:
                 msg = self.q.get(block=False)
-                node_name = msg["node_name"]
-                if node_name not in self.view.nodes:
-                    self.logger.info(f"Add new node: {node_name}")
-                    self.view.add_node_display(node_name=node_name)
-                self.view.write_display(node_name=node_name, msg=msg["data"])
+                self.server_log_handler.handle(msg)
             except queue.Empty as e:
                 break
 
     def serve_until_stopped(self):
-        self.logger.info(f'About to start Log server {self.view.session_name}...')
+        self.logger.info(f'About to start Log server...')
         try:
             self.serve_forever()
         except KeyboardInterrupt:
@@ -125,13 +129,13 @@ class BaseLogServer(socketserver.ThreadingTCPServer):
 
 class AppLogServer(BaseLogServer):
 
-    def __init__(self, server_address, RequestHandlerClass, view, q):
-        super(AppLogServer, self).__init__(server_address, RequestHandlerClass, view, q)
+    def __init__(self, server_address, RequestHandlerClass, server_log_handler, q):
+        super(AppLogServer, self).__init__(server_address, RequestHandlerClass, server_log_handler, q)
 
 
 class PlatformLogServer(BaseLogServer):
-    def __init__(self, server_address, RequestHandlerClass, view, q):
-        super(PlatformLogServer, self).__init__(server_address, RequestHandlerClass, view, q)
+    def __init__(self, server_address, RequestHandlerClass, server_log_handler, q):
+        super(PlatformLogServer, self).__init__(server_address, RequestHandlerClass, server_log_handler, q)
 
     # -----------------------------------------------------------------------------------
     # Commented code below is left in case using serve_forever() ends up having an as yet
@@ -154,12 +158,12 @@ class PlatformLogServer(BaseLogServer):
 
 if __name__ == '__main__':
     import multiprocessing
-    view = visualizer.View(session_name="platform")
+    server_log_handler = handler_factory.get_handler(handler_type="tmux", session_name="platform")
     q = queue.Queue()
     theLogServer = PlatformLogServer(server_address=("172.21.20.70",
                                                      logging.handlers.DEFAULT_TCP_LOGGING_PORT),
                                      RequestHandlerClass=PlatformLogHandler,
-                                     view=view,
+                                     server_log_handler=server_log_handler,
                                      q=q)
 
     logger = logging.getLogger(__name__)
@@ -169,7 +173,7 @@ if __name__ == '__main__':
     def term_handler(signal, frame):
         print("Call term_handler")
         server.terminate()
-        view.close_session()
+        server_log_handler.close()
 
     signal.signal(signal.SIGTERM, term_handler)
     signal.signal(signal.SIGINT, term_handler)
