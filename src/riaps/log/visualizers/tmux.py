@@ -18,7 +18,7 @@ class View(BaseView):
         self.window = session.attached_window
         self.pane = self.window.panes[0]
         self.set_pane(self.pane, node_name="host")
-        self.write_display(node_name="host", msg="echo 'Start session'")
+        self.write_display(node_name="host", msg="echo \"Start session\"")
 
     def set_pane(self, pane, node_name=None):
         pane_id = pane.get("pane_id")
@@ -41,9 +41,9 @@ class View(BaseView):
     def write_display(self, node_name, msg):
         pane_tty = self.nodes[node_name]["tty"]
         try:
-            output = subprocess.check_output(f"echo '{msg}' > {pane_tty}", shell=True)
+            output = subprocess.check_output(f"echo \"{msg}\" > {pane_tty}", shell=True)
         except subprocess.CalledProcessError as e:
-            logger.error(f"Was the Tmux session closed?")
+            logger.error(f"Was the Tmux session closed?: {e}")
             sys.exit(1)
 
     def start_session(self):
