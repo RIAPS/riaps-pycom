@@ -29,7 +29,6 @@ import importlib
 
 import capnp
 from concurrent.futures.thread import ThreadPoolExecutor
-from _thread import RLock
 
 import zmq
 from zmq import devices
@@ -91,8 +90,8 @@ class DeploymentManager(threading.Thread):
         self.riapsHome = parent.riapsHome
         self.launchMap = { }            # Map of launched actors
         # self.launchRefs = { }           # Reference count for device actors
-        self.mapLock = RLock()          # Lock to protect launchMap
-        self.discoLock = RLock()        # Lock to protect disco 
+        self.mapLock = threading.RLock()          # Lock to protect launchMap
+        self.discoLock = threading.RLock()        # Lock to protect disco 
         self.disco = None
         self.dbaseHost = None 
         self.dbasePort = None
@@ -121,7 +120,7 @@ class DeploymentManager(threading.Thread):
         self.procMonEndpoint = parent.procMonEndpoint
         
         self.commandS = { }             # Command sockets (per thread)
-        self.callLock = RLock()
+        self.callLock = threading.RLock()
         
         self.discoCommand = None
         

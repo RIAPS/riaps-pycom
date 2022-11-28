@@ -194,7 +194,86 @@ class DiscoClient(object):
         else:
             raise SetupError("handleLookupReq: Bad response from disco")
         return returnValue
+    
+    def handleUnregReq(self, bundle):
+        self.logger.info("handleUnregReq: %s" % str(bundle))
+        if self.socket == None:
+            self.logger.error("handleUnregReq: No disco - %s", str(bundle))
+            return
+        prefix,portInfo = bundle
+        partName, partType = prefix
+        portKind, portScope, portName, msgType, portHost, portNum = portInfo
+        # (partName, partType, kind, isLocal, portName, portType, portHost, portNum) = bundle[0:8]
+        # All interactions below go via the REQ/REP socket ; the channel is for server pushes
+        req = disco_capnp.DiscoReq.new_message()
+        reqMsg = req.init('serviceUnreg')
+        reqMsgPath = reqMsg.path
+        reqMsg.socket.host = self.actor.globalHost if portScope == PortScope.GLOBAL else self.actor.localHost
+        reqMsg.socket.port = portNum
+        reqMsg.pid = os.getpid()
+        reqMsgPath.appName = self.appName
+        reqMsgPath.actorName = self.actor.name
+        reqMsgPath.msgType = msgType 
+        reqMsgPath.kind = portKind
+        reqMsgPath.scope = portScope.scope()
         
+        msgBytes = req.to_bytes()
+        respBytes = self.rpcDisco(msgBytes,"handleUnregReq",True)
+        resp = disco_capnp.DiscoRep.from_bytes(respBytes)
+        
+        which = resp.which()
+        if which == 'serviceUnreg':
+            repMessage = resp.serviceUnreg
+            status = repMessage.status
+            if status == 'err':
+                raise SetupError("handleUnregReq: Error response from disco")
+            else:
+                pass
+        else:
+            raise SetupError("handleUnregReq: Unexpected response from disco")
+        return
+    
+    def handleUnlookupReq(self, bundle):
+        self.logger.info("handleUnlookupReq: %s" % str(bundle))
+        if self.socket == None:
+            self.logger.info("handleUnlookupReq: No disco - %s", str(bundle))
+            return []
+        prefix,portInfo = bundle
+        partName, _partType = prefix
+        portKind, portScope, portName, msgType, _portHost, _portNum = portInfo
+        # (partName, _partType, kind, isLocal, portName, portType) = bundle[0:6]
+        # All interactions below go via the REQ/REP socket ; the channel is for server pushes
+        req = disco_capnp.DiscoReq.new_message()
+        reqMsg = req.init('serviceUnlookup')
+        reqMsgPath = reqMsg.path
+        reqMsgPath.appName = self.appName
+        reqMsgPath.actorName = self.actor.name
+        reqMsgPath.msgType = msgType 
+        reqMsgPath.kind = portKind
+        reqMsgPath.scope = portScope.scope()
+        reqMsgClient = reqMsg.client
+        reqMsgClient.actorHost = self.actor.getGlobalIface()
+        reqMsgClient.actorName = self.actor.name # "%s.%s" % (self.actor.name,self.actor.iName) if self.actor.isDevice() else self.actor.name
+        reqMsgClient.instanceName = partName
+        reqMsgClient.portName = portName
+        
+        msgBytes = req.to_bytes()
+        respBytes = self.rpcDisco(msgBytes,"handleUnlookupReq",True)
+        resp = disco_capnp.DiscoRep.from_bytes(respBytes)
+        
+        which = resp.which()
+        returnValue = []
+        if which == 'serviceUnlookup':
+            repMessage = resp.serviceUnlookup
+            status = repMessage.status
+            if status == 'err':
+                raise SetupError('handleUnlookupReq: error response from disco')
+            else:
+                pass
+        else:
+            raise SetupError("handleUnlookupReq: Bad response from disco")
+        return returnValue
+    
     def registerEndpoint(self, bundle):
         # bundle = [(partName,partTypeName),PortInfo]
         self.logger.info("registerEndpoint: %s" % str(bundle))
@@ -237,9 +316,25 @@ class DiscoClient(object):
                                     portName=portName, 
                                     msgType=msgType,
                                     portHost='',portNum=0)]  
-        # (1) lookupReq -> (2) reqReq
+        # (1) lookupReq -> (2) regReq
         result = self.handleLookupReq(lookupReqBundle)
         self.handleRegReq(regReqBundle)
+        return result
+    
+    def unregisterGroup(self, bundle):
+        self.logger.info("unregisterGroup: %s" % str(bundle))
+        _key, groupType, groupName, messageType, host, pubPort, partName, partType, portName = bundle
+        msgType = messageType + '@' + groupType + '.' + groupName    
+        unregReqBundle = [(partName, partType),
+                            PortInfo(portKind="gpub", portScope=PortScope.GLOBAL, 
+                                     portName=portName,msgType=msgType, 
+                                     portHost=host, portNum=pubPort)]
+        unlookupReqBundle = [(partName, partType),
+                                PortInfo(portKind="gsub", portScope=PortScope.GLOBAL,
+                                         portName=portName,msgType=msgType,portHost='',portNum=0)]  
+        # (1) unlookupReq -> (2) unreqReq
+        result = self.handleUnlookupReq(unlookupReqBundle)
+        self.handleUnregReq(unregReqBundle)
         return result
     
     def terminate(self):

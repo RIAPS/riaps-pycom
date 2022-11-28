@@ -8,7 +8,8 @@ import socket
 
 
 # Prevent namespace errors by explicitly defining which tasks belong to this file
-__all__ = ['check', 'shutdown', 'reboot', 'clearJournal', 'run', 'sudo', 'arch',
+__all__ = ['check', 'shutdown', 'reboot', 'clearJournal', 
+           'run', 'sudo', 'arch', 'put', 'get',
            'flushIPTables', 'setJournalLogSize', 'getConfig']
 
 def catch(func, *args, **kwargs):
@@ -46,7 +47,7 @@ def load_hosts(hosts_file,validate=False):
     # control is optional
     control = spec.get('control', None)
 
-    if type(control) != str:
+    if control and type(control) != str:
         print("String is expected: %r" % control)
         return None
 

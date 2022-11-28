@@ -13,7 +13,6 @@ import time
 import signal
 import subprocess
 import psutil
-import threading
 import logging
 import random
 from riaps.consts.defs import *
@@ -237,7 +236,7 @@ class ActorResourceManager(object):
         actName = self.actorName
         if self.hasSpace:
             self.parent.spcMonitor.addProc(appName,actName,proc)
-        if self.hasNet:
+        if self.hasNet and self.parent.netMonitor:
             self.netController.tasks = [proc.pid]
             self.parent.netMonitor.addProc(appName,actName,proc)
         self.proc = proc
@@ -259,7 +258,7 @@ class ActorResourceManager(object):
         actName = self.actorName
         if self.hasSpace:
             self.parent.spcMonitor.delProc(appName,actName,proc)
-        if self.hasNet or self.hasRate:
+        if self.parent.netMonitor and (self.hasNet or self.hasRate):
             # self.netController.tasks = remove proc.pid
             self.parent.netMonitor.delProc(appName,actName,proc) 
         self.started = False
@@ -541,8 +540,11 @@ class ResourceManager(object):
                           % (Config.NIC_NAME,self.riaps_uid,
                              self.riaps_uid,self.riaps_uid,
                              Config.NIC_RATE, Config.NIC_CEIL))
-        self.netMonitor = NetMonitorThread(self)
-        self.netMonitor.start()
+        if Config.NETMON: 
+            self.netMonitor = NetMonitorThread(self)
+            self.netMonitor.start()
+        else: 
+            self.netMonitor = None
         self.logger.info("__init__ed")
         
     
@@ -615,6 +617,7 @@ class ResourceManager(object):
         self.cleanupNet()
         self.spcMonitor.terminate()
         self.spcMonitor.join()
-        self.netMonitor.terminate()
-        self.netMonitor.join()
+        if self.netMonitor:
+            self.netMonitor.terminate()
+            self.netMonitor.join()
         self.logger.info("terminated")

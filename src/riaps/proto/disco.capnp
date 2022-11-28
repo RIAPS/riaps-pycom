@@ -77,6 +77,25 @@ struct ServiceLookupRep {
   sockets @1 : List(Socket);
 }
 
+struct ServiceUnregReq {
+  path @0 : Path;
+  socket @1 : Socket;
+  pid @2 : Int32;
+}
+
+struct ServiceUnregRep {
+  status @0 : Status;
+}
+
+struct ServiceUnlookupReq {
+  path @0 : Path;
+  client @1 : Client;
+}
+
+struct ServiceUnlookupRep {
+  status @0  : Status;
+}
+
 struct PortUpd {
   client @0 : Client;
   scope @1 : Scope;
@@ -92,21 +111,23 @@ struct DiscoUpd {
 
 struct DiscoReq {
    union {
-      actorReg      @0 : ActorRegReq;
-      serviceReg    @1 : ServiceRegReq;
-      serviceLookup @2 : ServiceLookupReq;
-      actorUnreg    @3 : ActorUnregReq;
-      groupJoin     @4 : GroupJoinReq;
+      actorReg        @0 : ActorRegReq;
+      serviceReg      @1 : ServiceRegReq;
+      serviceLookup   @2 : ServiceLookupReq;
+      actorUnreg      @3 : ActorUnregReq;
+      serviceUnlookup @4 : ServiceUnlookupReq;
+      serviceUnreg	  @5 : ServiceUnregReq; 
    }
 }
 
 struct DiscoRep {
    union {
-      actorReg      @0 : ActorRegRep;
-      serviceReg    @1 : ServiceRegRep;
-      serviceLookup @2 : ServiceLookupRep;
-      actorUnreg    @3 : ActorUnregRep;
-      groupJoin     @4 : GroupJoinRep;
+      actorReg		  @0 : ActorRegRep;
+      serviceReg      @1 : ServiceRegRep;
+      serviceLookup   @2 : ServiceLookupRep;
+      actorUnreg      @3 : ActorUnregRep;
+      serviceUnlookup @4 : ServiceUnlookupRep;
+      serviceUnreg    @5 : ServiceUnregRep;
    }
 }
 
@@ -135,16 +156,16 @@ struct GroupJoinRep {
 
 # Messages between OpenDHT - rdiscoveryd threads
 
-struct ProviderListUpdate {
-        providerpath @0 : Text;
-        newvalues    @1 : List(Text);
-}
+# struct ProviderListUpdate {
+#        providerpath @0 : Text;
+#        newvalues    @1 : List(Text);
+#}
 
-struct ProviderListGet {
-    path         @0 : Path;
-    client       @1 : Client;
-    results      @2 : List(Text);
-}
+# struct ProviderListGet {
+#    path         @0 : Path;
+#    client       @1 : Client;
+#    results      @2 : List(Text);
+#}
 
 struct GroupUpdate {
     appName           @0 : Text;
@@ -153,12 +174,13 @@ struct GroupUpdate {
     services          @3 : List(GroupService);
 }
 
-struct DhtUpdate {
-    union {
-        providerUpdate @0: ProviderListUpdate;
-        providerGet    @1: ProviderListGet;
-        zombieList     @2: List(Text);
-        groupUpdate    @3: GroupUpdate;
-    }
-}
+# struct DhtUpdate {
+#    union {
+#        providerUpdate @0: ProviderListUpdate;
+#        providerGet    @1: ProviderListGet;
+#        zombieList     @2: List(Text);
+#        groupUpdate    @3: GroupUpdate;
+#    }
+#}
+
 

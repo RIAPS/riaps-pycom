@@ -4,7 +4,6 @@ Created on Oct 20, 2016
 
 @author: riaps
 '''
-import logging.handlers
 import riaps.consts.const as const
 
 # Name of endpoint for actor-disco communication
@@ -64,14 +63,15 @@ const.zmqCertificate = 'riaps-sys.cert'
 # SSH port
 const.ctrlSSHPort = 22
 
-
-# Nethog
-const.nethogLibrary = 'libnethogs.so'
+# Nethogs
+const.nethogsLibrary = 'libnethogs.so'
+const.nethogsTimeout = 0 
 
 # Quota system scanning timeout
 const.spcMonitorTimeout = 10.0
 
 # Peer timeouts
+const.zyreInterval = 1000
 const.peerEvasiveTimeout = 3000
 const.peerExpiredTimeout = 5000
 
@@ -100,8 +100,8 @@ const.groupPeerTimeout = 3000               # Peer is declared lost after this t
 const.groupConsensusTimeout = 1500          # Deadline for consensus vote 
 
 # Heartbeat period for ctrl and deplo (in sec) - 0 means disabled 
-const.ctrlHeartbeat = 3
-const.deploHeartbeat = 3
+const.ctrlHeartbeat = 5.0
+const.deploHeartbeat = 5.0
 # Control's timeout for client - not used for now
 const.ctrlQueryTimeout = 10.0
 const.ctrlClientTimeout = 5.0

@@ -64,4 +64,4 @@ else:
 
 if env.roledefs is None:
     abort('Bad configuration/hosts/roles')
-#
+

@@ -321,6 +321,40 @@ class DiscoService(object):
         repBytes = rep.to_bytes()
         self.server.send(repBytes)
     
+    def handleServiceUnreg(self,msg):
+        '''
+        Handle the service registration message
+        '''
+        reqMsg = msg.serviceUnreg                             # Parse the message
+        path = reqMsg.path
+        appName = path.appName 
+        actorName = path.actorName
+        msgType = path.msgType
+        kind = str(path.kind)
+        scope = str(path.scope)
+        
+        socket = reqMsg.socket
+        host = socket.host
+        port = socket.port
+        
+        self.logger.info("handleServiceUnreg: %s,%s,%s,%s,%s,%s,%s" % (appName,actorName,msgType,kind,scope,host,port))
+
+        regKey = self.appActorName(appName, actorName)
+        
+        (key,value) = self.buildInsertKeyValuePair(appName, actorName, msgType, kind, scope,host, port)
+        clients = self.dbase.remove(key,value)
+        self.registrations[regKey].remove((key,value))
+        
+        rep = disco_capnp.DiscoRep.new_message()            # Construct response
+        repMsg = rep.init('serviceUnreg')
+        repMsg.status = "ok"
+        repBytes = rep.to_bytes()
+        self.server.send(repBytes)
+        
+        # TODO: there should be a 'negative' update for ports (disconnect) 
+        #if len(clients) != 0:
+        #    self.clientUpdates = [(key,(value),clients)]
+    
 #     def makeGroupMessageType(self,msgType,groupType,groupName):
 #         return str(msgType) + '@' + str(groupType) + '.' + str(groupName)
 #     
@@ -331,6 +365,36 @@ class DiscoService(object):
 #         msgType,rest = msgName.split('@')
 #         groupType,groupName = rest.split('.')
 #         return (msgType,groupType,groupName)    
+
+    def handleServiceUnlookup(self,msg):
+        '''
+        Handle a service unlookup message
+        '''
+        reqMsg = msg.serviceUnlookup                          # Parse the message
+        path = reqMsg.path
+        appName = path.appName
+        msgType = path.msgType
+        kind = str(path.kind)
+        scope = str(path.scope)
+        client = reqMsg.client
+        clientActorHost = client.actorHost
+        clientActorName = client.actorName
+        clientInstanceName = client.instanceName
+        clientPortName = client.portName
+        client = (appName,clientActorHost,clientActorName,clientInstanceName,clientPortName)
+
+
+        (key,client) = self.buildLookupKey(appName, msgType, kind, scope,
+                                           clientActorHost, clientActorName, 
+                                           clientInstanceName,clientPortName)
+        result = self.dbase.remove(key,client)
+        self.logger.info("handleServiceUnlookup:%s,%s,%s,%s,%s,%s -> %r"
+                           % (appName,str(client),msgType,kind,scope,clientInstanceName,result))   
+        rep = disco_capnp.DiscoRep.new_message()            # Construct the response: all providers of the requested service
+        repMsg = rep.init('serviceUnlookup')
+        repMsg.status = "ok"
+        repBytes = rep.to_bytes()
+        self.server.send(repBytes)
 
     def handleGroupJoin(self,msg):
         '''
@@ -382,6 +446,10 @@ class DiscoService(object):
             self.handleServiceLookup(msg)
         elif which == 'actorUnreg':
             self.handleActorUnreg(msg)
+        elif which == 'serviceUnlookup':
+            self.handleServiceUnlookup(msg)
+        elif which == 'serviceUnreg':
+            self.handleServiceUnreg(msg)
         elif which == 'groupJoin':
             self.handleGroupJoin(msg)
         else:

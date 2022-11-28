@@ -16,8 +16,6 @@ import logging
 import traceback
 import psutil
 import pwd
-from concurrent.futures.thread import ThreadPoolExecutor
-from _thread import RLock
 
 import zmq
 
@@ -95,7 +93,7 @@ class ProcessManager(object):
         self.context = parent.context
         self.endpoint = None
         self.monitors = { }                 
-        self.lock = RLock()
+        self.lock = threading.RLock()
         
     def monitor(self,qualName,proc):
         self.logger.info(" monitoring %s" % (qualName))

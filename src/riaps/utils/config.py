@@ -33,6 +33,7 @@ class Config(object):
     APP_LOGS = ''
     CTRL_HEARTBEAT = True
     NODE_HEARTBEAT = True
+    NETMON = True
     SECURITY = True
     
     def __init__(self):

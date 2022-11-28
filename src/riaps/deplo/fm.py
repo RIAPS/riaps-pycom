@@ -100,6 +100,7 @@ class FMMonitor(threading.Thread):
             certFile = os.path.join(self.riapsHome,"keys",const.zmqCertificate)
             cert = czmq.Zcert.load(ctypes.c_char_p(certFile.encode('utf-8')))
             self.zyre.set_zcert(cert) 
+        self.zyre.set_interval(const.zyreInterval)
         self.zyre.set_evasive_timeout(const.peerEvasiveTimeout)
         self.zyre.set_expired_timeout(const.peerExpiredTimeout)
         self.zyre.set_header(self.peerHeaderKey(self.hostAddress), self.PEERMARK)
@@ -278,7 +279,7 @@ class FMMonitor(threading.Thread):
                             info = (head, appName, actorName, peer)
                             self.command.send_pyobj(info)       
                 else:
-                    pass
+                    self.logger.info('FMMon.%s' % str(eType))
         self.command.close()
         for appName in self.actors:
             if appName in self.groups:
