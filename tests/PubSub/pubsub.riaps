@@ -1,0 +1,34 @@
+app PubSub {
+
+    message globalMsg;
+    message localMsg;
+
+    //-------------------
+    //  Components
+    //-------------------
+
+    component DataPublisher(uid="") {
+        timer clock 200 msec;
+        pub data_pub: globalMsg;
+    }
+
+    component DataSubscriber {
+        sub data_sub: globalMsg;
+    }
+
+    //-------------------
+    //  Actors
+    //-------------------
+
+    actor PublisherActor(uid=""){
+        {
+            data_publisher: DataPublisher(uid=uid);
+        }
+    }
+
+    actor SubscriberActor{
+        {
+            data_subscriber: DataSubscriber;
+        }
+    }
+}

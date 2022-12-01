@@ -1,0 +1,23 @@
+// 
+app PubSub {
+
+    host all {
+        network 172.21.20.70; //IP address of riaps_app_log_server
+    }
+
+    // on (172.21.20.23) SubscriberActor();
+    // on (172.21.20.24) SubscriberActor();
+    // on (172.21.20.25) SubscriberActor();
+    on (172.21.20.40) SubscriberActor();
+    on (172.21.20.48) SubscriberActor();
+    on (172.21.20.49) SubscriberActor();
+    on (172.21.20.50) SubscriberActor();
+    //on (172.21.20.80) SubscriberActor();
+	on (172.21.20.43) PublisherActor(uid="43");
+	on (172.21.20.44) PublisherActor(uid="44");
+	on (172.21.20.45) PublisherActor(uid="45");
+	on (172.21.20.46) PublisherActor(uid="46");
+	on (172.21.20.47) PublisherActor(uid="47");
+
+}
+
