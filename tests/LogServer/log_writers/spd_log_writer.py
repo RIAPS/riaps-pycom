@@ -4,8 +4,8 @@ import time
 
 
 def add_tcp_sink_st():
-    sink = spdlog.tcp_sink_st(server_host="172.21.20.70",
-                              server_port=12345,
+    sink = spdlog.tcp_sink_st(server_host="10.0.3.15",
+                              server_port=9021,
                               lazy_connect=True)  # if true connect on first log call instead of on construction
     return sink
 
