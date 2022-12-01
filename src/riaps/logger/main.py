@@ -31,6 +31,7 @@ theServers = {}
 # global logger ('riaps.logger')
 theLogger = None
 
+
 def term_handler(_signal, _frame):
     theLogger.info("term_handler called")
     for _, obj in theServers.items():
@@ -44,17 +45,18 @@ def term_handler(_signal, _frame):
                 pass
     os._exit(0)
 
+
 def setup(pserver, aserver, driver_type):
     global theLogger
     if pserver:
         q = queue.Queue()
-        # view = visualizer.View(session_name="platform")
         driver = driver_factory.get_driver(driver_type=driver_type, session_name="platform")
         platform_log_server = PlatformLogServer(server_address=pserver,
-                                                driver = driver,
+                                                driver=driver,
                                                 q=q)
         p = multiprocessing.Process(target=platform_log_server.serve_until_stopped,
-                                    name="riaps.logger.platform", daemon=False)
+                                    name="riaps.logger.platform",
+                                    daemon=False)
         theServers["platform"] = {"server": platform_log_server,
                                   "process": p,
                                   "driver": driver}
@@ -62,13 +64,13 @@ def setup(pserver, aserver, driver_type):
 
     if aserver:
         q = queue.Queue()
-        # view = visualizer.View(session_name="app")
         driver = driver_factory.get_driver(driver_type=driver_type, session_name="app")
         app_log_server = AppLogServer(server_address=aserver,
-                                      driver = driver,
+                                      driver=driver,
                                       q=q)
         p = multiprocessing.Process(target=app_log_server.serve_until_stopped,
-                                     name="riaps.logger.app",daemon=False)
+                                    name="riaps.logger.app",
+                                    daemon=False)
         theServers["app"] = {"server": app_log_server,
                              "process": p,
                              "driver": driver}
@@ -78,12 +80,12 @@ def setup(pserver, aserver, driver_type):
     signal.signal(signal.SIGINT, term_handler)
 
 
-def parse_args(arg,default_host,default_port):
+def parse_args(arg, default_host, default_port):
     try:
         host,port = arg.split(':')
         if host == '*':
             host = default_host
-        if port == None:
+        if port is None:
             port = default_port
         else:
             port = int(port)
@@ -91,6 +93,7 @@ def parse_args(arg,default_host,default_port):
         theLogger.error(f"Invalid host:port argument: {e}")
         return None
     return host, port
+
 
 def main():
     parser = argparse.ArgumentParser()
