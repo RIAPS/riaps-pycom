@@ -5,7 +5,8 @@ from riaps.logger.drivers.base_driver import BaseDriver
 
 class ServerLogDriver(BaseDriver):
     def __init__(self, driver_type, session_name):
-        super().__init__(driver_type, session_name)
+        super().__init__(driver_type)
+        self.session_name = session_name
         self.nodes = {}
         self.msg_count = 0
 
