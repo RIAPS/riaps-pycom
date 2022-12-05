@@ -80,7 +80,7 @@ class DeploymentManager(threading.Thread):
     ERRORMARK = 'Exc:'
     
     def __init__(self,parent,resm,fm):
-        threading.Thread.__init__(self,name='DeploymentManager',daemon=True)
+        threading.Thread.__init__(self,name='DeploymentManager',daemon=False)
         self.logger = logging.getLogger(__name__)
         self.context = parent.context
         self.hostAddress = parent.hostAddress

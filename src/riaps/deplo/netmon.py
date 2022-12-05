@@ -194,7 +194,7 @@ class NHMonitorRecord(ctypes.Structure):
 class NetMonitorThread(threading.Thread):
 
     def __init__(self,parent):
-        threading.Thread.__init__(self,name='NetMonitor',daemon=True)
+        threading.Thread.__init__(self,name='NetMonitor',daemon=False)
         self.logger = logging.getLogger(__name__)
         self.parent = parent
         self.context = self.parent.context

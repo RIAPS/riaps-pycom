@@ -31,7 +31,7 @@ class ProcessMonitor(threading.Thread):
     Thread for monitoring a process
     '''
     def __init__(self,parent,qualName):
-        threading.Thread.__init__(self,name='ProcessMonitor:%r' % qualName,daemon=True)
+        threading.Thread.__init__(self,name='ProcessMonitor:%r' % qualName,daemon=False)
         self.logger = logging.getLogger(__name__)
         self.parent = parent
         self.context = parent.context

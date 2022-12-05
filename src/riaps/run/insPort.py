@@ -23,7 +23,7 @@ class _DeviceThread(threading.Thread):
     'ticker' and an echo service.
     '''
     def __init__(self, trigger):
-        threading.Thread.__init__(self,daemon=True)
+        threading.Thread.__init__(self,daemon=False)
         self.trigger = trigger
         self.active = threading.Event()
         self.active.clear()

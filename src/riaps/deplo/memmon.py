@@ -33,7 +33,7 @@ from riaps.utils.names import *
     
 class MemMonitorThread(threading.Thread):
     def __init__(self,parent,efd,usage):
-        threading.Thread.__init__(self,name='MemMonitorThread',daemon=True)
+        threading.Thread.__init__(self,name='MemMonitorThread',daemon=False)
         self.logger = logging.getLogger(__name__)
         self.parent = parent
         self.context = self.parent.context

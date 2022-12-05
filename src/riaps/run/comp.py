@@ -25,7 +25,7 @@ class ComponentThread(threading.Thread):
     '''
     
     def __init__(self, parent):
-        threading.Thread.__init__(self,daemon=True)
+        threading.Thread.__init__(self,daemon=False)
         self.logger = logging.getLogger(__name__)
         self.name = parent.name
         self.parent = parent
