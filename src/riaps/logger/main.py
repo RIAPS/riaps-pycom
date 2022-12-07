@@ -48,10 +48,9 @@ def setup(pserver, aserver, driver_type):
     global theLogger
     if pserver:
         q = queue.Queue()
-        # view = visualizer.View(session_name="platform")
         driver = driver_factory.get_driver(driver_type=driver_type, session_name="platform")
         platform_log_server = PlatformLogServer(server_address=pserver,
-                                                driver = driver,
+                                                driver=driver,
                                                 q=q)
         p = multiprocessing.Process(target=platform_log_server.serve_until_stopped,
                                     name="riaps.logger.platform", daemon=False)
@@ -62,13 +61,13 @@ def setup(pserver, aserver, driver_type):
 
     if aserver:
         q = queue.Queue()
-        # view = visualizer.View(session_name="app")
         driver = driver_factory.get_driver(driver_type=driver_type, session_name="app")
         app_log_server = AppLogServer(server_address=aserver,
-                                      driver = driver,
+                                      driver=driver,
                                       q=q)
         p = multiprocessing.Process(target=app_log_server.serve_until_stopped,
-                                     name="riaps.logger.app",daemon=False)
+                                    name="riaps.logger.app",
+                                    daemon=False)
         theServers["app"] = {"server": app_log_server,
                              "process": p,
                              "driver": driver}
