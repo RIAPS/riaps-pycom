@@ -1,4 +1,5 @@
 import json
+import pathlib
 
 from riaps.logger.drivers.base_driver import BaseDriver
 
@@ -15,7 +16,9 @@ class ServerLogDriver(BaseDriver):
         data = msg["data"]
         if node_name not in self.nodes:
             self.logger.info(f"driver: add new node: {node_name}")
-            f = open(f"{node_name}.log", "a+")
+            p = pathlib.Path("server_logs")
+            p.mkdir(exist_ok=True)
+            f = open(f"server_logs/{node_name}_{self.session_name}.log", "a+")
             self.nodes[node_name] = f
         f = self.nodes[node_name]
         f.write(f"{data}\n")
@@ -27,7 +30,6 @@ class ServerLogDriver(BaseDriver):
         for node in self.nodes:
             f = self.nodes[node]
             f.close()
-
 
 
 if __name__ == '__main__':
