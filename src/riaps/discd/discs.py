@@ -282,7 +282,7 @@ class DiscoService(object):
         self.server.send(repBytes)
         
         if len(clients) != 0:
-            self.clientUpdates = [(key,(value),clients)]
+            self.clientUpdates += [(key,value,clients)]
     
     def handleServiceLookup(self,msg):
         '''

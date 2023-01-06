@@ -31,7 +31,7 @@ class CPUMonitorThread(threading.Thread):
     Thread for monitoring an actor and enforcing resource limits.
     '''
     def __init__(self,parent,interval,usage):
-        threading.Thread.__init__(self,name = 'CPUMonitorThread',daemon=True)
+        threading.Thread.__init__(self,name = 'CPUMonitorThread',daemon=False)
         self.logger = logging.getLogger(__name__)
         self.parent = parent
         self.context = self.parent.context

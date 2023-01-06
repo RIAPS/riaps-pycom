@@ -27,7 +27,7 @@ import traceback
 
 class FMMonitor(threading.Thread):
     def __init__(self,context,hostAddress,riapsHome):
-        threading.Thread.__init__(self,name='FMMonitor',daemon=True)
+        threading.Thread.__init__(self,name='FMMonitor',daemon=False)
         self.logger = logging.getLogger(__name__)
         self.context = context
         self.hostAddress = hostAddress
@@ -88,7 +88,7 @@ class FMMonitor(threading.Thread):
         
     def run(self):
         self.zyre = Zyre(None)
-        if self.logger.getChild('zyre').level > 0:
+        if self.logger.getChild('zyre').level > logging.NOTSET:
             self.zyre.set_verbose()
             # Zsys.set_logsystem(1)
         else:
@@ -294,7 +294,7 @@ class FMMonitor(threading.Thread):
         
 class NICMonitor(threading.Thread):
     def __init__(self,context):
-        threading.Thread.__init__(self,name='NICMonitor',daemon=True)
+        threading.Thread.__init__(self,name='NICMonitor',daemon=False)
         self.logger = logging.getLogger(__name__)
         self.context = context
         self.ip = IPRSocket()

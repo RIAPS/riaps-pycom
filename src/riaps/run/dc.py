@@ -116,7 +116,7 @@ class GroupThread(threading.Thread):
     NO_LEADER = 0
     
     def __init__(self, group):
-        threading.Thread.__init__(self,daemon=True)
+        threading.Thread.__init__(self,daemon=False)
         self.logger = logging.getLogger(__name__)
         self.group = group
         self.coordinated = False if self.group.kind == "default" else True

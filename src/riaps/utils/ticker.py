@@ -12,7 +12,7 @@ class Ticker(threading.Thread):
     Simple periodic ticker
     '''
     def __init__(self,period, callback):
-        threading.Thread.__init__(self,name='Ticker-%r' % period,daemon=True)
+        threading.Thread.__init__(self,name='Ticker-%r' % period,daemon=False)
         self.period = period
         self.callback = callback
         self.finished = threading.Event()

@@ -46,7 +46,7 @@ import logging
 
 class DhtPeerMon(threading.Thread):
     def __init__(self,context,hostAddress,riapsHome,dht,dhtPort):
-        threading.Thread.__init__(self,daemon=True)
+        threading.Thread.__init__(self,daemon=False)
         self.logger = logging.getLogger(__name__)
         self.context = context
         self.hostAddress = hostAddress
@@ -327,7 +327,7 @@ class DhtDbase(DiscoDbase):
         self.republisherStart = threading.Event()
         self.republisherThread = threading.Thread(name='dhtRepublisher',
                                                   target=self.dhtRepublishWorker,
-                                                  daemon=True)
+                                                  daemon=False)
         self.republisherStop = False
         self.republishLock = RLock()
         self.deletedMap = { }

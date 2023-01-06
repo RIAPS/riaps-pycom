@@ -12,7 +12,7 @@
     </mapAttribute>
     <stringAttribute key="org.eclipse.ui.externaltools.ATTR_LOCATION" value="${workspace_loc:RIAPS/src/scripts/riaps_logger}"/>
     <stringAttribute key="org.eclipse.ui.externaltools.ATTR_OTHER_WORKING_DIRECTORY" value="${workspace_loc:RIAPS/src/scripts}"/>
-    <stringAttribute key="org.eclipse.ui.externaltools.ATTR_TOOL_ARGUMENTS" value="-v -p -d tmux"/>
+    <stringAttribute key="org.eclipse.ui.externaltools.ATTR_TOOL_ARGUMENTS" value="-p -d tmux"/>
     <stringAttribute key="org.eclipse.ui.externaltools.ATTR_WORKING_DIRECTORY" value="${workspace_loc:RIAPS/src/scripts}"/>
     <stringAttribute key="org.python.pydev.debug.ATTR_INTERPRETER" value="__default"/>
     <stringAttribute key="org.python.pydev.debug.ATTR_PROJECT" value="RIAPS"/>

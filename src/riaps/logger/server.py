@@ -18,6 +18,7 @@ from functools import partial
 
 import riaps.logger.drivers.factory as driver_factory
 
+
 class BaseLogRequestHandler(socketserver.StreamRequestHandler):
 
     def __init__(self, request, client_address, server):
@@ -63,6 +64,7 @@ class AppLogRequestHandler(BaseLogRequestHandler):
             data = f"{data_string}"
             self.handle_log_record(data)
 
+
 class PlatformLogRequestHandler(BaseLogRequestHandler):
     
     def __init__(self, request, client_address, server):
@@ -85,6 +87,7 @@ class PlatformLogRequestHandler(BaseLogRequestHandler):
             msg = handler.format(record)
             self.handle_log_record(data=msg)
 
+
 # thread that waits for items on the queue and forwards them to the driver
 # thread stops when receive a special 'stop' message '#'
 def handler_thread(owner):
@@ -97,6 +100,7 @@ def handler_thread(owner):
                 owner.driver.handle(msg)
         except:
             break
+
 
 class BaseLogServer(socketserver.ThreadingTCPServer):
     
@@ -115,8 +119,8 @@ class BaseLogServer(socketserver.ThreadingTCPServer):
         
     @staticmethod
     # termination signal handler, launches the stopper on another (timer) thread
-    def term_handler(_signal,_frame,me):
-        s = threading.Timer(0.1,BaseLogServer.stopper,args=(me,))
+    def term_handler(_signal, _frame, me):
+        s = threading.Timer(0.1, BaseLogServer.stopper, args=(me,))
         s.start()
     
     def serve_until_stopped(self):
@@ -125,8 +129,8 @@ class BaseLogServer(socketserver.ThreadingTCPServer):
         self.logger.info(f'server: starting at %s' % str(self.server_address))
         signal.signal(signal.SIGTERM, partial(BaseLogServer.term_handler, me=self))
         signal.signal(signal.SIGINT, partial(BaseLogServer.term_handler, me=self))
-        self.socket.setsockopt(socket.SOL_SOCKET,socket.SO_LINGER,struct.pack('ii', 1, 0))
-        _thread = threading.Thread(target=handler_thread, args=(self,),daemon=False)
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack('ii', 1, 0))
+        _thread = threading.Thread(target=handler_thread, args=(self,), daemon=False)
         _thread.start()
         try:
             self.serve_forever()
@@ -139,9 +143,11 @@ class BaseLogServer(socketserver.ThreadingTCPServer):
         self.socket.close()
         os._exit(0)
 
+
 class AppLogServer(BaseLogServer):
     def __init__(self, server_address, driver, q):
         super().__init__(server_address, AppLogRequestHandler, driver, q)
+
 
 class PlatformLogServer(BaseLogServer):
     def __init__(self, server_address, driver, q):
@@ -198,7 +204,7 @@ if __name__ == '__main__':
     import multiprocessing
     driver = driver_factory.get_driver(handler_type="console", session_name="platform")
     q = queue.Queue()
-    theLogServer = PlatformLogServer(server_address=("riaps.local",logging.handlers.DEFAULT_TCP_LOGGING_PORT),
+    theLogServer = PlatformLogServer(server_address=("riaps.local", logging.handlers.DEFAULT_TCP_LOGGING_PORT),
                                      driver=driver,
                                      q=q)
 

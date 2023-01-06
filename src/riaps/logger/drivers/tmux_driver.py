@@ -1,13 +1,14 @@
 #
 # tmux log driver
 #
-
 import logging
-import sys,os
+import sys
+import os
 
 import libtmux
 from riaps.logger.drivers.base_driver import BaseDriver
 import logging
+
 
 class ServerLogDriver(BaseDriver):
 
@@ -35,7 +36,7 @@ class ServerLogDriver(BaseDriver):
         _tty = pane.get("pane_tty")
         pane_tty = os.open(_tty, os.O_NOCTTY | os.O_WRONLY)
         self.nodes[pane_name] = { "tty" : pane_tty, "pane" : pane }
-        pane.cmd("select_pane", '-t', f"{pane_id}", "-T", f"{pane_name}")
+        pane.cmd("select-pane", '-t', f"{pane_id}", "-T", f"{pane_name}")
 
     def add_node_display(self, node_name):
         try:
@@ -50,16 +51,15 @@ class ServerLogDriver(BaseDriver):
     def write_display(self, node_name, msg):
         try:
             pane_tty = self.nodes[node_name]["tty"]
-            _msg = ("[%s.%s]%s\n" % (node_name,self.session_name,msg)).encode('UTF-8')
-            os.write(pane_tty,_msg) 
+            _msg = ("[%s.%s]%s\n" % (node_name, self.session_name, msg)).encode('UTF-8')
+            os.write(pane_tty, _msg)
         except Exception as e:
             self.logger.error(f"driver: tmux session closed")
             os._exit(0)
 
     def start_session(self):
-        self.server.new_session(session_name=self.session_name,attach=False,window_name="main")
+        self.server.new_session(session_name=self.session_name, attach=False, window_name="main")
         self.server.cmd("set", "-g", "pane-border-status", "top")
-
 
     def get_session(self):
         if not self.server.has_session(target_session=self.session_name):
