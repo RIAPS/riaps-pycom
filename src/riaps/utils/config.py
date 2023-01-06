@@ -31,6 +31,9 @@ class Config(object):
     ACTOR_DEBUG_SERVER = ''
     DEVICE_DEBUG_SERVER = ''
     APP_LOGS = ''
+    CTRL_HEARTBEAT = True
+    NODE_HEARTBEAT = True
+    NETMON = True
     SECURITY = True
     
     def __init__(self):
@@ -94,7 +97,6 @@ class Config(object):
                             optValue = arg
                         setattr(Config, opt, optValue)
                     except:
-                        print(2)
                         logger.warning('Formal and actual type of configuration argument %s differ %s - ignored'
                                        % (str(opt), str(optType)))
         except:

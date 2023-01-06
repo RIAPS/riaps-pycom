@@ -16,6 +16,7 @@ def getNetworkInterfaces(nicName=None):
     '''
      Determine the IP address of  the network interfaces
      Return a tuple of list of global IP addresses, list of MAC addresses, and local IP address
+     If the requested interface is found the list will contain the information for that interface only. 
      ''' 
     if nicName is None:
         nicName = Config.NIC_NAME
@@ -39,10 +40,10 @@ def getNetworkInterfaces(nicName=None):
                 macAddressList.append(linkAddr)
                 if(nicName == ifName):
                     ipAddressList = [ipAddressList[-1]]
+                    ifNameList = [ifName]
                     macAddressList = [macAddressList[-1]] 
                     break
     return (ipAddressList, macAddressList, ifNameList, local)
-
 
 def is_valid_ipv4_address(address):
     ''' Determine if the argument is a valid IP address

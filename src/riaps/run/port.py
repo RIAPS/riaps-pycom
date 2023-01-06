@@ -90,6 +90,13 @@ class Port(object):
         '''
         pass
     
+    def closeSocket(self):
+        ''' Close down the port.
+        Abstract, subclasses must implement this method.
+        
+        '''
+        raise SetupError
+            
     def setOwner(self, owner):
         ''' Save owner thread into a data member.
         
@@ -162,7 +169,8 @@ class Port(object):
         
         '''
         raise SetupError
-            
+    
+
     def getSocket(self):
         '''Return the socket(s) used by the port object. 
         Abstract, subclasses must implement this method.
@@ -484,7 +492,7 @@ class DuplexPort(Port):
         assert req_scope == rep_scope
         self.portScope = req_scope
         self.msgType = str(self.req_type) + '#' + str(self.rep_type)
-        print("DuplexPort.__init__()")
+        # print("DuplexPort.__init__()")
 
 class BindPort(Port):
     def __init__(self, parentComponent, portName, portSpec):
@@ -493,8 +501,8 @@ class BindPort(Port):
         '''
         super().__init__(parentComponent, portName, portSpec)
         # print("BindPort.__init__()")
-        
-    def setupBindSocket(self, owner,zmqType, portKind,sockopts=[]):
+    
+    def setupBindSocket(self, owner, zmqType, portKind, sockopts=[]):
         '''
         Set up a bind socket
         '''
@@ -504,17 +512,30 @@ class BindPort(Port):
         self.host = ''
         self.portNum = -1
         self.setupCurve(True) 
+        self.bindAddr = None
         if self.portScope == PortScope.GLOBAL:
             globalHost = self.getGlobalIface()
-            self.portNum = self.socket.bind_to_random_port("tcp://" + globalHost)
+            bindAddr = "tcp://" + globalHost
+            self.portNum = self.socket.bind_to_random_port(bindAddr)
+            self.bindAddr = "%s:%d" % (bindAddr, self.portNum)
             self.host = globalHost
         else:
             localHost = self.getLocalIface()
-            self.portNum = self.socket.bind_to_random_port("tcp://" + localHost)
+            bindAddr = "tcp://" + localHost
+            self.portNum = self.socket.bind_to_random_port(bindAddr)
+            self.bindAddr = "%s:%d" % (bindAddr, self.portNum)
             self.host = localHost
         self.info = PortInfo(portKind = portKind, portScope=self.portScope, portName=self.name, 
                              msgType=self.msgType, portHost=self.host, portNum=self.portNum)
         return self.info
+    
+    def closeBindSocket(self):
+        if self.socket:
+            if self.bindAddr:
+                self.socket.unbind(self.bindAddr)
+                self.bindAddr = None
+            self.socket.close()
+            self.socket = None
 
 class ConnPort(Port):
     def __init__(self, parentComponent, portName, portSpec):
@@ -545,6 +566,16 @@ class ConnPort(Port):
         self.info = PortInfo(portKind=portKind, portScope=self.portScope, portName=self.name, 
                              msgType=self.msgType, portHost=self.host, portNum=self.portNum)
         return self.info
+
+    def closeConnSocket(self):
+        if self.socket:
+            self.socket.setsockopt(zmq.LINGER, 0)
+            for (host,port) in self.servers:
+                srvPort = "tcp://" + str(host) + ":" + str(port)
+                self.socket.disconnect(srvPort)
+                self.servers = set()
+            self.socket.close()
+            self.socket = None
     
     def resetConnSocket(self,zmqType,sockopts=[]):
         '''

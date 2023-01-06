@@ -1,0 +1,38 @@
+// RIAPS Fm test 
+
+app FmTest {
+    message msg;
+    
+    library fmlib; 
+    
+    component Ping() {
+      timer tick 1000;				// Regular tick
+      pub ping : msg;
+    }
+    
+    component FmApp(test) {
+      sub ping : msg; 
+      timer timeout 15000; 			// Timeout for fault
+    }
+    
+    device FmDev(test) {
+      sub ping : msg;
+      timer timeout 15000;			// Timeout for fault
+    }
+    
+    actor FmAppActor(test) {
+       local msg;
+     {
+        pinger : Ping;
+        comp   : FmApp(test=test);
+     }
+    }
+     
+    actor FmDevActor(test) {
+        local msg;
+     {  
+        pinger : Ping;
+        dev    : FmDev(test=test);
+     }
+    }
+}

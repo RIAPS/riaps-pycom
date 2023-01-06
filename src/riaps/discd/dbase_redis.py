@@ -22,7 +22,7 @@ class RedisDbase(DiscoDbase):
         Construct the database object, set up singleton.
         '''
         super().__init__(context_, dbaseLoc)
-        # self.logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger(__name__)
         # Singleton DiscoDbase object
         # global theDiscoBase
         # theDiscoBase = self

@@ -14,6 +14,7 @@ import hashlib
 from os.path import join
 from collections import namedtuple
 import subprocess
+import shutil
 import threading
 import logging
 import traceback
@@ -28,7 +29,6 @@ import importlib
 
 import capnp
 from concurrent.futures.thread import ThreadPoolExecutor
-from _thread import RLock
 
 import zmq
 from zmq import devices
@@ -62,11 +62,11 @@ DeploAppRecord = namedtuple('DeploAppRecord', 'model hash file home hosts networ
 # Record of a user
 DeploUserRecord = namedtuple('DeploUserRecord', 'name home uid gid')
 # Record of an actor
-DeploActorRecord = namedtuple('DeploActorRecord', 'app model actor args device control monitor')
+DeploActorRecord = namedtuple('DeploActorRecord', 'app model actor args zdevice zdeviceCtrl control monitor')
 # Record of an device actor
-DeploDeviceRecord = namedtuple('DeploDeviceRecord', 'app model type inst args device control monitor')
+DeploDeviceRecord = namedtuple('DeploDeviceRecord', 'app model type inst args zdevice zdeviceCtrl control monitor')
 # Record of an app actor command 
-DeploActorCommand = namedtuple('DeploActorCommand', 'app model actor args cmd pid firewall')
+DeploActorCommand = namedtuple('DeploActorCommand', 'app model actor args cmd pid firewall isdevice')
 # Record of the disco command
 DeploDiscoCommand = namedtuple('DeploDiscoCommand', 'cmd pid args')
 
@@ -80,7 +80,7 @@ class DeploymentManager(threading.Thread):
     ERRORMARK = 'Exc:'
     
     def __init__(self,parent,resm,fm):
-        threading.Thread.__init__(self,daemon=True)
+        threading.Thread.__init__(self,name='DeploymentManager',daemon=False)
         self.logger = logging.getLogger(__name__)
         self.context = parent.context
         self.hostAddress = parent.hostAddress
@@ -90,8 +90,8 @@ class DeploymentManager(threading.Thread):
         self.riapsHome = parent.riapsHome
         self.launchMap = { }            # Map of launched actors
         # self.launchRefs = { }           # Reference count for device actors
-        self.mapLock = RLock()          # Lock to protect launchMap
-        self.discoLock = RLock()        # Lock to protect disco 
+        self.mapLock = threading.RLock()          # Lock to protect launchMap
+        self.discoLock = threading.RLock()        # Lock to protect disco 
         self.disco = None
         self.dbaseHost = None 
         self.dbasePort = None
@@ -119,9 +119,8 @@ class DeploymentManager(threading.Thread):
         # self.devmCommandEndpoint = parent.devmCommandEndpoint
         self.procMonEndpoint = parent.procMonEndpoint
         
-        self.command = self.context.socket(zmq.PAIR)        # Socket to recv commands from main
-        self.command.setsockopt(zmq.RCVTIMEO,const.depmRecvTimeout)
-        self.command.bind(self.depmCommandEndpoint)
+        self.commandS = { }             # Command sockets (per thread)
+        self.callLock = threading.RLock()
         
         self.discoCommand = None
         
@@ -147,30 +146,41 @@ class DeploymentManager(threading.Thread):
             pass
         return module_name
     
+    def getCommand(self,thread):
+        if thread in self.commandS:
+            return self.commandS[thread]
+        else:
+            command = self.context.socket(zmq.DEALER)        # Socket to recv commands from main
+            command.setsockopt(zmq.RCVTIMEO,const.depmRecvTimeout)
+            command.setsockopt_string(zmq.IDENTITY,str(thread))
+            command.connect(self.depmCommandEndpoint)
+            time.sleep(0.1)
+            self.commandS[thread] = command
+            return command
+        
     def callCommand(self,cmd):
         '''
-        Call a command in the DM. 
-        This method runs the DeploService background thread that handles the requests coming from riaps_ctrl.  
-        '''
-        self.logger.info("callCommand: %s" % str(cmd))
-        if self.pendingCall == False:
-            self.command.send_pyobj(cmd)
-            self.pendingCall = True
-        reply = None
-        while True:
-            try:
-                reply = self.command.recv_pyobj()
-                self.pendingCall = False
-                break
-            except zmq.error.ZMQError as e:
-                if e.errno == zmq.EAGAIN:
-                    continue
-                else:
-                    raise
-        if type(reply) == str and reply.startswith(self.ERRORMARK):
-            info = reply[len(self.ERRORMARK):]
-            raise BuildError(info)
-        return reply
+        Call a command in the DM. Runs in the DeploService background thread that handles the requests 
+        coming from riaps_ctrl, but can be called from the main thread (for setDisco).    
+        '''        
+        with self.callLock:                                     # Lock out other thread (if any) 
+            self.logger.info("callCommand: %s" % str(cmd))
+            command = self.getCommand(threading.get_native_id())
+            reply = None
+            command.send_pyobj(cmd)
+            while True:
+                try:
+                    reply = command.recv_pyobj()
+                    break
+                except zmq.error.ZMQError as e:
+                    if e.errno == zmq.EAGAIN:
+                        continue
+                    else:
+                        raise  
+            if type(reply) == str and reply.startswith(self.ERRORMARK):
+                info = reply[len(self.ERRORMARK):]
+                raise BuildError(info)
+            return reply
         
     def setupUser(self,user_name):
         '''
@@ -251,10 +261,11 @@ class DeploymentManager(threading.Thread):
         Set up and connect the ZMQ socket for communicating with the 
         Discovery Service. 
         '''        
-        self.discoCommand = self.context.socket(zmq.REQ)           # Socket to command disco
-        self.discoCommand.setsockopt(zmq.RCVTIMEO,const.discoEndpointRecvTimeout)
-        self.discoCommand.setsockopt(zmq.SNDTIMEO,const.discoEndpointSendTimeout)
-        self.discoCommand.connect(const.discoEndpoint)
+        if self.discoCommand is None:
+            self.discoCommand = self.context.socket(zmq.REQ)           # Socket to command disco
+            self.discoCommand.setsockopt(zmq.RCVTIMEO,const.discoEndpointRecvTimeout)
+            self.discoCommand.setsockopt(zmq.SNDTIMEO,const.discoEndpointSendTimeout)
+            self.discoCommand.connect(const.discoEndpoint)
         
     def startDisco(self):
         '''
@@ -277,7 +288,6 @@ class DeploymentManager(threading.Thread):
             self.disco = psutil.Popen(command,
                                       preexec_fn=self.demote(is_su,False,user_uid, user_gid), 
                                       cwd=user_cwd, env=user_env)
-    
         except FileNotFoundError:
             try:
                 command = ['python3',disco_mod] + command[1:]
@@ -285,6 +295,7 @@ class DeploymentManager(threading.Thread):
                                           preexec_fn=DeploymentManager.demote(is_su,False,user_uid, user_gid), 
                                           cwd=user_cwd, env=user_env)    
             except:
+                # traceback.print_exc()
                 self.logger.error("Error while starting disco: %s" % sys.exc_info()[0])
                 raise
         self.procm.monitor(self.DISCONAME,self.disco)
@@ -369,19 +380,29 @@ class DeploymentManager(threading.Thread):
             ok,err = False,"Error while verifying app '%s'" % appName
     
         if ok:
-            try:
-                with tarfile.open(tgz_file, "r:gz") as tar:
-                    tar.extractall(self.riapsApps+'/')
-            except Exception as ex:
-                self.logger.error("Extract app failed: %s(%s)" % (str(type(ex)),str(ex.args)))
-                ok, err = False, 'Content extraction failed' 
-
+            while True:
+                try:
+                    with tarfile.open(tgz_file, "r:gz") as tar:
+                        tar.extractall(self.riapsApps+'/')
+                        break
+                except PermissionError as ex:
+                    try:
+                        shutil.rmtree(join(self.riapsApps,appName))
+                        continue
+                    except Exception as ex:
+                        self.logger.error("Remove old app failed: %s(%s)" % (str(type(ex)),str(ex.args)))
+                        ok, err = False, 'Old app cannot be removed'
+                        break
+                except Exception as ex:
+                    self.logger.error("Extract app failed: %s(%s)" % (str(type(ex)),str(ex.args)))
+                    ok, err = False, 'Content extraction failed'
+                    break 
         try:
             os.remove(tgz_file)
             os.remove(sha_file)
         except:
             ok, err = False, 'App package removal failed'
-        
+        os.sync()
         return ok if ok else err
     
     def installApp(self,msg):
@@ -628,7 +649,6 @@ class DeploymentManager(threading.Thread):
                                 cwd=user_cwd, env=user_env,
                                 stdout=logFile,stderr=subprocess.STDOUT)
         except (FileNotFoundError,PermissionError):
-            self.logger.info("Error while starting actor: %s -- %s" % (command,sys.exc_info()[0]))
             try:
                 # if isPython:
                 command = ['python3',riaps_mod] + command[1:]
@@ -639,6 +659,7 @@ class DeploymentManager(threading.Thread):
                                     cwd=user_cwd, env=user_env,
                                     stdout=logFile,stderr=subprocess.STDOUT)
             except:
+                # traceback.print_exc()
                 self.logger.error("Error while starting actor: %s -- %s" % (command,sys.exc_info()[0]))
                 raise BuildError("Actor failed to start: %s.%s " % (appName,actorName))
         try:
@@ -654,14 +675,15 @@ class DeploymentManager(threading.Thread):
                    
         self.resm.startActor(appName, actorName, proc)
         self.fm.startActor(appName, actorName, proc)
+        
         key = str(appName) + "." + str(actorName)
         with self.mapLock:
             self.launchMap[key] = proc
             self.actors[key] = DeploActorRecord(app=appName, model=appModel, actor=actorName, args = actorArgs, 
-                                                device=None, control = None, monitor = None)
+                                                zdevice=None, zdeviceCtrl=None, control = None, monitor = None)
             self.peerQueue[key] = [ ]
         self.appDbase.addAppActor(appName, DeploActorCommand(app=appName, model=appModel, actor=actorName,args=actorArgs,
-                                                             cmd=cmdline,pid=pid,firewall=firewall))
+                                                             cmd=cmdline,pid=pid,firewall=firewall,isdevice=False))
         self.procm.monitor(key,proc)
         self.logger.info("Started %s" % key)
 
@@ -744,34 +766,44 @@ class DeploymentManager(threading.Thread):
         with self.mapLock:
             # assert qualName in self.launchMap
             if qualName not in self.launchMap:
-                self.logger.error('Actor %s has not been started' % qualName)
+                self.logger.error('Actor %s has no process' % qualName)
                 return
             proc = self.launchMap[qualName]
             del self.launchMap[qualName]
-        if proc != None:
-            self.logger.info("Stopping actor %s" % qualName)
-            self.resm.stopActor(appName, actorName, proc)
-            self.fm.stopActor(appName, actorName, proc)
-            assert qualName in self.actors
-            record = self.actors[qualName]
-            device = record.device
-            if device:
-                _control = record.control
-                _control.close(); del _control
-                _monitor = record.monitor
-                self.delMonitor(appName,actorName,_monitor)
-                _monitor.close(); del _monitor
-                # TODO: Stop the zmqdevice
-                # device.join()
-                del device                
-            del self.actors[qualName]
-            self.procm.release(qualName)
-            firewall = self.appDbase.getAppActor(appName, actorName).firewall
-            self.undoAppNetwork(firewall)
-            self.appDbase.delAppActor(appName, actorName)
-            self.executor.submit(self.terminateActor,proc,appName,actorName)
+        
+        assert proc != None
+        if qualName not in self.actors:
+            self.logger.error('Actor %s has not been started' % qualName)
+            return
+        # assert qualName in self.actors      
+        
+        self.logger.info("Stopping actor %s" % qualName)
+        self.resm.stopActor(appName, actorName, proc)
+        self.fm.stopActor(appName, actorName, proc)
+        self.procm.release(qualName)
+        
+        self.executor.submit(self.terminateActor,proc,appName,actorName)
+        time.sleep(0)
+        
+        record = self.actors[qualName]
+        zdevice = record.zdevice
+        if zdevice:
+            _control = record.control
+            _control.close(); del _control
+            _monitor = record.monitor
+            self.delMonitor(appName,actorName,_monitor)
+            _monitor.close(); del _monitor
+            _zdeviceCtrl = record.zdeviceCtrl
+            _zdeviceCtrl.send(b'TERMINATE')
+            zdevice.join()
+            del zdevice  
+        del self.actors[qualName]
+        
+        firewall = self.appDbase.getAppActor(appName, actorName).firewall
+        self.undoAppNetwork(firewall)
+        self.appDbase.delAppActor(appName, actorName)
             
-        self.logger.info("Stopped %s" % qualName)
+        self.logger.info("Stop complete: %s" % qualName)
 
     def haltActor(self,msg):
         '''
@@ -830,6 +862,7 @@ class DeploymentManager(threading.Thread):
         # This should be self.actors 
         for key in self.launchMap.keys():
             appName,actorName = key.split('.',1)
+            if key in self.devices: continue
             if appName in reply.keys():
                 actors = reply[appName]
                 actors += [actorName]
@@ -844,8 +877,10 @@ class DeploymentManager(threading.Thread):
         appName = msg[0]
         self.resm.reclaimApp(appName)
 
-    def handleCommand(self,msg):
-        self.logger.info("handleCommand: %s" % (str(msg)))
+    def handleCommand(self,msgFrames):
+        (identFrame,msgFrame) = msgFrames
+        msg = pickle.loads(msgFrame)
+        self.logger.info("handleCommand[%r]: %s" % (identFrame,str(msg)))
         reply = 'ok'
         try: 
             cmd = msg[0]
@@ -874,17 +909,17 @@ class DeploymentManager(threading.Thread):
             info = sys.exc_info()
             reply = '%s: %s %s' %(self.ERRORMARK, info[0].__name__,info[1])
             self.logger.error("Error in handleCommand '%s':\n   %s: %s" % (cmd, info[0].__name__, info[1]))
-        self.ctrl.send_pyobj(reply)
+        resp = [identFrame, zmq.Frame(pickle.dumps(reply))]
+        self.ctrl.send_multipart(resp)
     
     def kill(self,what,pid):
-        self.logger.info("killing %s [%d]" % (what,pid))
+        self.logger.info("terminating %s [%d]" % (what,pid))
         try:
             os.kill(pid, signal.SIGTERM)
         except OSError as err:
             if err.errno == errno.ESRCH:
                 return
-        cnt = 0 
-        while cnt < 10:
+        for _cnt in range(3):
             time.sleep(1.0)
             try:
                 os.kill(pid,0)
@@ -892,7 +927,6 @@ class DeploymentManager(threading.Thread):
                 if err.errno == errno.ESRCH:
                     self.logger.info("terminated [%d]" % pid)
                     return
-                cnt += 1
         self.logger.info("killing [%d]" % pid)
         try:
             os.kill(pid, signal.SIGKILL)
@@ -919,7 +953,6 @@ class DeploymentManager(threading.Thread):
                     self.appDbase.delDiscoCommand()
         return result
                     
-        
     def stopOrphanActor(self,record):
         cmdline = record.cmd
         pid,appName,actorName = record.pid, record.app, record.actor
@@ -964,9 +997,10 @@ class DeploymentManager(threading.Thread):
                         self.setupApp((act.app,act.model))
                         appSet = True
                     self.logger.info("recover: actor = %s.%s" % (appName,actName))
-                    self.startActor((act.app,act.model,act.actor,act.args))
-                except:
-                    self.logger.error("recovery failed: actor = %s.%s" % (appName,actName))
+                    if not act.isdevice:
+                        self.startActor((act.app,act.model,act.actor,act.args))
+                except Exception as exc:
+                    self.logger.error("recovery failed: actor = %s.%s with %r" % (appName,actName,exc))
                     self.appDbase.delAppActor(appName,actName)
     
     def addMonitor(self,appName,actorName,sock):
@@ -993,8 +1027,9 @@ class DeploymentManager(threading.Thread):
             endpoint = const.deplEndpoint
             self.server.bind(endpoint)
             # Control socket to receive commands from main thread
-            self.ctrl = self.context.socket(zmq.PAIR)
-            self.ctrl.connect(self.depmCommandEndpoint)
+            self.ctrl = self.context.socket(zmq.ROUTER)
+            self.ctrl.setsockopt(zmq.ROUTER_MANDATORY,1)
+            self.ctrl.bind(self.depmCommandEndpoint)
             # Socket to communicate with procmon threads
             self.procmon = self.context.socket(zmq.ROUTER)        
             self.procmon.bind(self.procMonEndpoint)
@@ -1032,8 +1067,8 @@ class DeploymentManager(threading.Thread):
             toDelete = []           
             for s in sockets:
                 if s == self.ctrl:                  # Handle commands from main
-                    msg = self.ctrl.recv_pyobj()
-                    self.handleCommand(msg)
+                    msgFrames = self.ctrl.recv_multipart()
+                    self.handleCommand(msgFrames)
                 elif s == self.server:              # Handle client requests
                     msg = self.server.recv()
                     self.handleClient(msg)
@@ -1143,32 +1178,38 @@ class DeploymentManager(threading.Thread):
         clientPort = self.setupClient(appName,appVersion,appActorName)
         clientPID  = self.launchMap[qualName].pid
         
-        zmqDevice = devices.ThreadProxy(zmq.DEALER,zmq.PAIR,zmq.PUB)
+        iface = 'tcp://127.0.0.1'
+        zmqDevice = devices.ThreadProxySteerable(zmq.DEALER,zmq.PAIR,zmq.PUB,zmq.PAIR)
         identity = actorIdentity(appName, appActorName, clientPID)
         self.logger.info("zmqDevice ID = %s" % identity)
         zmqDevice.setsockopt_in(zmq.IDENTITY, identity.encode(encoding='utf_8'))
         # device.setsockopt_in(zmq.RCVTIMEO,const.deplEndpointRecvTimeout)
         # device.setsockopt_out(zmq.SNDTIMEO,const.deplEndpointSendTimeout)
-        zmqDevice.bind_out('tcp://127.0.0.1:%i' % clientPort)      # 
+        zmqDevice.bind_out('%s:%i' % (iface,clientPort)) 
         
         self.resm.addClientDevice(appName,appActorName,zmqDevice)
         
         # Socket for sending control messages to the actor
         actorControl = self.context.socket(zmq.ROUTER)
-        actorPort = actorControl.bind_to_random_port('tcp://127.0.0.1')
-        zmqDevice.connect_in('tcp://127.0.0.1:%i' % actorPort)
+        actorPort = actorControl.bind_to_random_port(iface)
+        zmqDevice.connect_in('%s:%i' % (iface,actorPort))
         
         # Monitoring socket to intercept messages going to the actor
         monPort = self.binder()
-        monAddr = 'tcp://127.0.0.1:%i' % monPort
+        monAddr = '%s:%i' % (iface,monPort)
         zmqDevice.bind_mon(monAddr)
 
         actorMonitor = self.context.socket(zmq.SUB)
         actorMonitor.setsockopt(zmq.SUBSCRIBE, b'')
         actorMonitor.connect(monAddr)
-        
+
+        ctrlPort = zmqDevice.bind_ctrl_to_random_port(iface)
+        zdeviceCtrl = self.context.socket(zmq.PAIR)
+        zdeviceCtrl.connect("%s:%i" % (iface, ctrlPort))
+         
         self.addMonitor(appName,appActorName,actorMonitor)
         self.fm.addClientDevice(appName,appActorName,zmqDevice)
+        
         
         time.sleep(0.1)
         zmqDevice.start()
@@ -1179,11 +1220,11 @@ class DeploymentManager(threading.Thread):
         if isDevice:
             self.devices[qualName] = DeploDeviceRecord(app=appName, model=appModel, 
                                                        type=deviceTypeName, inst=appActorName, args=actorArgs,
-                                                       device=zmqDevice, 
+                                                       zdevice=zmqDevice, zdeviceCtrl=zdeviceCtrl,
                                                        control = actorControl, monitor = actorMonitor)
         else:
             self.actors[qualName] = DeploActorRecord(app=appName, model=appModel, actor=appActorName, args=actorArgs,
-                                                     device=zmqDevice, 
+                                                     zdevice=zmqDevice, zdeviceCtrl=zdeviceCtrl,
                                                      control = actorControl, monitor = actorMonitor)
                 
         rsp = deplo_capnp.DeplRep.new_message()
@@ -1289,6 +1330,8 @@ class DeploymentManager(threading.Thread):
                                         cwd=appFolder,env=dev_env,
                                         stdout=logFile, stderr=subprocess.STDOUT)
             except:
+                if self.logger.level >= logging.info: 
+                    traceback.print_exc()
                 self.logger.error("Error while starting device: %s -- %s" % (command,sys.exc_info()[0]))
                 raise BuildError("Device failed to start: %s" % (appName,instName))
         try:
@@ -1298,6 +1341,10 @@ class DeploymentManager(threading.Thread):
         if rc != None:
             raise BuildError("Device failed to start: %s " % (command,))
         
+        pid = proc.pid
+        cmdline = [p.info for p in psutil.process_iter(attrs=['pid','cmdline']) 
+                   if pid == p.info['pid']][0]['cmdline']
+                   
         self.resm.startActor(appName, instName, proc)
         self.fm.startActor(appName, instName, proc)
         
@@ -1307,7 +1354,9 @@ class DeploymentManager(threading.Thread):
             # self.launchRefs[key] = 1
             self.devices[key] = DeploDeviceRecord(app=appName, model=appModel, 
                                                   type=typeName, inst=instName, args=actorArgs, 
-                                                  device=None, control = None, monitor = None)
+                                                  zdevice=None, zdeviceCtrl=None, control = None, monitor = None)
+        self.appDbase.addAppActor(appName, DeploActorCommand(app=appName, model=appModel, actor=instName,args=actorArgs,
+                                                             cmd=cmdline,pid=pid,firewall=[],isdevice=True))
         self.procm.monitor(key,proc)
         self.logger.info("Started %s" % key)
 

@@ -33,7 +33,7 @@ from riaps.utils.names import *
     
 class MemMonitorThread(threading.Thread):
     def __init__(self,parent,efd,usage):
-        threading.Thread.__init__(self,daemon=True)
+        threading.Thread.__init__(self,name='MemMonitorThread',daemon=False)
         self.logger = logging.getLogger(__name__)
         self.parent = parent
         self.context = self.parent.context
@@ -72,6 +72,7 @@ class MemMonitorThread(threading.Thread):
         self.running.set()
 
     def run(self):
+        self.name = 'MemMonitorThread-%r' % self.ident
         self.notifier = self.context.socket(zmq.ROUTER)
         # self.notifier.setsockopt(zmq.SNDTIMEO,const.deplEndpointSendTimeout)
         self.notifierPort = self.notifier.bind_to_random_port('tcp://127.0.0.1')

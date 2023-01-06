@@ -26,7 +26,7 @@ class SubPort(SimplexConnPort):
         Constructor
         '''
         super().__init__(parentComponent, portName, portSpec)
-        self.pubs = set()
+        # self.pubs = set()
     
     def setup(self):
         pass
@@ -49,6 +49,9 @@ class SubPort(SimplexConnPort):
         # self.info = PortInfo(portType='sub', portKind=self.portKind, portName=self.name, 
         #                      msgType=self.type, host=self.host, portNum=self.portNum)
         # return self.info
+    
+    def closeSocket(self):
+        self.closeConnSocket()
     
     def reset(self):
         self.resetConnSocket(zmq.SUB,[(zmq.SUBSCRIBE,'')])

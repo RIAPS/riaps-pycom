@@ -6,55 +6,8 @@ Created on Jan 19, 2018
 '''
 
 import os
-import re
-import stat
-import time
-import signal
 import subprocess
-import psutil
-import threading
-import traceback
-
-import fabric
-from fabric import tasks
-from fabric.api import run
-from fabric.api import env
-from fabric.network import disconnect_all
- 
-from socket import gethostname
- 
-import functools
-import atexit
- 
-# Local host
-env.hosts = [gethostname()]
- 
-# THIS SHOULD BE IMPORTED FROM A SECURED SOURCE
-# Standard riaps setup
-env.user = 'riaps'
-env.password = 'riaps@isis'
-# env.sudo_password = 'riaps@isis'
-# END OF IMPORT
-# Shell
-env.shell = "/bin/bash -l -i -c"
-
- 
-def run(cmd):
-    res = fabric.operations.sudo(cmd)
-    return res
-
- 
-def sudo(cmd):
-    exe = functools.partial(run, cmd=cmd)
-    res = tasks.execute(exe)
-    return res
-
- 
-def cleanup():
-    fabric.network.disconnect_all()
-
- 
-atexit.register(cleanup)
+# import traceback
 
 is_su_flag = '?'
 
@@ -68,7 +21,8 @@ def is_su():
 def riaps_sudo(cmd, timeout=None):
     try:
         if is_su(): 
-            full = ['sudo'] + cmd.split(' ')
+            # full = ['sudo'] + cmd.split(' ')
+            full = cmd.split(' ')
             proc = subprocess.Popen(full)
             proc.wait(timeout)
             return proc.returncode

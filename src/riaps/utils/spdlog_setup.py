@@ -3,7 +3,7 @@ Created on Jan 3, 2019
 
 @author: riaps
 '''
-
+import platform
 import toml
 import spdlog
 import os
@@ -135,7 +135,17 @@ def add_syslog_sink_mt(s):
                               )
 
 
-types = { 
+def add_tcp_sink_st(s):
+    return spdlog.tcp_sink_st(server_host=s["server_host"],
+                               server_port=s["server_port"],
+                               lazy_connect=True)  # Leave True. If the server is not ready False causes an exception. True connect on first log call instead of on construction. 
+
+def add_tcp_sink_mt(s):
+    return spdlog.tcp_sink_mt(server_host=s["server_host"],
+                              server_port=s["server_port"],
+                              lazy_connect=True)  # Leave True. If the server is not ready False causes an exception. True connect on first log call instead of on construction. 
+
+types = {
         'stdout_sink_st': add_stdout_sink_st,
         'stdout_sink_mt': add_stdout_sink_mt,
         'color_stdout_sink_st': add_color_stdout_sink_st,
@@ -149,7 +159,9 @@ types = {
         'null_sink_st': add_null_sink_st,
         'null_sink_mt': add_null_sink_mt,
         'syslog_sink_st': add_syslog_sink_st,
-        'syslog_sink_mt': add_syslog_sink_mt
+        'syslog_sink_mt': add_syslog_sink_mt,
+        'tcp_sink_st': add_tcp_sink_st,
+        'tcp_sink_mt': add_tcp_sink_mt
         }
 
     
@@ -180,12 +192,18 @@ def from_file(fname):
                 if p in patterns.keys():
                     if 'value' in patterns[p]:
                         pat = patterns[p]['value']
+                        if 'extra' in patterns[p]:
+                            extra = patterns[p]['extra']
+                            node_id = platform.uname().node
+                            print(extra)
+                            pat = pat.format(*extra, node_id=node_id)
                         logger.set_pattern(pat)
             elif global_pattern:
                 logger.set_pattern(global_pattern)
             if 'level' in l.keys():
                 logger.set_level(levels[l['level']])
             loggers[name] = logger
+    return loggers
 
 
 def get_logger(name):
@@ -303,6 +321,20 @@ type = "syslog_sink_st"
 # syslog_option = 0 (default)
 # syslog_facility = LOG_USER (default macro value)
 
+[[sink]]
+name = "tcp_st"
+type = "tcp_sink_st"
+server_host = "localhost"
+server_port = 12345
+lazy_connect = false
+
+[[sink]]
+name = "tcp_mt"
+type = "tcp_sink_mt"
+server_host = "localhost"
+server_port = 12345
+lazy_connect = false
+
 [[pattern]]
 name = "succient"
 value = "%c-%L: %v"
@@ -323,6 +355,14 @@ level = "trace"
 name = "console"
 sinks = ["console_st", "console_mt"]
 pattern = "succient"
+
+[[logger]]
+name = "tcp"
+sinks = ["tcp_st", "tcp_mt"]
+pattern = "succient"
+level = "trace"
+
+
 """ 
     with open('test.toml', 'w') as f:
         f.write(test)

@@ -1,0 +1,24 @@
+// 
+app FmTest {
+	// Basic actor tests
+
+    host 172.21.20.50 {
+        network 172.21.20.70; //IP address of riaps_app_log_server
+    }
+
+	on (172.21.20.50) FmAppActor(test='');		// OK
+	// on all FmAppActor(test='e');		// Exit
+	// on all FmAppActor(test='a');		// Actor
+	
+	// Actor tests with a device
+	// on all FmDevActor(test='');		
+	// on all FmDevActor(test='e');
+	// on all FmDevActor(test='a');
+	
+	// Privileged tests	
+	// on all FmDevActor(test='i');		// Disco - service restarts
+	// on (172.21.20.50) FmDevActor(test='d');		// Deplo
+	// on all FmDevActor(test='s');		// Services - disco restarts
+	// on (172.21.20.50) FmDevActor(test='k');		// Kernel panic - node restarts
+	// on (172.21.20.50) FmDevActor(test='r');  // node
+}

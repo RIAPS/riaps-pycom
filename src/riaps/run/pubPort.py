@@ -56,6 +56,9 @@ class PubPort(SimplexBindPort):
         # self.info = PortInfo(portKind = 'pub', portScope=self.portScope, portName=self.name, 
         #                      msgType=self.type, portHost=self.host, portNum=self.portNum)
         # return self.info
+    
+    def closeSocket(self):
+        self.closeBindSocket()
         
     def reset(self):
         pass

@@ -8,7 +8,8 @@ import socket
 
 
 # Prevent namespace errors by explicitly defining which tasks belong to this file
-__all__ = ['check', 'shutdown', 'reboot', 'clearJournal', 'run', 'sudo', 'arch',
+__all__ = ['check', 'shutdown', 'reboot', 'clearJournal', 
+           'run', 'sudo', 'arch', 'put', 'get',
            'flushIPTables', 'setJournalLogSize', 'getConfig']
 
 def catch(func, *args, **kwargs):
@@ -46,7 +47,7 @@ def load_hosts(hosts_file,validate=False):
     # control is optional
     control = spec.get('control', None)
 
-    if type(control) != str:
+    if control and type(control) != str:
         print("String is expected: %r" % control)
         return None
 
@@ -158,8 +159,8 @@ def reboot():
 @roles('nodes','remote')
 def clearJournal():
     """Clear system journal"""
-    sudo('rm -rf  /run/log/journal/*')
-    sudo('systemctl restart systemd-journald')
+    sudo('journalctl --rotate')
+    sudo('journalctl --vacuum-time=1s')
 
 # Wrapper for fabric.api.run to capture and combine and console output
 @task
@@ -196,7 +197,7 @@ def get(fileName, local_path='', use_sudo=False):
 # If transferring to a RIAPS account directory, use_sudo=False.
 # If transferring to a system location, use_sudo=True
 @task
-@roles('control')
+@roles('control','remote')
 def put(fileName, remote_path='', use_sudo=False):
     """Upload file to hosts:<file name>,[remote path],[use sudo]"""
     use_sudo = use_sudo in ['True', 'true', 'Yes', 'yes', 'y']

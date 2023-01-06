@@ -52,6 +52,9 @@ class ReqPort(DuplexConnPort):
         #                      host=self.host, portNum=self.portNum) 
         # return self.info
     
+    def closeSocket(self):
+        self.closeConnSocket()
+    
     def reset(self):
         self.resetConnSocket(zmq.REQ)
     

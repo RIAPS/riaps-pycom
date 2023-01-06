@@ -261,8 +261,14 @@ class ControlCLIClient(object):
     def clearDeployment(self):
         self.cmdClearDepl()
         
-    def update_node_apps(self,clientName,value):
-        for appName in value.keys():
-            actors = value[appName]
-            for actorName in actors:
-                self.controller.addToLaunchList(clientName,appName,actorName)
+    def update_node_apps(self,clientName,data):
+        global cmdLock
+        with cmdLock:
+            if not data: return
+            for item in data:
+                appName,actors = item[0],item[1]
+                for actorName in actors:
+                    self.controller.addToLaunchList(clientName,appName,actorName)
+                    
+                    
+        

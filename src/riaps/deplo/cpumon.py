@@ -31,7 +31,7 @@ class CPUMonitorThread(threading.Thread):
     Thread for monitoring an actor and enforcing resource limits.
     '''
     def __init__(self,parent,interval,usage):
-        threading.Thread.__init__(self,daemon=True)
+        threading.Thread.__init__(self,name = 'CPUMonitorThread',daemon=False)
         self.logger = logging.getLogger(__name__)
         self.parent = parent
         self.context = self.parent.context
@@ -71,6 +71,7 @@ class CPUMonitorThread(threading.Thread):
         self.running.set()
 
     def run(self):
+        self.name = 'CPUMonitorThread-%r' % self.ident 
         self.notifier = self.context.socket(zmq.ROUTER)
         # self.notifier.setsockopt(zmq.SNDTIMEO,const.deplEndpointSendTimeout)
         self.notifierPort = self.notifier.bind_to_random_port('tcp://127.0.0.1')

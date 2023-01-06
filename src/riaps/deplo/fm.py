@@ -27,7 +27,7 @@ import traceback
 
 class FMMonitor(threading.Thread):
     def __init__(self,context,hostAddress,riapsHome):
-        threading.Thread.__init__(self,daemon=True)
+        threading.Thread.__init__(self,name='FMMonitor',daemon=False)
         self.logger = logging.getLogger(__name__)
         self.context = context
         self.hostAddress = hostAddress
@@ -88,7 +88,7 @@ class FMMonitor(threading.Thread):
         
     def run(self):
         self.zyre = Zyre(None)
-        if self.logger.level > 0:
+        if self.logger.getChild('zyre').level > logging.NOTSET:
             self.zyre.set_verbose()
             # Zsys.set_logsystem(1)
         else:
@@ -100,6 +100,7 @@ class FMMonitor(threading.Thread):
             certFile = os.path.join(self.riapsHome,"keys",const.zmqCertificate)
             cert = czmq.Zcert.load(ctypes.c_char_p(certFile.encode('utf-8')))
             self.zyre.set_zcert(cert) 
+        self.zyre.set_interval(const.zyreInterval)
         self.zyre.set_evasive_timeout(const.peerEvasiveTimeout)
         self.zyre.set_expired_timeout(const.peerExpiredTimeout)
         self.zyre.set_header(self.peerHeaderKey(self.hostAddress), self.PEERMARK)
@@ -278,21 +279,22 @@ class FMMonitor(threading.Thread):
                             info = (head, appName, actorName, peer)
                             self.command.send_pyobj(info)       
                 else:
-                    pass
+                    self.logger.info('FMMon.%s' % str(eType))
         self.command.close()
         for appName in self.actors:
             if appName in self.groups:
                 group = self.groupName(appName) 
-                arg = "- %s.%s" % (appName,actorName)
-                self.logger.info("FMMon.terminate.shout: %s" % arg)
-                self.zyre.shouts(group,arg.encode('utf-8')) 
+                for actorName in self.actors[appName]:
+                    arg = "- %s.%s" % (appName,actorName)
+                    self.logger.info("FMMon.terminate.shout: %s" % arg)
+                    self.zyre.shouts(group,arg.encode('utf-8')) 
         self.zyre.leave(b'riaps')
         self.zyre.stop()
 
         
 class NICMonitor(threading.Thread):
     def __init__(self,context):
-        threading.Thread.__init__(self,daemon=True)
+        threading.Thread.__init__(self,name='NICMonitor',daemon=False)
         self.logger = logging.getLogger(__name__)
         self.context = context
         self.ip = IPRSocket()
@@ -320,16 +322,17 @@ class NICMonitor(threading.Thread):
                 for info in infos:
                     attrs = dict(info['attrs'])
                     ifname = attrs['IFLA_IFNAME']
-                    state = attrs['IFLA_OPERSTATE']
-                    carrier = attrs['IFLA_CARRIER']
-                    if ifname == Config.NIC_NAME and state != self.state and carrier != self.carrier:
-                        self.logger.info("NICMonitor: state has changed (%s,%d)" % (state,carrier))
-                        if state != 'UP' or carrier != 1:       # NIC down and/or carrier lost
-                            info = ('nic-',)
-                            self.command.send_pyobj(info)
-                        elif state == 'UP' and carrier == 1:    # NIC UP and carrier is on
-                            info = ('nic+',)
-                            self.command.send_pyobj(info)       
+                    if ifname == Config.NIC_NAME:
+                        state = attrs['IFLA_OPERSTATE']
+                        carrier = attrs['IFLA_CARRIER']
+                        if state != self.state and carrier != self.carrier:
+                            self.logger.info("NICMonitor: state has changed (%s,%d)" % (state,carrier))
+                            if state != 'UP' or carrier != 1:       # NIC down and/or carrier lost
+                                info = ('nic-',)
+                                self.command.send_pyobj(info)
+                            elif state == 'UP' and carrier == 1:    # NIC UP and carrier is on
+                                info = ('nic+',)
+                                self.command.send_pyobj(info)       
                         self.state,self.carrier = state, carrier
                 del sockets[self.ip._sock.fileno()]
             elif self.command in sockets:

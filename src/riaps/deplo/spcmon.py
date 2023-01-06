@@ -34,7 +34,7 @@ from riaps.utils.names import *
 
 class SpcMonitorThread(threading.Thread):
     def __init__(self, parent):
-        threading.Thread.__init__(self,daemon=True)
+        threading.Thread.__init__(self,name='SpcMonitorThread',daemon=False)
         self.logger = logging.getLogger(__name__)
         self.parent = parent
         self.context = self.parent.context
@@ -100,6 +100,7 @@ class SpcMonitorThread(threading.Thread):
         self.running.set()
 
     def run(self):
+        self.name='SpcMonitorThread-%r' % self.ident
         self.logger.info("run: started")
         self.alive = True
         self.notifier = self.context.socket(zmq.ROUTER)
