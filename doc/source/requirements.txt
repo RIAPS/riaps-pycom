@@ -2,7 +2,7 @@ sphinx==2.1.1
 paramiko==2.11.0
 gitdb==4.0.9
 # GitPython==3.1.27
-rpyc==5.2.3
+# rpyc==5.2.3
 PyYAML==6.0
 pycryptodomex==3.15.0
 pyzmq==23.2.1
