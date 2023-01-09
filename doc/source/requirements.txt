@@ -1,37 +1,43 @@
 sphinx==2.1.1
-paramiko==2.7.2
-gitdb==4.0.7
-GitPython==3.1.14
-rpyc==5.0.1
-PyYAML==5.3.1
-pycryptodomex==3.10.1
-pyzmq==22.0.3
-redis==3.5.3
-# hiredis == 1.1.0
+paramiko==2.11.0
+gitdb==4.0.9
+GitPython==3.1.27
+rpyc==5.2.3
+PyYAML==6.0
+pycryptodomex==3.15.0
+pyzmq==23.2.1
+redis==4.3.4
+# hiredis == 2.0.0
 pycairo==1.16.2
 # cgroups==0.1.0
-cgroupspy==0.1.6
-lmdb==1.1.1
-psutil==5.5.1
+cgroupspy==0.2.2
+lmdb==1.3.0
+psutil==5.9.2
 # pycapnp==1.0.0
 # apparmor-monkeys==0.0.2.dev0
 simplejson==3.16.0
-pyroute2==0.5.14
-butter==0.12.6
+pyroute2==0.7.2
+butter==0.13.1
 Fabric3==1.14.post1
 pymultigen==0.2.0
-textX==2.3.0
+textX==3.0.0
 toml==0.10.2
 pydot==1.4.2
-ipaddress==1.0.22
 # spdlog==2.0.4
-netifaces==0.10.7
-pydevd==2.3.0
+netifaces==0.11.0
+pydevd==2.8.0
 # PyGObject>=3.26.1
-# czmq==4.2.0
+# czmq==4.2.1
 # zyre==2.0.1
 # python-prctl==1.7
-# butter==0.12.6
-# cryptography==2.8
-# pybind11==2.6.2
-# Jinja2==2.11.3
+# butter==0.13.1
+# cryptography==3.3.2
+# bcrypt==3.2.2
+# pybind11==2.10.0
+# Jinja2==3.1.2
+# pyserial==3.5
+# parse==1.19.0
+# libtmux==0.15.7
+# python-magic==0.4.27
+# graphviz==0.20.1
+# influxdb-client==1.32.0
