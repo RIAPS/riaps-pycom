@@ -5,11 +5,8 @@ import logging
 import time
 import random
 
-import libs.TerminalColors as TerminalColors
-
-
 class Groupie(Component):
-    """
+    '''
     :param gs: string containing 1 character group names
     :param tl: string containing the selection of tests:
                 c = clock logging
@@ -18,15 +15,9 @@ class Groupie(Component):
                 v = vote for value consensus
                 t = vote for action consensus
                 d = leave and the rejoin group
-<<<<<<< HEAD:tests/Group/Groupie.py
                 '' = join the group, no operation
     '''
     def __init__(self,name,gs,tl):
-=======
-    """
-
-    def __init__(self, name, gs, tl):
->>>>>>> 6d0ae91 (weird app):tests/Group/Groupie_original.py
         super(Groupie, self).__init__()
         self.name = name
         self.gs = str(gs)
@@ -50,9 +41,7 @@ class Groupie(Component):
             if 'm' in self.tl:              # Test: group message
                 msg = "%s in %s @ %d" % (self.name, g.getGroupName(), now)
                 g.send_pyobj(msg)
-                self.logger.info(f"{TerminalColors.Yellow}"
-                                 f"group size = {g.groupSize()}"
-                                 f"{TerminalColors.RESET}")
+                self.logger.info("group size = %d" % g.groupSize())
             if 'l' in self.tl:              # Test: send message to leader
                 if g.hasLeader():
                     g.sendToLeader_pyobj("to leader from %s" % self.name)
@@ -78,13 +67,8 @@ class Groupie(Component):
                 else:
                     self.logger.info("no leader yet[%d]" % g.groupSize())
             if 'd' in self.tl:              # Test: leave/rejoin group
-<<<<<<< HEAD:tests/Group/Groupie.py
                 if random.uniform(0,1) > 0.67 :
                     when = self.name2Depart.get(g.getGroupName(),None)
-=======
-                if random.uniform(0, 1) > 0.51:
-                    when = self.name2Depart.get(g.getGroupName(), None)
->>>>>>> 6d0ae91 (weird app):tests/Group/Groupie_original.py
                     if when is None or time.time() > when:
                         leavers += [g.getGroupId()]  # Leave the group
         for gName in self.gs:
@@ -94,41 +78,22 @@ class Groupie(Component):
                     del self.name2Group[gName] 
                     self.groups.remove(group)
                     self.leaveGroup(group)
-<<<<<<< HEAD:tests/Group/Groupie.py
                     self.name2Rejoin[gName] = time.time() + random.uniform(8.0,16.0)
                     self.logger.info("leaving group[%s]: %s to rejoin after %r" % (group.getGroupName(),group.getGroupId().hex(), self.name2Rejoin[gName]))
-=======
-                    self.name2Rejoin[gName] = time.time() + random.uniform(2.0,5.0)
-                    self.logger.info(f"{TerminalColors.Red}"
-                                     f"leaving group[{group.getGroupName()}]: "
-                                     f"{str(group.getGroupId())} to rejoin after "
-                                     f"{self.name2Rejoin[gName]}"
-                                     f"{TerminalColors.RESET}")
->>>>>>> 6d0ae91 (weird app):tests/Group/Groupie_original.py
             elif gName in self.name2Rejoin:
                 when = self.name2Rejoin[gName]
                 if time.time() >= when: 
                     del self.name2Rejoin[gName]                  
-                    group = self.joinGroup("TheGroup", f"g_{gName}")
+                    group = self.joinGroup("TheGroup","g_%c" % gName)
                     self.groups += [group]
                     self.name2Group[gName] = group
-<<<<<<< HEAD:tests/Group/Groupie.py
                     depart = time.time() + random.uniform(8.0,16.0)
                     self.name2Depart[group.getGroupName()] = depart
                     self.logger.info("rejoined group[%s]: %s to leave after %r" % (group.getGroupName(),group.getGroupId().hex(),depart))        
-=======
-                    depart = time.time() + random.uniform(5.0, 10.0)
-                    self.name2Depart[group.getGroupName()] = depart
-                    self.logger.info(f"{TerminalColors.Green}"
-                                     f"rejoined group[{group.getGroupName()}]: "
-                                     f"{str(group.getGroupId())} to leave after "
-                                     f"{depart}"
-                                     f"{TerminalColors.RESET}")
->>>>>>> 6d0ae91 (weird app):tests/Group/Groupie_original.py
 
     def handleActivate(self):
         for g in self.gs:
-            group = self.joinGroup("TheGroup", "g_%c" % g)
+            group = self.joinGroup("TheGroup","g_%c" % g)
             self.groups += [group]
             self.name2Group[g] = group
             self.logger.info("joined group[%s]: %s" % (group.getGroupName(),group.getGroupId().hex()))
