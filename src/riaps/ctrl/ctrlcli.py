@@ -73,7 +73,17 @@ class ControlCLIClient(object):
         def __init__(self,parent):
             super(parent.CtrlCmdShell, self).__init__()
             self.parent = parent
-            
+
+        def do_c(self, arg):
+            '''Wait until listed clients are connected: c IPADDR1 [IPADDR2 ...]'''
+            expectedClients = set(arg.split(', '))
+            while True:
+                clients = set(self.parent.getClients())
+                if expectedClients.issubset(clients):
+                    break
+                self.stdout.write(f"Waiting for: {expectedClients not in clients}\n")
+                time.sleep(1)
+
         def do_f(self,arg):
             '''Select app folder: f path'''
             self.parent.cmdSelectFolder(arg)
@@ -218,6 +228,12 @@ class ControlCLIClient(object):
         Clears the app entry.
         '''
         self.appName = ''
+    
+    def cmdNumClient(self):
+        '''
+        Gets number of connected clients
+        '''
+        return self.controller.numClients()
           
     def cmdSelectDepl(self,fileName):
         if fileName != None:
