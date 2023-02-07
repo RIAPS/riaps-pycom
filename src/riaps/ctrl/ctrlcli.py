@@ -76,7 +76,6 @@ class ControlCLIClient(object):
 
         def do_c(self, arg):
             '''Wait until listed clients are connected: c IPADDR1 [IPADDR2 ...]'''
-            # numExpecting = int(arg) if arg else 1
             expectedClients = set(arg.split(', '))
             while True:
                 clients = set(self.parent.getClients())
