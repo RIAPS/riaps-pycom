@@ -8,13 +8,13 @@ import argparse
 Event = namedtuple("Event",['ts','lvl','msg'])
 
 spdlogformat = re.compile("^\[(?P<logLevel>info)\]:\[(?P<timestamp>[0-9:\-\. ]+)\]:\[(?P<pid>[0-9]+)\]:(?P<msg>.*)")
-pylogformat = re.compile("^(?P<logLevel>INFO|ERROR):(?P<timestamp>[0-9:, ]+?):\[(?P<pid>[0-9]+)\]:(?P<msg>.*)")
+pylogformat = re.compile("^(?P<logLevel>INFO|ERROR):(?P<timestamp>[0-9:, -]+?):\[(?P<pid>[0-9]+)\]:(?P<msg>.*)")
 journaldformat = re.compile("^Feb \d{2} [\d:]+ riaps-[0-9a-f]{4} RIAPS-DEPLO\[\d+\]: (?P<msg>.*)")
 
 discofmt = re.compile("^riaps\.discd\.(dbase|dbase_dht|discs):(?P<msg>.*?)")
 deplofmt = re.compile("^riaps\.deplo\.deplo:(?P<msg>.*?)")
 
-
+dc_format = re.compile("^riaps.run.dc:(?P<msg>.*)")
 grpthdfmt = re.compile("^\.\.\. (?P<msg>.*)")
 grpthd_ndmsg = re.compile("^\[(?P<groupType>\w+)\.(?P<groupInstance>\w+)\]\.(?P<state>\d):(?P<cmd>tic|req|vot|ldr)")
 
@@ -85,7 +85,7 @@ class NodeRecord(object):
             for line in file:
                 m = pylogformat.match(line)
                 if not m:
-                    print(f"Unknown format in journal log. Line:\n{line}")
+                    # print(f"Unknown format in journal log. Line:\n{line}",end='')
                     continue
                 lvl,ts,pid,msg = (m['logLevel'],m['timestamp'],m['pid'],m['msg'])
                 m = discofmt.match(msg)
@@ -106,49 +106,74 @@ class NodeRecord(object):
 
 class DistributedCoordinator(object):
     STATES = ["NONE", "FOLLOWER", "CANDIDATE", "LEADER"]
+    
+    class Group():
+        def __init__(self,name):
+            self.name = name
+            self.events = []
+            print(f"Made group {self.name}")
+
+        def print_timeline(self):
+            self.events.sort(key=lambda x: x.ts)
+            groupMem = set()
+            for e in self.events:
+                if e.msg.find("Group.update(") == 0:
+                    _, _, hostname = e.msg.partition("(")
+                    hostname = hostname[:-1].replace(",",":")
+                    if hostname in groupMem:
+                        print(f"{hostname} UPDATED TWICE")
+                    groupMem.add(hostname)
+                    print(f"{e.ts}: Group is: {groupMem}")
+                
 
     def __init__(self):
         super().__init__()
         self.events = []
         self.state = None
         self.groups = {}
+        self.theGroup = None
 
     def asUML(self, file):
-        for e in self.events:
-            state = e.msg
-            if state == "LEADER":
-                state += "#pink"
-            file.write(f"{e.ts} is {state}\n")
+        self.theGroup.print_timeline()
+        # for e in self.events:
+        #     state = e.msg
+        #     if state == "LEADER":
+        #         state += "#pink"
+        #     file.write(f"{e.ts} is {state}\n")
 
     def addEvent(self, e: Event):
+        # print(f"DC: adding event {e}")
         if e.msg.find("Coordinator.joinGroup") == 0:
             coord, _, groupName = e.msg.partition('(')
             groupName = groupName[:-1].replace(',','.')
-            self.groups[groupName] = Group()
-            self.groups[groupName].addEvent(e)
+            # self.groups[groupName] = Group()
+            # self.groups[groupName].events.append(e)
+            self.theGroup = DistributedCoordinator.Group(groupName)
+            self.theGroup.events.append(e)
             return
-        if e.msg.find("")
+        if e.msg.find("Group.update(") == 0:
+            self.theGroup.events.append(e)
+            print("Added group update event")
+            return
+        if e.msg.find("... [") == 0:
+            self.theGroup.events.append(e)
+            return
+            
 
 
         #NOTE: This assumes each actor is only participating in a single group
-        m = grpthdfmt.match(s)
-        if m:
-            n = grpthd_ndmsg.match(m['msg'])
-            if n:
-                if self.state != n['state']:
-                    self.state = n['state']
-                    self.events.append(Event(e.ts,"info", __class__.STATES[int(n['state'])]))
+        # m = grpthdfmt.match(s)
+        # if m:
+        #     n = grpthd_ndmsg.match(m['msg'])
+        #     if n:
+        #         if self.state != n['state']:
+        #             self.state = n['state']
+        #             self.events.append(Event(e.ts,"info", __class__.STATES[int(n['state'])]))
 
             #BOOKMARK: I was working on parsing dc log statements
             # Consider ordering of events: maybe guarantee that all msgs are in order first?
             # Then, check events for state changes, create list of state changes
-
-    class Group(object):
-        def __init__(self):
-            self.events = []
-
-        def addEvent(self, e: Event):
-            if e.
+        
 
 
             
@@ -190,12 +215,11 @@ class StateGroupie(ActorLog):
     def valid(filename):
         return filename == "StateGroupie.log"
 
-    dc_format = re.compile("^riaps.run.dc:(?P<msg>.*?)")
-        
     def __init__(self):
         super().__init__()
 
     def addEvent(self,e: Event):
+        # print(f"SG adding event {e}")
         m = dc_format.match(e.msg)
         if m:
             self.dc.addEvent(Event(e.ts,e.lvl,m['msg']))
@@ -250,3 +274,4 @@ if __name__ == "__main__":
                     node.importJournal(os.path.join(root,f))
     print(f"# of nodes: {len(theResults.nodes)}")
     theResults.asUML(os.path.join(os.getcwd(),args.log_dir,f"results-{num_nodes}.uml"))
+    # theResults
