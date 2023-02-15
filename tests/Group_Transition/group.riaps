@@ -1,0 +1,24 @@
+app GroupApp {
+
+    // Message types used in the app
+    message Msg;
+
+    group TheGroup with leader using Msg;
+
+    //-------------------
+    //  Components
+    //-------------------
+
+    component Groupie(uid) {
+      timer clock 1000 msec;
+    }
+
+    //-------------------
+    //  Actors
+    //-------------------
+    actor GroupActor(uid="") {
+       {
+          groupie : Groupie(uid=uid);
+       }
+    }
+}
