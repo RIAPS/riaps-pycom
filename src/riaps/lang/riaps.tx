@@ -26,13 +26,24 @@ Message:
 // Groups used in the application
 Group:
   'group' name=ID (kind=GroupKind)?
-  		  'using' message=[Message] (timed='timed')? ';' 
+  		  'using' message=[Message] (timed='timed')? 
+  		  ( groupParams += GroupParam[','] )? 
+  ';'
 ;
  
  GroupKind:
    'with' (kind='leader' | kind='consensus')
  ;
-    
+
+GroupParam: 
+	( name = GroupParamName '=' value=INT ) 
+;   
+
+GroupParamName: 
+	('heartbeat' | 'electionMin' | 'electionMax' | 'peerTimeout' | 'consensusTimeout')
+; 
+
+   
 // Libraries used in the app
 Library:
   'library' ( name=ID | name=STRING) ';'

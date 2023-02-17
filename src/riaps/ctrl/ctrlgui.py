@@ -453,15 +453,16 @@ class ControlGUIClient(object):
         An app has been removed from the system
         '''
         # modify gui
-        index = list(self.appStatusDict.keys()).index(app) + 1
-        self.remove_table_row(index)
-        self.row_cur_size = self.row_cur_size - 1
+        if app in self.appStatusDict:
+            index = list(self.appStatusDict.keys()).index(app) + 1
+            self.remove_table_row(index)
+            self.row_cur_size = self.row_cur_size - 1
 
-        # modify data
-        del self.appStatusDict[app]
+            # modify data
+            del self.appStatusDict[app]
 
-        self.create_table_row(self.row_cur_size, self.column_cur_size)
-        self.row_cur_size = self.row_cur_size + 1
+            self.create_table_row(self.row_cur_size, self.column_cur_size)
+            self.row_cur_size = self.row_cur_size + 1
         self.gridTable.show_all()
 
     def halt_app(self, node, app):

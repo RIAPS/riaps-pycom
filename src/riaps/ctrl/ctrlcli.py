@@ -116,6 +116,31 @@ class ControlCLIClient(object):
         def do_shell(self,arg):
             ''' Execute command: e ls -l'''
             subprocess.call(arg.split())
+        
+        def do_j(self,args):
+            ''' Join host(s): j [hosts]+ [wait]'''
+            try:
+                items = args.split()
+                wait = None
+                if len(items) >= 2:
+                    last = items[-1]
+                    if last.isnumeric(): wait = abs(int(last)); items = items[0:-1]
+                expected = set(items)
+                while(True):
+                    clients = set(self.parent.controller.getClients())
+                    if expected.issubset(clients):
+                        break
+                    elif wait is not None: 
+                        if wait > 0: 
+                            time.sleep(1.0)
+                            wait -= 1
+                        else:
+                            self.stdout.write('? join timeout ' + args + '\r\n')
+                            self.stdout.flush()
+                            break
+            except Exception as e:
+                self.stdout.write('exception: ' + str(e) + '\r\n')
+                self.stdout.flush()                      
             
         def do_q(self,arg):
             '''Quit program'''

@@ -134,7 +134,8 @@ class Actor(object):
             self.groupTypes[group["name"]] = { 
                 "kind": group["kind"],
                 "message": group["message"],
-                "timed": group["timed"]
+                "timed": group["timed"],
+                "params" : group["params"]
             }
 
         self.rt_actor = self.model.get("real-time")  # If real time actor, set scheduler (if specified)

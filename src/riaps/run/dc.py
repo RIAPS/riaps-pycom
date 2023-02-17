@@ -123,12 +123,13 @@ class GroupThread(threading.Thread):
         # Assumption: we use IPv4 addresses - converted to ulong for the wire protocol
         self.host = ipaddress.IPv4Address(self.group.parent.parent.owner.parent.getGlobalIface())
         self.ldrPort = None
-        self.groupHeartbeat = const.groupHeartbeat 
-        self.groupElectionMin = const.groupElectionMin
-        self.groupElectionMax = const.groupElectionMax
-        self.groupPeerTimeout = const.groupPeerTimeout
-        self.groupConsensusTimeout = const.groupConsensusTimeout
+        self.groupHeartbeat = group.heartbeat               # const.groupHeartbeat 
+        self.groupElectionMin = group.electionMin           # const.groupElectionMin
+        self.groupElectionMax = group.electionMax           # const.groupElectionMax
+        self.groupPeerTimeout = group.peerTimeout           # const.groupPeerTimeout
+        self.groupConsensusTimeout = group.consensusTimeout # const.groupConsensusTimeout
         self.timeout = None
+        self.leaderDeadline = None
         self.numPeers = -1
         self.leader = None
         self.ownId = None 
@@ -143,6 +144,7 @@ class GroupThread(threading.Thread):
             self.peers = {}
             self.numPeers = len(self.peers)
             self.timeout = self.groupHeartbeat
+            self.setLeaderDeadline()
             self.lastWait = 0
             self.lastHeartbeat = 0
             self.term = 0
@@ -156,6 +158,74 @@ class GroupThread(threading.Thread):
     
     def isLeader(self):
         return self.leader == self.ownId
+    
+    def setLeaderDeadline(self):
+        '''
+        Set deadline for heartbeat from leader 
+        '''
+        timeout = random.randrange(self.groupElectionMax, self.groupPeerTimeout)
+        self.leaderDeadline = time.time() + timeout/1000.0
+    
+    def electionTimeout(self):
+        '''
+        Produce a random election timeout
+        '''
+        return random.randrange(self.groupElectionMin, self.groupElectionMax)
+    
+    def threshold(self):
+        '''
+        Calculate the threshold for leader election, based on membership list 
+        '''
+        return int(self.numPeers / 2 + 1)  # Threshold for votes for leader election
+    
+    def setTimeout(self, value, now):
+        '''
+        Set the next timeout value, update lastWait (with 'now')
+        '''
+        assert(type(value) == int)
+        self.timeout = value
+        self.lastWait = now
+            
+    def heartbeat(self, now):
+        '''
+        Send out a group heartbeat (so that group members can maintain an accurate membership list) 
+        '''
+        if now > (self.lastHeartbeat + self.groupHeartbeat / 1000.0):
+            msg = struct.pack('!16s', self.ownId)
+            self.pubPort.sendGroup(GroupThread.HEARTBEAT, msg)
+            self.lastHeartbeat = now
+        
+    def sendChangeMessage(self, change, someId):
+        '''
+        Send message about a change to the component
+        '''
+        msgOut = [zmq.Frame(change), zmq.Frame(someId)]
+        self.groupSocket.send_multipart(msgOut)
+    
+    def updatePeers(self, now):
+        '''
+        Update membership list (with the current time as the last time a peer was heard from)
+        '''
+        leavers = []
+        for peer in \
+            [p for p in self.peers if int((now - self.peers[p]) * 1000) > self.groupPeerTimeout]:
+                leavers += [peer] 
+        if len(leavers) > 0:
+            for leaver in leavers:
+                self.sendChangeMessage(Group.GROUP_MLT, leaver)  # Member dropped out
+                del self.peers[leaver] 
+            self.numPeers = len(self.peers)
+                  
+    def updateTimeout(self, now):
+        '''
+        Update the timeout value - used when a data message was received from the group; 
+        the timeout is updated to reflect elapsed time.
+        '''
+        elapsed = now - self.lastWait
+        remains = max(self.timeout - int(elapsed * 1000), 1)
+        self.lastWait = now
+        assert(type(remains) == int)
+        self.timeout = remains
     
     def handleCompMessage(self):
         '''
@@ -272,67 +342,6 @@ class GroupThread(threading.Thread):
         return toStop
             
         
-    def randomTimeout(self):
-        '''
-        Produce a random election timeout
-        '''
-        return random.randrange(self.groupElectionMin, self.groupElectionMax)
-    
-    def threshold(self):
-        '''
-        Calculate the threshold for leader election, based on membership list 
-        '''
-        return int(self.numPeers / 2 + 1)  # Threshold for votes for leader election
-    
-    def setTimeout(self, value, now):
-        '''
-        Set the next timeout value, update lastWait (with 'now')
-        '''
-        assert(type(value) == int)
-        self.timeout = value
-        self.lastWait = now
-            
-    def heartbeat(self, now):
-        '''
-        Send out a group heartbeat (so that group members can maintain an accurate membership list) 
-        '''
-        if now > (self.lastHeartbeat + self.groupHeartbeat / 1000.0):
-            msg = struct.pack('!16s', self.ownId)
-            self.pubPort.sendGroup(GroupThread.HEARTBEAT, msg)
-            self.lastHeartbeat = now
-        
-    def sendChangeMessage(self, change, someId):
-        '''
-        Send message about a change to the component
-        '''
-        msgOut = [zmq.Frame(change), zmq.Frame(someId)]
-        self.groupSocket.send_multipart(msgOut)
-    
-    def updatePeers(self, now):
-        '''
-        Update membership list (with the current time as the last time a peer was heard from)
-        '''
-        leavers = []
-        for peer in \
-            [p for p in self.peers if int((now - self.peers[p]) * 1000) > self.groupPeerTimeout]:
-                leavers += [peer] 
-        if len(leavers) > 0:
-            for leaver in leavers:
-                self.sendChangeMessage(Group.GROUP_MLT, leaver)  # Member dropped out
-                del self.peers[leaver] 
-            self.numPeers = len(self.peers)
-                  
-    def updateTimeout(self, now):
-        '''
-        Update the timeout value - used when a data message was received from the group; 
-        the timeout is updated to reflect elapsed time.
-        '''
-        elapsed = now - self.lastWait
-        remains = max(self.timeout - int(elapsed * 1000), 1)
-        self.lastWait = now
-        assert(type(remains) == int)
-        self.timeout = remains
-        
     def handleTimeout(self, now):
         '''
         Handle the timeout on communications within the group
@@ -341,27 +350,34 @@ class GroupThread(threading.Thread):
         assert(self.coordinated)
         self.updatePeers(now)
         self.checkAllPolls(now)
-        if self.state == GroupThread.FOLLOWER:  # If we are beyond the current election timeout then
-            self.logger.info("... FOLLOWER --> CANDIDATE, starting leader election")                     
-            if self.leader != None:
-                self.sendChangeMessage(Group.GROUP_LEX, self.leader)  # Leader exited
-            self.term += 1  # increment term
-            self.state = GroupThread.CANDIDATE  # candidate state
-            self.votes = 1  # self-vote
-            self.votedFor = self.ownId
-            self.qryPort.update(None, None)  # Disconnect query port
-            msg = struct.pack('!L16s', self.term, self.ownId)
-            self.pubPort.sendGroup(GroupThread.REQVOTE, msg)  # request votes
-            self.setTimeout(self.randomTimeout(), now)  # Timeout for votes to come in
-            self.leader = None
+        if self.state == GroupThread.FOLLOWER:  
+            if self.leaderDeadline and now > self.leaderDeadline: # Past leader deadline (if set)
+                self.logger.info("... FOLLOWER --> CANDIDATE, starting leader election")                     
+                if self.leader != None:
+                    self.logger.info("... past leader %s deadline" % self.leader.hex())
+                    self.sendChangeMessage(Group.GROUP_LEX, self.leader)  # Leader exited
+                self.term += 1  # increment term
+                self.state = GroupThread.CANDIDATE  # candidate state
+                self.votes = 1  # self-vote
+                self.votedFor = self.ownId
+                self.qryPort.update(None, None)  # Disconnect query port
+                msg = struct.pack('!L16s', self.term, self.ownId)
+                self.pubPort.sendGroup(GroupThread.REQVOTE, msg)    # request votes
+                self.setTimeout(self.electionTimeout(), now)          # Timeout for votes to come in
+                self.leaderDeadline = None                          # No leader / deadline
+                self.leader = None
+            else:
+                self.setTimeout(self.groupHeartbeat,now)
         elif self.state == GroupThread.CANDIDATE:  # We are beyond the current election timeout then
             self.logger.info("... CANDIDATE --> FOLLOWER, timeout on leader election")
             self.state = GroupThread.FOLLOWER  # follower state
             self.votedFor = None
             if self.leader != None:
+                self.logger.info("... previous leader %s ?" % self.leader.hex())
                 self.sendChangeMessage(Group.GROUP_LEX, self.leader)  # Leader exited
             self.leader = None
-            self.setTimeout(self.randomTimeout(), now)
+            self.setTimeout(self.groupHeartbeat, now)
+            self.leaderDeadline = None
         elif self.state == GroupThread.LEADER:  # Leader sends message to inform members: term,id, host, port
             self.logger.info("... LEADER, sending out leadership note")
             assert(self.leader == self.ownId)
@@ -370,9 +386,11 @@ class GroupThread(threading.Thread):
                               int(self.ldrPort))
             self.pubPort.sendGroup(GroupThread.AUTHORITY, msg)
             self.setTimeout(self.groupHeartbeat, now)
+            self.leaderDeadline = None
         else:
             self.logger.error("GroupThread.handleTimeout() - in undefined state")
             pass  # Error : timeout in unknown state")
+    
     
     def handleNetMessage(self, now=None):
         '''
@@ -430,7 +448,8 @@ class GroupThread(threading.Thread):
                     msgOut += [zmq.Frame(self.recvTime)]
                     msgOut += [zmq.Frame(self.sendTime)]
                 self.groupSocket.send_multipart(msgOut)  # forward it to component
-                self.updateTimeout(now) 
+                self.updateTimeout(now)
+                self.setLeaderDeadline()
                 return 
             if cmd == Group.GROUP_ANN:  # Incoming announcement (from leader)
                 self.logger.info("... handle GROUP_ANN")
@@ -442,7 +461,8 @@ class GroupThread(threading.Thread):
                     msgOut += [zmq.Frame(self.recvTime)]
                     msgOut += [zmq.Frame(self.sendTime)]
                 self.groupSocket.send_multipart(msgOut)  # forward it to component
-                self.updateTimeout(now) 
+                self.updateTimeout(now)
+                self.setLeaderDeadline()
                 return
             # Everything else is election-related
             if self.state == GroupThread.FOLLOWER:  # We are a FOLLOWER              
@@ -457,7 +477,8 @@ class GroupThread(threading.Thread):
                     if prevLeader != _leader:  # If leader has changed
                         self.sendChangeMessage(Group.GROUP_LEL, self.leader)             
                     self.votedFor = None  # clear last vote
-                    self.setTimeout(self.randomTimeout(), now)  # Set new election timeout
+                    self.setTimeout(self.electionTimeout(), now)  # TODO: Set new election timeout 
+                    self.setLeaderDeadline()
                     if _port == GroupThread.NO_LEADER:
                         _host, _port = None, None  # Will this ever happen?
                     else:
@@ -478,18 +499,19 @@ class GroupThread(threading.Thread):
                                 vote = False  # vote no
                             else:  # same leader
                                 vote = True  # vote yes
-                    self.logger.info('... voting for leader %s for term %s with %s', str(_node), str(_term), str(vote))
+                    self.logger.info('... voting for leader %s for term %s with %s', _node.hex(), str(_term), str(vote))
                     rsp = struct.pack("!L16sL16s", _term, _node, int(vote), self.ownId)
                     self.pubPort.sendGroup(GroupThread.RSPVOTE, rsp)
                     self.term = _term
                     if self.leader != None: 
-                        self.sendChangeMessage(Group.GROUP_LEX, self.leader) 
+                        self.sendChangeMessage(Group.GROUP_LEX, self.leader)
+                    self.leaderDeadline = None 
                     self.leader = None
                     self.qryPort.update(None, None)  # disconnect from previous leader (if at all)
                     if vote: self.votedFor = _node
-                    self.setTimeout(self.randomTimeout(), now)
+                    self.setTimeout(self.electionTimeout(), now)
                 elif cmd == GroupThread.RSPVOTE:  # Somebody's vote
-                    self.setTimeout(self.randomTimeout(), now)  # ignore, keep waiting 
+                    self.setTimeout(self.electionTimeout(), now)  # ignore, keep waiting 
             elif self.state == GroupThread.CANDIDATE:  # Candidate is requested to vote
                 if cmd == GroupThread.REQVOTE:
                     self.logger.info("... candidate requested to vote")
@@ -511,7 +533,7 @@ class GroupThread(threading.Thread):
                         self.votedFor = _node
                     else:  # For past term - ignore
                         pass
-                    self.setTimeout(self.randomTimeout(), now)
+                    self.setTimeout(self.electionTimeout(), now)
                 elif cmd == GroupThread.RSPVOTE:
                     self.logger.info("... candidate received vote")
                     (_term, _leader, _vote, _node) = struct.unpack("!L16sL16s", frame)
@@ -543,7 +565,8 @@ class GroupThread(threading.Thread):
                     _host = ipaddress.IPv4Address(_host).compressed
                     _port = int(_port)
                     self.qryPort.update(_host, _port)  # connect qry port to leader
-                    self.setTimeout(self.randomTimeout(), now)  # set new election timeout
+                    self.setTimeout(self.electionTimeout(), now)  # set new election timeout
+                    self.setLeaderDeadline()
             elif self.state == GroupThread.LEADER:  # leader received a  message
                 self.logger.info("... leader received message")
                 if cmd == GroupThread.REQVOTE:
@@ -730,13 +753,15 @@ class GroupThread(threading.Thread):
             self.poller.register(self.ansSocket, zmq.POLLIN)
         
         if self.coordinated:
-            time.sleep(self.randomTimeout() / 1000.0)  # Initial random sleep
+            time.sleep(self.electionTimeout() / 1000.0)  # Initial random sleep
             self.state = GroupThread.FOLLOWER
             now = time.time()
             self.lastWait = now
             self.lastHeartbeat = 0
             self.heartbeat(now)
-            self.timeout = self.groupElectionMax
+            self.timeout = self.groupHeartbeat
+            self.leader = None
+            self.setLeaderDeadline()
         else:
             self.timeout = None 
             now = None
@@ -807,6 +832,7 @@ class Group(object):
         self.isTimed = self.groupSpec['timed']
         self.kind = self.groupSpec['kind']
         self.coordinated = False if self.kind == "default" else True
+        self.setupParams()
         # PAIR socket for the component poller
         self.compSocket = self.context.socket(zmq.PAIR)
         self.compSocket.bind('inproc://%s' % self.groupSocketName(self.groupType, self.groupInstance, self.componentId))
@@ -830,6 +856,20 @@ class Group(object):
         self.thread.sendControl(msg)
         time.sleep(1.0)  # 
     
+    GROUP_PARAMETERS = {'heartbeat' : const.groupHeartbeat, 
+                        'electionMin' : const.groupElectionMin,
+                        'electionMax' : const.groupElectionMax,
+                        'peerTimeout' : const.groupPeerTimeout,
+                        'consensusTimeout' : const.groupConsensusTimeout 
+                        }
+    
+    def setupParams(self):
+        modelParams = self.groupSpec["params"]
+        for (name,value) in Group.GROUP_PARAMETERS.items():
+            result = modelParams.get(name,None) or value
+            assert result > 0, "Group parameter %s must be >0 " % name
+            setattr(self,name,result)
+                    
     def leave(self):
         self.logger.info("Group.leave(): %s" % self.groupInstanceName)
         # 

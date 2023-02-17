@@ -145,7 +145,10 @@ class Controller(object):
         self.hostAddress = globalIP
         self.macAddress = globalMAC
         self.nodeAddr = str(self.hostAddress)
-        self.nodeName = socket.gethostbyaddr(self.nodeAddr)[0]
+        try:
+            self.nodeName = socket.gethostbyaddr(self.nodeAddr)[0]
+        except socket.herror:
+            self.nodeName = self.nodeAddr
         self.service = None
         
     def startService(self):
@@ -722,7 +725,7 @@ class Controller(object):
         for actor in actors:
             actorName = actor["name"]
             if actorName in clientActors:
-                self.log("? %s => %s " % (actorName,client.name))
+                self.log("? %s => %s - repeated" % (actorName,client.name))
                 continue
             actuals = actor["actuals"]
             actualArgs = self.buildArgs(actuals)
@@ -967,6 +970,8 @@ class Controller(object):
         elif status == AppStatus.Recovered:
             # If it was recovered, we have only clients and appName. 
             files, libraries, clients = [], [], self.appInfo[appName].clients
+        elif status == AppStatus.NotLoaded:
+            return False
         self.removeSignature()
         ok = True
         with ctrlLock:
