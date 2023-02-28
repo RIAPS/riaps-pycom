@@ -16,6 +16,7 @@ import re
 import logging
 import cmd
 import traceback
+import socket
 import subprocess
 
 gi.require_version('Gtk', '3.0')
@@ -126,6 +127,7 @@ class ControlCLIClient(object):
                     last = items[-1]
                     if last.isnumeric(): wait = abs(int(last)); items = items[0:-1]
                 expected = set(items)
+                expected = { socket.gethostbyname(host) for host in expected }
                 while(True):
                     clients = set(self.parent.controller.getClients())
                     if expected.issubset(clients):
