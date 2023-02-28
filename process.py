@@ -134,12 +134,15 @@ class DistributedCoordinator(object):
         self.theGroup = None
 
     def asUML(self, file):
-        self.theGroup.print_timeline()
-        # for e in self.events:
-        #     state = e.msg
-        #     if state == "LEADER":
-        #         state += "#pink"
-        #     file.write(f"{e.ts} is {state}\n")
+        # self.theGroup.print_timeline()
+        for e in self.theGroup.events:
+            n = grpthdfmt.match(e.msg)
+            if n is None: continue
+            m = grpthd_ndmsg.match(n['msg'])
+            state = __class__.STATES[int(m['state'])]
+            if state == "LEADER":
+                state += "#pink"
+            file.write(f"{e.ts} is {state}\n")
 
     def addEvent(self, e: Event):
         # print(f"DC: adding event {e}")
@@ -173,10 +176,7 @@ class DistributedCoordinator(object):
             #BOOKMARK: I was working on parsing dc log statements
             # Consider ordering of events: maybe guarantee that all msgs are in order first?
             # Then, check events for state changes, create list of state changes
-        
-
-
-            
+                
 class DiscoLog(object):
     def __init__(self, pid):
         super().__init__()
@@ -260,11 +260,12 @@ if __name__ == "__main__":
     num_nodes = args.log_dir.split("-")[-1]
     theResults = Results()
     logsPath = os.path.join(os.getcwd(),args.log_dir)
-    for dir in os.scandir(logsPath):
+
+    for node_dir in os.scandir(logsPath):
         # assert dir.is_dir()s
-        if dir.name not in theResults.nodes:
-            theResults.add(NodeRecord(dir.name))
-        node = theResults.getNode(dir.name)
+        if node_dir.name not in theResults.nodes:
+            theResults.add(NodeRecord(node_dir.name))
+        node = theResults.getNode(node_dir.name)
         for root, dirs, files in os.walk(os.path.join(logsPath,node.hostname)):
             assert len(dirs) == 0
             for f in files:
