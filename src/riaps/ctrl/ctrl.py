@@ -168,7 +168,12 @@ class Controller(object):
         # Launch the database process
         try: 
             self.logger.info('Launching redis server')
-            self.dbase = subprocess.Popen(['redis-server',dbase_config])
+            sec_args = ['--tls-port', str(const.discoRedisPort),'--port', '0',
+                        '--tls-cert-file', self.certFile,
+                        '--tls-key-file', self.keyFile,
+                        '--tls-ca-cert-file', self.certFile
+                       ] if Config.SECURITY else []
+            self.dbase = subprocess.Popen(['redis-server',dbase_config] + sec_args)
         except:
             self.logger.error("Error when starting database: %s", sys.exc_info()[0])
             raise

@@ -8,8 +8,10 @@ Created on Oct 19, 2016
 import redis
 from riaps.consts.defs import *
 from riaps.run.exc import *
+from riaps.utils.config import Config
 from .dbase import DiscoDbase
 import re
+import os
 import logging
 
 class RedisDbase(DiscoDbase):
@@ -26,6 +28,9 @@ class RedisDbase(DiscoDbase):
         # Singleton DiscoDbase object
         # global theDiscoBase
         # theDiscoBase = self
+        self.riaps_Folder = os.getenv('RIAPSHOME', './')
+        self.keyFile = os.path.join(self.riaps_Folder,"keys/" + str(const.ctrlPrivateKey))
+        self.certFile = os.path.join(self.riaps_Folder,"keys/" + str(const.ctrlCertificate))
         self.context = context_ 
         self.r = None               # The redis connection
         self.rHostPort = dbaseLoc      # Redis access string: 'host:port' (if any) 
@@ -46,7 +51,16 @@ class RedisDbase(DiscoDbase):
         
         try:    
             self.logger.info("connecting to redis")
-            self.r = redis.StrictRedis(host,port, db=0) # Connect
+            if Config.SECURITY:
+                self.r = redis.StrictRedis(host,port, db=0, 
+                                           ssl=True,
+                                           ssl_keyfile=self.keyFile,
+                                           ssl_certfile=self.certFile,
+                                           ssl_cert_reqs="required",
+                                           ssl_ca_certs=self.certFile
+                                           )
+            else:
+                self.r = redis.StrictRedis(host,port, db=0) # Connect
             self.notesPubSub = self.r.pubsub()          # Set up pubsub channel to receive notifications
         except redis.exceptions.ConnectionError:
             raise DatabaseError("db connection lost")
