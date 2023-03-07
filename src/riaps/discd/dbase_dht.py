@@ -364,7 +364,9 @@ class DhtDbase(DiscoDbase):
         try:    
             self.logger.info("launching dht")
             config = dht.DhtConfig()
-            config.setBootstrapMode(True)   
+            config.setBootstrapMode(True)
+            if Config.SECURITY:
+                config.setIdentity(dht.Identity.generate("riaps-disco"))
             self.dht = dht.DhtRunner()
             self.dhtPort = get_random_port()
             self.dht.run(port=self.dhtPort,config=config)  # Run on a random, free port
