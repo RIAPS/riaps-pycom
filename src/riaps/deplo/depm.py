@@ -403,7 +403,8 @@ class DeploymentManager(threading.Thread):
         except:
             ok, err = False, 'App package removal failed'
         os.sync()
-        return ok if ok else err
+        if not ok: raise BuildError(err)
+        return ok
     
     def installApp(self,msg):
         '''

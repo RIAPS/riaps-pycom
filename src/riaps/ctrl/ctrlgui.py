@@ -527,7 +527,7 @@ class ControlGUIClient(object):
 
         self.gridScrollWindow.show_all()
 
-    def on_loadApplication(self, widget):
+    def on_loadApplication(self, _widget):
         '''
         Load the selected application onto to the network
         '''
@@ -535,12 +535,13 @@ class ControlGUIClient(object):
         if self.appToLoad is None:
             return
 
-        self.add_app(self.appToLoad)
+        if self.controller.loadByName(self.appToLoad):
+            self.add_app(self.appToLoad)
         self.clearApplication()
         self.clearDeployment()
         self.appToLoad = None
 
-    def on_viewApplication(self, widget):
+    def on_viewApplication(self, _widget):
         '''
         View the selected application as to be deployed
         '''

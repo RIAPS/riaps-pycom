@@ -492,17 +492,15 @@ class Controller(object):
                 remoteFile = os.path.join(appFolderRemote, os.path.basename(fileName))                
                 self.logger.info ('Copying' + str(localFile) + ' to ' + str(remoteFile))
                 sftpClient.put(localFile, remoteFile)
-            res = None
-            resMsg = ''
+            res,ok = None, True
             try:
                 res = self.callClient(client.install,[appName]) # const.ctrlInstallTimeout
-            except Exception as ex:
-                resMsg = "%r" % ex
-            if res.error:
-                res.value = resMsg
+            except Exception:
+                ok = False
+            ok = ok and not res.error
             resList += [res]
             transport.close()
-            return (True,who,resList)
+            return (ok,who,resList)
         except Exception as e:
             self.logger.warning('Caught exception: %s: %s' % (e.__class__, e))
             try:
@@ -531,14 +529,17 @@ class Controller(object):
                 for future in done:
                     ok,client,resList = future.result()
                     result &= ok
-                    if ok == True:
+                    if ok:
                         self.log('I %s %s' % (client,appName))
                     else:
                         for res in resList:
                             # while not res.ready: time.sleep(0.5)
-                            value = res.value
+                            try:
+                                value = res.value
+                            except Exception as ex:
+                                value = ex
                             if value != True:
-                                self.log('? %s on %s: %r' % (appName,client,str(value)))
+                                self.log('? %s on %s: %r' % (appName,client,str(value.args[0])))
                                 result = False
         os.remove(tgz_file)
         os.remove(sha_file)
@@ -783,13 +784,13 @@ class Controller(object):
                 _done,_pending = concurrent.futures.wait(futures)
                 executor.shutdown()
     
-    def launchByName(self, appName):
+    def loadByName(self,appName):
         '''
-        Launch the named app 
+        Load the named app 
         '''
         status = self.appInfo[appName].status if appName in self.appInfo else AppStatus.NotLoaded
         if status == AppStatus.NotLoaded: 
-            download,libraries,clients,depls = self.buildDownload(appName)
+            download,libraries,clients,_depls = self.buildDownload(appName)
             if download == []:
                 self.log("* Nothing to download")
                 return False
@@ -802,17 +803,29 @@ class Controller(object):
                 return False
             self.appInfo[appName].status = AppStatus.Loaded
         elif status == AppStatus.Loaded:
-            depls = self.appInfo[appName].depl.getDeployments() if appName in self.appInfo else []
+            self.log("* App already installed")
+            return False
         elif status == AppStatus.Recovered:
-            self.log("* App recovered - remove/deploy/launch again")
-            depls = []                  # TODO: recover actor parameters
+            self.log("* App recovered - remove/install/launch again")
+            # TODO: recover actor parameters
             return False
         else: 
-            self.log("* App launch fault")
+            self.log("* App installation fault")
             return False
-        lock = threading.RLock()
-        self.launchApp(appName,depls,lock)
         return True
+    
+    def launchByName(self, appName):
+        '''
+        Launch the named app 
+        '''
+        status = self.appInfo[appName].status if appName in self.appInfo else AppStatus.NotLoaded
+        if status != AppStatus.Loaded:
+            self.log("* App status not %r - cannot be launched" % status.name)
+            return False
+        else:
+            lock = threading.RLock()
+            self.launchApp(appName,self.appInfo[appName].depl.getDeployments(),lock)
+            return True
     
     def haltAppClient(self,client,appName,actors):
         for actorName in actors:

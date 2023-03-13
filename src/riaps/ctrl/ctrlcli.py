@@ -87,6 +87,10 @@ class ControlCLIClient(object):
             '''Select deployment model: d app.depl '''
             self.parent.cmdSelectDepl(arg)
             
+        def do_i(self,arg):
+            '''Install app: i app'''
+            self.parent.cmdLoadApp(arg)
+            
         def do_l(self,arg):
             '''Launch app: g app'''
             self.parent.cmdLaunchApp(arg)
@@ -273,6 +277,9 @@ class ControlCLIClient(object):
         self.socket.close()
         self.loop.quit()   
 
+    def cmdLoadApp(self,appSelected):
+        self.controller.loadByName(appSelected)
+        
     def cmdLaunchApp(self,appSelected):
         self.controller.launchByName(appSelected)
               
