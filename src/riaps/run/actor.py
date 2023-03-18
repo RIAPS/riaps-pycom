@@ -252,7 +252,7 @@ class Actor(object):
         try:
             opts, _args = getopt.getopt(sysArgv, '', optList)
         except:
-            self.logger.info("Error parsing actor options %s" % str(sysArgv))
+            self.logger.error("Error parsing actor options %s" % str(sysArgv))
             return
         for opt in opts:
             optName2, optValue = opt 

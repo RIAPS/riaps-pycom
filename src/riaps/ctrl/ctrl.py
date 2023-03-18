@@ -191,6 +191,7 @@ class Controller(object):
         self.dht = dht.DhtRunner()
         self.dhtPort = get_random_port()
         if const.discoDhtBoot:
+            self.logger.info("Starting opendht on %s:%s", str(self.hostAddress),str(self.dhtPort))
             self.dht.run(port=self.dhtPort,ipv4=self.hostAddress,config=config)
     
     def stopDht(self):
