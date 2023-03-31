@@ -101,7 +101,8 @@ def main(debug=True):
     except: 
         print ("Unexpected error:", sys.exc_info()[0])
         os._exit(1)
-    sys.path.append(appFolder)  # Ensure load_module works from current directory
+    
+    sys.path.insert(0,appFolder)  # Ensure load_module works from current directory first
     
     # Setup the logger formatter 
     logging.Formatter.default_time_format = '%H:%M:%S'
