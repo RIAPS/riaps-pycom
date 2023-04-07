@@ -16,6 +16,7 @@ import re
 import logging
 import cmd
 import traceback
+import socket
 import subprocess
 
 gi.require_version('Gtk', '3.0')
@@ -73,7 +74,17 @@ class ControlCLIClient(object):
         def __init__(self,parent):
             super(parent.CtrlCmdShell, self).__init__()
             self.parent = parent
-            
+
+        def do_c(self, arg):
+            '''Wait until listed clients are connected: c IPADDR1 [IPADDR2 ...]'''
+            expectedClients = set(arg.split(', '))
+            while True:
+                clients = set(self.parent.getClients())
+                if expectedClients.issubset(clients):
+                    break
+                self.stdout.write(f"Waiting for: {expectedClients not in clients}\n")
+                time.sleep(1)
+
         def do_f(self,arg):
             '''Select app folder: f path'''
             self.parent.cmdSelectFolder(arg)
@@ -85,6 +96,10 @@ class ControlCLIClient(object):
         def do_d(self,arg):
             '''Select deployment model: d app.depl '''
             self.parent.cmdSelectDepl(arg)
+            
+        def do_i(self,arg):
+            '''Install app: i app'''
+            self.parent.cmdLoadApp(arg)
             
         def do_l(self,arg):
             '''Launch app: g app'''
@@ -116,6 +131,32 @@ class ControlCLIClient(object):
         def do_shell(self,arg):
             ''' Execute command: e ls -l'''
             subprocess.call(arg.split())
+        
+        def do_j(self,args):
+            ''' Join host(s): j [hosts]+ [wait]'''
+            try:
+                items = args.split()
+                wait = None
+                if len(items) >= 2:
+                    last = items[-1]
+                    if last.isnumeric(): wait = abs(int(last)); items = items[0:-1]
+                expected = set(items)
+                expected = { socket.gethostbyname(host) for host in expected }
+                while(True):
+                    clients = set(self.parent.controller.getClients())
+                    if expected.issubset(clients):
+                        break
+                    elif wait is not None: 
+                        if wait > 0: 
+                            time.sleep(1.0)
+                            wait -= 1
+                        else:
+                            self.stdout.write('? join timeout ' + args + '\r\n')
+                            self.stdout.flush()
+                            break
+            except Exception as e:
+                self.stdout.write('exception: ' + str(e) + '\r\n')
+                self.stdout.flush()                      
             
         def do_q(self,arg):
             '''Quit program'''
@@ -218,6 +259,12 @@ class ControlCLIClient(object):
         Clears the app entry.
         '''
         self.appName = ''
+    
+    def cmdNumClient(self):
+        '''
+        Gets number of connected clients
+        '''
+        return self.controller.numClients()
           
     def cmdSelectDepl(self,fileName):
         if fileName != None:
@@ -246,6 +293,9 @@ class ControlCLIClient(object):
         self.socket.close()
         self.loop.quit()   
 
+    def cmdLoadApp(self,appSelected):
+        self.controller.loadByName(appSelected)
+        
     def cmdLaunchApp(self,appSelected):
         self.controller.launchByName(appSelected)
               

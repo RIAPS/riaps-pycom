@@ -145,7 +145,10 @@ class Controller(object):
         self.hostAddress = globalIP
         self.macAddress = globalMAC
         self.nodeAddr = str(self.hostAddress)
-        self.nodeName = socket.gethostbyaddr(self.nodeAddr)[0]
+        try:
+            self.nodeName = socket.gethostbyaddr(self.nodeAddr)[0]
+        except socket.herror:
+            self.nodeName = self.nodeAddr
         self.service = None
         
     def startService(self):
@@ -165,7 +168,12 @@ class Controller(object):
         # Launch the database process
         try: 
             self.logger.info('Launching redis server')
-            self.dbase = subprocess.Popen(['redis-server',dbase_config])
+            sec_args = ['--tls-port', str(const.discoRedisPort),'--port', '0',
+                        '--tls-cert-file', self.certFile,
+                        '--tls-key-file', self.keyFile,
+                        '--tls-ca-cert-file', self.certFile
+                       ] if Config.SECURITY else []
+            self.dbase = subprocess.Popen(['redis-server',dbase_config] + sec_args)
         except:
             self.logger.error("Error when starting database: %s", sys.exc_info()[0])
             raise
@@ -183,6 +191,7 @@ class Controller(object):
         self.dht = dht.DhtRunner()
         self.dhtPort = get_random_port()
         if const.discoDhtBoot:
+            self.logger.info("Starting opendht on %s:%s", str(self.hostAddress),str(self.dhtPort))
             self.dht.run(port=self.dhtPort,ipv4=self.hostAddress,config=config)
     
     def stopDht(self):
@@ -484,17 +493,15 @@ class Controller(object):
                 remoteFile = os.path.join(appFolderRemote, os.path.basename(fileName))                
                 self.logger.info ('Copying' + str(localFile) + ' to ' + str(remoteFile))
                 sftpClient.put(localFile, remoteFile)
-            res = None
-            resMsg = ''
+            res,ok = None, True
             try:
                 res = self.callClient(client.install,[appName]) # const.ctrlInstallTimeout
-            except Exception as ex:
-                resMsg = "%r" % ex
-            if res.error:
-                res.value = resMsg
+            except Exception:
+                ok = False
+            ok = ok and not res.error
             resList += [res]
             transport.close()
-            return (True,who,resList)
+            return (ok,who,resList)
         except Exception as e:
             self.logger.warning('Caught exception: %s: %s' % (e.__class__, e))
             try:
@@ -523,14 +530,17 @@ class Controller(object):
                 for future in done:
                     ok,client,resList = future.result()
                     result &= ok
-                    if ok == True:
+                    if ok:
                         self.log('I %s %s' % (client,appName))
                     else:
                         for res in resList:
                             # while not res.ready: time.sleep(0.5)
-                            value = res.value
+                            try:
+                                value = res.value
+                            except Exception as ex:
+                                value = ex
                             if value != True:
-                                self.log('? %s on %s: %r' % (appName,client,str(value)))
+                                self.log('? %s on %s: %r' % (appName,client,str(value.args[0])))
                                 result = False
         os.remove(tgz_file)
         os.remove(sha_file)
@@ -722,7 +732,7 @@ class Controller(object):
         for actor in actors:
             actorName = actor["name"]
             if actorName in clientActors:
-                self.log("? %s => %s " % (actorName,client.name))
+                self.log("? %s => %s - repeated" % (actorName,client.name))
                 continue
             actuals = actor["actuals"]
             actualArgs = self.buildArgs(actuals)
@@ -775,13 +785,13 @@ class Controller(object):
                 _done,_pending = concurrent.futures.wait(futures)
                 executor.shutdown()
     
-    def launchByName(self, appName):
+    def loadByName(self,appName):
         '''
-        Launch the named app 
+        Load the named app 
         '''
         status = self.appInfo[appName].status if appName in self.appInfo else AppStatus.NotLoaded
         if status == AppStatus.NotLoaded: 
-            download,libraries,clients,depls = self.buildDownload(appName)
+            download,libraries,clients,_depls = self.buildDownload(appName)
             if download == []:
                 self.log("* Nothing to download")
                 return False
@@ -794,17 +804,29 @@ class Controller(object):
                 return False
             self.appInfo[appName].status = AppStatus.Loaded
         elif status == AppStatus.Loaded:
-            depls = self.appInfo[appName].depl.getDeployments() if appName in self.appInfo else []
+            self.log("* App already installed")
+            return False
         elif status == AppStatus.Recovered:
-            self.log("* App recovered - remove/deploy/launch again")
-            depls = []                  # TODO: recover actor parameters
+            self.log("* App recovered - remove/install/launch again")
+            # TODO: recover actor parameters
             return False
         else: 
-            self.log("* App launch fault")
+            self.log("* App installation fault")
             return False
-        lock = threading.RLock()
-        self.launchApp(appName,depls,lock)
         return True
+    
+    def launchByName(self, appName):
+        '''
+        Launch the named app 
+        '''
+        status = self.appInfo[appName].status if appName in self.appInfo else AppStatus.NotLoaded
+        if status != AppStatus.Loaded:
+            self.log("* App status not %r - cannot be launched" % status.name)
+            return False
+        else:
+            lock = threading.RLock()
+            self.launchApp(appName,self.appInfo[appName].depl.getDeployments(),lock)
+            return True
     
     def haltAppClient(self,client,appName,actors):
         for actorName in actors:
@@ -967,6 +989,8 @@ class Controller(object):
         elif status == AppStatus.Recovered:
             # If it was recovered, we have only clients and appName. 
             files, libraries, clients = [], [], self.appInfo[appName].clients
+        elif status == AppStatus.NotLoaded:
+            return False
         self.removeSignature()
         ok = True
         with ctrlLock:

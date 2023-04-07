@@ -5,7 +5,12 @@
 app LangTest {
 	message Message;
 	
-	group Grouper with consensus using Message; 
+	group Grouper with consensus using Message;
+	
+	group ParGroup with consensus using Message  
+			heartbeat = 1000, 
+			consensusTimeout = 2000
+	;
 	 
 	component Component {
 		timer Timer 1000;

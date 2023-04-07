@@ -572,12 +572,13 @@ class Component(object):
         '''  
         pass
     
-    def joinGroup(self, groupName, instName, groupPriority=GROUP_PRIORITY_MIN):
+    def joinGroup(self, groupName, instName, groupSize = 1, groupPriority=GROUP_PRIORITY_MIN):
         if self.thread == None:
             self.thread = self.owner.thread
         group = self.coord.getGroup(groupName, instName)
+        assert groupSize >= 1, "group size must be >=1"
         if group == None:
-            group = self.coord.joinGroup(self.thread, groupName, instName, self.getLocalID())
+            group = self.coord.joinGroup(self.thread, groupName, instName, self.getLocalID(), groupSize)
             self.thread.addGroupSocket(group, groupPriority)
         return group
             

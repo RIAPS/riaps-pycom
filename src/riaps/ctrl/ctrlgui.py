@@ -453,15 +453,16 @@ class ControlGUIClient(object):
         An app has been removed from the system
         '''
         # modify gui
-        index = list(self.appStatusDict.keys()).index(app) + 1
-        self.remove_table_row(index)
-        self.row_cur_size = self.row_cur_size - 1
+        if app in self.appStatusDict:
+            index = list(self.appStatusDict.keys()).index(app) + 1
+            self.remove_table_row(index)
+            self.row_cur_size = self.row_cur_size - 1
 
-        # modify data
-        del self.appStatusDict[app]
+            # modify data
+            del self.appStatusDict[app]
 
-        self.create_table_row(self.row_cur_size, self.column_cur_size)
-        self.row_cur_size = self.row_cur_size + 1
+            self.create_table_row(self.row_cur_size, self.column_cur_size)
+            self.row_cur_size = self.row_cur_size + 1
         self.gridTable.show_all()
 
     def halt_app(self, node, app):
@@ -526,7 +527,7 @@ class ControlGUIClient(object):
 
         self.gridScrollWindow.show_all()
 
-    def on_loadApplication(self, widget):
+    def on_loadApplication(self, _widget):
         '''
         Load the selected application onto to the network
         '''
@@ -534,12 +535,13 @@ class ControlGUIClient(object):
         if self.appToLoad is None:
             return
 
-        self.add_app(self.appToLoad)
+        if self.controller.loadByName(self.appToLoad):
+            self.add_app(self.appToLoad)
         self.clearApplication()
         self.clearDeployment()
         self.appToLoad = None
 
-    def on_viewApplication(self, widget):
+    def on_viewApplication(self, _widget):
         '''
         View the selected application as to be deployed
         '''
