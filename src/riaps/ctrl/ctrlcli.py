@@ -16,6 +16,7 @@ import re
 import logging
 import cmd
 import traceback
+import socket
 import subprocess
 
 gi.require_version('Gtk', '3.0')
@@ -96,6 +97,10 @@ class ControlCLIClient(object):
             '''Select deployment model: d app.depl '''
             self.parent.cmdSelectDepl(arg)
             
+        def do_i(self,arg):
+            '''Install app: i app'''
+            self.parent.cmdLoadApp(arg)
+            
         def do_l(self,arg):
             '''Launch app: g app'''
             self.parent.cmdLaunchApp(arg)
@@ -126,6 +131,32 @@ class ControlCLIClient(object):
         def do_shell(self,arg):
             ''' Execute command: e ls -l'''
             subprocess.call(arg.split())
+        
+        def do_j(self,args):
+            ''' Join host(s): j [hosts]+ [wait]'''
+            try:
+                items = args.split()
+                wait = None
+                if len(items) >= 2:
+                    last = items[-1]
+                    if last.isnumeric(): wait = abs(int(last)); items = items[0:-1]
+                expected = set(items)
+                expected = { socket.gethostbyname(host) for host in expected }
+                while(True):
+                    clients = set(self.parent.controller.getClients())
+                    if expected.issubset(clients):
+                        break
+                    elif wait is not None: 
+                        if wait > 0: 
+                            time.sleep(1.0)
+                            wait -= 1
+                        else:
+                            self.stdout.write('? join timeout ' + args + '\r\n')
+                            self.stdout.flush()
+                            break
+            except Exception as e:
+                self.stdout.write('exception: ' + str(e) + '\r\n')
+                self.stdout.flush()                      
             
         def do_q(self,arg):
             '''Quit program'''
@@ -262,6 +293,9 @@ class ControlCLIClient(object):
         self.socket.close()
         self.loop.quit()   
 
+    def cmdLoadApp(self,appSelected):
+        self.controller.loadByName(appSelected)
+        
     def cmdLaunchApp(self,appSelected):
         self.controller.launchByName(appSelected)
               

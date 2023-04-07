@@ -58,6 +58,11 @@ class RiapsModel2JSON(object):
             groupObj["kind"] = group.kind.kind if group.kind else 'default'
             groupObj["message"] = group.message.name
             groupObj["timed"] = True if group.timed == "timed" else False
+            params = { }
+            if group.groupParams:
+                for param in group.groupParams:
+                    params[param.name] = param.value
+            groupObj["params"] = params
             res.append(groupObj)
         return res
     def getLibraries(self,libraries):

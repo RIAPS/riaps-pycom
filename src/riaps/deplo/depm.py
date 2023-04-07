@@ -403,7 +403,8 @@ class DeploymentManager(threading.Thread):
         except:
             ok, err = False, 'App package removal failed'
         os.sync()
-        return ok if ok else err
+        if not ok: raise BuildError(err)
+        return ok
     
     def installApp(self,msg):
         '''
@@ -1084,7 +1085,11 @@ class DeploymentManager(threading.Thread):
                         msgBytes = s.recv()
                         self.handleActorMessage(appName,actorName,msgBytes)
                     else:
-                        self.logger.error("unknown socket")
+                        self.logger.info("unknown socket")
+                        try:
+                            _discard = s.recv()
+                        except:
+                            pass
                 toDelete += [s]
             for s in toDelete:
                 del sockets[s]                

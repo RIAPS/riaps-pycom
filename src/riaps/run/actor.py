@@ -134,7 +134,8 @@ class Actor(object):
             self.groupTypes[group["name"]] = { 
                 "kind": group["kind"],
                 "message": group["message"],
-                "timed": group["timed"]
+                "timed": group["timed"],
+                "params" : group["params"]
             }
 
         self.rt_actor = self.model.get("real-time")  # If real time actor, set scheduler (if specified)
@@ -251,7 +252,7 @@ class Actor(object):
         try:
             opts, _args = getopt.getopt(sysArgv, '', optList)
         except:
-            self.logger.info("Error parsing actor options %s" % str(sysArgv))
+            self.logger.error("Error parsing actor options %s" % str(sysArgv))
             return
         for opt in opts:
             optName2, optValue = opt 

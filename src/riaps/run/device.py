@@ -153,7 +153,8 @@ class Device(Actor):
             self.groupTypes[group["name"]] = { 
                 "kind": group["kind"],
                 "message": group["message"],
-                "timed": group["timed"]
+                "timed": group["timed"],
+                "params" : group["params"]
             }
             
         self.components = {}
