@@ -892,6 +892,11 @@ class Group(object):
             result = modelParams.get(name,None) or value
             assert result > 0, "Group parameter %s must be >0 " % name
             setattr(self,name,result)
+        assert self.heartbeat < self.electionMin and \
+                self.electionMin < self.electionMax and \
+                self.electionMax < self.groupPeerTimeout and \
+                self.consensusTimeout < self.electionMax, \
+                "Group timing parameter(s) incorrectly ordered"   
                     
     def leave(self):
         self.logger.info("Group.leave(): %s" % self.groupInstanceName)

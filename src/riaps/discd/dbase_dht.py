@@ -529,11 +529,16 @@ class DhtDbase(DiscoDbase):
         if key not in self.listeners:
             self.listeners[key] = self.dhtListen(key)
     
-    def dhtGetClients(self,key):
+    def dhtDelClient(self,key,client):
         '''
-        Return all clients of a key. 
         '''
-        return self.clients.get(key,[])
+        self.logger.info('dhtdelClient(%s,%r)' % (key,client))
+        listener = self.listeners.get(key,None)
+        if listener:
+            self.dht.cancelListen(listener)
+            del self.listeners[key]
+        if client in self.clients.get(key,[]):
+            self.clients[key].remove(client)
 
     def dhtDelete(self,key):
         '''
@@ -545,7 +550,7 @@ class DhtDbase(DiscoDbase):
         if listener:
             self.dht.cancelListen(listener)
             del self.listeners[key]
-        clients = self.dhtGetClients(key)
+        clients = self.clients.get(key,[])
         if clients: del self.clients[key]
         values = self.dhtGet(key)
         for value in values:
@@ -629,7 +634,7 @@ class DhtDbase(DiscoDbase):
                 _res = self.dhtPut(key,value)
                 self.regDb.addKeyValue(key, value)              # Save k/v into backup db
                 self.addToRepublish(key,value)                  # Add k/v to republisher
-                clientsToNotify = self.dhtGetClients(key)       # Return interested clients
+                clientsToNotify = self.clients.get(key,[])      # Return interested clients
             return clientsToNotify
         except Exception:
             raise DatabaseError("dht.insert: %s" % sys.exc_info()[0])
@@ -668,20 +673,12 @@ class DhtDbase(DiscoDbase):
         except OSError:
             raise DatabaseError("OS error")
         
-    def delete(self,key:str):
+    def detach(self, key:str, target:str):
         '''
-        Completely delete key and list of clients for that key.
+        Detach actor (updates) from keys
         '''
-        self.logger.info("dht.delete[%r]" % key)
-        try:
-            values= self.dhtGet(key)                # Retrieve values                   
-            self.delFromRepublishAll(key,values)    # Remove values from republisher
-            self.regDb.delKey(key)                  # Delete k/v from db
-            values = self.dhtDelete(key)            # Delete values from dht
-        except Exception:
-            raise DatabaseError("dht.delete: %s" % sys.exc_info()[0])
-        except OSError:
-            raise DatabaseError("OS error")
+        self.logger.info("dht.detach: %s : %r " % (key,target))
+        self.dhtDelClient(key,target)
         
     def terminate(self):
         self.regDb.closeDbase()

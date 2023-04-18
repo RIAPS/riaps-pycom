@@ -506,16 +506,21 @@ class Actor(object):
             msg = msgUpd.portUpdate
             client = msg.client
             actorHost = client.actorHost
-            assert actorHost == self.globalHost                 # It has to be addressed to this actor
+            # assert actorHost == self.globalHost                 # It has to be addressed to this actor
             actorName = client.actorName
-            assert actorName == self.name
+            # assert actorName == self.name
             instanceName = client.instanceName
-            assert instanceName in self.components              # It has to be for a part of this actor
+            # It has to be for a part of this actor
+            # assert instanceName in self.components, "%r not in %r" % (instanceName,self.components)  
             portName = client.portName
             scope = msg.scope
             socket = msg.socket
             host = socket.host
             port = socket.port 
+            if actorHost != self.globalHost or actorName != self.name or instanceName not in self.components:
+                self.logger.warning('handleServiceUpdate(): discard message for %r.%r.%r.%r.%r.%r' \
+                                    % (actorHost, actorName, instanceName, portName, host, port))
+                return
             if scope != "global":
                 assert host == self.localHost                   # Local/internal ports are host-local
             self.updatePart(instanceName, portName, host, port) # Update the selected part

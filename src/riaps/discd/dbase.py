@@ -58,13 +58,13 @@ class DiscoDbase(object):
         
     def remove(self,key:str,value:str) -> [str]:
         '''
-        Remove value from values under key.
+        Remove value from value under key.
         '''
         pass
         
-    def delete(self,key:str):
+    def detach(self, key:str, target:str):
         '''
-        Completely delete key and list of clients for that key.
+        Detach client (for updates) from keys
         '''
         pass
 
