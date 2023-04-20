@@ -24,8 +24,8 @@ const.discoDhtBoot = False
 # Name of endpoint for actor-depl communication
 const.deplEndpoint = 'tcp://127.0.0.1:9780'     # 'ipc:///tmp/riaps-depl'
 # Timeout for actor-depl communication (-1: wait forever)
-const.deplEndpointRecvTimeout = 3000 
-const.deplEndpointSendTimeout = 3000  
+const.deplEndpointRecvTimeout = 5000 
+const.deplEndpointSendTimeout = 5000  
   
 # Timeout for deplo internal communications
 const.depmRecvTimeout = 3000

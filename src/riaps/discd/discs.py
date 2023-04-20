@@ -41,7 +41,10 @@ class DiscoService(object):
             self.dbase = DhtDbase(self.context,self.hostAddress,dbaseLoc)
         else:
             pass    
-        self.registrations = {}
+        self.registrations = { }            # Registered 'producers': app.actor -> { producer* }
+        self.clients = { }                  # Information about client actors
+        self.enrollments = { }              # Registered 'consumers': app.actor -> { consumer* } 
+        self.devices = set()                # Local devices
         self.GROUPMSG_RE = re.compile("\w*\@\w*\.\w*")
     
     def setupIfaces(self):
@@ -72,8 +75,7 @@ class DiscoService(object):
         
         self.poller = zmq.Poller()                              # Set up initial poller (only on the main server socket)  
         self.poller.register(self.server,zmq.POLLIN)
-        self.clients = { }
-        self.devices = set()  
+
         self.clientUpdates = []
     
     def run(self):
@@ -122,7 +124,10 @@ class DiscoService(object):
         self.clients[clientKeyLocal] = port
         clientKeyGlobal = clientKeyBase + self.hostAddress
         self.clients[clientKeyGlobal] = port
-        self.registrations[self.appActorName(appName,actorName)] = []
+        actorKey = self.appActorName(appName,actorName)
+        self.registrations[actorKey] = set()
+        self.clients[actorKey] = []
+        self.enrollments[actorKey] = set()
         return port
     
     def unsetupClient(self,appName,appVersion,actorName):
@@ -142,6 +147,7 @@ class DiscoService(object):
         self.logger.info("unsetupClient - unbind/close sock")
         sock.unbind('tcp://127.0.0.1:' + str(port))
         sock.close(0)
+        client = ""
         # Remove all services registered by this client  
         del self.clients[clientKeyBase]
         del self.clients[clientKeyLocal]
@@ -149,12 +155,16 @@ class DiscoService(object):
         if clientKeyBase in self.devices:
             self.devices.discard(clientKeyBase)
         actorKey = self.appActorName(appName,actorName)
-        assert actorKey in self.registrations
-        registration = self.registrations[actorKey]
-        self.logger.info("unsetupClient - dbase remove")
-        for (key,value) in registration:
-            self.dbase.remove(key, value)
+        # assert actorKey in self.registrations
+        for (key,value) in self.registrations.get(actorKey,set()):
+            self.logger.info("unsetupClient - dbase remove %r.%r.%r" % (actorName,key,value))
+            self.dbase.remove(key, value)               # Remove k/v pair from database
+        # assert actorKey in self.enrollments
+        for (key,target) in self.enrollments.get(actorKey,set()):
+            self.logger.info("unsetupClient - dbase detach %r.%r.%r" % (actorName,key,target))
+            self.dbase.detach(key, target)              # Detach target from key
         del self.registrations[actorKey]
+        del self.enrollments[actorKey]
         return port
     
     def handleActorReg(self,msg):
@@ -223,7 +233,7 @@ class DiscoService(object):
             key = key + ":" + str(self.macAddress) + ":" + actorName
         value = str(host) + ':' + str(port)
         return (key,value)
-    
+            
     def buildLookupKey(self,appName,msgType,kind,scope,clientHost,clientActorName,clientInstanceName,clientPortName):
         '''
         Construct a key used to lookup a service. Construct also a string that identifies the client of the lookup 
@@ -273,7 +283,8 @@ class DiscoService(object):
         # if regKey not in self.registrations:
         (key,value) = self.buildInsertKeyValuePair(appName, actorName, msgType, kind, scope,host, port)
         clients = self.dbase.insert(key,value)
-        self.registrations[regKey].append((key,value))
+        self.logger.info("handleServiceReg: clients = %r",clients)
+        self.registrations[regKey] |= {(key,value)} 
         
         rep = disco_capnp.DiscoRep.new_message()            # Construct response
         repMsg = rep.init('serviceReg')
@@ -306,8 +317,14 @@ class DiscoService(object):
                                            clientActorHost, clientActorName, 
                                            clientInstanceName,clientPortName)
         result = self.dbase.fetch(key,client)
+        
+        regKey = self.appActorName(appName, clientActorName)
+        self.enrollments[regKey] |=  {(key,client)}
+        
+        self.logger.info("handleServiceLookup: clients = %r",self.enrollments[regKey])
         self.logger.info("handleServiceLookup:%s,%s,%s,%s,%s,%s -> %r"
-                           % (appName,str(client),msgType,kind,scope,clientInstanceName,result))   
+                           % (appName,str(client),msgType,kind,scope,clientInstanceName,result))
+           
         rep = disco_capnp.DiscoRep.new_message()            # Construct the response: all providers of the requested service
         repMsg = rep.init('serviceLookup')
         repMsg.status = "ok"
@@ -323,7 +340,7 @@ class DiscoService(object):
     
     def handleServiceUnreg(self,msg):
         '''
-        Handle the service registration message
+        Handle the service un-registration message
         '''
         reqMsg = msg.serviceUnreg                             # Parse the message
         path = reqMsg.path
@@ -340,10 +357,10 @@ class DiscoService(object):
         self.logger.info("handleServiceUnreg: %s,%s,%s,%s,%s,%s,%s" % (appName,actorName,msgType,kind,scope,host,port))
 
         regKey = self.appActorName(appName, actorName)
-        
+
         (key,value) = self.buildInsertKeyValuePair(appName, actorName, msgType, kind, scope,host, port)
-        clients = self.dbase.remove(key,value)
-        self.registrations[regKey].remove((key,value))
+        self.dbase.remove(key,value)
+        self.registrations[regKey] -= {(key,value)}
         
         rep = disco_capnp.DiscoRep.new_message()            # Construct response
         repMsg = rep.init('serviceUnreg')
@@ -387,9 +404,13 @@ class DiscoService(object):
         (key,client) = self.buildLookupKey(appName, msgType, kind, scope,
                                            clientActorHost, clientActorName, 
                                            clientInstanceName,clientPortName)
-        result = self.dbase.remove(key,client)
-        self.logger.info("handleServiceUnlookup:%s,%s,%s,%s,%s,%s -> %r"
-                           % (appName,str(client),msgType,kind,scope,clientInstanceName,result))   
+        
+        regKey = self.appActorName(appName, clientActorName)
+        self.dbase.detach(key,client)
+        self.enrollments[regKey] -=  {(key,client)}
+        
+        self.logger.info("handleServiceUnlookup:%s,%s,%s,%s,%s,%s"
+                           % (appName,str(client),msgType,kind,scope,clientInstanceName))   
         rep = disco_capnp.DiscoRep.new_message()            # Construct the response: all providers of the requested service
         repMsg = rep.init('serviceUnlookup')
         repMsg.status = "ok"
