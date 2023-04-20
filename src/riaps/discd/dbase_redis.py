@@ -183,16 +183,17 @@ class RedisDbase(DiscoDbase):
         except OSError:
             raise DatabaseError("OS error")
         
-    def delete(self,key):
+    def detach(self, key:str, target:str):
         '''
-        Completely delete key and list of clients for that key.
+        Detach update client from keys
         '''
-        self.logger.info("delete %s" % (repr(key)))
+        self.logger.info("detach %s from %r" % (target,key))
         try:
-            self.rLocal.delete(key)
-            clientsKey = key + "_client"
-            self.r.delete(clientsKey)
-            self.delSub(key)
+            clientsKey = key + "_clients"
+            try:
+                self.r.srem(clientsKey,target)
+            except:
+                pass
         except redis.exceptions.ConnectionError:
             raise DatabaseError("db connection lost")
         except OSError:
