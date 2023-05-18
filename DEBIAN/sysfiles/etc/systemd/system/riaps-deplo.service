@@ -1,0 +1,20 @@
+[Unit]
+Description=RIAPS Deployment Manager Service
+Requires=riaps-rm-cgroups.service riaps-rm-quota.service
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/riaps/systemdenv.conf
+StandardOutput=syslog
+StandardError=inherit
+SyslogIdentifier=RIAPS-DEPLO
+SyslogLevel=info
+ExecStart=/usr/local/bin/riaps_deplo
+Restart=always
+KillMode=process
+KillSignal=SIGTERM
+
+[Install]
+WantedBy=multi-user.target

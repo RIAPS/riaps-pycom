@@ -8,7 +8,12 @@ pipeline {
       steps {
         sh '''#!/bin/bash
           chmod +x package.sh
-          ./package.sh
+          ./package.sh -a amd64
+          ./package.sh -a amd64 -d
+          ./package.sh -a armhf
+          ./package.sh -a armhf -d
+          ./package.sh -a arm64
+          ./package.sh -a arm64 -d
         '''
       }
     }
@@ -22,7 +27,7 @@ pipeline {
           script {
             def user = 'riaps'
             def repo = 'riaps-pycom'
-            def files = ['riaps-pycom-amd64.deb','riaps-pycom-armhf.deb','riaps-pycom-arm64.deb']
+            def files = ['riaps-pycom-amd64.deb','riaps-pycom-armhf.deb','riaps-pycom-arm64.deb','riaps-pycom-amd64-dev.deb','riaps-pycom-armhf-dev.deb','riaps-pycom-arm64-dev.deb']
             // Create release on GitHub, if it doesn't already exist
             sh "${env.WORKSPACE}/go/bin/github-release release --user ${user} --repo ${repo} --tag ${env.TAG_NAME} --name ${env.TAG_NAME} --pre-release || true"
             // Iterate over artifacts and upload them

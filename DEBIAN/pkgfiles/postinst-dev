@@ -1,0 +1,54 @@
+#!/bin/bash
+set -e
+
+# Install riaps-pycom pip package
+sudo pip3 install /opt/riaps-pycom/src --verbose --no-index
+
+# Make sure key directories are available
+mkdir -p /usr/local/riaps/keys/
+mkdir -p /usr/local/riaps/etc/
+
+# Restore saved security keys
+PREV_KEYS_PATH="/home/riaps/.ssh/riaps_keys"
+if [ -d $PREV_KEYS_PATH ] && [ "$(ls -A $PREV_KEYS_PATH)" ]; then
+  echo "Restoring saved security keys"
+  sudo cp /home/riaps/.ssh/riaps_keys/id_rsa.key /etc/riaps/id_rsa.key
+  sudo cp /home/riaps/.ssh/riaps_keys/id_rsa.pub /etc/riaps/id_rsa.pub
+  sudo cp /home/riaps/.ssh/riaps_keys/riaps-sys.cert /etc/riaps/riaps-sys.cert
+  sudo cp /home/riaps/.ssh/riaps_keys/x509.pem /etc/riaps/x509.pem
+fi
+
+# Set permissions for security keys
+chown root:riaps /etc/riaps/id_rsa.key
+chown root:riaps /etc/riaps/id_rsa.pub
+chown root:riaps /etc/riaps/riaps-sys.cert
+chown root:riaps /etc/riaps/x509.pem
+chmod 440 /etc/riaps/id_rsa.key
+chmod 440 /etc/riaps/id_rsa.pub
+chmod 444 /etc/riaps/riaps-sys.cert
+chmod 440 /etc/riaps/x509.pem
+
+# Soft link conf files and security keys
+ln -s /etc/riaps/riaps.conf /usr/local/riaps/etc/riaps.conf
+ln -s /etc/riaps/riaps-log.conf /usr/local/riaps/etc/riaps-log.conf
+ln -s /etc/riaps/redis.conf /usr/local/riaps/etc/redis.conf
+ln -s /etc/riaps/id_rsa.key /usr/local/riaps/keys/id_rsa.key
+ln -s /etc/riaps/id_rsa.pub /usr/local/riaps/keys/id_rsa.pub
+ln -s /etc/riaps/riaps-sys.cert /usr/local/riaps/keys/riaps-sys.cert
+ln -s /etc/riaps/x509.pem /usr/local/riaps/keys/x509.pem
+# Note: Specific for developer package
+ln -s /etc/riaps/riaps-hosts.conf /usr/local/riaps/etc/riaps-hosts.conf
+ln -s /etc/riaps/riaps-ctrl.glade /usr/local/riaps/etc/riaps-ctrl.glade
+
+# Remove location used while installing riaps-pycom package
+rm -rf /opt/riaps-pycom/ || true
+
+# Enable and start RIAPS services
+systemctl daemon-reload
+systemctl enable riaps-rm-cgroups.service
+systemctl start riaps-rm-cgroups.service || true
+systemctl enable riaps-rm-quota.service
+systemctl start riaps-rm-quota.service || true
+# Note: Specific for developer package
+systemctl enable riaps-rpyc-registry.service
+systemctl start riaps-rpyc-registry.service || true
