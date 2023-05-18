@@ -7,20 +7,22 @@ Arguments are:
 
 dev="false"
 
-options='h:a:d:'
-while getopt $options option; do
+while getopts hda: option
+do
   case "$option" in 
     h) echo "$usage"; exit;;
+    d) echo "Dev Selected"; dev="true";;
     a) arch=$OPTARG;;
-    d) dev="true";;
   esac
 done
 
-if [ arch == "amd64" ]; then
+echo "Architecture requested: $arch"
+echo "Developer Package: $dev"
+if [ $arch == "amd64" ]; then
   arch_lib="x86_64-linux-gnu"
-elif [ arch == "armhf" ]; then
+elif [ $arch == "armhf" ]; then
   arch_lib="arm-linux-gnueabihf"
-elif [ arch == "arm64" ]; then
+elif [ $arch == "arm64" ]; then
   arch_lib="aarch64-linux-gnu"
 else
   echo "Current available architectures are amd64, armhf and arm64"
@@ -36,6 +38,7 @@ if [ $dev == "false" ]; then
 else
   package_name="riaps-pycom-$arch-dev"
 fi
+echo "Package Name: $package_name"
 
 mkdir -p package/$package_name/DEBIAN
 mkdir -p package/$package_name/usr/local/bin/
@@ -52,7 +55,7 @@ if [ $dev == "false" ]; then
   cp -r DEBIAN/pkgfiles/conffiles package/$package_name/DEBIAN/conffiles
   cp -r DEBIAN/pkgfiles/postinst package/$package_name/DEBIAN/postinst
   cp -r DEBIAN/pkgfiles/postrm package/$package_name/DEBIAN/postrm
-  cp -r DEBIAN/pkgfiles/prerm package/$package_name4/DEBIAN/prerm
+  cp -r DEBIAN/pkgfiles/prerm package/$package_name/DEBIAN/prerm
 else
   cp -r DEBIAN/pkgfiles/conffiles-dev package/$package_name/DEBIAN/conffiles
   cp -r DEBIAN/pkgfiles/postinst-dev package/$package_name/DEBIAN/postinst

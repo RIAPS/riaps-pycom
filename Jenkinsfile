@@ -8,12 +8,12 @@ pipeline {
       steps {
         sh '''#!/bin/bash
           chmod +x package.sh
-          ./package.sh -a amd64
-          ./package.sh -a amd64 -d
-          ./package.sh -a armhf
-          ./package.sh -a armhf -d
-          ./package.sh -a arm64
-          ./package.sh -a arm64 -d
+          ./package.sh -a "amd64"
+          ./package.sh -a "amd64" -d
+          ./package.sh -a "armhf"
+          ./package.sh -a "armhf" -d
+          ./package.sh -a "arm64"
+          ./package.sh -a "arm64" -d
         '''
       }
     }
