@@ -1,7 +1,7 @@
-Package: riaps-pycom
+Package: riaps-pycom-dev
 Architecture: all
 Maintainer: Institute for Software Integrated Systems
-Depends: debconf (>= 0.5.00),libssl-dev, python3, python3-pip
+Depends: debconf (>= 0.5.00),libssl-dev, python3, python3-pip, riaps-pycom
 Conflicts: 
 Priority: required
 Version:  @version@

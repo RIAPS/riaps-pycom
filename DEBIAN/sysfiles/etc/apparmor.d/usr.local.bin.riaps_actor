@@ -57,7 +57,7 @@ profile /usr/local/bin/riaps_actor {
   /usr/local/bin/riaps_actor r,
   owner @{RIAPSAPPS}/** mrw,
 
-  /lib/@arch-lib@/ld-*.so* mr,
+  /lib/@{multiarch}/ld-*.so* mr,
 
   /usr/bin/python3 Cx -> trusted_domain,
 
