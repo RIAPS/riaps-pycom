@@ -1,36 +1,36 @@
 #!/bin/bash
 
-usage="$(basename "$0") [-d] [-h]
-Create Debian packages for indicated architecture. Use -d to create a developer package (for the controller system).
+usage="$(basename "$0") [-c] [-h]
+Create Debian packages for indicated architecture. Use -c to create a controller package.
 Arguments are:
     -h show this help text
-    -d create a developer package (optional)"
+    -c create a controller package (optional)"
 
-dev="false"
+ctrl="false"
 
-while getopts hd option
+while getopts hc option
 do
   case "$option" in 
     h) echo "$usage"; exit;;
-    d) echo "Dev Selected"; dev="true";;
+    c) echo "Ctrl Selected"; ctrl="true";;
   esac
 done
 
-echo "Developer Package: $dev"
+echo "Controller Package: $ctrl"
 
 rm -rf package
 source version.sh
 
-if [ $dev == "false" ]; then
+if [ $ctrl == "false" ]; then
   package_name="riaps-pycom"
 else
-  package_name="riaps-pycom-dev"
+  package_name="riaps-pycom-ctrl"
 fi
 echo "Package Name: $package_name"
 
 mkdir -p package/$package_name/DEBIAN
 
-if [ $dev == "false" ]; then
+if [ $ctrl == "false" ]; then
   cp -r DEBIAN/pkgfiles/control package/$package_name/DEBIAN/control
   cp -r DEBIAN/pkgfiles/conffiles package/$package_name/DEBIAN/conffiles
   cp -r DEBIAN/pkgfiles/postinst package/$package_name/DEBIAN/postinst
