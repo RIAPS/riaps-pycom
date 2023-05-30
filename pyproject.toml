@@ -49,9 +49,16 @@ riaps_gen = "riaps.gen.gen:main"
 riaps_gviz = "riaps.lang.gviz:main"
 riaps_lang = "riaps.lang.lang:main"
 riaps_logger = "riaps.logger.main:main"
+riaps_ctrl_host = "riaps.ctrl.ctrlhost:main"
+riaps_depll = "riaps.deplo.depll:main"
+riaps_gen_cert = "riaps.gen.gencert:main"
+riaps_fab = "riaps.fabfile.fabfile:main"
+riaps_mn = "riaps.mn.mn:main"
+riaps_log_config_test = "riaps.logger.riaps_log_config_test:main"
 
 # Scripts that include additional functionality - could consider moving code to src/riaps folders
 #    then can indicate desired riaps entry points like above.
+#    MM:  took a shot at this to allow testing, feel free to change it as desired
 #    - scripts/riaps_ctrl_host
 #    - scripts/riaps_depll
 #    - scripts/riaps_gen_cert
