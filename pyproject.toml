@@ -1,0 +1,63 @@
+[build-system]
+requires = ["setuptools>=45", "setuptools_scm[toml]>=6.2"]
+# in future add "cython>=0.29.0 to requires
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "riaps-pycom"
+version = "@version@"
+authors = [
+  { name = "RIAPS", email = "riaps@vanderbilt.com" },
+]
+description = "python implementation of the RIAPS component model"
+readme = "README.md"
+license = {file = "LICENSE"}
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: Linux",
+    "License :: OSI Approved :: Apache Software License"
+]
+#dependencies = [
+# could include pip packages required here for RIAPS, i.e. requirements.txt from doc/source
+#]
+
+[project.urls]
+"Homepage" = "https://github.com/RIAPS/riaps-pycom"
+"Bug Tracker" = "https://github.com/RIAPS/riaps-pycom/issues"
+
+[project.optional-dependencies]
+dev = [
+    "watchdog",
+    "pytest"
+]
+# Future could include other optional installs, such as interfaces (e.g. RIAPS Modbus, CANBus, GPIO)
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+riaps = ["*.capnp", "*.tpl"]
+
+[project.scripts]
+riaps_actor = "riaps.run.main:main"
+riaps_ctrl = "riaps.ctrl.main:main"
+riaps_deplo = "riaps.deplo.main:main"
+riaps_device = "riaps.run.dmain:main"
+riaps_disco = "riaps.discd.main:main"
+riaps_gen = "riaps.gen.gen:main"
+riaps_gviz = "riaps.lang.gviz:main"
+riaps_lang = "riaps.lang.lang:main"
+riaps_logger = "riaps.logger.main:main"
+
+# Scripts that include additional functionality - could consider moving code to src/riaps folders
+#    then can indicate desired riaps entry points like above.
+#    - scripts/riaps_ctrl_host
+#    - scripts/riaps_depll
+#    - scripts/riaps_gen_cert
+#    - scripts/riaps_fab
+#    - scripts/riaps_mn
+#    - scripts/riaps_log_config_test
+
+#[tool.setuptools] 
+#zip_safe = "False" - deprecated: https://setuptools.pypa.io/en/latest/deprecated/zip_safe.html

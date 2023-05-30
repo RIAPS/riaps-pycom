@@ -57,7 +57,7 @@ if [ $ctrl == "false" ]; then
   cp -r src/riaps/keys/riaps-sys.cert package/$package_name/etc/riaps/.
   cp -r src/riaps/keys/x509.pem package/$package_name/etc/riaps/.
 
-  sed s/@version@/$pycomversion/g -i package/$package_name/opt/riaps-pycom/src/setup.py
+  sed s/@version@/$pycomversion/g -i package/$package_name/opt/riaps-pycom/pyproject.toml
 else
   cp -r DEBIAN/pkgfiles/control-dev package/$package_name/DEBIAN/control
   cp -r DEBIAN/pkgfiles/conffiles-dev package/$package_name/DEBIAN/conffiles
