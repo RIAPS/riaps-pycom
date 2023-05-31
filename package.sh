@@ -16,8 +16,6 @@ do
   esac
 done
 
-echo "Controller Package: $ctrl"
-
 rm -rf package
 source version.sh
 
@@ -46,6 +44,7 @@ if [ $ctrl == "false" ]; then
   mkdir -p package/$package_name/usr/local/riaps/lang/
 
   cp -r DEBIAN/sysfiles/etc/* package/$package_name/etc/.
+  cp -r pyproject.toml package/$package_name/opt/riaps-pycom/.
   cp -r src package/$package_name/opt/riaps-pycom/.
   cp -r src/riaps/etc/riaps.conf package/$package_name/etc/riaps/.
   cp -r src/riaps/etc/riaps-log.conf package/$package_name/etc/riaps/.
@@ -59,11 +58,11 @@ if [ $ctrl == "false" ]; then
 
   sed s/@version@/$pycomversion/g -i package/$package_name/opt/riaps-pycom/pyproject.toml
 else
-  cp -r DEBIAN/pkgfiles/control-dev package/$package_name/DEBIAN/control
-  cp -r DEBIAN/pkgfiles/conffiles-dev package/$package_name/DEBIAN/conffiles
-  cp -r DEBIAN/pkgfiles/postinst-dev package/$package_name/DEBIAN/postinst
-  cp -r DEBIAN/pkgfiles/postrm-dev package/$package_name/DEBIAN/postrm
-  cp -r DEBIAN/pkgfiles/prerm-dev package/$package_name/DEBIAN/prerm
+  cp -r DEBIAN/pkgfiles/control-ctrl package/$package_name/DEBIAN/control
+  cp -r DEBIAN/pkgfiles/conffiles-ctrl package/$package_name/DEBIAN/conffiles
+  cp -r DEBIAN/pkgfiles/postinst-ctrl package/$package_name/DEBIAN/postinst
+  cp -r DEBIAN/pkgfiles/postrm-ctrl package/$package_name/DEBIAN/postrm
+  cp -r DEBIAN/pkgfiles/prerm-ctrl package/$package_name/DEBIAN/prerm
 
   mkdir -p package/$package_name/etc/
   mkdir -p package/$package_name/etc/riaps/

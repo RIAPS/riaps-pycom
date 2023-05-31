@@ -1,11 +1,12 @@
 [build-system]
-requires = ["setuptools>=45", "setuptools_scm[toml]>=6.2"]
+requires = ["setuptools", "setuptools_scm"]
 # in future add "cython>=0.29.0 to requires
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "riaps-pycom"
-version = "@version@"
+#version = "@version@"
+version = "1.1.22rc1"
 authors = [
   { name = "RIAPS", email = "riaps@vanderbilt.com" },
 ]
