@@ -45,6 +45,8 @@ if [ $ctrl == "false" ]; then
 
   cp -r DEBIAN/sysfiles/etc/* package/$package_name/etc/.
   cp -r pyproject.toml package/$package_name/opt/riaps-pycom/.
+  cp -r LICENSE package/$package_name/opt/riaps-pycom/.
+  cp -r README.md package/$package_name/opt/riaps-pycom/.
   cp -r src package/$package_name/opt/riaps-pycom/.
   cp -r src/riaps/etc/riaps.conf package/$package_name/etc/riaps/.
   cp -r src/riaps/etc/riaps-log.conf package/$package_name/etc/riaps/.
