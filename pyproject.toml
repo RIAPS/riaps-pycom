@@ -38,7 +38,7 @@ dev = [
 where = ["src"]
 
 [tool.setuptools.package-data]
-riaps = ["*.capnp", "*.tpl"]
+"*" = ["*.capnp", "*.tpl"]
 
 [project.scripts]
 riaps_actor = "riaps.run.main:main"

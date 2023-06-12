@@ -22,7 +22,7 @@ source version.sh
 if [ $ctrl == "false" ]; then
   package_name="riaps-pycom"
 else
-  package_name="riaps-pycom-ctrl"
+  package_name="riaps-pycom-dev"
 fi
 echo "Package Name: $package_name"
 
@@ -60,11 +60,11 @@ if [ $ctrl == "false" ]; then
 
   sed s/@version@/$pycomversion/g -i package/$package_name/opt/riaps-pycom/pyproject.toml
 else
-  cp -r DEBIAN/pkgfiles/control-ctrl package/$package_name/DEBIAN/control
-  cp -r DEBIAN/pkgfiles/conffiles-ctrl package/$package_name/DEBIAN/conffiles
-  cp -r DEBIAN/pkgfiles/postinst-ctrl package/$package_name/DEBIAN/postinst
-  cp -r DEBIAN/pkgfiles/postrm-ctrl package/$package_name/DEBIAN/postrm
-  cp -r DEBIAN/pkgfiles/prerm-ctrl package/$package_name/DEBIAN/prerm
+  cp -r DEBIAN/pkgfiles/control-dev package/$package_name/DEBIAN/control
+  cp -r DEBIAN/pkgfiles/conffiles-dev package/$package_name/DEBIAN/conffiles
+  cp -r DEBIAN/pkgfiles/postinst-dev package/$package_name/DEBIAN/postinst
+  cp -r DEBIAN/pkgfiles/postrm-dev package/$package_name/DEBIAN/postrm
+  cp -r DEBIAN/pkgfiles/prerm-dev package/$package_name/DEBIAN/prerm
 
   mkdir -p package/$package_name/etc/
   mkdir -p package/$package_name/etc/riaps/
