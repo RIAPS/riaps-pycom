@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# Stop and remove RIAPS services
+systemctl stop riaps-rm-cgroups.service || true
+systemctl disable riaps-rm-cgroups.service
+systemctl stop riaps-rm-quota.service || true
+systemctl disable riaps-rm-quota.service
+# Developer systems have rpyc running to support the controller
+systemctl stop riaps-rpyc-registry.service || true
+systemctl disable riaps-rpyc-registry.service
+
+# Save off security keys for use with next install
+mkdir -p /home/riaps/.ssh/riaps_keys
+echo "Saving existing security keys (~/.ssh/riaps_keys)"
+sudo cp /etc/riaps/id_rsa.key /home/riaps/.ssh/riaps_keys/id_rsa.key
+sudo cp /etc/riaps/id_rsa.pub /home/riaps/.ssh/riaps_keys/id_rsa.pub
+sudo cp /etc/riaps/riaps-sys.cert /home/riaps/.ssh/riaps_keys/riaps-sys.cert
+sudo cp /etc/riaps/x509.pem /home/riaps/.ssh/riaps_keys/x509.pem

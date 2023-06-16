@@ -1,4 +1,0 @@
-#!/bin/bash
-
-systemctl stop riaps-rpyc-registry.service || true
-systemctl disable riaps-rpyc-registry.service
