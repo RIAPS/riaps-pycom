@@ -55,17 +55,3 @@ riaps_depll = "riaps.lang.depll:main"
 riaps_gen_cert = "riaps.utils.gencert:main"
 riaps_fab = "riaps.fabfile.fabfile:main"
 riaps_log_config_test = "riaps.logger.riaps_log_config_test:main"
-#riaps_mn = "riaps.mn.mn:main"
-
-# Scripts that include additional functionality - could consider moving code to src/riaps folders
-#    then can indicate desired riaps entry points like above.
-#    MM:  took a shot at this to allow testing, feel free to change it as desired
-#    - scripts/riaps_ctrl_host
-#    - scripts/riaps_depll
-#    - scripts/riaps_gen_cert
-#    - scripts/riaps_fab
-#    - scripts/riaps_mn
-#    - scripts/riaps_log_config_test
-
-#[tool.setuptools] 
-#zip_safe = "False" - deprecated: https://setuptools.pypa.io/en/latest/deprecated/zip_safe.html
