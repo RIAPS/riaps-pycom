@@ -50,3 +50,7 @@ systemctl start riaps-rm-quota.service || true
 # Note: RPYC is enabled for the controller app
 systemctl enable riaps-rpyc-registry.service
 systemctl start riaps-rpyc-registry.service || true
+
+echo ">>>> Update the 'nic_name' in '/etc/riaps/riaps.conf' to match your system's setup. <<<<"
+echo ">>>> Instructions can be found at https://github.com/RIAPS/riaps-integration/tree/master/riaps-x86runtime#configuring-environment-for-local-network-setup <<<<"
+echo ">>>> Then, please reboot your system to start using RIAPS <<<<"

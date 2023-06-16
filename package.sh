@@ -8,7 +8,7 @@ Arguments are:
 
 dev="false"
 
-while getopts hc option
+while getopts hd option
 do
   case "$option" in 
     h) echo "$usage"; exit;;

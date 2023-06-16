@@ -6,9 +6,8 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "riaps-pycom"
 version = "@version@"
-#MM FOR TESTING: version = "1.1.22rc1"
 authors = [
-  { name = "RIAPS", email = "riaps@vanderbilt.edu" },
+  { name = "Vanderbilt University Institute for Software Integrated Systems" },
 ]
 description = "python implementation of the RIAPS component model"
 readme = "README.md"
@@ -25,7 +24,7 @@ dependencies = [
     "bcrypt >= 3.2.2",
     "butter >= 0.13.1",
     "cgroups >= 0.1.0",
-    "cgroupspy => 0.2.2",
+    "cgroupspy >= 0.2.2",
     "cryptography >= 3.3.2",
     "czmq == 4.2.1",
     "fabric3 >= 1.14.post1",
@@ -50,7 +49,7 @@ dependencies = [
     "spdlog == 2.0.4", # https://github.com/RIAPS/spdlog-python.git
     "toml >= 0.10.2",
     "zyre == 2.0.1",
-    # add VM additionals and special installs
+    # the following are used in the controller portion of riaps-pycom
     "gitpython >= 3.1.27",
     "Jinja2 >= 3.1.2",
     "libtmux >= 0.15.7",
