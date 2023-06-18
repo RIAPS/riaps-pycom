@@ -10,8 +10,5 @@ Arguments:
 '''
 from riaps.lang.depl import main
 
-def main():
-    main(True)
-    
 if __name__ == '__main__':
     main(True)
