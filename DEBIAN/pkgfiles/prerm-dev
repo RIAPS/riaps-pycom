@@ -10,9 +10,9 @@ systemctl stop riaps-rpyc-registry.service || true
 systemctl disable riaps-rpyc-registry.service
 
 # Save off security keys for use with next install
-mkdir -p /home/riaps/.ssh/riaps_keys
-echo "Saving existing security keys (~/.ssh/riaps_keys)"
-sudo cp /etc/riaps/id_rsa.key /home/riaps/.ssh/riaps_keys/id_rsa.key
-sudo cp /etc/riaps/id_rsa.pub /home/riaps/.ssh/riaps_keys/id_rsa.pub
-sudo cp /etc/riaps/riaps-sys.cert /home/riaps/.ssh/riaps_keys/riaps-sys.cert
-sudo cp /etc/riaps/x509.pem /home/riaps/.ssh/riaps_keys/x509.pem
+mkdir -p /tmp/riaps-pycom-save/
+echo "Saving existing security keys (/tmp/riaps-pycom-save/)"
+sudo cp /etc/riaps/id_rsa.key /tmp/riaps-pycom-save/id_rsa.key
+sudo cp /etc/riaps/id_rsa.pub /tmp/riaps-pycom-save/id_rsa.pub
+sudo cp /etc/riaps/riaps-sys.cert /tmp/riaps-pycom-save/riaps-sys.cert
+sudo cp /etc/riaps/x509.pem /tmp/riaps-pycom-save/x509.pem

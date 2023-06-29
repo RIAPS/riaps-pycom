@@ -28,18 +28,18 @@ echo "Package Name: $package_name"
 
 mkdir -p package/$package_name/DEBIAN
 
-cp -r DEBIAN/pkgfiles/conffiles package/$package_name/DEBIAN/conffiles
-
 if [ $dev == "false" ]; then
   cp -r DEBIAN/pkgfiles/control package/$package_name/DEBIAN/control
   cp -r DEBIAN/pkgfiles/postinst package/$package_name/DEBIAN/postinst
   cp -r DEBIAN/pkgfiles/postrm package/$package_name/DEBIAN/postrm
   cp -r DEBIAN/pkgfiles/prerm package/$package_name/DEBIAN/prerm
+  cp -r DEBIAN/pkgfiles/conffiles package/$package_name/DEBIAN/conffiles
 else
   cp -r DEBIAN/pkgfiles/control-dev package/$package_name/DEBIAN/control
   cp -r DEBIAN/pkgfiles/postinst-dev package/$package_name/DEBIAN/postinst
   cp -r DEBIAN/pkgfiles/postrm-dev package/$package_name/DEBIAN/postrm
   cp -r DEBIAN/pkgfiles/prerm-dev package/$package_name/DEBIAN/prerm
+  cp -r DEBIAN/pkgfiles/conffiles-dev package/$package_name/DEBIAN/conffiles
 fi
 
 mkdir -p package/$package_name/opt/riaps-pycom/
@@ -55,11 +55,15 @@ cp -r pyproject.toml package/$package_name/opt/riaps-pycom/.
 cp -r LICENSE package/$package_name/opt/riaps-pycom/.
 cp -r README.md package/$package_name/opt/riaps-pycom/.
 cp -r src package/$package_name/opt/riaps-pycom/.
+
 cp -r src/riaps/etc/riaps.conf package/$package_name/etc/riaps/.
 cp -r src/riaps/etc/riaps-log.conf package/$package_name/etc/riaps/.
 cp -r src/riaps/etc/redis.conf package/$package_name/etc/riaps/.
-cp -r src/riaps/etc/riaps-hosts.conf package/$package_name/etc/riaps/.
-cp -r src/riaps/etc/riaps-ctrl.glade package/$package_name/etc/riaps/.
+if [ $dev == "true" ]; then
+  cp -r src/riaps/etc/riaps-hosts.conf package/$package_name/etc/riaps/.
+  cp -r src/riaps/etc/riaps-ctrl.glade package/$package_name/etc/riaps/.
+fi
+
 cp -r src/riaps/lang/riaps.tx package/$package_name/usr/local/riaps/lang/.
 cp -r src/riaps/lang/depl.tx package/$package_name/usr/local/riaps/lang/.
 cp -r src/riaps/keys/id_rsa.key package/$package_name/etc/riaps/.
