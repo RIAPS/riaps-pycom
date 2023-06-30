@@ -9,7 +9,7 @@ mkdir -p /usr/local/riaps/keys/
 mkdir -p /usr/local/riaps/etc/
 
 # Restore saved security keys
-PREV_KEYS_PATH="/.ssh/riaps-pycom-save"
+PREV_KEYS_PATH="/home/riaps/.ssh/riaps-pycom-save"
 if [ -d $PREV_KEYS_PATH ] && [ "$(ls -A $PREV_KEYS_PATH)" ]; then  echo "Restoring saved security keys"
   sudo cp $PREV_KEYS_PATH/id_rsa.key /etc/riaps/id_rsa.key
   sudo cp $PREV_KEYS_PATH/id_rsa.pub /etc/riaps/id_rsa.pub
