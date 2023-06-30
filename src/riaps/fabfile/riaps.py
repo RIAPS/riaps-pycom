@@ -121,7 +121,7 @@ def install(keepConfig=False):
             print("install exception: %r" % e)
 
 @task
-@roles('nodes','control','remote','all')
+@roles('remote')
 def uninstall(keepConfig=False):
     """Uninstall all RIAPS packages from nodes:[keepConfig]"""
     global packages
