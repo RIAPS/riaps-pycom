@@ -11,9 +11,10 @@ systemctl disable riaps-rpyc-registry.service
 
 # Save off security keys for use with next install
 SAVE_KEYS_PATH="/home/riaps/.ssh/riaps-pycom-save"
+PYCOM_ETC_DIR="/etc/riaps"
 mkdir -p $SAVE_KEYS_PATH
 echo "Saving existing security keys ($SAVE_KEYS_PATH)"
-sudo cp /etc/riaps/id_rsa.key $SAVE_KEYS_PATH/id_rsa.key
-sudo cp /etc/riaps/id_rsa.pub $SAVE_KEYS_PATH/id_rsa.pub
-sudo cp /etc/riaps/riaps-sys.cert $SAVE_KEYS_PATH/riaps-sys.cert
-sudo cp /etc/riaps/x509.pem $SAVE_KEYS_PATH/x509.pem
+sudo cp $PYCOM_ETC_DIR/id_rsa.key $SAVE_KEYS_PATH/id_rsa.key
+sudo cp $PYCOM_ETC_DIR/id_rsa.pub $SAVE_KEYS_PATH/id_rsa.pub
+sudo cp $PYCOM_ETC_DIR/riaps-sys.cert $SAVE_KEYS_PATH/riaps-sys.cert
+sudo cp $PYCOM_ETC_DIR/x509.pem $SAVE_KEYS_PATH/x509.pem

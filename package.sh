@@ -1,5 +1,8 @@
 #!/bin/bash
 
+PYCOM_ETC_DIR="etc/riaps"
+PYCOM_LN_DIR="usr/local/riaps"
+
 usage="$(basename "$0") [-d] [-h]
 Create Debian packages for indicated architecture. Use -d to create a developer package.
 Arguments are:
@@ -44,11 +47,11 @@ fi
 
 mkdir -p package/$package_name/opt/riaps-pycom/
 mkdir -p package/$package_name/etc/
-mkdir -p package/$package_name/etc/riaps/
-mkdir -p package/$package_name/usr/local/bin/
-mkdir -p package/$package_name/usr/local/riaps/etc/
-mkdir -p package/$package_name/usr/local/riaps/keys/
-mkdir -p package/$package_name/usr/local/riaps/lang/
+mkdir -p package/$package_name/$PYCOM_ETC_DIR/
+#mkdir -p package/$package_name/usr/local/bin/
+mkdir -p package/$package_name/$PYCOM_LN_DIR/etc/
+mkdir -p package/$package_name/$PYCOM_LN_DIR/keys/
+mkdir -p package/$package_name/$PYCOM_LN_DIR/lang/
 
 cp -r DEBIAN/sysfiles/etc/* package/$package_name/etc/.
 cp -r pyproject.toml package/$package_name/opt/riaps-pycom/.
@@ -56,20 +59,20 @@ cp -r LICENSE package/$package_name/opt/riaps-pycom/.
 cp -r README.md package/$package_name/opt/riaps-pycom/.
 cp -r src package/$package_name/opt/riaps-pycom/.
 
-cp -r src/riaps/etc/riaps.conf package/$package_name/etc/riaps/.
-cp -r src/riaps/etc/riaps-log.conf package/$package_name/etc/riaps/.
-cp -r src/riaps/etc/redis.conf package/$package_name/etc/riaps/.
+cp -r src/$PYCOM_ETC_DIR/riaps.conf package/$package_name/$PYCOM_ETC_DIR/.
+cp -r src/$PYCOM_ETC_DIR/riaps-log.conf package/$package_name/$PYCOM_ETC_DIR/.
+cp -r src/$PYCOM_ETC_DIR/redis.conf package/$package_name/$PYCOM_ETC_DIR/.
 if [ $dev == "true" ]; then
-  cp -r src/riaps/etc/riaps-hosts.conf package/$package_name/etc/riaps/.
-  cp -r src/riaps/etc/riaps-ctrl.glade package/$package_name/etc/riaps/.
+  cp -r src/$PYCOM_ETC_DIR/riaps-hosts.conf package/$package_name/$PYCOM_ETC_DIR/.
+  cp -r src/$PYCOM_ETC_DIR/riaps-ctrl.glade package/$package_name/$PYCOM_ETC_DIR/.
 fi
 
-cp -r src/riaps/lang/riaps.tx package/$package_name/usr/local/riaps/lang/.
-cp -r src/riaps/lang/depl.tx package/$package_name/usr/local/riaps/lang/.
-cp -r src/riaps/keys/id_rsa.key package/$package_name/etc/riaps/.
-cp -r src/riaps/keys/id_rsa.pub package/$package_name/etc/riaps/.
-cp -r src/riaps/keys/riaps-sys.cert package/$package_name/etc/riaps/.
-cp -r src/riaps/keys/x509.pem package/$package_name/etc/riaps/.
+cp -r src/riaps/lang/riaps.tx package/$package_name/$PYCOM_LN_DIR/lang/.
+cp -r src/riaps/lang/depl.tx package/$package_name/$PYCOM_LN_DIR/lang/.
+cp -r src/riaps/keys/id_rsa.key package/$package_name/$PYCOM_ETC_DIR/.
+cp -r src/riaps/keys/id_rsa.pub package/$package_name/$PYCOM_ETC_DIR/.
+cp -r src/riaps/keys/riaps-sys.cert package/$package_name/$PYCOM_ETC_DIR/.
+cp -r src/riaps/keys/x509.pem package/$package_name/$PYCOM_ETC_DIR/.
 
 sed s/@version@/$pycomversion/g -i package/$package_name/opt/riaps-pycom/pyproject.toml
 sed s/@version@/$pycomversion/g -i package/$package_name/DEBIAN/control
