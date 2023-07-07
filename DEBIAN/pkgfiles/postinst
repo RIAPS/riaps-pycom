@@ -5,7 +5,7 @@ PYCOM_ETC_DIR="/etc/riaps"
 PYCOM_LN_DIR="/usr/local/riaps"
 
 # Install riaps-pycom pip package
-sudo pip3 install /opt/riaps-pycom/. --verbose
+pip3 install /opt/riaps-pycom/. --verbose
 
 # Make sure key directories are available
 mkdir -p $PYCOM_LN_DIR/keys/
