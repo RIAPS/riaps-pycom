@@ -59,12 +59,12 @@ cp -r LICENSE package/$package_name/opt/riaps-pycom/.
 cp -r README.md package/$package_name/opt/riaps-pycom/.
 cp -r src package/$package_name/opt/riaps-pycom/.
 
-cp -r src/$PYCOM_ETC_DIR/riaps.conf package/$package_name/$PYCOM_ETC_DIR/.
-cp -r src/$PYCOM_ETC_DIR/riaps-log.conf package/$package_name/$PYCOM_ETC_DIR/.
-cp -r src/$PYCOM_ETC_DIR/redis.conf package/$package_name/$PYCOM_ETC_DIR/.
+cp -r src/riaps/etc/riaps.conf package/$package_name/$PYCOM_ETC_DIR/.
+cp -r src/riaps/etc/riaps-log.conf package/$package_name/$PYCOM_ETC_DIR/.
+cp -r src/riaps/etc/redis.conf package/$package_name/$PYCOM_ETC_DIR/.
 if [ $dev == "true" ]; then
-  cp -r src/$PYCOM_ETC_DIR/riaps-hosts.conf package/$package_name/$PYCOM_ETC_DIR/.
-  cp -r src/$PYCOM_ETC_DIR/riaps-ctrl.glade package/$package_name/$PYCOM_ETC_DIR/.
+  cp -r src/riaps/etc/riaps-hosts.conf package/$package_name/$PYCOM_ETC_DIR/.
+  cp -r src/riaps/etc/riaps-ctrl.glade package/$package_name/$PYCOM_ETC_DIR/.
 fi
 
 cp -r src/riaps/lang/riaps.tx package/$package_name/$PYCOM_LN_DIR/lang/.
