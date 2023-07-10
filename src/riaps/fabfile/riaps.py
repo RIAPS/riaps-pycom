@@ -81,7 +81,8 @@ def updateNodeKey(keepPasswd=False):
     run('rm ' + ssh_zmqcert_name)
 
     # Defaults to remove password to remote nodes, user can request to keep the password enabled
-    if not keepPasswd:
+    if keepPasswd == "False":
+        print("Turning off password access to remote node")
         sudo('passwd -q -d riaps')
 
 @task
