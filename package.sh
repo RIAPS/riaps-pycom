@@ -48,7 +48,6 @@ fi
 mkdir -p package/$package_name/opt/riaps-pycom/
 mkdir -p package/$package_name/etc/
 mkdir -p package/$package_name/$PYCOM_ETC_DIR/
-#mkdir -p package/$package_name/usr/local/bin/
 mkdir -p package/$package_name/$PYCOM_LN_DIR/etc/
 mkdir -p package/$package_name/$PYCOM_LN_DIR/keys/
 mkdir -p package/$package_name/$PYCOM_LN_DIR/lang/
@@ -65,6 +64,10 @@ cp -r src/riaps/etc/redis.conf package/$package_name/$PYCOM_ETC_DIR/.
 if [ $dev == "true" ]; then
   cp -r src/riaps/etc/riaps-hosts.conf package/$package_name/$PYCOM_ETC_DIR/.
   cp -r src/riaps/etc/riaps-ctrl.glade package/$package_name/$PYCOM_ETC_DIR/.
+
+  # Setup riaps-pycom-dev nic name to be the typical VM value
+  sed s/"nic_name = eth0"/"# nic_name = eth0"/g -i package/$package_name/$PYCOM_ETC_DIR/riaps.conf
+  sed s/"# nic_name = enp0s8"/"nic_name = enp0s8"/g -i package/$package_name/$PYCOM_ETC_DIR/riaps.conf
 fi
 
 cp -r src/riaps/lang/riaps.tx package/$package_name/$PYCOM_LN_DIR/lang/.
