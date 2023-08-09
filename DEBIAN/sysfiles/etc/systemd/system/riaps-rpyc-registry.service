@@ -4,8 +4,7 @@ Description=RIAPS RPyC Registry Service
 [Service] 
 Type=simple  
 User=riaps 
-Group=riaps 
-StandardOutput=syslog 
+Group=riaps  
 StandardError=inherit 
 SyslogIdentifier=RIAPS-RPYC 
 SyslogLevel=info 
