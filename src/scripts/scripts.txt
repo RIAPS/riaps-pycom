@@ -12,8 +12,16 @@ The scripts listed below are used by all riaps installations (both on a developm
 embedded targets):
 - riaps_actor: the actor 
 - riaps_ctrl: the controller
+- riaps_ctrl_host: provides IP address(es) of the RIAPS Control host
 - riaps_depll: the deployment language processor
 - riaps_deplo: the deployment manager
+- riaps_device: the device actor
 - riaps_disco: the discovery service
+- riaps_fab: the communication tool for multiple nodes
+- riaps_gen: the riaps file generator based on model files
+- riaps_gen_cert: the security key generator
+- riaps_gviz: the graphic visualization processor
 - riaps_lang: the modeling language processor
+- riaps_log_config_test: test app for log configuration file
+- riaps_logger: the framework log server
  

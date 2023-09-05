@@ -1,0 +1,8 @@
+Package: riaps-pycom-dev
+Architecture: all
+Maintainer: Institute for Software Integrated Systems
+Depends: debconf (>= 0.5.00),libssl-dev, python3, python3-pip
+Conflicts: riaps-pycom
+Priority: required
+Version:  @version@
+Description: This is the python version of the RIAPS component model for development machines.

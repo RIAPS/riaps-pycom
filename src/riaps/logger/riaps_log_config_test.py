@@ -24,7 +24,7 @@ def test_loggers(loggers, msg):
     print("\n")
 
 
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-F", "--file", default="riaps-log.conf")
     parser.add_argument("-s", "--spd", action='store_true')
@@ -44,6 +44,7 @@ if __name__ == '__main__':
         test_loggers(loggers, f"message: {i}")
         time.sleep(1)
 
-
+if __name__ == '__main__':
+    main()
 
 

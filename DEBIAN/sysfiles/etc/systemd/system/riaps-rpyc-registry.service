@@ -1,0 +1,16 @@
+[Unit] 
+Description=RIAPS RPyC Registry Service 
+  
+[Service] 
+Type=simple  
+User=riaps 
+Group=riaps  
+StandardError=inherit 
+SyslogIdentifier=RIAPS-RPYC 
+SyslogLevel=info 
+ExecStart=/usr/local/bin/rpyc_registry.py 
+Restart=always
+RestartSec=5s
+  
+[Install]
+WantedBy=multi-user.target
