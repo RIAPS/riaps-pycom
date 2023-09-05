@@ -1,0 +1,53 @@
+#!/bin/bash
+set -e
+
+PYCOM_ETC_DIR="/etc/riaps"
+PYCOM_LN_DIR="/usr/local/riaps"
+
+# Install riaps-pycom pip package
+pip3 install /opt/riaps-pycom/. --verbose
+
+# Make sure key directories are available
+mkdir -p $PYCOM_LN_DIR/keys/
+mkdir -p $PYCOM_LN_DIR/etc/
+
+# Restore saved security keys
+PREV_KEYS_PATH="/home/riaps/.ssh/riaps-pycom-save"
+if [ -d $PREV_KEYS_PATH ] && [ "$(ls -A $PREV_KEYS_PATH)" ]; then  echo "Restoring saved security keys"
+  sudo cp $PREV_KEYS_PATH/id_rsa.key $PYCOM_ETC_DIR/id_rsa.key
+  sudo cp $PREV_KEYS_PATH/id_rsa.pub $PYCOM_ETC_DIR/id_rsa.pub
+  sudo cp $PREV_KEYS_PATH/riaps-sys.cert $PYCOM_ETC_DIR/riaps-sys.cert
+  sudo cp $PREV_KEYS_PATH/x509.pem $PYCOM_ETC_DIR/x509.pem
+fi
+
+# Set permissions for security keys
+chown -f root:riaps $PYCOM_ETC_DIR/id_rsa.key
+chown -f root:riaps $PYCOM_ETC_DIR/id_rsa.pub
+chown -f root:riaps $PYCOM_ETC_DIR/riaps-sys.cert
+chown -f root:riaps $PYCOM_ETC_DIR/x509.pem
+chmod -f 440 $PYCOM_ETC_DIR/id_rsa.key
+chmod -f 440 $PYCOM_ETC_DIR/id_rsa.pub
+chmod -f 444 $PYCOM_ETC_DIR/riaps-sys.cert
+chmod -f 440 $PYCOM_ETC_DIR/x509.pem
+
+# Soft link conf files and security keys
+ln -s $PYCOM_ETC_DIR/riaps.conf $PYCOM_LN_DIR/etc/riaps.conf
+ln -s $PYCOM_ETC_DIR/riaps-log.conf $PYCOM_LN_DIR/etc/riaps-log.conf
+ln -s $PYCOM_ETC_DIR/redis.conf $PYCOM_LN_DIR/etc/redis.conf
+ln -s $PYCOM_ETC_DIR/id_rsa.key $PYCOM_LN_DIR/keys/id_rsa.key
+ln -s $PYCOM_ETC_DIR/id_rsa.pub $PYCOM_LN_DIR/keys/id_rsa.pub
+ln -s $PYCOM_ETC_DIR/riaps-sys.cert $PYCOM_LN_DIR/keys/riaps-sys.cert
+ln -s $PYCOM_ETC_DIR/x509.pem $PYCOM_LN_DIR/keys/x509.pem
+
+# Remove location used while installing riaps-pycom package
+rm -rf /opt/riaps-pycom/ || true
+
+# Enable and start RIAPS services
+systemctl daemon-reload
+systemctl enable riaps-rm-cgroups.service
+systemctl start riaps-rm-cgroups.service || true
+systemctl enable riaps-rm-quota.service
+systemctl start riaps-rm-quota.service || true
+# Note: Normal RIAPS nodes have riaps-deplo active on boot
+systemctl enable riaps-deplo.service
+systemctl start riaps-deplo.service || true

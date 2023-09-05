@@ -1,0 +1,94 @@
+[build-system]
+requires = ["setuptools", "setuptools_scm", "testresources"]
+# in future add "cython>=0.29.0 to requires
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "riaps-pycom"
+version = "@version@"
+authors = [
+  { name = "Vanderbilt University Institute for Software Integrated Systems" },
+]
+description = "python implementation of the RIAPS component model"
+readme = "README.md"
+license = {file = "LICENSE"}
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: Linux",
+    "License :: OSI Approved :: Apache Software License"
+]
+dependencies = [
+#    "apparmor >= 2.13.3",
+#    "apparmor_monkeys == 0.0.2.dev0", # https://github.com/RIAPS/apparmor_monkeys.git
+#    "bcrypt >= 3.2.2",
+#    "butter >= 0.13.1",
+#    "cgroups >= 0.1.0",
+#    "cgroupspy >= 0.2.2",
+#    "cryptography >= 3.3.2",
+#    "czmq == 4.2.1",
+#    "fabric3 >= 1.14.post1",
+#    "gpiod >= 1.5.3",
+#    "hiredis >= 2.0.0",
+#    "lmdb >= 1.3.0",
+#    "netifaces >= 0.11.0",
+#    "paramiko >= 2.11.0",
+#    "parse >= 1.19.0",
+#    "psutil >= 5.5.1",
+#    "pybind11 >= 2.10.0",
+#    "pycapnp == 1.0.0",
+#    "pycryptodomex >= 3.15.0",
+#    "pydevd >= 2.8.0",
+#    "pyroute2 >= 0.7.2",
+#    "pyserial >= 3.5",
+#    "python-prctl == 1.7", # https://github.com/RIAPS/python-prctl.git
+#    "PyYAML >= 5.3.1",
+#    "pyzmq == 23.2.1",
+#    "redis >= 4.3.4",
+#    "rpyc >= 5.2.3",
+#    "spdlog == 2.0.4", # https://github.com/RIAPS/spdlog-python.git
+#    "toml >= 0.10.2",
+#    "zyre == 2.0.1",
+#    # the following are used in the controller portion of riaps-pycom
+#    "gitpython >= 3.1.27",
+#    "Jinja2 >= 3.1.2",
+#    "libtmux >= 0.15.7",
+#    "graphviz >= 0.20.1",
+#    "pydot >= 1.4.2",
+#    "pymultigen >= 0.2.0",
+#    "python-magic >= 0.4.27",
+#    "textX >= 3.0.0",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/RIAPS/riaps-pycom"
+"Bug Tracker" = "https://github.com/RIAPS/riaps-pycom/issues"
+
+[project.optional-dependencies]
+dev = [
+    "watchdog",
+    "pytest"
+]
+# Future could include other optional installs, such as interfaces (e.g. RIAPS Modbus, CANBus, GPIO)
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"*" = ["*.capnp", "*.tpl"]
+
+[project.scripts]
+riaps_actor = "riaps.run.main:main"
+riaps_ctrl = "riaps.ctrl.main:main"
+riaps_deplo = "riaps.deplo.main:main"
+riaps_device = "riaps.run.dmain:main"
+riaps_disco = "riaps.discd.main:main"
+riaps_gen = "riaps.gen.gen:main"
+riaps_gviz = "riaps.lang.gviz:main"
+riaps_lang = "riaps.lang.lang:main"
+riaps_logger = "riaps.logger.main:main"
+riaps_ctrl_host = "riaps.utils.ctrlhost:main"
+riaps_depll = "riaps.lang.depll:main"
+riaps_gen_cert = "riaps.utils.gencert:main"
+riaps_fab = "riaps.fabfile.fabfile:main"
+riaps_log_config_test = "riaps.logger.riaps_log_config_test:main"

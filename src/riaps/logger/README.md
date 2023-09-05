@@ -4,14 +4,14 @@ RIAPS logs can be viewed in real-time for both local and remote nodes using the 
 There are two loggers, which can be started simultaneously if desired:
 
 - platform logger: `riaps_logger -p [HOST:[PORTP]][-d DRIVER]` captures logs written by the RIAPS platform itself.
-- app logger: `riaps_log_server -p [HOST:[PORTA]][-d DRIVER]` captures logs written by RIAPS applications.
-- `riaps_logger -p [HOST:[PORTP]] -p [HOST:[PORTA]][-d DRIVER] `starts both loggers
+- app logger: `riaps_logger -a [HOST:[PORTA]][-d DRIVER]` captures logs written by RIAPS applications.
+- `riaps_logger -p [HOST:[PORTP]] -a [HOST:[PORTA]][-d DRIVER] `starts both loggers
 
 The logger operates uses a network interface and a port. 
 
 The network interface is identified by the IP address of that interface (provided in the `HOST` argument) and it defaults to the network interface used by the RIAPS framework (as set in `/etc/riaps.conf`). 
 
-The port arguments: `PORTP` for the platform logger and `PORTP` for the app logger are optional and
+The port arguments: `PORTP` for the platform logger and `PORTA` for the app logger are optional and
 default to `logging.handlers.DEFAULT_TCP_LOGGING_PORT` (9020) and `logging.handlers.DEFAULT_TCP_LOGGING_PORT+1` (9021) respectively. 
 
 The port numbers must be unique (and different), and must match the port numbers used in the logger configuration of the RIAPS nodes, i.e. the `/etc/riaps-log.conf` for the platform, and the `riaps_apps/APP/riaps-log.conf` for the app. 
@@ -34,7 +34,7 @@ or
 ## Platform logging
 ###  Configuration
 
-Each node specified in `/etc/riaps/riaps-hosts.conf` needs the `socketHandler` to be added the list of `[handlers]` for the `root` logger in the `/etc/riaps/riaps-log.conf` file, and the `args` in the `[handler_socketHandler]` definition needs to be modified to match the IP address of the node running the `riaps_logger`.To be explicit, here is an example of those elements:
+Each node specified in `/etc/riaps/riaps-hosts.conf` needs the `socketHandler` to be added to the list of `[handlers]` for the `root` logger in the `/etc/riaps/riaps-log.conf` file, and the `args` in the `[handler_socketHandler]` definition needs to be modified to match the IP address of the node running the `riaps_logger`. To be explicit, here is an example of those elements:
  
 ```
 [loggers]
@@ -77,11 +77,11 @@ qualname=riaps.rlog
 
 Start the log server with:
 ```bash
-$ riaps_log_server -p [HOST:[PORT]]
+$ riaps_logger -p [HOST:[PORT]]
 ```
 e.g.,
 ```bash
-$ riaps_log_server -p -d tmux
+$ riaps_logger -p -d tmux
 ```
 
 Then view the platform logs by attaching to the tmux session:
@@ -94,7 +94,7 @@ $ tmux attach -t platform
 ## Application logging
 ###  Configuration
 
-#### 1. Network access to the `riaps_log_server` endpoint
+#### 1. Network access to the `riaps_logger` endpoint
 
 If RIAPS has security enabled, each node **MUST** be given explicit access to the log server in the application deployment file. For example:
 ```
@@ -131,11 +131,11 @@ Where the `server_host` and `server_port` match overall configuration and `<ACTO
 ### Usage: 
 Start the log server with:
 ```bash
-$ riaps_log_server -a [HOST:[PORT]]
+$ riaps_logger -a [HOST:[PORT]]
 ```
 e.g.,
 ```bash
-$ riaps_log_server -a -d tmux
+$ riaps_logger -a -d tmux
 ```
 Then view the application logs by attaching to the tmux session:
 

@@ -894,7 +894,7 @@ class Group(object):
             setattr(self,name,result)
         assert self.heartbeat < self.electionMin and \
                 self.electionMin < self.electionMax and \
-                self.electionMax < self.groupPeerTimeout and \
+                self.electionMax < self.peerTimeout and \
                 self.consensusTimeout < self.electionMax, \
                 "Group timing parameter(s) incorrectly ordered"   
                     

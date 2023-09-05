@@ -15,8 +15,8 @@ __all__ = ['update','updateNodeKey','updateAptKey','install','uninstall','reset'
 
 # RIAPS packages
 packages = [
-            'riaps-timesync-',
-            'riaps-pycom-'
+            'riaps-timesync',
+            'riaps-pycom'
             ]
 
 # RIAPS update (from release)
@@ -26,9 +26,18 @@ def update():
     """Update RIAPS packages from official release"""
     sudo('apt-get update')
     architecture = arch()
+    hostname = env.host_string
+    controlhost = "{}".format(*env.roledefs['control'])
     global packages
     for pack in packages:
-        package = pack + architecture
+        if pack == 'riaps-pycom':
+            if controlhost == hostname:
+                package = pack + '-dev'
+            else:
+                package = pack
+        else:
+            package = pack + '-' + architecture
+                
         sudo('apt-get install ' + package + ' -y')
 
 @task
@@ -72,7 +81,8 @@ def updateNodeKey(keepPasswd=False):
     run('rm ' + ssh_zmqcert_name)
 
     # Defaults to remove password to remote nodes, user can request to keep the password enabled
-    if not keepPasswd:
+    if keepPasswd == "False":
+        print("Turning off password access to remote node")
         sudo('passwd -q -d riaps')
 
 @task
@@ -90,9 +100,16 @@ def install(keepConfig=False):
     """Install RIAPS packages from host:[keepConfig]"""
     global packages
     hostname = env.host_string
+    controlhost = "{}".format(*env.roledefs['control'])
     architecture = arch()
     for pack in packages:
-        package = pack + architecture + '.deb'
+        if pack == 'riaps-pycom':
+            if controlhost == hostname:
+                package = pack + '-dev' + '.deb'
+            else:
+                package = pack + '.deb'
+        else:
+            package = pack + '-' + architecture + '.deb'
         try:
             if not os.path.exists(package): continue
             put(package)
@@ -105,13 +122,21 @@ def install(keepConfig=False):
             print("install exception: %r" % e)
 
 @task
-@roles('nodes','control','remote','all')
+@roles('remote')
 def uninstall(keepConfig=False):
-    """Uninstall all RIAPS packages from nodes:"""
+    """Uninstall all RIAPS packages from nodes:[keepConfig]"""
     global packages
     architecture = arch()
+    hostname = env.host_string
+    controlhost = "{}".format(*env.roledefs['control'])
     for pack in reversed(packages):
-        package = pack + architecture
+        if pack == 'riaps-pycom':
+            if controlhost == hostname:
+                package = pack + '-dev'
+            else:
+                package = pack
+        else:
+            package = pack + '-' + architecture
         try:
             sudo('apt-get remove -y ' + package)
         except Exception as e:
