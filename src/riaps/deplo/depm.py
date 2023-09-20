@@ -127,7 +127,7 @@ class DeploymentManager(threading.Thread):
         self.executor = ThreadPoolExecutor(max_workers=3)
         self.appDbase = AppDbase()
         self.is_su = is_su()
-        self.uuid = None
+        self.uuid = None                    # Deployment unique ID (for this deplo process)
         self.started = False
         self.pendingCall = False
         if Config.SECURITY:
@@ -649,6 +649,7 @@ class DeploymentManager(threading.Thread):
                                 preexec_fn=self.demote(self.is_su,rt_actor,user_uid, user_gid), 
                                 cwd=user_cwd, env=user_env,
                                 stdout=logFile,stderr=subprocess.STDOUT)
+            self.logger.info("Launched %s " % str(command))
         except (FileNotFoundError,PermissionError):
             try:
                 # if isPython:
@@ -659,16 +660,17 @@ class DeploymentManager(threading.Thread):
                                     preexec_fn=self.demote(self.is_su,rt_actor,user_uid, user_gid), 
                                     cwd=user_cwd, env=user_env,
                                     stdout=logFile,stderr=subprocess.STDOUT)
+                self.logger.info("Launched %s " % str(command))
             except:
                 # traceback.print_exc()
                 self.logger.error("Error while starting actor: %s -- %s" % (command,sys.exc_info()[0]))
-                raise BuildError("Actor failed to start: %s.%s " % (appName,actorName))
+                raise BuildError("Actor failed to start [imm]: %s.%s " % (appName,actorName))
         try:
             rc = proc.wait(const.depmStartTimeout)
         except psutil.TimeoutExpired:
             rc = None
         if rc != None:
-            raise BuildError("Actor failed to start: %s.%s " % (appName,actorName))
+            raise BuildError("Actor terminated: %s.%s [%r]" % (appName,actorName,rc))
         
         pid = proc.pid
         cmdline = [p.info for p in psutil.process_iter(attrs=['pid','cmdline']) 
@@ -1036,7 +1038,8 @@ class DeploymentManager(threading.Thread):
             self.procmon.bind(self.procMonEndpoint)
             # Socket for communication with fault monitor
             self.fmmon = self.fm.setupFMMon()
-            self.uuid = self.fm.getUUID()
+            # Deployment-unique ID is coming from the UUID of the zyre p2p network
+            self.uuid = self.fm.getUUID()               
             # Socket for communication with NIC manager
             self.nicmon = self.fm.setupNICMon()
             # Poller for commands, requests, and procmon messages             

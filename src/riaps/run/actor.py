@@ -340,10 +340,11 @@ class Actor(object):
         return self.actorID
     
     def setUUID(self, uuid):
-        '''Sets the UUID for this actor.
+        '''Sets the deployment-unique ID for this actor. 
         
-        The UUID is dynamically generated (by the peer-to-peer network system)
-        and is unique. 
+        This id is dynamically generated (by the peer-to-peer network system)
+        and is unique for the deployment manager instance. 
+        Actors under the same deployment manager will have the same UUID.  
         '''
         self.uuid = uuid
         
