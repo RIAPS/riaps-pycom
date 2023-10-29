@@ -96,7 +96,7 @@ class DiscoService(object):
             elif self.server in sockets:                        # else check if there is a server request, handle it 
                 msg = self.server.recv()
                 self.handle(msg)
-                del sockets[self.server]
+                # del sockets[self.server]
             else:
                 pass
             for note in self.clientUpdates:                     # Handle all client updates (received from the 

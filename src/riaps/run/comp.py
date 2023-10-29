@@ -231,7 +231,7 @@ class ComponentThread(threading.Thread):
                 msg = ('exception', traceback.format_exc())
                 self.control.send_pyobj(msg)
         else:
-            self.logger.error('Unbound port')
+            self.logger.warning('Unbound port')
         
     def batchScheduler(self, sockets):
         '''

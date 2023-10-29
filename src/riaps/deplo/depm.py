@@ -1517,7 +1517,10 @@ class DeploymentManager(threading.Thread):
         # Terminate disco
         if self.disco != None:
             self.procm.release(self.DISCONAME)
+            self.logger.info("stopping disco")
             self.disco.terminate()
+            self.disco.wait(const.depmTermTimeout)
+            self.logger.info("disco stopped")
             self.disco = None
         self.appDbase.closeDbase()
         self.logger.info("stopped")
