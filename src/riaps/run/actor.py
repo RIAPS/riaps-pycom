@@ -500,8 +500,7 @@ class Actor(object):
         '''
         Handle a service update message from the discovery service
         '''
-        msgUpd = disco_capnp.DiscoUpd.from_bytes(msgBytes)  # Parse the incoming message
-
+        msgUpd = disco_capnp.DiscoUpd.from_bytes(msgBytes)       # Parse the incoming message
         which = msgUpd.which()
         if which == 'portUpdate':
             msg = msgUpd.portUpdate
@@ -541,8 +540,7 @@ class Actor(object):
         '''
         Handle a message from the deployment service
         '''
-        msgUpd = deplo_capnp.DeplCmd.from_bytes(msgBytes)  # Parse the incoming message
-
+        msgUpd = deplo_capnp.DeplCmd.from_bytes(msgBytes)   # Parse the incoming message
         which = msgUpd.which()
         if which == 'resourceMsg':
             what = msgUpd.resourceMsg.which()

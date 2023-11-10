@@ -27,6 +27,9 @@ import traceback
 from apparmor_monkeys import patch_modules
 patch_modules()
 
+import faulthandler
+faulthandler.enable()
+
 from riaps.utils.config import Config
 from riaps.utils.trace import riaps_trace
 

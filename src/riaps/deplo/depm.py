@@ -847,7 +847,6 @@ class DeploymentManager(threading.Thread):
                 return
             
             resp = disco_capnp.DiscoRep.from_bytes(respBytes)
-            
             which = resp.which()
             if which == 'actorUnreg':
                 respMessage = resp.actorUnreg
@@ -1519,7 +1518,10 @@ class DeploymentManager(threading.Thread):
             self.procm.release(self.DISCONAME)
             self.logger.info("stopping disco")
             self.disco.terminate()
-            self.disco.wait(const.depmTermTimeout)
+            try:
+                self.disco.wait(const.depmTermTimeout)
+            except:
+                pass
             self.logger.info("disco stopped")
             self.disco = None
         self.appDbase.closeDbase()
@@ -1563,6 +1565,7 @@ class DeploymentManager(threading.Thread):
         msg = pickle.loads(msgFrames[1])
         (qualName,) = msg
         if qualName == self.DISCONAME:
+            self.logger.info("restarting disco")
             self.startDisco()
             self.reinstate()
         else:
@@ -1652,7 +1655,6 @@ class DeploymentManager(threading.Thread):
         Handle a  message that has been sent to the actor
         '''
         msg = deplo_capnp.DeplCmd.from_bytes(msgBytes)      
-
         which = msg.which()
         if which == 'resourceMsg':      # Resource violation
             what = msg.resourceMsg.which()

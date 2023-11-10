@@ -309,7 +309,7 @@ class GroupThread(threading.Thread):
                         if (ok):
                             self.pubPort.sendGroup(Group.GROUP_RCM, msg)  # Send RCM to group
                         else: 
-                            rfv = dc_capnp.GroupVote.from_bytes(msg)  # Poll failed (before it got started)        
+                            rfv = dc_capnp.GroupVote.from_bytes(msg)        # Poll failed (before it got started)        
                             which = rfv.which()
                             assert(which == 'rfv')
                             rfvId = rfv.rfv.rfvId
@@ -718,7 +718,7 @@ class GroupThread(threading.Thread):
             if (ok):
                 self.pubPort.sendGroup(Group.GROUP_RCM, msg)  # Send RCM to group
             else: 
-                rfv = dc_capnp.GroupVote.from_bytes(msg)  # Poll failed (before it got started)        
+                rfv = dc_capnp.GroupVote.from_bytes(msg)   # Poll failed (before it got started)        
                 which = rfv.which()
                 assert(which == 'rfv')
                 rfvId = rfv.rfv.rfvId
