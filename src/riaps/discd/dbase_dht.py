@@ -335,6 +335,7 @@ class DhtDbase(DiscoDbase):
         self.listeners = { }
         self.cancelled = []
         self.deletedMap = { }
+        self.noClientsMap = { }
         
         self.republishMap = { }
         self.republisherStart = threading.Event()
@@ -417,7 +418,10 @@ class DhtDbase(DiscoDbase):
                 res = []
                 for (key,value) in set(self.updates):
                     clients = self.clients.get(key,None)
-                    if clients: res.append((key,value,clients))
+                    if clients: 
+                        res.append((key,value,clients))
+                    else:
+                        self.noClientsMap = list(set(self.noClientsMap.get(key,[]) + [value]))
                 self.updates = []
                 return res
             except Exception:
@@ -561,6 +565,11 @@ class DhtDbase(DiscoDbase):
             self.clients[key] = list(set(self.clients.get(key,[]) + [client]))
             if key not in self.listeners:
                 self.listeners[key] = self.dhtListen(key)
+            if key in self.noClientsMap:
+                values = self.noClientsMap.get(key,[])
+                for value in values:
+                    self.updates += [(key,value)]
+                del self.noClientsMap[key]
     
     def dhtDelClient(self,key,client):
         '''
