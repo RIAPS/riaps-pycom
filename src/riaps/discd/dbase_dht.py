@@ -56,6 +56,7 @@ class DhtPeerMon(threading.Thread):
         self.dhtPort = dhtPort
         self.peers  = { }       # uuid : address - all peers
         self.peerGroup = set()  # set(uuid) of peer group members
+        self.dhtGroup = set()   # set(uuid) of peers who are on dht 
         self.uuid = None
         self.logger.info('DhtPeerMon:__inited__')
     
@@ -158,18 +159,22 @@ class DhtPeerMon(threading.Thread):
                     else:
                         self.peerGroup.add(peer)
                         self.zyre.whispers(peer,("%s://%d" % (self.PEERGROUP_STR,self.dhtPort)).encode('utf-8'))
-                elif eType == b'SHOUT' or eType == b'WHISPER':
+                elif eType == b'WHISPER' or eType == b'SHOUT':
                     arg = msg.popstr().decode()
-                    self.logger.info("DhtPeerMon.SHOUT %s = %s " % (pUUID.decode('utf-8'), arg))
+                    self.logger.info("DhtPeerMon.%s %s = %s " % 
+                                     (eType.decode('utf-8'),pUUID.decode('utf-8'), arg))
                     try:
                         # pAddrStr = pAddr.decode('UTF-8')
                         # (peerIp,_peerPort) = parse.parse("tcp://{}:{}",pAddrStr)
                         # assert peerIp == self.peers[pUUID]
                         (peerIP,peerPort) = self.peers[pUUID]
                         (peerDhtPort,) = parse.parse("%s://{}" % self.PEERGROUP_STR,arg)
-                        if peerDhtPort:
+                        if peerDhtPort and pUUID not in self.dhtGroup:
                             self.logger.info("DhtPeerMon.bootstrap %s:%s" % (peerIP,peerDhtPort))
                             self.dhtDbase.bootstrap(str(peerIP),str(peerDhtPort))
+                            self.dhtGroup.add(pUUID)
+                        else:
+                            self.logger.info("DhtPeerMon.bootstrapped %s:%s" % (peerIP,peerDhtPort))
                     except:
                         self.logger.error("DhtPeerMon.bootstrap failed %r", sys.exc_info()[0])
                 elif eType == b'LEAVE':
@@ -180,10 +185,12 @@ class DhtPeerMon(threading.Thread):
                         pass 
                     else:
                         self.peerGroup.discard(pUUID)
+                        if pUUID in self.dhtGroup: self.dhtGroup.discard(pUUID)
                 elif eType == b'EXIT':
                     self.logger.info("DhtPeerMon.EXIT %s " % (str(pUUID)))
                     if pUUID in self.peers: 
                         del self.peers[pUUID]
+                        if pUUID in self.dhtGroup: self.dhtGroup.discard(pUUID)
                         self.peerGroup.discard(pUUID)       
                 else:
                     pass
@@ -405,7 +412,7 @@ class DhtDbase(DiscoDbase):
         self.republisherThread.start()                          # Start republisher
     
     def bootstrap(self,peerIP:str,peerDhtPort:str):
-        self.dht.boostrape(peerIP,peerDhtPort)
+        self.dht.bootstrap(peerIP,peerDhtPort)
     
     def fetchUpdates(self):
         '''
