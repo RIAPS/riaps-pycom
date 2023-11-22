@@ -309,11 +309,11 @@ class GroupThread(threading.Thread):
                         if (ok):
                             self.pubPort.sendGroup(Group.GROUP_RCM, msg)  # Send RCM to group
                         else: 
-                            rfv = dc_capnp.GroupVote.from_bytes(msg)        # Poll failed (before it got started)        
-                            which = rfv.which()
-                            assert(which == 'rfv')
-                            rfvId = rfv.rfv.rfvId
-                            self.announceConsensus(rfvId, 'timeout')
+                            with dc_capnp.GroupVote.from_bytes(msg) as rfv:  # Poll failed (before it got started)        
+                                which = rfv.which()
+                                assert(which == 'rfv')
+                                rfvId = rfv.rfv.rfvId
+                                self.announceConsensus(rfvId, 'timeout')
                     else:
                         self.qryPort.sendToLeader(Group.GROUP_RFV, msgFrames[1])
                         self.groupSocket.send_multipart([zmq.Frame(Group.GROUP_ACK)])
@@ -609,24 +609,24 @@ class GroupThread(threading.Thread):
         Start a poll for a member based on message
         '''
         self.logger.info("GroupThread.startPoll()")
-        rfv = dc_capnp.GroupVote.from_bytes(msg)
-        which = rfv.which()
-        if which == 'rfv':
-            now = time.time()
-            rfvId = rfv.rfv.rfvId
-            started = rfv.rfv.started
-            timeout = rfv.rfv.timeout
-            if timeout == 0.0: timeout = self.groupConsensusTimeout
-            delta = now - started
-            if delta > timeout:  # We are past the timeout
+        with dc_capnp.GroupVote.from_bytes(msg) as rfv:
+            which = rfv.which()
+            if which == 'rfv':
+                now = time.time()
+                rfvId = rfv.rfv.rfvId
+                started = rfv.rfv.started
+                timeout = rfv.rfv.timeout
+                if timeout == 0.0: timeout = self.groupConsensusTimeout
+                delta = now - started
+                if delta > timeout:  # We are past the timeout
+                    return False
+                deadline = started + timeout - delta  # Compensate for initial delay 
+                poll = Poll(self, rfv.rfv, member, timeout, deadline, self.numPeers)
+                self.polls[rfvId] = poll
+                return True
+            else:
+                self.logger.error('GroupThread.startPoll(): invalid message type %s', str(which))
                 return False
-            deadline = started + timeout - delta  # Compensate for initial delay 
-            poll = Poll(self, rfv.rfv, member, timeout, deadline, self.numPeers)
-            self.polls[rfvId] = poll
-            return True
-        else:
-            self.logger.error('GroupThread.startPoll(): invalid message type %s', str(which))
-            return False
     
     def announceConsensus(self, rfvId, vote):
         '''
@@ -677,21 +677,21 @@ class GroupThread(threading.Thread):
         Update poll with the vote in msg
         '''
         self.logger.info("GroupThread.updatePoll()")
-        rtc = dc_capnp.GroupVote.from_bytes(msg)
-        which = rtc.which()
-        if which == 'rtc':
-            rfvId = rtc.rtc.rfvId
-            if rfvId in self.polls:
-                poll = self.polls[rfvId] 
-                now = time.time()
-                vote = True if rtc.rtc.vote == 'yes' else False
-                poll.vote(vote)
-                done = self.checkPoll(poll, now)
-                if done:
-                    del self.polls[rfvId]
-            else:
-                self.logger.info("... rpfId is not in polls")
-                pass
+        with dc_capnp.GroupVote.from_bytes(msg) as rtc:
+            which = rtc.which()
+            if which == 'rtc':
+                rfvId = rtc.rtc.rfvId
+                if rfvId in self.polls:
+                    poll = self.polls[rfvId] 
+                    now = time.time()
+                    vote = True if rtc.rtc.vote == 'yes' else False
+                    poll.vote(vote)
+                    done = self.checkPoll(poll, now)
+                    if done:
+                        del self.polls[rfvId]
+                else:
+                    self.logger.info("... rpfId is not in polls")
+                    pass
             
     def handleMessageForLeader(self):
         '''
@@ -718,11 +718,11 @@ class GroupThread(threading.Thread):
             if (ok):
                 self.pubPort.sendGroup(Group.GROUP_RCM, msg)  # Send RCM to group
             else: 
-                rfv = dc_capnp.GroupVote.from_bytes(msg)   # Poll failed (before it got started)        
-                which = rfv.which()
-                assert(which == 'rfv')
-                rfvId = rfv.rfv.rfvId
-                self.announceConsensus(rfvId, 'timeout')                                   
+                with dc_capnp.GroupVote.from_bytes(msg) as rfv:  # Poll failed (before it got started)        
+                    which = rfv.which()
+                    assert(which == 'rfv')
+                    rfvId = rfv.rfv.rfvId
+                    self.announceConsensus(rfvId, 'timeout')
         elif cmd == Group.GROUP_RTC:  # Reply to consensus to leader
             self.logger.info('...: consensus vote to leader')
             msg = msgFrames[1]
@@ -1059,31 +1059,31 @@ class Group(object):
                 if self.isTimed:  # If group is timed, store values
                     self.recvTime = msgFrames[2]
                     self.sendTime = msgFrames[3]
-                rfv = dc_capnp.GroupVote.from_bytes(msg)
-                which = rfv.which()
-                if which == 'rfv':
-                    topic = rfv.rfv.topic
-                    rfvId = rfv.rfv.rfvId
-                    subject = rfv.rfv.subject
-                    self.msgQueue.append(topic)
-                    if subject == Poll.ACTION:  # Call member's appropriate message handler
-                        when = rfv.rfv.release
-                        self.parent.parent.handleActionVoteRequest(self, rfvId, when)    
-                    elif subject == Poll.VALUE:
-                        self.parent.parent.handleVoteRequest(self, rfvId)
-                    else:
-                        self.logger.error("handleMessage() - unknown poll subject %s", str(subject))
+                with dc_capnp.GroupVote.from_bytes(msg) as rfv:
+                    which = rfv.which()
+                    if which == 'rfv':
+                        topic = rfv.rfv.topic
+                        rfvId = rfv.rfv.rfvId
+                        subject = rfv.rfv.subject
+                        self.msgQueue.append(topic)
+                        if subject == Poll.ACTION:  # Call member's appropriate message handler
+                            when = rfv.rfv.release
+                            self.parent.parent.handleActionVoteRequest(self, rfvId, when)    
+                        elif subject == Poll.VALUE:
+                            self.parent.parent.handleVoteRequest(self, rfvId)
+                        else:
+                            self.logger.error("handleMessage() - unknown poll subject %s", str(subject))
             elif cmd == Group.GROUP_ANN:
                 msg = msgFrames[1]
                 if self.isTimed:  # If group is timed, store values
                     self.recvTime = msgFrames[2]
                     self.sendTime = msgFrames[3]
-                ann = dc_capnp.GroupVote.from_bytes(msg)
-                which = ann.which()
-                if which == 'ann':
-                    rfvId = ann.ann.rfvId
-                    vote = ann.ann.vote
-                    self.parent.parent.handleVoteResult(self, rfvId, vote)  # Call member's message handler
+                with dc_capnp.GroupVote.from_bytes(msg) as ann:
+                    which = ann.which()
+                    if which == 'ann':
+                        rfvId = ann.ann.rfvId
+                        vote = ann.ann.vote
+                        self.parent.parent.handleVoteResult(self, rfvId, vote)  # Call member's message handler
             elif cmd == Group.GROUP_MJD:
                 memberId = msgFrames[1]
                 self.parent.parent.handleMemberJoined(self, memberId)

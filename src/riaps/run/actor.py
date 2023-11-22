@@ -499,34 +499,34 @@ class Actor(object):
     def handleServiceUpdate(self, msgBytes):
         '''
         Handle a service update message from the discovery service
-        '''
-        msgUpd = disco_capnp.DiscoUpd.from_bytes(msgBytes)       # Parse the incoming message
-        which = msgUpd.which()
-        if which == 'portUpdate':
-            msg = msgUpd.portUpdate
-            client = msg.client
-            actorHost = client.actorHost
-            # assert actorHost == self.globalHost                 # It has to be addressed to this actor
-            actorName = client.actorName
-            # assert actorName == self.name
-            instanceName = client.instanceName
-            # It has to be for a part of this actor
-            # assert instanceName in self.components, "%r not in %r" % (instanceName,self.components)  
-            portName = client.portName
-            scope = msg.scope
-            socket = msg.socket
-            host = socket.host
-            port = socket.port 
-            if actorHost != self.globalHost or actorName != self.name or instanceName not in self.components:
-                self.logger.warning('handleServiceUpdate(): discard message for %r.%r.%r.%r.%r.%r' \
-                                    % (actorHost, actorName, instanceName, portName, host, port))
-                return
-            if scope != "global":
-                assert host == self.localHost                   # Local/internal ports are host-local
-            self.updatePart(instanceName, portName, host, port) # Update the selected part
-        elif which == 'groupUpdate':
-            msg = msgUpd.groupUpdate                            # Placeholder 
-            self.logger.info('handleServiceUpdate():groupUpdate')
+        '''      
+        with disco_capnp.DiscoUpd.from_bytes(msgBytes) as msgUpd: # Parse the incoming message
+            which = msgUpd.which()
+            if which == 'portUpdate':
+                msg = msgUpd.portUpdate
+                client = msg.client
+                actorHost = client.actorHost
+                # assert actorHost == self.globalHost                 # It has to be addressed to this actor
+                actorName = client.actorName
+                # assert actorName == self.name
+                instanceName = client.instanceName
+                # It has to be for a part of this actor
+                # assert instanceName in self.components, "%r not in %r" % (instanceName,self.components)  
+                portName = client.portName
+                scope = msg.scope
+                socket = msg.socket
+                host = socket.host
+                port = socket.port 
+                if actorHost != self.globalHost or actorName != self.name or instanceName not in self.components:
+                    self.logger.warning('handleServiceUpdate(): discard message for %r.%r.%r.%r.%r.%r' \
+                                        % (actorHost, actorName, instanceName, portName, host, port))
+                    return
+                if scope != "global":
+                    assert host == self.localHost                   # Local/internal ports are host-local
+                self.updatePart(instanceName, portName, host, port) # Update the selected part
+            elif which == 'groupUpdate':
+                msg = msgUpd.groupUpdate                            # Placeholder 
+                self.logger.info('handleServiceUpdate():groupUpdate')
     
     def updatePart(self, instanceName, portName, host, port):
         '''
@@ -540,35 +540,35 @@ class Actor(object):
         '''
         Handle a message from the deployment service
         '''
-        msgUpd = deplo_capnp.DeplCmd.from_bytes(msgBytes)   # Parse the incoming message
-        which = msgUpd.which()
-        if which == 'resourceMsg':
-            what = msgUpd.resourceMsg.which()
-            if what == 'resCPUX':
-                self.handleCPULimit()
-            elif what == 'resMemX':
-                self.handleMemLimit()
-            elif what == 'resSpcX':
-                self.handleSpcLimit()
-            elif what == 'resNetX':
-                self.handleNetLimit()
+        with deplo_capnp.DeplCmd.from_bytes(msgBytes) as msgUpd: # Parse the incoming message
+            which = msgUpd.which()
+            if which == 'resourceMsg':
+                what = msgUpd.resourceMsg.which()
+                if what == 'resCPUX':
+                    self.handleCPULimit()
+                elif what == 'resMemX':
+                    self.handleMemLimit()
+                elif what == 'resSpcX':
+                    self.handleSpcLimit()
+                elif what == 'resNetX':
+                    self.handleNetLimit()
+                else:
+                    self.logger.error("unknown resource msg from deplo: '%s'" % what)
+                    pass
+            elif which == 'reinstateCmd':
+                self.handleReinstate()
+            elif which == 'nicStateMsg':
+                stateMsg = msgUpd.nicStateMsg
+                state = str(stateMsg.nicState)
+                self.handleNICStateChange(state)
+            elif which == 'peerInfoMsg':
+                peerMsg = msgUpd.peerInfoMsg
+                state = str(peerMsg.peerState)
+                uuid = peerMsg.uuid
+                self.handlePeerStateChange(state, uuid)
             else:
-                self.logger.error("unknown resource msg from deplo: '%s'" % what)
+                self.logger.error("unknown msg from deplo: '%s'" % which)
                 pass
-        elif which == 'reinstateCmd':
-            self.handleReinstate()
-        elif which == 'nicStateMsg':
-            stateMsg = msgUpd.nicStateMsg
-            state = str(stateMsg.nicState)
-            self.handleNICStateChange(state)
-        elif which == 'peerInfoMsg':
-            peerMsg = msgUpd.peerInfoMsg
-            state = str(peerMsg.peerState)
-            uuid = peerMsg.uuid
-            self.handlePeerStateChange(state, uuid)
-        else:
-            self.logger.error("unknown msg from deplo: '%s'" % which)
-            pass
            
     def handleReinstate(self):
         self.logger.info('handleReinstate')
