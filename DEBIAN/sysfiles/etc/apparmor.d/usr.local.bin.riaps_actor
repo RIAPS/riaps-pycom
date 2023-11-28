@@ -17,7 +17,7 @@
 # Location of RIAPS scripts (i.e riaps_actor)
 @{RIAPSEXEC}=/usr/local/bin
 # Python version
-@{PYTHONVERSION}=3.10
+@{PYTHONVERSION}=3.8
 
 #include <tunables/global>
 
@@ -41,7 +41,6 @@ profile /usr/local/bin/riaps_actor {
 
   /etc/** r,
   owner /proc/** rw,
-  /opt/riaps/** mr,
   /usr/local/lib/** mr,
   /usr/local/lib/python@{PYTHONVERSION}/dist-packages/** mr,
   /usr/share/dpkg/** mr,

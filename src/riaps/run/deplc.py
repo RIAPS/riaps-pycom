@@ -74,25 +74,25 @@ class DeplClient(object):
             # self.socket = None
             return False
       
-        with deplo_capnp.DeplRep.from_bytes(respBytes) as resp:
-            which = resp.which()
-            if which == 'actorReg':
-                respMessage = resp.actorReg
-                status = respMessage.status
-                port = respMessage.port
-                uuid = respMessage.uuid
-                if status == 'ok':
-                    self.channel.connect("tcp://127.0.0.1:" + str(port))
-                    self.actor.setUUID(uuid)
-                    return True
-                else:
-                    self.logger.error("registerActor: can't connect to deplo")
-                    # raise SetupError("registerActor - can't connect to deplo channel")
-                    return False
+        resp = deplo_capnp.DeplRep.from_bytes(respBytes)
+        which = resp.which()
+        if which == 'actorReg':
+            respMessage = resp.actorReg
+            status = respMessage.status
+            port = respMessage.port
+            uuid = respMessage.uuid
+            if status == 'ok':
+                self.channel.connect("tcp://127.0.0.1:" + str(port))
+                self.actor.setUUID(uuid)
+                return True
             else:
-                self.logger.error("registerActor: unexpected response from deplo")
-                # raise SetupError("registerActor - unexpected response from deplo")
+                self.logger.error("registerActor: can't connect to deplo")
+                # raise SetupError("registerActor - can't connect to deplo channel")
                 return False
+        else:
+            self.logger.error("registerActor: unexpected response from deplo")
+            # raise SetupError("registerActor - unexpected response from deplo")
+            return False
 
     def requestDevice(self, bundle):
         self.logger.info("requestDevice %s" % str(bundle))
@@ -135,21 +135,21 @@ class DeplClient(object):
             # self.socket = None
             return False
        
-        with deplo_capnp.DeplRep.from_bytes(respBytes) as resp:
-            which = resp.which()
-            if which == 'deviceGet':
-                respMessage = resp.deviceGet
-                status = respMessage.status
-                if status == 'ok':
-                    return True
-                else:
-                    self.logger.error("requestDevice: error response from deplo")
-                    # raise SetupError("requestDevice - error response from deplo")
-                    return False
+        resp = deplo_capnp.DeplRep.from_bytes(respBytes)
+        which = resp.which()
+        if which == 'deviceGet':
+            respMessage = resp.deviceGet
+            status = respMessage.status
+            if status == 'ok':
+                return True
             else:
-                self.logger.error("requestDevice: unexpected response from deplo")
-                # raise SetupError("requestDevice - unexpected response from deplo")
+                self.logger.error("requestDevice: error response from deplo")
+                # raise SetupError("requestDevice - error response from deplo")
                 return False
+        else:
+            self.logger.error("requestDevice: unexpected response from deplo")
+            # raise SetupError("requestDevice - unexpected response from deplo")
+            return False
     
     def releaseDevice(self, bundle):
         self.logger.info("releaseDevice %s" % str(bundle))
@@ -185,21 +185,21 @@ class DeplClient(object):
 #             self.socket = None
             return False
        
-        with deplo_capnp.DeplRep.from_bytes(respBytes) as resp:
-            which = resp.which()
-            if which == 'deviceRel':
-                respMessage = resp.deviceRel
-                status = respMessage.status
-                if status == 'ok':
-                    return True
-                else:
-                    self.logger.error("releaseDevice: error response from deplo")
-                    # raise SetupError(errMsg)
-                    return False
+        resp = deplo_capnp.DeplRep.from_bytes(respBytes)
+        which = resp.which()
+        if which == 'deviceRel':
+            respMessage = resp.deviceRel
+            status = respMessage.status
+            if status == 'ok':
+                return True
             else:
-                self.logger.error("releaseDevice: unexpected response from deplo")
+                self.logger.error("releaseDevice: error response from deplo")
                 # raise SetupError(errMsg)
                 return False
+        else:
+            self.logger.error("releaseDevice: unexpected response from deplo")
+            # raise SetupError(errMsg)
+            return False
     
     def reportEvent(self, bundle):
         self.logger.info("reportEvent %s" % str(bundle))
@@ -233,21 +233,21 @@ class DeplClient(object):
             # self.socket = None
             return False
       
-        with deplo_capnp.DeplRep.from_bytes(respBytes) as resp:
-            which = resp.which()
-            if which == 'reportEvent':
-                respMessage = resp.reportEvent
-                status = respMessage.status
-                if status == 'ok':
-                    return True
-                else:
-                    self.logger.error("reportEvent: error response from deplo")
-                    # raise SetupError("reportEvent - can't connect to deplo channel")
-                    return False
+        resp = deplo_capnp.DeplRep.from_bytes(respBytes)
+        which = resp.which()
+        if which == 'reportEvent':
+            respMessage = resp.reportEvent
+            status = respMessage.status
+            if status == 'ok':
+                return True
             else:
-                self.logger.error("reportEvent: unexpected response from deplo")
-                # raise SetupError("reportEvent - unexpected response from deplo")
+                self.logger.error("reportEvent: error response from deplo")
+                # raise SetupError("reportEvent - can't connect to deplo channel")
                 return False
+        else:
+            self.logger.error("reportEvent: unexpected response from deplo")
+            # raise SetupError("reportEvent - unexpected response from deplo")
+            return False
     
     def terminate(self):
         self.socket.setsockopt(zmq.LINGER, 0)

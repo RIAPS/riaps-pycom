@@ -2,8 +2,8 @@
 
 # RIAPS disco messages
 
-# using Cxx = import "/capnp/c++.capnp";
-# $Cxx.namespace("riaps::discovery");
+using Cxx = import "/capnp/c++.capnp";
+$Cxx.namespace("riaps::discovery");
 
 # RIAPS disco messages
 

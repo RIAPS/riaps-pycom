@@ -846,18 +846,18 @@ class DeploymentManager(threading.Thread):
                 self.logger.error("No response from discovery service: %s" % e.args)
                 return
             
-            with disco_capnp.DiscoRep.from_bytes(respBytes) as resp:
-                which = resp.which()
-                if which == 'actorUnreg':
-                    respMessage = resp.actorUnreg
-                    status = respMessage.status
-                    if status == 'ok':
-                        self.logger.info("unregistered '%s.%s'" % (appName,actorName))
-                    else:
-                        self.logger.error("Bad response from disco service at app unregistration")
+            resp = disco_capnp.DiscoRep.from_bytes(respBytes)
+            which = resp.which()
+            if which == 'actorUnreg':
+                respMessage = resp.actorUnreg
+                status = respMessage.status
+                if status == 'ok':
+                    self.logger.info("unregistered '%s.%s'" % (appName,actorName))
                 else:
-                    self.logger.error("Unexpected response from disco service at app unregistration")
-                
+                    self.logger.error("Bad response from disco service at app unregistration")
+            else:
+                self.logger.error("Unexpected response from disco service at app unregistration")
+                                
                 
     def queryApps(self):
         reply = {}
@@ -1104,18 +1104,18 @@ class DeploymentManager(threading.Thread):
         '''
         self.logger.info("handleClient")
         try:
-            with deplo_capnp.DeplReq.from_bytes(msgBytes) as msg:
-                which = msg.which()
-                if which == 'actorReg':
-                    self.handleActorReg(msg)
-                elif which == 'deviceGet':
-                    self.handleDeviceReq(msg)
-                elif which == 'deviceRel':
-                    self.handleDeviceRel(msg)
-                elif which == 'reportEvent':
-                    self.handleReportEvent(msg)
-                else:
-                    pass
+            msg = deplo_capnp.DeplReq.from_bytes(msgBytes)
+            which = msg.which()
+            if which == 'actorReg':
+                self.handleActorReg(msg)
+            elif which == 'deviceGet':
+                self.handleDeviceReq(msg)
+            elif which == 'deviceRel':
+                self.handleDeviceRel(msg)
+            elif which == 'reportEvent':
+                self.handleReportEvent(msg)
+            else:
+                pass
         except: 
             info = sys.exc_info()
             self.logger.error("Error in handleClient '%s': %s %s" % (which, info[0], info[1]))
@@ -1654,23 +1654,22 @@ class DeploymentManager(threading.Thread):
         '''
         Handle a  message that has been sent to the actor
         '''
-        with deplo_capnp.DeplCmd.from_bytes(msgBytes) as msg:
-            which = msg.which()
-            if which == 'resourceMsg':      # Resource violation
-                what = msg.resourceMsg.which()
-                self.logger.info('handleActorMessage: %s.%s - %s' 
-                                % (appName,actorName,what))
-                # TODO: send message to fault manager
-            elif which == 'reinstateCmd':   # Reinstate command - ignore
-                pass
-            elif which == 'nicStateMsg':    # NIC state has changed - ignore
-                pass
-            elif which == 'peerInfoMsg':    # Peer info has changed - ignore
-                pass
-            else:
-                self.logger.error("unknown msg from monitor: '%s'" % which)
-                pass
-              
+        msg = deplo_capnp.DeplCmd.from_bytes(msgBytes)      
+        which = msg.which()
+        if which == 'resourceMsg':      # Resource violation
+            what = msg.resourceMsg.which()
+            self.logger.info('handleActorMessage: %s.%s - %s' 
+                             % (appName,actorName,what))
+            # TODO: send message to fault manager
+        elif which == 'reinstateCmd':   # Reinstate command - ignore
+            pass
+        elif which == 'nicStateMsg':    # NIC state has changed - ignore
+            pass
+        elif which == 'peerInfoMsg':    # Peer info has changed - ignore
+            pass
+        else:
+            self.logger.error("unknown msg from monitor: '%s'" % which)
+            pass              
     
     def terminate(self):
         if self.started:
