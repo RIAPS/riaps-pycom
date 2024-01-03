@@ -250,6 +250,9 @@ class DeplClient(object):
             return False
     
     def terminate(self):
+        self.socket.setsockopt(zmq.LINGER, 0)
+        endpoint = const.deplEndpoint
+        self.socket.disconnect(endpoint) 
         self.logger.info("terminated")
         pass
     

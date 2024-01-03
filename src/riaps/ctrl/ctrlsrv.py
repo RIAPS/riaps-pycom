@@ -253,7 +253,7 @@ class ServiceThread(threading.Thread):
                                          auto_register=True,
                                          protocol_config = {"allow_public_attrs" : True})
         except:
-            print ("Failed to create server")
+            print ("riaps_ctrl: Failed to create server - already running")
             traceback.print_exc()
             os._exit(0)
         self.server.start()

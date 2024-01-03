@@ -340,10 +340,11 @@ class Actor(object):
         return self.actorID
     
     def setUUID(self, uuid):
-        '''Sets the UUID for this actor.
+        '''Sets the deployment-unique ID for this actor. 
         
-        The UUID is dynamically generated (by the peer-to-peer network system)
-        and is unique. 
+        This id is dynamically generated (by the peer-to-peer network system)
+        and is unique for the deployment manager instance. 
+        Actors under the same deployment manager will have the same UUID.  
         '''
         self.uuid = uuid
         
@@ -499,8 +500,7 @@ class Actor(object):
         '''
         Handle a service update message from the discovery service
         '''
-        msgUpd = disco_capnp.DiscoUpd.from_bytes(msgBytes)  # Parse the incoming message
-
+        msgUpd = disco_capnp.DiscoUpd.from_bytes(msgBytes)       # Parse the incoming message
         which = msgUpd.which()
         if which == 'portUpdate':
             msg = msgUpd.portUpdate
@@ -527,7 +527,7 @@ class Actor(object):
         elif which == 'groupUpdate':
             msg = msgUpd.groupUpdate                            # Placeholder 
             self.logger.info('handleServiceUpdate():groupUpdate')
-    
+
     def updatePart(self, instanceName, portName, host, port):
         '''
         Ask a part to update itself
@@ -540,8 +540,7 @@ class Actor(object):
         '''
         Handle a message from the deployment service
         '''
-        msgUpd = deplo_capnp.DeplCmd.from_bytes(msgBytes)  # Parse the incoming message
-
+        msgUpd = deplo_capnp.DeplCmd.from_bytes(msgBytes)   # Parse the incoming message
         which = msgUpd.which()
         if which == 'resourceMsg':
             what = msgUpd.resourceMsg.which()
@@ -570,7 +569,7 @@ class Actor(object):
         else:
             self.logger.error("unknown msg from deplo: '%s'" % which)
             pass
-           
+
     def handleReinstate(self):
         self.logger.info('handleReinstate')
         self.poller.unregister(self.discoChannel)

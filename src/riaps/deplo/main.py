@@ -10,6 +10,9 @@ import argparse
 import traceback
 import logging
 
+import faulthandler
+faulthandler.enable()
+
 from .deplo import DeploService
 from riaps.consts.defs import *
 from riaps.utils.config import Config 

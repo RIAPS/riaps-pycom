@@ -123,14 +123,14 @@ class GroupThread(threading.Thread):
         # Assumption: we use IPv4 addresses - converted to ulong for the wire protocol
         self.host = ipaddress.IPv4Address(self.group.parent.parent.owner.parent.getGlobalIface())
         self.ldrPort = None
-        self.groupSize = group.groupSize
+        self.groupMinSize = group.groupMinSize
         self.groupHeartbeat = group.heartbeat               # const.groupHeartbeat 
         self.groupElectionMin = group.electionMin           # const.groupElectionMin
         self.groupElectionMax = group.electionMax           # const.groupElectionMax
         self.groupPeerTimeout = group.peerTimeout           # const.groupPeerTimeout
         self.groupConsensusTimeout = group.consensusTimeout # const.groupConsensusTimeout
         self.timeout = None
-        self.leaderDeadline = None
+        self.leaderDeadline = None                          # deadline to recv an expected heartbeat from leader
         self.numPeers = -1
         self.leader = None
         self.ownId = None 
@@ -166,7 +166,7 @@ class GroupThread(threading.Thread):
         '''
         timeout = random.randrange(self.groupElectionMax, self.groupPeerTimeout)
         self.leaderDeadline = time.time() + timeout/1000.0
-    
+       
     def electionTimeout(self):
         '''
         Produce a random election timeout
@@ -309,7 +309,7 @@ class GroupThread(threading.Thread):
                         if (ok):
                             self.pubPort.sendGroup(Group.GROUP_RCM, msg)  # Send RCM to group
                         else: 
-                            rfv = dc_capnp.GroupVote.from_bytes(msg)  # Poll failed (before it got started)        
+                            rfv = dc_capnp.GroupVote.from_bytes(msg)        # Poll failed (before it got started)        
                             which = rfv.which()
                             assert(which == 'rfv')
                             rfvId = rfv.rfv.rfvId
@@ -349,11 +349,11 @@ class GroupThread(threading.Thread):
         '''
         self.logger.info("GroupThread.handleTimeout()")
         assert(self.coordinated)
-        self.updatePeers(now)
+        # self.updatePeers(now)
         self.checkAllPolls(now)
         if self.state == GroupThread.FOLLOWER:  
-            if self.leaderDeadline and now > self.leaderDeadline: # Past leader deadline (if set)
-                if self.numPeers > int(self.groupSize / 2) + 1:   
+            if self.leaderDeadline and now > self.leaderDeadline:       # Past leader heartbeat deadline (if set)
+                if self.numPeers > int(self.groupMinSize / 2) + 1:      # To start an election, we need quorum
                     self.logger.info("... FOLLOWER --> CANDIDATE, starting leader election")                     
                     if self.leader != None:
                         self.logger.info("... past leader %s deadline" % self.leader.hex())
@@ -366,11 +366,11 @@ class GroupThread(threading.Thread):
                     msg = struct.pack('!L16s', self.term, self.ownId)
                     self.pubPort.sendGroup(GroupThread.REQVOTE, msg)    # request votes
                     self.setTimeout(self.electionTimeout(), now)        # Timeout for votes to come in
-                    self.leaderDeadline = None                          # No leader / deadline
+                    self.leaderDeadline = None                          # No leader heartbeat deadline, we are in election mode
                     self.leader = None
                 else:
                     self.logger.info("... FOLLOWER, no majority in group to start election")
-                    self.setLeaderDeadline()         
+                    self.setLeaderDeadline()                            # Update leader heartbeat deadline  
                     self.setTimeout(self.groupHeartbeat,now)
             else:
                 self.setTimeout(self.groupHeartbeat,now)
@@ -380,19 +380,19 @@ class GroupThread(threading.Thread):
             self.votedFor = None
             if self.leader != None:
                 self.logger.info("... previous leader %s ?" % self.leader.hex())
-                self.sendChangeMessage(Group.GROUP_LEX, self.leader)  # Leader exited
+                self.sendChangeMessage(Group.GROUP_LEX, self.leader)    # Leader exited
             self.leader = None
             self.setTimeout(self.groupHeartbeat, now)
-            self.leaderDeadline = None
+            self.setLeaderDeadline()                                    # Update leader heartbeat deadline   
         elif self.state == GroupThread.LEADER:  # Leader sends message to inform members: term,id, host, port
             self.logger.info("... LEADER, sending out leadership note")
             assert(self.leader == self.ownId)
             msg = struct.pack('!L16sLL', self.term, self.ownId, \
                               int(self.host), \
                               int(self.ldrPort))
-            self.pubPort.sendGroup(GroupThread.AUTHORITY, msg)
+            self.pubPort.sendGroup(GroupThread.AUTHORITY, msg)          # Send out leader heartbeat
             self.setTimeout(self.groupHeartbeat, now)
-            self.leaderDeadline = None
+            self.leaderDeadline = None                                  # We are the leader, we don't have a deadline
         else:
             self.logger.error("GroupThread.handleTimeout() - in undefined state")
             pass  # Error : timeout in unknown state")
@@ -453,9 +453,9 @@ class GroupThread(threading.Thread):
                     self.sendTime = self.subPort.sendTime
                     msgOut += [zmq.Frame(self.recvTime)]
                     msgOut += [zmq.Frame(self.sendTime)]
-                self.groupSocket.send_multipart(msgOut)  # forward it to component
+                self.groupSocket.send_multipart(msgOut) # forward it to component
                 self.updateTimeout(now)
-                self.setLeaderDeadline()
+                self.setLeaderDeadline()                # update leader heartbeat deadline
                 return 
             if cmd == Group.GROUP_ANN:  # Incoming announcement (from leader)
                 self.logger.info("... handle GROUP_ANN")
@@ -466,13 +466,13 @@ class GroupThread(threading.Thread):
                     self.sendTime = self.subPort.sendTime
                     msgOut += [zmq.Frame(self.recvTime)]
                     msgOut += [zmq.Frame(self.sendTime)]
-                self.groupSocket.send_multipart(msgOut)  # forward it to component
+                self.groupSocket.send_multipart(msgOut) # forward it to component
                 self.updateTimeout(now)
-                self.setLeaderDeadline()
+                self.setLeaderDeadline()                # update leader heartbeat deadline
                 return
             # Everything else is election-related
             if self.state == GroupThread.FOLLOWER:  # We are a FOLLOWER              
-                if cmd == GroupThread.AUTHORITY:  # Message from leader
+                if cmd == GroupThread.AUTHORITY:    # Message from leader
                     self.logger.info('... leader asserts authority')
                     (_term, _leader, _host, _port) = struct.unpack('!L16sLL', frame)
                     if self.term >= _term and self.leader and self.leader != _leader:
@@ -483,52 +483,52 @@ class GroupThread(threading.Thread):
                     if prevLeader != _leader:  # If leader has changed
                         self.sendChangeMessage(Group.GROUP_LEL, self.leader)             
                     self.votedFor = None  # clear last vote
-                    self.setTimeout(self.electionTimeout(), now)  # TODO: Set new election timeout 
-                    self.setLeaderDeadline()
+                    self.setTimeout(self.electionTimeout(), now)    # set timeout to [electionMin,electionMax] < groupHeartbeat   
+                    self.setLeaderDeadline()                        # update leader heartbeat deadline
                     if _port == GroupThread.NO_LEADER:
                         _host, _port = None, None  # Will this ever happen?
                     else:
                         _host = ipaddress.IPv4Address(_host).compressed
                         _port = int(_port)
-                    self.qryPort.update(_host, _port)  # Update query port to new leader
-                elif cmd == GroupThread.REQVOTE:  # Message to request a vote
+                    self.qryPort.update(_host, _port)               # Update query port to new leader
+                elif cmd == GroupThread.REQVOTE:    # Message to request a vote
                     self.logger.info('... follower vote requested')
                     (_term, _node) = struct.unpack('!L16s', frame)
                     vote = None
-                    if self.votedFor == None:  # Not voted yet
+                    if self.votedFor == None:   # Not voted yet
                         vote = True  # vote yes
                     else:  # Already voted
-                        if _term > self.term:  # Newer term 
+                        if _term > self.term:   # Newer term 
                             vote = True
                         else:  # Current term
                             if _node != self.votedFor:  # different leader
-                                vote = False  # vote no
+                                vote = False    # vote no
                             else:  # same leader
-                                vote = True  # vote yes
+                                vote = True     # vote yes
                     self.logger.info('... voting for leader %s for term %s with %s', _node.hex(), str(_term), str(vote))
                     rsp = struct.pack("!L16sL16s", _term, _node, int(vote), self.ownId)
                     self.pubPort.sendGroup(GroupThread.RSPVOTE, rsp)
                     self.term = _term
                     if self.leader != None: 
                         self.sendChangeMessage(Group.GROUP_LEX, self.leader)
-                    self.leaderDeadline = None 
+                    self.leaderDeadline = None          # no leader, we don't expect a heartbeat          
                     self.leader = None
-                    self.qryPort.update(None, None)  # disconnect from previous leader (if at all)
+                    self.qryPort.update(None, None)     # disconnect from previous leader (if at all)
                     if vote: self.votedFor = _node
-                    self.setTimeout(self.electionTimeout(), now)
+                    self.setTimeout(self.electionTimeout(), now)    # rand([eMin,eMax]) < gHB
                 elif cmd == GroupThread.RSPVOTE:  # Somebody's vote
-                    self.setTimeout(self.electionTimeout(), now)  # ignore, keep waiting 
-            elif self.state == GroupThread.CANDIDATE:  # Candidate is requested to vote
-                if cmd == GroupThread.REQVOTE:
+                    self.setTimeout(self.electionTimeout(), now)    # rand([eMin,eMax]) < gHB 
+            elif self.state == GroupThread.CANDIDATE:   # We are a candidate
+                if cmd == GroupThread.REQVOTE:          # ... requested to vote
                     self.logger.info("... candidate requested to vote")
                     (_term, _node) = struct.unpack('!L16s', frame)
                     if _term == self.term:          # For current term
-                        if _node != self.ownId:     # Another candidate -> vote no
+                        if _node != self.ownId:         # Another candidate -> vote no
                             rsp = struct.pack("!L16sL16s", _term, _node, int(False), self.ownId)    
                             self.pubPort.sendGroup(GroupThread.RSPVOTE, rsp)
                         else:
-                            pass                    # We already 'voted' for ourselves
-                    elif _term > self.term:  # For a future (next) term
+                            pass                        # We already 'voted' for ourselves
+                    elif _term > self.term:         # For a future (next) term
                         self.state = GroupThread.FOLLOWER  # Go back to follower
                         # Vote yes        
                         rsp = struct.pack("!L16sL16s", _term, _node, int(True), self.ownId)
@@ -541,11 +541,11 @@ class GroupThread(threading.Thread):
                         self.votedFor = _node
                     else:  # For past term - ignore
                         pass
-                    self.setTimeout(self.electionTimeout(), now)
-                elif cmd == GroupThread.RSPVOTE:
+                    self.setTimeout(self.electionTimeout(), now)    # rand([eMin,eMax]) < gHB
+                elif cmd == GroupThread.RSPVOTE:    # ... response to a vote request
                     self.logger.info("... candidate received vote")
                     (_term, _leader, _vote, _node) = struct.unpack("!L16sL16s", frame)
-                    if bool(_vote) and _leader == self.ownId:  # it is a vote for us
+                    if bool(_vote) and _leader == self.ownId:   # it is a vote for us
                             self.votes += 1
                             if self.votes >= self.threshold():  # we won 
                                 self.logger.info("... candidate won election")
@@ -559,8 +559,9 @@ class GroupThread(threading.Thread):
                                                     int(self.host), \
                                                     int(self.ldrPort))
                                 self.pubPort.sendGroup(GroupThread.AUTHORITY, msg)
+                                self.leaderDeadline = None                  # We are the leader, no deadline
                                 self.setTimeout(self.groupHeartbeat, now)
-                elif cmd == GroupThread.AUTHORITY:
+                elif cmd == GroupThread.AUTHORITY:  # ... leader asserted authority
                     self.logger.info("... candidate received message from leader")
                     (_term, _leader, _host, _port) = struct.unpack('!L16sLL', frame)
                     self.state = GroupThread.FOLLOWER  # we lost, go back to FOLLOWER
@@ -573,8 +574,8 @@ class GroupThread(threading.Thread):
                     _host = ipaddress.IPv4Address(_host).compressed
                     _port = int(_port)
                     self.qryPort.update(_host, _port)  # connect qry port to leader
-                    self.setTimeout(self.electionTimeout(), now)  # set new election timeout
-                    self.setLeaderDeadline()
+                    self.setTimeout(self.electionTimeout(), now)  # rand([eMin,eMax]) < gHB
+                    self.setLeaderDeadline()            
             elif self.state == GroupThread.LEADER:  # leader received a  message
                 self.logger.info("... leader received message")
                 timeout = self.groupHeartbeat
@@ -597,8 +598,8 @@ class GroupThread(threading.Thread):
                         self.votedFor = None                # clear last vote
                         _host,_port = ipaddress.IPv4Address(_host).compressed, int(_port)
                         self.qryPort.update(_host, _port)   # connect qry port to leader
-                        timeout = self.electionTimeout()    # set new election timeout
-                        self.setLeaderDeadline()
+                        timeout = self.electionTimeout()    # rand([eMin,eMax]) < gHB
+                        self.setLeaderDeadline()            # set leader heartbeat deadline
                 self.setTimeout(timeout, now)
         else:
             self.logger.error("GroupThread[%s] - not coordinated", self.group.getGroupName())
@@ -717,11 +718,11 @@ class GroupThread(threading.Thread):
             if (ok):
                 self.pubPort.sendGroup(Group.GROUP_RCM, msg)  # Send RCM to group
             else: 
-                rfv = dc_capnp.GroupVote.from_bytes(msg)  # Poll failed (before it got started)        
+                rfv = dc_capnp.GroupVote.from_bytes(msg)   # Poll failed (before it got started)        
                 which = rfv.which()
                 assert(which == 'rfv')
                 rfvId = rfv.rfv.rfvId
-                self.announceConsensus(rfvId, 'timeout')                                   
+                self.announceConsensus(rfvId, 'timeout')
         elif cmd == Group.GROUP_RTC:  # Reply to consensus to leader
             self.logger.info('...: consensus vote to leader')
             msg = msgFrames[1]
@@ -840,7 +841,7 @@ class Group(object):
     GROUP_LEL = 'lel'.encode('utf-8')  # Group leader elected
     GROUP_LEX = 'lex'.encode('utf-8')  # Group leader exited
     
-    def __init__(self, parent, thread, groupType, groupInstance, componentId, groupSpec, groupSize):
+    def __init__(self, parent, thread, groupType, groupInstance, componentId, groupSpec, groupMinSize):
         self.logger = logging.getLogger(__name__)
         self.parent = parent
         self.thread = thread
@@ -854,7 +855,7 @@ class Group(object):
         self.isTimed = self.groupSpec['timed']
         self.kind = self.groupSpec['kind']
         self.coordinated = False if self.kind == "default" else True
-        self.groupSize = groupSize
+        self.groupMinSize = groupMinSize
         self.setupParams()
         # PAIR socket for the component poller
         self.compSocket = self.context.socket(zmq.PAIR)
@@ -1368,9 +1369,9 @@ class Coordinator(object):
         '''
         return groupType + '.' + groupInstance
     
-    def joinGroup(self, thread, groupType, groupInstance, componentId, groupSize):
+    def joinGroup(self, thread, groupType, groupInstance, componentId, groupMinSize):
         '''
-        Operation to create a group instance in a component.
+        Operation to create a group instance (with capacity) in a component. 
         Returns the instance
         '''
         self.logger.info("Coordinator.joinGroup(%s,%s)" % (groupType, groupInstance))
@@ -1388,7 +1389,7 @@ class Coordinator(object):
         if key in self.groupMembers:
             res = self.groupMembers[key]
         else:
-            res = Group(self, thread, groupType, groupInstance, componentId, groupSpec, groupSize)
+            res = Group(self, thread, groupType, groupInstance, componentId, groupSpec, groupMinSize)
             self.groupMembers[key] = res
         return res
     

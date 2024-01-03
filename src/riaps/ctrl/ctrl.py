@@ -60,6 +60,7 @@ class AppStatus(Enum):
     Unknown = auto()
     NotLoaded = auto()
     Loaded = auto()
+    Running = auto()
     Recovered = auto()
 
 class AppInfo(object):
@@ -806,6 +807,9 @@ class Controller(object):
         elif status == AppStatus.Loaded:
             self.log("* App already installed")
             return False
+        elif status == AppStatus.Running:
+            self.log("* App already running")
+            return False
         elif status == AppStatus.Recovered:
             self.log("* App recovered - remove/install/launch again")
             # TODO: recover actor parameters
@@ -821,14 +825,18 @@ class Controller(object):
         '''
         status = self.appInfo[appName].status if appName in self.appInfo else AppStatus.NotLoaded
         if status != AppStatus.Loaded:
-            self.log("* App status not %r - cannot be launched" % status.name)
+            self.log("* App status %r - cannot be launched" % status.name)
             return False
         else:
             lock = threading.RLock()
             self.launchApp(appName,self.appInfo[appName].depl.getDeployments(),lock)
+            self.appInfo[appName].status = AppStatus.Running
             return True
     
     def haltAppClient(self,client,appName,actors):
+        '''
+        Halt an app (via its actors) on client
+        '''
         for actorName in actors:
             self.logger.info("halting app actor %r.%r on %r" % (appName,actorName,client.name))
             try:
@@ -838,20 +846,27 @@ class Controller(object):
                 self.log("? halt: %r" % exc)
     
     def reclaimAppClient(self,client,appName):
+        '''
+        Reclaim (control of) an app on a client
+        '''
         self.logger.info("reclaiming app %r on %r" % (appName,client.name))
         try:
             _res = self.callClient(client.reclaim,[appName]) # const.ctrlClientTimeout
         except Exception as exc:
             self.log("? reclaim: %r" % exc)
     
-    def haltApp(self,appNameToHalt,logErr):
-        self.logger.info('halt app %r' % appNameToHalt)
+    def haltApp(self,appName,logErr):
+        '''
+        Halt an app 
+        '''
+        self.logger.info('halt app %r' % appName)
+        status = self.appInfo[appName].status
         launchList, haltMap, clients = [], {}, set()
         found = False
         # Gather all (client, actor*)* for the app
         for elt in self.launchList:
-            client,appName,_actorName = elt[0], elt[1], elt[2]
-            if appName == appNameToHalt:
+            client,_appName,_actorName = elt[0], elt[1], elt[2]
+            if appName == _appName:
                 found = True
                 clients.add(client)
                 if client not in haltMap: haltMap[client] = []
@@ -859,15 +874,15 @@ class Controller(object):
             else:
                 launchList += [elt]
         if not found:
-            if logErr: self.log("? not found: %r" % appNameToHalt)
+            if logErr: self.log("? not found: %r" % appName)
             return False
-        # Halt all of them in a thread
+        # Halt all of them in a separate thread
         if len(haltMap) > 0:
             futures = []
             with concurrent.futures.ThreadPoolExecutor(max_workers=len(haltMap)) as executor:
                 for (client,values) in haltMap.items():
                     actors = [ elt[2] for elt in values]
-                    futures += [executor.submit(self.haltAppClient,client,appNameToHalt,actors)]
+                    futures += [executor.submit(self.haltAppClient,client,appName,actors)]
                 done,_pending = concurrent.futures.wait(futures)
                 executor.shutdown()
         # Reclaim all apps on all clients
@@ -876,10 +891,15 @@ class Controller(object):
             futures = []
             with concurrent.futures.ThreadPoolExecutor(max_workers=len(clients)) as executor:
                 for client in clients:
-                    futures += [executor.submit(self.reclaimAppClient,client,appNameToHalt)]
+                    futures += [executor.submit(self.reclaimAppClient,client,appName)]
                 _done,_pending = concurrent.futures.wait(futures)
                 executor.shutdown()
         self.launchList = launchList
+        if status == AppStatus.Running: 
+            self.appInfo[appName].status = AppStatus.Loaded
+        else:
+            assert status == AppStatus.Recovered, 'app status Recovered expected' 
+            pass
         self.logger.info('...done')
         return True
     

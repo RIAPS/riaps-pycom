@@ -56,13 +56,14 @@ class ProcessMonitor(threading.Thread):
         while True: 
             self.proc.wait()
             if self.terminated.is_set(): break
+            code = self.proc.returncode
             if self.released.is_set(): 
-                self.logger.info("expected termination: %s" % self.proc_name)
+                self.logger.info("expected termination: %s[%r]" % (self.proc_name,code))
                 break
             else:
                 # Process termination was unexpected
                 self.unexpected = True
-                self.logger.info("unexpected termination: %s" % self.proc_name)
+                self.logger.error("unexpected termination: %s[%r]" % (self.proc_name,code))
                 self.dealer.send_pyobj((self.proc_name,))
                 # Ask parent to restart, wait until completed
                 _resp = self.dealer.recv_pyobj()

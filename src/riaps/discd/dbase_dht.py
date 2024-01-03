@@ -45,17 +45,18 @@ from .dbase import DiscoDbase
 import logging
 
 class DhtPeerMon(threading.Thread):
-    def __init__(self,context,hostAddress,riapsHome,dht,dhtPort):
+    def __init__(self,context,hostAddress,riapsHome,dhtDbase,dhtPort):
         threading.Thread.__init__(self,daemon=False)
         self.logger = logging.getLogger(__name__)
         self.context = context
         self.hostAddress = hostAddress
         self.riapsHome = riapsHome
         self.control = None
-        self.dht = dht
+        self.dhtDbase = dhtDbase
         self.dhtPort = dhtPort
         self.peers  = { }       # uuid : address - all peers
         self.peerGroup = set()  # set(uuid) of peer group members
+        self.dhtGroup = set()   # set(uuid) of peers who are on dht 
         self.uuid = None
         self.logger.info('DhtPeerMon:__inited__')
     
@@ -131,14 +132,14 @@ class DhtPeerMon(threading.Thread):
                     self.logger.info("DhtPeerMon.ENTER %s from %s" % (pUUID.decode('utf-8'),pAddr.decode('utf-8')))
                     try:
                         pAddrStr = pAddr.decode('UTF-8')
-                        (peerIp,peerPort) = parse.parse("tcp://{}:{}",pAddrStr)
-                        peerHeaderKey =  self.peerHeaderKey(peerIp)
+                        (peerIP,peerPort) = parse.parse("tcp://{}:{}",pAddrStr)
+                        peerHeaderKey =  self.peerHeaderKey(peerIP)
                         _value = _headers.lookup(peerHeaderKey)
                         if (_value):
                             try:
                                 value = ctypes.cast(_value,ctypes.c_char_p).value
                                 assert value == self.PEERMARK
-                                self.peers[pUUID] = (peerIp,peerPort)
+                                self.peers[pUUID] = (peerIP,peerPort)
                                 self.logger.info("DhtPeerMon.ENTER valid peer")
                             except:
                                 self.logger.info("DhtPeerMon.ENTER header value mismatch")
@@ -158,20 +159,24 @@ class DhtPeerMon(threading.Thread):
                     else:
                         self.peerGroup.add(peer)
                         self.zyre.whispers(peer,("%s://%d" % (self.PEERGROUP_STR,self.dhtPort)).encode('utf-8'))
-                elif eType == b'SHOUT' or eType == b'WHISPER':
+                elif eType == b'WHISPER' or eType == b'SHOUT':
                     arg = msg.popstr().decode()
-                    self.logger.info("DhtPeerMon.SHOUT %s = %s " % (pUUID.decode('utf-8'), arg))
+                    self.logger.info("DhtPeerMon.%s %s = %s " % 
+                                     (eType.decode('utf-8'),pUUID.decode('utf-8'), arg))
                     try:
                         # pAddrStr = pAddr.decode('UTF-8')
                         # (peerIp,_peerPort) = parse.parse("tcp://{}:{}",pAddrStr)
                         # assert peerIp == self.peers[pUUID]
-                        (peerIp,peerPort) = self.peers[pUUID]
+                        (peerIP,peerPort) = self.peers[pUUID]
                         (peerDhtPort,) = parse.parse("%s://{}" % self.PEERGROUP_STR,arg)
-                        if peerDhtPort:
-                            self.logger.info("DhtPeerMon.bootstrap %s:%s" % (peerIp,peerDhtPort))
-                            self.dht.bootstrap(str(peerIp),str(peerDhtPort))
+                        if peerDhtPort and pUUID not in self.dhtGroup:
+                            self.logger.info("DhtPeerMon.bootstrap %s:%s" % (peerIP,peerDhtPort))
+                            self.dhtDbase.bootstrap(str(peerIP),str(peerDhtPort))
+                            self.dhtGroup.add(pUUID)
+                        else:
+                            self.logger.info("DhtPeerMon.bootstrapped %s:%s" % (peerIP,peerDhtPort))
                     except:
-                        self.logger.error("DhtPeerMon.bootstrap failed")
+                        self.logger.error("DhtPeerMon.bootstrap failed %r", sys.exc_info()[0])
                 elif eType == b'LEAVE':
                     groupName = group.decode()
                     self.logger.info("DhtPeerMon.LEAVE %s from %s" % (pUUID.decode('utf-8'),groupName))
@@ -180,10 +185,12 @@ class DhtPeerMon(threading.Thread):
                         pass 
                     else:
                         self.peerGroup.discard(pUUID)
+                        if pUUID in self.dhtGroup: self.dhtGroup.discard(pUUID)
                 elif eType == b'EXIT':
                     self.logger.info("DhtPeerMon.EXIT %s " % (str(pUUID)))
                     if pUUID in self.peers: 
                         del self.peers[pUUID]
+                        if pUUID in self.dhtGroup: self.dhtGroup.discard(pUUID)
                         self.peerGroup.discard(pUUID)       
                 else:
                     pass
@@ -210,6 +217,7 @@ class DhtBackup(object):
         mapSize = const.appDbSize * 1024 * 1024
         if os.path.exists(dbPath) and not os.access(dbPath,os.W_OK):
             raise BuildError("regDb is not writeable")
+        self.dbLock = RLock() 
         while True:
             try:
                 self.dbase = lmdb.open(dbPath,
@@ -229,12 +237,14 @@ class DhtBackup(object):
                 raise 
             
     def closeDbase(self):
-        with self.dbase.begin() as txn:
-            with txn.cursor() as curs:
-                go = True
-                while go:
-                    go = curs.delete()
-        self.dbase.close()
+        self.logger.info("regdDb closing")
+        with self.dbLock:
+            with self.dbase.begin() as txn:
+                with txn.cursor() as curs:
+                    go = True
+                    while go:
+                        go = curs.delete()
+            self.dbase.close()
         self.logger.info('regDb closed')
     
     @staticmethod
@@ -243,61 +253,67 @@ class DhtBackup(object):
         return res if res else []          
     
     def getAllKeyValues(self):
-        with self.dbase.begin() as txn:
-            raw = list(txn.cursor().iternext())
-            return [(k.decode('UTF-8'),[v for v in self.unpickle(vl)] if vl else []) 
-                    for (k,vl) in raw]
+        with self.dbLock:
+            with self.dbase.begin() as txn:
+                raw = list(txn.cursor().iternext())
+                return [(k.decode('UTF-8'),[v for v in self.unpickle(vl)] if vl else []) 
+                        for (k,vl) in raw]
     
     def clearDbase(self):
-        with self.dbase.begin() as txn:
-            with txn.cursor() as curs:
-                go = True
-                while go: go = curs.delete()
+        with self.dbLock:
+            with self.dbase.begin() as txn:
+                with txn.cursor() as curs:
+                    go = True
+                    while go: go = curs.delete()
     
     def getKeyValues(self,key,default = None):
         assert self.dbase != None
         value = default
         if type(key) == str: key = key.encode('utf-8')
-        with self.dbase.begin() as txn:
-            _value = txn.get(key)
-            if _value != None:
-                value = self.unpickle(_value)
+        with self.dbLock:
+            with self.dbase.begin() as txn:
+                _value = txn.get(key)
+                if _value != None:
+                    value = self.unpickle(_value)
         return value
     
     def addKeyValue(self,key,value):
         assert self.dbase != None
         res = False
         if type(key) == str: key = key.encode('utf-8')
-        with self.dbase.begin(write=True) as txn:
-            values = []
-            _values = txn.get(key)
-            if _values != None:
-                values = self.unpickle(_values)
-            values += [value]
-            _values = pickle.dumps(values)
-            res = txn.put(key,_values)
+        with self.dbLock:
+            with self.dbase.begin(write=True) as txn:
+                values = []
+                _values = txn.get(key)
+                if _values != None:
+                    values = self.unpickle(_values)
+                values += [value]
+                _values = pickle.dumps(values)
+                res = txn.put(key,_values)
         return res
     
     def delKey(self,key):
         assert self.dbase != None
         res = False
         if type(key) == str: key = key.encode('utf-8')
-        with self.dbase.begin(write=True) as txn:
-            res = txn.delete(key)
+        with self.dbLock:
+            with self.dbase.begin(write=True) as txn:
+                res = txn.delete(key)
         return res
     
     def delKeyValue(self,key,value):
         assert self.dbase != None
         res = False
         if type(key) == str: key = key.encode('utf-8')
-        with self.dbase.begin(write=True) as txn:
-            values = []
-            _values = txn.get(key)
-            if _values != None:
-                values = self.unpickle(_values)
-            values = values.remove(value) if value in values else values
-            _values = pickle.dumps(values)
-            res = txn.put(key,_values)
+        with self.dbLock:
+            with self.dbase.begin(write=True) as txn:
+                values = []
+                _values = txn.get(key)
+                if _values != None:
+                    values = self.unpickle(_values)
+                values = values.remove(value) if value in values else values
+                _values = pickle.dumps(values)
+                res = txn.put(key,_values)
         return res
 
 class DhtDbase(DiscoDbase):
@@ -315,22 +331,30 @@ class DhtDbase(DiscoDbase):
         self.context = context_ 
         self.hostAddress = hostAddress
         self.root = dbaseLoc
+        self.riapsHome = os.getenv('RIAPSHOME', './')
+        
         self.dht = None
         self.dhtPort = None
+                      
+        self.dataLock = RLock()
         self.updates = []
-        self.updateLock = RLock()
         self.clients = { }
         self.listeners = { }
-        self.riapsHome = os.getenv('RIAPSHOME', './')
-        self.republisher = sched.scheduler(time.time,time.sleep)
+        self.cancelled = []
+        self.deletedMap = { }
+        self.noClientsMap = { }
+        
         self.republishMap = { }
         self.republisherStart = threading.Event()
+        self.republisherDelay  = threading.Event()
+        self.republisherDelayFunc = functools.partial(self.republisherDelay.wait)
+        self.republisher = sched.scheduler(time.time,self.republisherDelayFunc)
         self.republisherThread = threading.Thread(name='dhtRepublisher',
                                                   target=self.dhtRepublishWorker,
                                                   daemon=False)
         self.republisherStop = False
         self.republishLock = RLock()
-        self.deletedMap = { }
+
         self.regDb = DhtBackup()
         self.private_key = None
         self.cipher_rsa = None
@@ -372,6 +396,7 @@ class DhtDbase(DiscoDbase):
             self.dht.run(port=self.dhtPort,config=config)  # Run on a random, free port
         except Exception:
             raise DatabaseError("dht.start: %s" % sys.exc_info()[0])
+
         if const.discoDhtBoot and bootHost and bootPort:
             try:    
                 self.logger.info("dht.bootstrap on %s:%s" % (str(bootHost),str(bootPort)))
@@ -386,17 +411,24 @@ class DhtDbase(DiscoDbase):
         self.cleanupRegDb()                                     # If something in the backup db, discard from the dht
         self.republisherThread.start()                          # Start republisher
     
+    def bootstrap(self,peerIP:str,peerDhtPort:str):
+        self.dht.bootstrap(peerIP,peerDhtPort)
+    
     def fetchUpdates(self):
         '''
         Check and fetch the updated values of the subscribed keys if any
+        Called from another thread
         '''
-        with self.updateLock:
+        with self.dataLock:
             if len(self.updates) == 0: return []
             try:
                 res = []
                 for (key,value) in set(self.updates):
                     clients = self.clients.get(key,None)
-                    if clients: res.append((key,value,clients))
+                    if clients: 
+                        res.append((key,value,clients))
+                    else:
+                        self.noClientsMap = list(set(self.noClientsMap.get(key,[]) + [value]))
                 self.updates = []
                 return res
             except Exception:
@@ -472,17 +504,28 @@ class DhtDbase(DiscoDbase):
         self.logger.info('dhtPut[%s]:= %r (%r)' % (key,value,res))
         return res
                        
-    def dhtValueCallback(self,key: str, value : bytes, expired : bool) -> bool:
+    def dhtValueCallback(self, key : str, value : bytes, expired : bool) -> bool:
         '''
         ValueCallback - called when a key's value get updated. 
         '''
-        with self.updateLock:
+        with self.dataLock:
+            if key in self.cancelled:
+                self.logger.info('dhtValueCallback[%s]: cancelled' % key)
+                token = self.listeners.get(key,None)
+                if token:
+                    # self.dht.cancelListen(token)
+                    del self.listeners[key]
+                self.cancelled.remove(key)
+                return False
+            if key not in self.listeners:
+                self.logger.error('dhtValueCallback[%r] - already cancelled ' % key)
+                return False
             try:
                 value_ = self.strValue(value)
             except ValueError:
                 self.logger.error('dhtValueCallback[%s]: <INVALID>(%r)' % (key,expired))
                 return True
-            self.logger.info('dhtValueCallback[%s]: %r(%r)' % (key,value_,expired))
+            self.logger.info('dhtValueCallback[%s].value: %r(%r)' % (key,value_,expired))
             if expired or self.isDelValue(value_) or \
                 (key,value_) in self.republishMap or \
                 self.deletedMap.get(key,None) == value_:
@@ -493,7 +536,7 @@ class DhtDbase(DiscoDbase):
                 _value = self.orgValue(value_)
                 self.deletedMap[key] = _value
                 self.updates = [(k,v) for (k,v) in self.updates if k != key and v != _value]
-        return True
+            return True
     
     def dhtListen(self,key):
         '''
@@ -525,20 +568,29 @@ class DhtDbase(DiscoDbase):
         Add a client to the key. Clients are local service clients
         (app/actor/component/ports) that need to connect to the providers.
         '''
-        self.clients[key] = list(set(self.clients.get(key,[]) + [client]))
-        if key not in self.listeners:
-            self.listeners[key] = self.dhtListen(key)
+        with self.dataLock:
+            self.clients[key] = list(set(self.clients.get(key,[]) + [client]))
+            if key not in self.listeners:
+                self.listeners[key] = self.dhtListen(key)
+            if key in self.noClientsMap:
+                values = self.noClientsMap.get(key,[])
+                for value in values:
+                    self.updates += [(key,value)]
+                del self.noClientsMap[key]
     
     def dhtDelClient(self,key,client):
         '''
         '''
         self.logger.info('dhtdelClient(%s,%r)' % (key,client))
-        listener = self.listeners.get(key,None)
-        if listener:
-            self.dht.cancelListen(listener)
-            del self.listeners[key]
-        if client in self.clients.get(key,[]):
-            self.clients[key].remove(client)
+        with self.dataLock:
+            if client in self.clients.get(key,[]):
+                self.clients[key].remove(client)
+                if not self.clients[key]:
+                    listener = self.listeners.get(key,None)
+                    if listener:
+                        self.cancelled += [key]
+                        # self.dht.cancelListen(listener)
+                        # del self.listeners[key]
 
     def dhtDelete(self,key):
         '''
@@ -546,22 +598,25 @@ class DhtDbase(DiscoDbase):
         Cancel the listener (if any), mark all values as deleted  
         '''
         self.logger.info('dhtDelete[%s]' % (key,))
-        listener = self.listeners.get(key,None)
-        if listener:
-            self.dht.cancelListen(listener)
-            del self.listeners[key]
-        clients = self.clients.get(key,[])
-        if clients: del self.clients[key]
-        values = self.dhtGet(key)
-        for value in values:
-            _res = self.dhtPut(key,self.delValue(value))
-            self.deletedMap[key] = value
+        with self.dataLock:
+            values = self.dhtGet(key)
+            clients = self.clients.get(key,[])
+            if clients: del self.clients[key]
+            listener = self.listeners.get(key,None)
+            if listener:
+                self.cancelled += [key]
+                # self.dht.cancelListen(listener)
+                # del self.listeners[key]
+            for value in values:
+                _res = self.dhtPut(key,self.delValue(value))
+                self.deletedMap[key] = value
         return values
     
     def dhtRepublishWorker(self):
         '''
         Worker thread that runs the 'republisher' scheduler.
         '''
+        self.republisherDelay.clear()
         while True:
             self.republisherStart.wait()                # Wait for re(start)
             self.republisher.run()                      # Run scheduler
@@ -619,6 +674,17 @@ class DhtDbase(DiscoDbase):
                 if event:
                     self.republisher.cancel(event)
                     del self.republishMap[(key,value)]
+                    
+    def stopRepublisher(self):
+        self.republisherStop = True
+        with self.republishLock:
+            for (_pair,event) in self.republishMap.items():
+                if event:
+                    self.republisher.cancel(event)
+        self.republisherStart.set()
+        self.republisherDelay.set()
+        self.republisherThread.join()
+        self.logger.info("dht.republisher stopped")
                     
     def insert(self,key:str,value:str) -> [str]:
         '''
@@ -681,12 +747,17 @@ class DhtDbase(DiscoDbase):
         self.dhtDelClient(key,target)
         
     def terminate(self):
+        self.logger.info("dht.terminate")
         self.regDb.closeDbase()
-        self.republisherStop = True
-        if self.peerMon: self.peerMon.terminate()
+        self.stopRepublisher()
+        if self.peerMon: 
+            self.peerMon.terminate()
+            self.logger.info("peerMon terminated")
+        time.sleep(1)
         if self.dht:
             self.dht.join() 
             self.dht.shutdown()
-       
+        self.logger.info("dht.terminated")
+           
     
 

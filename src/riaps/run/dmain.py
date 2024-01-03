@@ -12,6 +12,9 @@ import json
 import logging
 import traceback 
 
+import faulthandler
+faulthandler.enable()
+
 from riaps.utils.config import Config
 from riaps.utils.trace import riaps_trace
 

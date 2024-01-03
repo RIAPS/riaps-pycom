@@ -87,7 +87,6 @@ class DiscoClient(object):
         msgBytes = reqt.to_bytes()
         respBytes = self.rpcDisco(msgBytes,"registerActor",True)
         resp = disco_capnp.DiscoRep.from_bytes(respBytes)
-        
         which = resp.which()
         if which == 'actorReg':
             respMessage = resp.actorReg
@@ -135,8 +134,7 @@ class DiscoClient(object):
         
         msgBytes = req.to_bytes()
         respBytes = self.rpcDisco(msgBytes,"handleRegReq",True)
-        resp = disco_capnp.DiscoRep.from_bytes(respBytes)
-        
+        resp = disco_capnp.DiscoRep.from_bytes(respBytes)          
         which = resp.which()
         if which == 'serviceReg':
             repMessage = resp.serviceReg
@@ -176,7 +174,6 @@ class DiscoClient(object):
         msgBytes = req.to_bytes()
         respBytes = self.rpcDisco(msgBytes,"handleLookupReq",True)
         resp = disco_capnp.DiscoRep.from_bytes(respBytes)
-        
         which = resp.which()
         returnValue = []
         if which == 'serviceLookup':
@@ -219,8 +216,8 @@ class DiscoClient(object):
         
         msgBytes = req.to_bytes()
         respBytes = self.rpcDisco(msgBytes,"handleUnregReq",True)
-        resp = disco_capnp.DiscoRep.from_bytes(respBytes)
         
+        resp = disco_capnp.DiscoRep.from_bytes(respBytes)  
         which = resp.which()
         if which == 'serviceUnreg':
             repMessage = resp.serviceUnreg
@@ -260,7 +257,6 @@ class DiscoClient(object):
         msgBytes = req.to_bytes()
         respBytes = self.rpcDisco(msgBytes,"handleUnlookupReq",True)
         resp = disco_capnp.DiscoRep.from_bytes(respBytes)
-        
         which = resp.which()
         returnValue = []
         if which == 'serviceUnlookup':
@@ -358,8 +354,8 @@ class DiscoClient(object):
                 _discard = self.recvFromDisco("unregister",True) 
             self.logger.info("terminate: unregistering")
             respBytes = self.rpcDisco(msgBytes,"unregister",True)
-            resp = disco_capnp.DiscoRep.from_bytes(respBytes)
             
+            resp = disco_capnp.DiscoRep.from_bytes(respBytes)
             which = resp.which()
             if which == 'actorUnreg':
                 respMessage = resp.actorUnreg
