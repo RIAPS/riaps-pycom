@@ -231,7 +231,7 @@ class ComponentThread(threading.Thread):
                 msg = ('exception', traceback.format_exc())
                 self.control.send_pyobj(msg)
         else:
-            self.logger.error('Unbound port')
+            self.logger.warning('Unbound port')
         
     def batchScheduler(self, sockets):
         '''
@@ -443,7 +443,7 @@ class Component(object):
     
     def getUUID(self):
         '''
-        Return the network unique ID for the parent actor
+        Return the deployment-unique ID for the parent actor
         '''
         return self.owner.getUUID()
     
@@ -572,13 +572,13 @@ class Component(object):
         '''  
         pass
     
-    def joinGroup(self, groupName, instName, groupSize = 1, groupPriority=GROUP_PRIORITY_MIN):
+    def joinGroup(self, groupName, instName, groupMinSize = 1, groupPriority=GROUP_PRIORITY_MIN):
         if self.thread == None:
             self.thread = self.owner.thread
         group = self.coord.getGroup(groupName, instName)
-        assert groupSize >= 1, "group size must be >=1"
+        assert groupMinSize >= 1, "min group size must be >=1"
         if group == None:
-            group = self.coord.joinGroup(self.thread, groupName, instName, self.getLocalID(), groupSize)
+            group = self.coord.joinGroup(self.thread, groupName, instName, self.getLocalID(), groupMinSize)
             self.thread.addGroupSocket(group, groupPriority)
         return group
             
