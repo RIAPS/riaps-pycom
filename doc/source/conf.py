@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.abspath('../../src'))
 # -- Project information -----------------------------------------------------
 
 project = 'RIAPS'
-copyright = '2023, Vanderbilt University'
+copyright = '2024, Vanderbilt University'
 author = 'RIAPS Team'
 
 # The short X.Y version
