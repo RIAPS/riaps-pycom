@@ -1,4 +1,4 @@
-sphinx==2.1.1
+sphinx==7.2.6
 paramiko==2.11.0
 gitdb==4.0.9
 # GitPython==3.1.27
