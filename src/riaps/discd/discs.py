@@ -463,24 +463,24 @@ class DiscoService(object):
         '''
         Dispatch the request based on the message type
         '''
-        msg = disco_capnp.DiscoReq.from_bytes(msgBytes)
-        which = msg.which()
-        if which == 'actorReg':
-            self.handleActorReg(msg)
-        elif which == "serviceReg":
-            self.handleServiceReg(msg)
-        elif which == "serviceLookup":
-            self.handleServiceLookup(msg)
-        elif which == 'actorUnreg':
-            self.handleActorUnreg(msg)
-        elif which == 'serviceUnlookup':
-            self.handleServiceUnlookup(msg)
-        elif which == 'serviceUnreg':
-            self.handleServiceUnreg(msg)
-        elif which == 'groupJoin':
-            self.handleGroupJoin(msg)
-        else:
-            pass
+        with disco_capnp.DiscoReq.from_bytes(msgBytes) as msg:
+            which = msg.which()
+            if which == 'actorReg':
+                self.handleActorReg(msg)
+            elif which == "serviceReg":
+                self.handleServiceReg(msg)
+            elif which == "serviceLookup":
+                self.handleServiceLookup(msg)
+            elif which == 'actorUnreg':
+                self.handleActorUnreg(msg)
+            elif which == 'serviceUnlookup':
+                self.handleServiceUnlookup(msg)
+            elif which == 'serviceUnreg':
+                self.handleServiceUnreg(msg)
+            elif which == 'groupJoin':
+                self.handleGroupJoin(msg)
+            else:
+                pass
         
     def handleUpdate(self,msg):
         '''
