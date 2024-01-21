@@ -20,7 +20,7 @@ def getNetworkInterfaces(nicName=None):
      ''' 
     if nicName is None:
         nicName = Config.NIC_NAME
-    local = None
+    local = '127.0.0.1'
     ipAddressList = []
     macAddressList = []
     ifNameList = []
@@ -31,7 +31,7 @@ def getNetworkInterfaces(nicName=None):
             ifAddrs = ifInfo[netifaces.AF_INET]
             ifAddr = ifAddrs[0]['addr']
             if ifAddr == '127.0.0.1':
-                local = ifAddr
+                continue
             else:
                 ipAddressList.append(ifAddr)
                 ifNameList.append(ifName)
