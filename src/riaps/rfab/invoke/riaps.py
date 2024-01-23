@@ -6,13 +6,6 @@ import socket
 from riaps.rfab import api
 from .helpers import assert_role_in
 
-@task(pre=[call(assert_role_in,'control','hostlist','nodes')])
-def dummy(c: Context):
-    print(c.config.hosts)
-    print(type(c.config.hosts))
-    print(c.config.role)
-    print(type(c.config.role))
-
 @task(pre=[call(assert_role_in,'control','remote','all')])
 def update(c: Context):
     """Update RIAPS packages from official release"""
@@ -35,9 +28,10 @@ def update(c: Context):
             print(f"Installing {pack} results:")
             groupGres.pretty_print()
 
-@task(pre=[call(assert_role_in,'remote')],auto_shortflags=False)
+@task(pre=[call(assert_role_in,'remote')],auto_shortflags=False,
+      help={'keep-password':'prevents removal of password-authenticated login'})
 def updateNodeKey(c: Context, keep_password=False):
-    """Rekey the remote nodes with newly generated keys:[keepPasswd]"""
+    """Rekey the remote nodes with newly generated keys"""
     api_res = api.riaps_cmds.updateNodeKey(c.config.hosts,keep_password,hide=c.config.hide)
     for conn, results in api_res.items():
         print(f"{conn.host}: ",end='')
@@ -59,8 +53,10 @@ def install(c: Context, keepConfig=True):
         if api.helpers.multi_step_print_errors(results):
             print(f"succeeded")
 
-@task(pre=[call(assert_role_in,'remote')])
+@task(pre=[call(assert_role_in,'remote')],
+      help={'keepConfig': "keep RIAPS system config files"})
 def uninstall(c: Context, keepConfig=True):
+    """Uninstall all RIAPS packages from nodes"""
     api_res = api.riaps_cmds.uninstall(c.config.hosts,keepConfig,c.config.hide)
     for conn, results in api_res.items():
         print(f"{conn.host}: ",end='')
@@ -69,11 +65,11 @@ def uninstall(c: Context, keepConfig=True):
 
 @task(pre=[call(assert_role_in,'nodes','remote')])
 def reset(c: Context):
+    """Kill riaps_, clean, restart riaps_*"""
     api.riaps_cmds.reset(c.config.hosts,c.config.hide)
 
 
 ns = Collection('riaps')
-ns.add_task(dummy)
 ns.add_task(update)
 ns.add_task(updateNodeKey)
 ns.add_task(updateAptKey)

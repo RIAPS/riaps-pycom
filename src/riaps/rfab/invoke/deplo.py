@@ -23,7 +23,7 @@ def start(c: Context):
 @task(pre=[call(assert_role_in,'nodes','remote')])
 def startManual(c: Context):
     """Start deplo on hosts without service"""
-    res = api.replo.startManual(c.config.hosts,hide=c.config.hide)
+    res = api.deplo.startManual(c.config.hosts,hide=c.config.hide)
     # hostname = env.host_string
     # command = ('sudo -E riaps_deplo >~/riaps-' + hostname + '.log 2>&1 &')
     # run(command)
@@ -48,17 +48,21 @@ def disable(c: Context):
     """Disable service"""
     res = api.deplo.disable(c.config.hosts,hide=c.config.hide).pretty_print()
 
-@task(pre=[call(assert_role_in,'nodes','remote')])
+@task(pre=[call(assert_role_in,'nodes','remote')],
+      help={'n':'number of lines to collect (default: 10)',
+            'grep':'arbitrary grep args to filter results, in quotes'})
 def status(c: Context, n='10', grep=''):
-    """Get systemctl service status:[# of lines],[grep args]"""
+    """Get systemctl service status"""
     if grep != '':
         grep=" | grep " + grep
     res = api.deplo.status(c.config.hosts,hide=c.config.hide,n=n,grep=grep)
 
 
-@task(pre=[call(assert_role_in,'nodes','remote')])
+@task(pre=[call(assert_role_in,'nodes','remote')],
+      help={'n':'number of lines to collect (default: 10)',
+            'grep':'arbitrary grep args to filter results, in quotes'})
 def journal(c: Context, n='10', grep=''):
-    """Get journalctl service log:[# of lines],[grep args]"""
+    """Get journalctl service log"""
     if grep != '':
         grep=" | grep " + grep
     res = api.deplo.journal(c.config.hosts,hide=c.config.hide,n=n,grep=grep)

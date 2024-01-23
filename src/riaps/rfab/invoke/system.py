@@ -14,35 +14,46 @@ def check(c: Context):
     res = api.sys.check(c.config.hosts,hide=c.config.hide)
     res.pretty_print(exception_hints=[(socket.gaierror,"No known address for host")])
 
-@task(optional=['when','why'],pre=[call(assert_role_in,"remote")])
+@task(optional=['when','why'],pre=[call(assert_role_in,"remote")],
+      help={'when':'time passed to \'shutdown\', default "now"',
+            'why':'message logged for shutdown reason'})
 def shutdown(c: Context, when='now', why=''):
+    """Shutdown the hosts"""
     api.sys.shutdown(c.config.hosts,when,why,hide=c.config.hide).pretty_print()
 
 @task(pre=[call(assert_role_in,"remote")])
 def reboot(c: Context):
+    """Reboot the hosts"""
     api.sys.reboot(c.config.hosts,hide=c.config.hide).pretty_print()
 
 @task(pre=[call(assert_role_in,"remote","nodes")])
 def clearJournal(c: Context):
+    """Clear system journal"""
     res = api.sys.sudo('journalctl --rotate && journalctl --vacuum-time=1s', c.config.hosts,hide = c.config.hide)
     res.pretty_print()
 
-@task(positional=["local_file"])
+@task(positional=["local_file"],
+      help={'local_file':'path to local file',
+            'remote_dir':'remote directory to copy into'})
 def put(c: Context, local_file, remote_dir=''):
     '''
     Copies a local file to the target(s)
     '''
     api.sys.put( c.config.hosts, local_file, remote_dir)
 
-@task(positional=["remote_file"],pre=[call(assert_role_in,'remote','nodes')])
+@task(positional=["remote_file"],pre=[call(assert_role_in,'remote','nodes')],
+      help={'remote_file':'remote filename to copy locally',
+            'local_dir':'local directory to save files in'})
 def get(c: Context, remote_file, local_dir=''):
     '''
     Copies a remote file from the target(s)
     '''
     res = api.sys.get(remote_file,local_dir,c.config.hosts)
 
-@task(positional=['command'])
+@task(positional=['command'],
+      help={'command':'shell command to run, in quotes'})
 def run(c: Context, command):
+    """Execute command as user:<command>"""
     res = api.sys.run(command,c.config.hosts,hide=c.config.hide)
     res.pretty_print()
 
