@@ -1,6 +1,6 @@
 from fabric import Group, Connection
 from .helpers import *
-from .utils import load_hostfile
+from .utils import load_role
 import os
 from riaps.consts.defs import *
 from pathlib import Path
@@ -9,22 +9,22 @@ from invoke.exceptions import UnexpectedExit
 
 packages = ['riaps-timesync','riaps-pycom']
 
-def update_control(host: str,hide=True):
+def update_control(host: str,**kwargs):
     results = {}
     for pack in packages:
         if pack == 'riaps-pycom':
             package = pack + '-dev'
         else:
             package = pack + '-$(dpkg --print-architecture)'
-        results[pack] = Connection(host).sudo(f"apt-get install {package} -y",hide=hide,pty=True)
+        results[pack] = Connection(host).sudo(f"apt-get install {package} -y",pty=True,**kwargs)
     return results
         
     
-def update_remote(hosts: Group, hide=True) -> dict:
+def update_remote(hosts: Group, **kwargs) -> dict:
     results = {}
     for pack in packages:
         package = pack + '-$(dpkg --print-architecture)'
-        results[pack] = groupRun(f"apt-get install {package} -y",hosts,hide=hide)
+        results[pack] = groupRun(f"apt-get install {package} -y",hosts,**kwargs)
     return results
 
 def updateNodeKey(hosts: Group, keep_password=False, hide=True):
@@ -75,15 +75,14 @@ def updateNodeKey(hosts: Group, keep_password=False, hide=True):
 def updateAptKey(hosts: Group, hide=True):
     return groupSudo('wget -qO - https://riaps.isis.vanderbilt.edu/keys/riapspublic.key | apt-key add -')
 
-def install(dir, hosts: Group, keepConfig, hide=True):
-    def _install(c: Connection, package, keep, logfolder, hide):
-        c.hide = hide
+def install(dir, hosts: Group, keepConfig, **kwargs):
+    def _install(c: Connection, package, keep, logfolder, **kwargs):
         if package == 'riaps-pycom':
             if c.host == controlhost:
                 package += '-dev'
             package += '.deb'
         else:   
-            res = c.run('dpkg --print-architecture',hide=True)
+            res = c.run('dpkg --print-architecture',**kwargs)
             if res.exited != 0:
                 return [(res, "FAILED AT --PRINT-ARCHITECTURE")]
             a = res.stdout.strip()
@@ -93,8 +92,8 @@ def install(dir, hosts: Group, keepConfig, hide=True):
         filename = f"riaps-install-{c.host}-{package}.log"
         steps = [
             [c.put,{},package],
-            [c.sudo,{},f"dpkg -i {keep} {package} > {filename}"],
-            [c.sudo,{},f"rm -f {package}"],
+            [c.sudo,kwargs,f"dpkg {keep} -i {package} > {filename}"],
+            [c.sudo,kwargs,f"rm -f {package}"],
             [c.get,{},filename,f"{logfolder}/{filename}"]
         ]
         return run_multiple_steps(steps)
@@ -103,35 +102,33 @@ def install(dir, hosts: Group, keepConfig, hide=True):
     print(f"logfile is: {logfolder}")
     if not os.path.exists(logfolder):
         os.mkdir(logfolder)
-    roledefs = load_hostfile('/etc/riaps/riaps-hosts.conf')
-    controlhost = "{}".format(*roledefs['control'])
+    controlhost = load_role('control')[0].host
     keep = '--force-confold' if keepConfig else '--force-confnew'
-    return {host:_install(host,pack,keep,logfolder,hide) for pack in packages for host in hosts}
+    return {host:_install(host,pack,keep,logfolder,**kwargs) for pack in packages for host in hosts}
 
-def uninstall(hosts: Group, keepConfig, hide=True):
-    def _uninstall(c: Connection,package,keep,hide):
+def uninstall(hosts: Group, keepConfig, **kwargs):
+    def _uninstall(c: Connection,package,keep,**kwargs):
         if package == 'riaps-pycom':
             if c.host == controlhost:
                 package += '-dev'
         else:   
-            res = c.run('dpkg --print-architecture',hide=True)
+            res = c.run('dpkg --print-architecture',**kwargs)
             if res.exited != 0:
                 return [(res, "FAILED AT --PRINT-ARCHITECTURE")]
             a = res.stdout.strip()
             package = f"{package}-{a}"
 
         steps = [
-            [c.sudo,{'hide':True},f"apt-get remove -y {package}"],
+            [c.sudo,kwargs,f"apt-get -s remove -y {package}"],
         ]
         if not keep:
-            steps.append([c.sudo,f"dpkg --purge {package}"])
+            steps.append([c.sudo,kwargs,f"dpkg --no-act --purge {package}"])
         
         return run_multiple_steps(steps)
     
-    roledefs = load_hostfile('/etc/riaps/riaps-hosts.conf')
-    controlhost = "{}".format(*roledefs['control'])
+    controlhost = load_role('control')[0].host
     keep = '--force-confold' if keepConfig else '--force-confnew'
-    return {host:_uninstall(host,pack,keepConfig,hide) for pack in reversed(packages) for host in hosts}
+    return {host:_uninstall(host,pack,keepConfig,**kwargs) for pack in reversed(packages) for host in hosts}
 
 
 def reset(hosts: Group, hide = True):

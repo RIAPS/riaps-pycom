@@ -57,6 +57,13 @@ def run(c: Context, command):
     res = api.sys.run(command,c.config.hosts,hide=c.config.hide)
     res.pretty_print()
 
+@task(positional=['command'],
+      help={'command':'shell command to run, in quotes'})
+def sudo(c: Context, command):
+    """Sudo execute command as user:<command>"""
+    res = api.sys.sudo(command,c.config.hosts,hide=c.config.hide)
+    res.pretty_print()
+
 @task
 def arch(c: Context):
     '''
@@ -92,6 +99,7 @@ ns.add_task(clearJournal)
 ns.add_task(put)
 ns.add_task(get)
 ns.add_task(run)
+ns.add_task(sudo)
 ns.add_task(arch)
 ns.add_task(flushIPTables)
 ns.add_task(setJournalLogSize)

@@ -9,6 +9,12 @@ def load_hostfile(hosts_file,validate=False):
     '''
     Load a hosts file, construct role definitions
     '''
+
+    def catch(func, *args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception:
+            raise Exception("%r" % args)
     if not os.path.isfile(hosts_file):
         print('Hosts configuration file doesn\'t exist: %s' % hosts_file)
         return None
@@ -75,7 +81,12 @@ def load_hostfile(hosts_file,validate=False):
                 }
     return roledefs
 
-def load_role(role, validate=False, hostfile="/etc/riaps/riaps-hosts.conf") -> ThreadingGroup:
+def load_role(role, validate=False) -> ThreadingGroup:
+    riapsHome = os.getenv('RIAPSHOME')
+    if riapsHome is None:
+        riapsHome = os.getcwd()
+        print(f"RIAPS Configuration - RIAPSHOME is not set, using {riapsHome}")
+    hostfile = riapsHome+'/etc/riaps-hosts.conf'
     roledefs = load_hostfile(hostfile,validate)
     hosts = roledefs.get(role,None)
     if hosts is None:

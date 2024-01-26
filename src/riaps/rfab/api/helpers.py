@@ -134,7 +134,7 @@ def run_multiple_steps(steplist):
                 r = e.result
                 ok, res = _check_result_success(r)
                 if not ok:
-                    results.append(cmd,res)
+                    results.append((cmd,res))
             except BaseException as e:
                 results.append((cmd,e))
                 break

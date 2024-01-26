@@ -17,9 +17,18 @@ ns.add_collection(Collection.from_module(timesync))
 ns.add_collection(Collection.from_module(deplo))
 
 # class RfabConfig(Config):
-#     def __init__(self,hostlist,*args,**kwargs):
+#     def __init__(self,*args,**kwargs):
 #         super().__init__(*args,**kwargs)
-#         self._set(hosts=ThreadingGroup(hostlist))
+#         riapsHome = os.getenv('RIAPSHOME')
+#         if riapsHome is None:
+#             riapsHome = os.getcwd()
+#             print(f"RIAPS Configuration - RIAPSHOME is not set, using {riapsHome}")
+#         riapsApps = os.getenv('RIAPSAPPS')
+#         if riapsApps is None:
+#             riapsApps = '/home/riaps/riaps_apps'
+#             print(f"RIAPS Configuration - RIAPSAPPS  is not set, using {riapsApps}")
+#         self._set(riapsHome=riapsHome)
+#         self._set(riapsApps=riapsApps)
 
 class RfabProgram(Program):
     def core_args(self) -> List[Argument]:
