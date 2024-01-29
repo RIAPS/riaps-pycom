@@ -18,12 +18,14 @@ def check(c: Context):
             'why':'message logged for shutdown reason'})
 def shutdown(c: Context, when='now', why=''):
     """Shutdown the hosts"""
-    api.sys.shutdown(c.config.hosts,when,why,hide=c.config.hide).pretty_print()
+    res = api.sys.shutdown(c.config.hosts,when,why,hide=c.config.hide)
+    res.pretty_print()
 
 @task(pre=[call(assert_role_in,"remote")])
 def reboot(c: Context):
     """Reboot the hosts"""
-    api.sys.reboot(c.config.hosts,hide=c.config.hide).pretty_print()
+    res = api.sys.reboot(c.config.hosts,hide=c.config.hide)
+    res.pretty_print()
 
 @task(pre=[call(assert_role_in,"remote","nodes")])
 def clearJournal(c: Context):
@@ -47,7 +49,7 @@ def get(c: Context, remote_file, local_dir=''):
     '''
     Copies a remote file from the target(s)
     '''
-    res = api.sys.get(remote_file,local_dir,c.config.hosts)
+    api.sys.get(remote_file,local_dir,c.config.hosts)
 
 @task(positional=['command'],
       help={'command':'shell command to run, in quotes'})
@@ -76,13 +78,15 @@ def flushIPTables(c: Context):
     '''
     Flush the iptables
     '''
-    api.sys.sudo('iptables --flush',c.config.hosts,hide=c.config.hide).pretty_print()
+    res = api.sys.sudo('iptables --flush',c.config.hosts,hide=c.config.hide)
+    res.pretty_print()
 
 @task(pre=[call(assert_role_in,'nodes','remote')])
 def setJournalLogSize(c: Context, size):
     """Adjust journalctl log file size"""
     newSize = f'SystemMaxUse={size}M'
     res = api.sys.sudo(f'sed -i "/SystemMaxUse/c\{newSize}" /etc/systemd/journald.conf',c.config.hosts,hide=c.config.hide)
+    res.pretty_print()
 
 @task(pre=[call(assert_role_in,'nodes','remote')])
 def getConfig(c: Context):

@@ -10,7 +10,7 @@ from .helpers import assert_role_in
 def start(c: Context):
     """Start service"""
     res = api.deplo.start(c.config.hosts,hide=c.config.hide)
-    # sudo('systemctl start riaps-deplo.service')
+    res.pretty_print()
 
 # @serial
 # @task
@@ -24,6 +24,7 @@ def start(c: Context):
 def startManual(c: Context):
     """Start deplo on hosts without service"""
     res = api.deplo.startManual(c.config.hosts,hide=c.config.hide)
+    res.pretty_print()
     # hostname = env.host_string
     # command = ('sudo -E riaps_deplo >~/riaps-' + hostname + '.log 2>&1 &')
     # run(command)
@@ -31,22 +32,26 @@ def startManual(c: Context):
 @task(pre=[call(assert_role_in,'nodes','remote')])
 def restart(c: Context):
     """Restart service"""
-    res = api.deplo.restart(c.config.hosts,hide=c.config.hide).pretty_print()
+    res = api.deplo.restart(c.config.hosts,hide=c.config.hide)
+    res.pretty_print()
 
 @task(pre=[call(assert_role_in,'nodes','remote')])
 def stop(c: Context):
     """Stop service"""
-    res = api.deplo.stop(c.config.hosts,hide=c.config.hide).pretty_print()
+    res = api.deplo.stop(c.config.hosts,hide=c.config.hide)
+    res.pretty_print()
 
 @task(pre=[call(assert_role_in,'nodes','remote')])
 def enable(c: Context):
     """Enable service"""
-    res = api.deplo.enable(c.config.hosts,hide=c.config.hide).pretty_print()
+    res = api.deplo.enable(c.config.hosts,hide=c.config.hide)
+    res.pretty_print()
 
 @task(pre=[call(assert_role_in,'nodes','remote')])
 def disable(c: Context):
     """Disable service"""
-    res = api.deplo.disable(c.config.hosts,hide=c.config.hide).pretty_print()
+    res = api.deplo.disable(c.config.hosts,hide=c.config.hide)
+    res.pretty_print()
 
 @task(pre=[call(assert_role_in,'nodes','remote')],
       help={'n':'number of lines to collect (default: 10)',
@@ -56,7 +61,7 @@ def status(c: Context, n='10', grep=''):
     if grep != '':
         grep=" | grep " + grep
     res = api.deplo.status(c.config.hosts,hide=c.config.hide,n=n,grep=grep)
-
+    res.pretty_print()
 
 @task(pre=[call(assert_role_in,'nodes','remote')],
       help={'n':'number of lines to collect (default: 10)',
@@ -66,6 +71,7 @@ def journal(c: Context, n='10', grep=''):
     if grep != '':
         grep=" | grep " + grep
     res = api.deplo.journal(c.config.hosts,hide=c.config.hide,n=n,grep=grep)
+    res.pretty_print()
 
 ns = Collection('deplo')
 ns.add_task(start)
