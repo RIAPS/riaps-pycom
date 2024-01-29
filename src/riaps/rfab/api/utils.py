@@ -90,7 +90,7 @@ def load_role(role, validate=False) -> ThreadingGroup:
     roledefs = load_hostfile(hostfile,validate)
     hosts = roledefs.get(role,None)
     if hosts is None:
-        raise RFabException(f"No role {role} in {hostfile}")
+        raise RFabException(f"No role {role} in {hostfile}, choose one of {list(roledefs)}")
     if len(hosts) == 0:
         raise RFabException(f"Zero hosts for role {role} in {hostfile}")
     return ThreadingGroup(*hosts)
