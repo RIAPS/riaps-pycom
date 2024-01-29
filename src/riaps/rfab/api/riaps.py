@@ -75,7 +75,7 @@ def updateNodeKey(hosts: Group, keep_password=False, hide=True):
 def updateAptKey(hosts: Group, hide=True):
     return groupSudo('wget -qO - https://riaps.isis.vanderbilt.edu/keys/riapspublic.key | apt-key add -')
 
-def install(dir, hosts: Group, keepConfig, **kwargs):
+def install(dir, hosts: Group, clean_config: bool, **kwargs):
     def _install(c: Connection, package, keep, logfolder, **kwargs):
         if package == 'riaps-pycom':
             if c.host == controlhost:
@@ -103,11 +103,11 @@ def install(dir, hosts: Group, keepConfig, **kwargs):
     if not os.path.exists(logfolder):
         os.mkdir(logfolder)
     controlhost = load_role('control')[0].host
-    keep = '--force-confold' if keepConfig else '--force-confnew'
+    keep = '--force-confold' if clean_config else '--force-confnew'
     return {host:_install(host,pack,keep,logfolder,**kwargs) for pack in packages for host in hosts}
 
-def uninstall(hosts: Group, keepConfig, **kwargs):
-    def _uninstall(c: Connection,package,keep,**kwargs):
+def uninstall(hosts: Group, purge_config, **kwargs):
+    def _uninstall(c: Connection,package,purge,**kwargs):
         if package == 'riaps-pycom':
             if c.host == controlhost:
                 package += '-dev'
@@ -121,14 +121,13 @@ def uninstall(hosts: Group, keepConfig, **kwargs):
         steps = [
             [c.sudo,kwargs,f"apt-get remove -y {package}"],
         ]
-        if not keep:
+        if purge:
             steps.append([c.sudo,kwargs,f"dpkg --purge {package}"])
         
         return run_multiple_steps(steps)
     
     controlhost = load_role('control')[0].host
-    keep = '--force-confold' if keepConfig else '--force-confnew'
-    return {host:_uninstall(host,pack,keepConfig,**kwargs) for pack in reversed(packages) for host in hosts}
+    return {host:_uninstall(host,pack,purge_config,**kwargs) for pack in reversed(packages) for host in hosts}
 
 
 def reset(hosts: Group, hide = True):

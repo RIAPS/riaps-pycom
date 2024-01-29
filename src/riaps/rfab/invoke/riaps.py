@@ -45,22 +45,24 @@ def updateAptKey(c: Context):
     """Update RIAPS apt key"""
     res = api.riaps.updateAptKey(c.config.hosts,hide=c.config.hide)
 
-@task(help={'keepConfig': "keep RIAPS system config files"})
-def install(c: Context, keepConfig=True):
+@task(help={'clean': 'Overwrite RIAPS config files'},
+      auto_shortflags=False)
+def install(c: Context, clean=False):
     """Install RIAPS packages from host"""
     kwargs = {'dry':c.config.run.dry,'hide':c.config.hide,'pty':True}
-    api_res = api.riaps.install(c.cwd,c.config.hosts,keepConfig,**kwargs)
+    api_res = api.riaps.install(c.cwd,c.config.hosts,clean,**kwargs)
     for conn, results in api_res.items():
         print(f"{conn.host}: ",end='')
         if api.helpers.multi_step_print_errors(results):
             print(f"succeeded")
 
 @task(pre=[call(assert_role_in,'remote')],
-      help={'keepConfig': "keep RIAPS system config files"})
-def uninstall(c: Context, keepConfig=True):
+      help={'purge': "Purge RIAPS config files"},
+      auto_shortflags=False)
+def uninstall(c: Context, purge=False):
     """Uninstall all RIAPS packages from nodes"""
     kwargs = {'dry':c.config.run.dry,'hide':c.config.hide,'pty':True}
-    api_res = api.riaps.uninstall(c.config.hosts,keepConfig,**kwargs)
+    api_res = api.riaps.uninstall(c.config.hosts,purge,**kwargs)
     for conn, results in api_res.items():
         print(f"{conn.host}: ",end='')
         if api.helpers.multi_step_print_errors(results):
