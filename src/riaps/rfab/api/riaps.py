@@ -119,10 +119,10 @@ def uninstall(hosts: Group, keepConfig, **kwargs):
             package = f"{package}-{a}"
 
         steps = [
-            [c.sudo,kwargs,f"apt-get -s remove -y {package}"],
+            [c.sudo,kwargs,f"apt-get remove -y {package}"],
         ]
         if not keep:
-            steps.append([c.sudo,kwargs,f"dpkg --no-act --purge {package}"])
+            steps.append([c.sudo,kwargs,f"dpkg --purge {package}"])
         
         return run_multiple_steps(steps)
     
