@@ -2,8 +2,10 @@ from fabric import Group, GroupResult, Result
 from fabric.exceptions import GroupException
 from fabric.transfer import Result as TransferResult
 from invoke.exceptions import UnexpectedExit
+import socket
 
 class RFabGroupResult(dict):
+    _exception_hints = exception_hints=[(socket.gaierror,"No known address for host")]
     def __init__(self, fabResult: GroupResult, test=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.update(fabResult)
@@ -45,6 +47,7 @@ class RFabGroupResult(dict):
     
         
     def pretty_print(self, exception_hints: list = []):
+        exception_hints += RFabGroupResult._exception_hints
         if self.succeeded:
             print(f"Succeeded ({len(self.succeeded)}):")
             for c,r in self.succeeded.items():

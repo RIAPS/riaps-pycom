@@ -2,7 +2,6 @@ from invoke import task, Collection, Context
 from invoke.tasks import call
 from fabric import Group, GroupResult
 from fabric.exceptions import GroupException
-import socket
 from riaps.rfab import api
 from .helpers import assert_role_in
 
@@ -12,7 +11,7 @@ def check(c: Context):
     Confims a connection can be made
     '''
     res = api.sys.check(c.config.hosts,hide=c.config.hide)
-    res.pretty_print(exception_hints=[(socket.gaierror,"No known address for host")])
+    res.pretty_print()
 
 @task(optional=['when','why'],pre=[call(assert_role_in,"remote")],
       help={'when':'time passed to \'shutdown\', default "now"',
