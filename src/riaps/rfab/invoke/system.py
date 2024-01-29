@@ -70,6 +70,7 @@ def arch(c: Context):
     Get architecture of host(s)
     '''
     res = api.sys.run("dpkg --print-architecture",c.config.hosts,hide=c.config.hide)
+    res.pretty_print()
 
 @task(pre=[call(assert_role_in,'nodes','remote')])
 def flushIPTables(c: Context):
