@@ -513,7 +513,7 @@ class DhtDbase(DiscoDbase):
                 self.logger.info('dhtValueCallback[%s]: cancelled' % key)
                 token = self.listeners.get(key,None)
                 if token:
-                    # self.dht.cancelListen(token)
+                    self.dht.cancelListen(token)
                     del self.listeners[key]
                 self.cancelled.remove(key)
                 return False
@@ -589,8 +589,8 @@ class DhtDbase(DiscoDbase):
                     listener = self.listeners.get(key,None)
                     if listener:
                         self.cancelled += [key]
-                        # self.dht.cancelListen(listener)
-                        # del self.listeners[key]
+                        self.dht.cancelListen(listener)
+                        del self.listeners[key]
 
     def dhtDelete(self,key):
         '''
@@ -605,8 +605,8 @@ class DhtDbase(DiscoDbase):
             listener = self.listeners.get(key,None)
             if listener:
                 self.cancelled += [key]
-                # self.dht.cancelListen(listener)
-                # del self.listeners[key]
+                self.dht.cancelListen(listener)
+                del self.listeners[key]
             for value in values:
                 _res = self.dhtPut(key,self.delValue(value))
                 self.deletedMap[key] = value
