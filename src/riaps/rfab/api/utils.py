@@ -4,6 +4,7 @@ from fabric import ThreadingGroup, Group, GroupResult, Result
 from fabric.transfer import Result as TransferResult
 from fabric.exceptions import GroupException
 from .exceptions import RFabException
+import socket
 
 def load_hostfile(hosts_file,validate=False):
     '''
