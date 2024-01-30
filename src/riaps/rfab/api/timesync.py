@@ -1,7 +1,7 @@
 from fabric import Group
 from .helpers import *
 
-def config(hosts: Group, mode='', hide=True):
+def config(hosts: Group, mode, hide=True):
     return groupSudo("timesyncctl config "+ mode,hosts,hide=hide)
 
 def status(hosts: Group, hide=True):

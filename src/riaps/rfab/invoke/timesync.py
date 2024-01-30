@@ -5,10 +5,10 @@ from fabric.exceptions import GroupException
 from riaps.rfab import api
 
 
-@task(positional=['mode'])
-def config(c: Context, mode=''):
+@task
+def config(c: Context, mode):
     """Change timesync configuration"""
-    res = api.timesync.config(c.config.hosts,hide=c.config.hide)
+    res = api.timesync.config(c.config.hosts,mode,hide=c.config.hide)
     res.pretty_print()
 
 @task
