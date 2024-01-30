@@ -14,7 +14,7 @@ sudo = groupSudo
 run = groupRun
 
 def put(hosts: Group, local_file, remote_dir):
-    return groupPut(local_file, remote_dir,hosts)
+    return groupPut(hosts, local_file, remote_dir,hosts)
 
 def get(hosts: Group, remote_file, local_dir=''):
-    return groupGet(remote_file,local_dir,hosts)
+    return groupGet(hosts, remote_file,local_dir)
