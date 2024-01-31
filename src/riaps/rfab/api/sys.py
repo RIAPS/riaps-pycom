@@ -13,8 +13,32 @@ def reboot(hosts: Group, hide=True) -> RFabGroupResult:
 sudo = groupSudo
 run = groupRun
 
-def put(hosts: Group, local_file, remote_dir):
-    return groupPut(hosts, local_file, remote_dir,hosts)
+def put(hosts: Group, local_file, remote):
+    '''SFTP a file from caller to host(s)
+    
+    :param hosts: A fabric.Group of Connection objects to "put" to
+    :param local_file: Relative path to send to host(s)
+    :param remote: Folder
+    '''
+    return groupPut(hosts, local_file, remote_dir)
 
-def get(hosts: Group, remote_file, local_dir=''):
-    return groupGet(hosts, remote_file,local_dir)
+def get(hosts: Group, 
+        remote_file: str, 
+        local_dir: str = '', 
+        local_name: str = ''
+    ) -> RFabGroupResult: 
+    '''SFTP a file from host(s) to caller
+
+    Local folders WILL be created to satisfy local paths.
+    
+    :param hosts: a fabric.Group of Connection objects to "get" from
+    :param remote_file: Remote filename relative to SSH user's home dir,
+                        Cannot be a path
+    :param local_dir: Dir to store transferred file(s) into
+     '''
+
+    local_path = "{host}/"
+    local_path += local_name if len(local_name)>0 else "{basename}"
+    if len(local_dir) > 0:
+        local_path = local_dir+"/"+local_path
+    return groupGet(hosts, remote_file,local_path)

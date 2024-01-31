@@ -42,14 +42,17 @@ def put(c: Context, local_file, remote_dir=''):
     '''
     api.sys.put(c.config.hosts, local_file, remote_dir)
 
-@task(positional=["remote_file"],pre=[call(assert_role_in,'remote','nodes')],
+@task(pre=[call(assert_role_in,'remote','nodes')],
       help={'remote_file':'remote filename to copy locally',
-            'local_dir':'local directory to save files in'})
-def get(c: Context, remote_file, local_dir=''):
+            'local_dir':'local directory to save files in',
+            'name':'local name to use for file(s)'},)
+def get(c: Context, remote_file, local_dir='', name=''):
     '''
-    Copies a remote file from the target(s)
+    Copies a remote file from the host(s) into
+    subfolders named for their respective hosts
     '''
-    api.sys.get(c.config.hosts,remote_file,local_dir)
+    res = api.sys.get(c.config.hosts,remote_file,local_dir,name)
+    res.pretty_print()
 
 @task(positional=['command'],
       help={'command':'shell command to run, in quotes'})

@@ -66,6 +66,33 @@ class RFabGroupResult(dict):
                         break
                 print(f"   {c.host}: {r}")
 
+class RFabGroupTransferResult(RFabGroupResult):
+    def __init__(self, fabResult: GroupResult, test=None, *args, **kwargs):
+        super().__init__(fabResult,*args,**kwargs)
+
+        # fabric.transfer.Result objects arent "truthy", so no purpose in
+        # separating "failed" results, ergo, test always should succeed
+        def test(x):
+            return True
+        self._test = test
+
+    def pretty_print(self, exception_hints: list = []):
+        exception_hints += RFabGroupResult._exception_hints
+        if self.succeeded:
+            print(f"Succeeded ({len(self.succeeded)}):")
+            for c,r in self.succeeded.items():
+                print(f"{c.host}:{r.remote} -> {r.local}")
+        if self.excepted:
+            print(f"Excepted ({len(self.excepted)}):")
+            for c,r in self.excepted.items():
+                for eh in exception_hints:
+                    T, hint = eh
+                    if isinstance(r,T):
+                        r = hint
+                        break
+                print(f"{c.host}: {r}")
+
+
 def _fabricGroupRun(sudo: bool, cmd: str, group: Group, test: callable, **kwargs):
     res = None
     hide = kwargs.pop("hide",False)
@@ -84,25 +111,21 @@ def groupRun(cmd: str, group: Group, test: callable = None, **kwargs):
 def groupSudo(cmd: str, group: Group, test: callable = None, **kwargs):
     return _fabricGroupRun(True,cmd,group,test,**kwargs)
 
-def groupPut(group: Group, fileName, remote_dir) -> TransferResult:
+def groupPut(group: Group, fileName, remote_dir) -> RFabGroupTransferResult:
     res = None
     try:
         res: TransferResult = group.put(fileName, remote_dir)
-    except Exception:
-        raise
-    return res
+    except GroupException as e:
+        res = e.result
+    return RFabGroupResult(res)
 
-def groupGet(group: Group, remote_file, local_path = '') -> TransferResult:
+def groupGet(group: Group, remote_file, local_path) -> RFabGroupTransferResult:
     res = None
-    if len(group) > 1:
-        local_path += "{host}/{basename}"
-    if len(local_path) == 0:
-        local_path = None
     try:
         res: TransferResult = group.get(remote_file,local=local_path)
-    except Exception:
-        raise
-    return res
+    except GroupException as e:
+        res = e.result
+    return RFabGroupTransferResult(res)
 
 def _check_result_success(r):
         if isinstance(r,Result):
