@@ -6,6 +6,13 @@ from fabric.exceptions import GroupException
 from .exceptions import RFabException
 import socket
 
+def isIPaddress(addr):
+    try:
+        socket.inet_aton(addr)
+        return True
+    except socket.error:
+        return False
+
 def load_hostfile(hosts_file,validate=False):
     '''
     Load a hosts file, construct role definitions
