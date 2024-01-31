@@ -96,6 +96,8 @@ def load_role(role, validate=False) -> ThreadingGroup:
         print(f"RIAPS Configuration - RIAPSHOME is not set, using {riapsHome}")
     hostfile = riapsHome+'/etc/riaps-hosts.conf'
     roledefs = load_hostfile(hostfile,validate)
+    if roledefs is None:
+        exit(-1)
     hosts = roledefs.get(role,None)
     if hosts is None:
         raise RFabException(f"No role \"{role}\" in {hostfile}, choose one of {list(roledefs)}")
