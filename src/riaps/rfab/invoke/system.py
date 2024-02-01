@@ -4,6 +4,8 @@ from fabric import Group, GroupResult
 from fabric.exceptions import GroupException
 from riaps.rfab import api
 from .helpers import assert_role_in
+from os.path import isfile
+from pathlib import Path
 
 @task
 def check(c: Context):
@@ -40,7 +42,11 @@ def put(c: Context, local_file, remote_dir=''):
     '''
     Copies a local file to the target(s)
     '''
-    api.sys.put(c.config.hosts, local_file, remote_dir)
+    if not isfile(Path(c.cwd,local_file)):
+        print(f"ERROR: {local_file} is not a file")
+        exit(-1)
+    res = api.sys.put(c.config.hosts, local_file, remote_dir)
+    res.pretty_print()
 
 @task(pre=[call(assert_role_in,'remote','nodes')],
       help={'remote_file':'remote filename to copy locally',
