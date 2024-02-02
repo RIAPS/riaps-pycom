@@ -20,7 +20,7 @@ def put(hosts: Group, local_file, remote):
     :param local_file: Relative path to send to host(s)
     :param remote: Folder
     '''
-    return groupPut(hosts, local_file, remote_dir)
+    return groupPut(hosts, local_file, remote)
 
 def get(hosts: Group, 
         remote_file: str, 

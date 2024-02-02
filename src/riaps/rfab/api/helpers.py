@@ -6,6 +6,15 @@ import socket
 
 class RFabGroupResult(dict):
     _exception_hints = exception_hints=[(socket.gaierror,"No known address for host")]
+
+    def _print_multiline(header_str,stream,indent=0):
+        lines = stream.splitlines()
+        if len(lines) == 1:
+            print(f"{' '.rjust(indent)}{header_str} {lines[0]}")
+            return
+        print(f"{' '.rjust(indent)}{header_str}")
+        [print(f"{' '.rjust(indent+2)}{l}") for l in lines]
+
     def __init__(self, fabResult: GroupResult, test=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.update(fabResult)
@@ -47,28 +56,34 @@ class RFabGroupResult(dict):
     
         
     def pretty_print(self, exception_hints: list = []):
+
         exception_hints += RFabGroupResult._exception_hints
         if self.succeeded:
             print(f"Succeeded ({len(self.succeeded)}):")
             for c,r in self.succeeded.items():
-                print(f"   {c.host}: {r.stdout.strip()}")
+                RFabGroupResult._print_multiline(f"{c.host}:",r.stdout,2)
         if self.failed:
             print(f"Failed ({len(self.failed)}):")
             for c,r in self.failed.items():
-                print(f"   {c.host}: {r.stdout.strip()}")
+                print(f"  {c.host}:")
+                RFabGroupResult._print_multiline(f"STDOUT:",r.stdout,4)
+                RFabGroupResult._print_multiline(f"STDERR:",r.stderr,4)
         if self.excepted:
             print(f"Excepted ({len(self.excepted)}):")
             for c,r in self.excepted.items():
+                hint=None
                 for eh in exception_hints:
-                    T, hint = eh
+                    T, h = eh
                     if isinstance(r,T):
-                        r = hint
-                        break
-                print(f"   {c.host}: {r}")
+                        hint = h
+                RFabGroupResult._print_multiline(f"{c.host}.exception:",str(r),2)
+                if hint is not None:
+                    RFabGroupResult._print_multiline(f"^^^ HINT:",hint,2)
 
 class RFabGroupTransferResult(RFabGroupResult):
-    def __init__(self, fabResult: GroupResult, test=None, *args, **kwargs):
+    def __init__(self, fabResult: GroupResult, was_put: bool, test=None,*args, **kwargs):
         super().__init__(fabResult,*args,**kwargs)
+        self._arrow = "->" if was_put else "<-"
 
         # fabric.transfer.Result objects arent "truthy", so no purpose in
         # separating "failed" results, ergo, test always should succeed
@@ -81,16 +96,18 @@ class RFabGroupTransferResult(RFabGroupResult):
         if self.succeeded:
             print(f"Succeeded ({len(self.succeeded)}):")
             for c,r in self.succeeded.items():
-                print(f"{c.host}:{r.remote} -> {r.local}")
+                    print(f"{r.local} {self._arrow} {c.host}:{r.remote}")
         if self.excepted:
             print(f"Excepted ({len(self.excepted)}):")
             for c,r in self.excepted.items():
+                hint=None
                 for eh in exception_hints:
-                    T, hint = eh
+                    T, h = eh
                     if isinstance(r,T):
-                        r = hint
-                        break
-                print(f"{c.host}: {r}")
+                        hint = h
+                RFabGroupResult._print_multiline(f"{c.host} exception:",str(r),2)
+                if hint is not None:
+                    RFabGroupResult._print_multiline(f"^^^ HINT:",hint,2)
 
 
 def _fabricGroupRun(sudo: bool, cmd: str, group: Group, test: callable, **kwargs):
@@ -117,7 +134,7 @@ def groupPut(group: Group, fileName, remote_dir) -> RFabGroupTransferResult:
         res: TransferResult = group.put(fileName, remote_dir)
     except GroupException as e:
         res = e.result
-    return RFabGroupResult(res)
+    return RFabGroupTransferResult(res,True,)
 
 def groupGet(group: Group, remote_file, local_path) -> RFabGroupTransferResult:
     res = None
@@ -125,7 +142,7 @@ def groupGet(group: Group, remote_file, local_path) -> RFabGroupTransferResult:
         res: TransferResult = group.get(remote_file,local=local_path)
     except GroupException as e:
         res = e.result
-    return RFabGroupTransferResult(res)
+    return RFabGroupTransferResult(res,False)
 
 def _check_result_success(r):
         if isinstance(r,Result):
