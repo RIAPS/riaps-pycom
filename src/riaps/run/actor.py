@@ -4,10 +4,11 @@ Actors are processes that act as shells for components that run in their own thr
  
 '''
 
+import spdlog
 from .part import Part
 from .peripheral import Peripheral
 from .exc import BuildError
-import sys
+import sys 
 import zmq
 import time
 from riaps.run.disco import DiscoClient
@@ -17,7 +18,7 @@ from riaps.proto import disco_capnp
 from riaps.proto import deplo_capnp
 from riaps.consts.defs import *
 from riaps.utils.ifaces import getNetworkInterfaces
-from riaps.utils.appdesc import AppDescriptor
+from riaps.utils.appdesc import AppDescriptor  
 import getopt
 import logging
 import traceback
@@ -34,7 +35,6 @@ from riaps.utils.config import Config
 from riaps.utils.appdesc import AppDescriptor
 import zmq.auth
 from zmq.auth.thread import ThreadAuthenticator
-
 
 class Actor(object):
     '''The actor class implements all the management and control functions over its components
@@ -110,7 +110,7 @@ class Actor(object):
                 spdlog_setup.from_file(const.logConfFile)      
         except Exception as e:
             self.logger.error("error while configuring componentLogger: %s" % repr(e))  
-        
+
         messages = gModel["messages"]  # Global message types (global on the network)
         self.messageNames = []
         for messageSpec in messages:
@@ -161,6 +161,7 @@ class Actor(object):
         instSpecs = self.model["instances"]
         compSpecs = gModel["components"]
         ioSpecs = gModel["devices"]
+        
         for instName in instSpecs:  # Create the component instances: the 'parts'
             instSpec = instSpecs[instName]
             instType = instSpec['type']
@@ -405,7 +406,7 @@ class Actor(object):
         '''
         Relay the endpoint registration message to the discovery service client 
         '''
-        self.logger.info("registerEndpoint")
+        self.logger.info("registerEndpoint %r", bundle)
         result = self.disco.registerEndpoint(bundle)
         for res in result:
             (partName, portName, host, port) = res

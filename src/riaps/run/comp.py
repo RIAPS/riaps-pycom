@@ -5,6 +5,7 @@ Created on Oct 15, 2016
 @author: riaps
 '''
 
+import spdlog
 import threading
 import zmq
 import time
@@ -15,9 +16,7 @@ from collections import deque
 import traceback
 from .exc import BuildError
 from riaps.utils import spdlog_setup
-import spdlog
 from .dc import Coordinator,Group
-
 
 class ComponentThread(threading.Thread):
     '''
