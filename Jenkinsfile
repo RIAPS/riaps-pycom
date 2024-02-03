@@ -17,7 +17,7 @@ pipeline {
       when { buildingTag() }
       steps {
         // Install github-release cli tool to build directory
-        sh 'GOPATH=$WORKSPACE/go install get github.com/aktau/github-release@latest'
+        sh 'GOPATH=$WORKSPACE/go go install github.com/aktau/github-release@latest'
         // Use GitHub OAuth token stored in 'github-token' credentials
         withCredentials([string(credentialsId: 'github-token', variable: 'GITHUB_TOKEN')]) {
           script {
