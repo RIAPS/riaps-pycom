@@ -7,7 +7,6 @@ After=network-online.target
 [Service]
 Type=simple
 EnvironmentFile=/etc/riaps/systemdenv.conf
-StandardOutput=syslog
 StandardError=inherit
 SyslogIdentifier=RIAPS-DEPLO
 SyslogLevel=info
