@@ -166,38 +166,40 @@ def reset(hosts: Group, hide = True):
         remains = list(filter(lambda x: len(x) > 2, res.stdout.split('\n')))
         print(f"{c.host} still alive: {remains}")
 
-        hnamecmd = 'hostname'
-        ok, res = run_step([c.run,{"hide":hide},hnamecmd])
+        # hnamecmd = 'hostname'
+        # ok, res = run_step([c.run,{"hide":hide},hnamecmd])
+        # if not ok:
+        #     results.append((hnamecmd,res))
+        #     if isinstance(res,BaseException):
+        #         return results
+        
+        # hostname = res.stdout.strip()
+        # if hostname[0:4] == 'riaps':
+        #     host_last_4 = hostname[-4:]
+        # else:
+            # If it doesn't start with riaps, assume it is a development VM
+                #NOTE: This seems like a broad assumption, as VMs are currently named "riaps-VirtualBox"
+                #NOTE: The below works for remote nodes too, so just use that, no need to branch
+            # Get last for digits of mac address since that is how apps and users are named.
+        getniccmd = 'python3 -c "from riaps.utils.config import Config; c=Config(); print(c.NIC_NAME)"'
+        ok, res = run_step([c.sudo,{"hide":hide},getniccmd])
         if not ok:
-            results.append((hnamecmd,res))
+            results.append((getniccmd,res))
             if isinstance(res,BaseException):
                 return results
         
-        hostname = res.stdout.strip()
-        if hostname[0:4] == 'riaps':
-            host_last_4 = hostname[-4:]
-        else:
-            # If it doesn't start with riaps, assume it is a development VM
-            # Get last for digits of mac address since that is how apps and users are named.
-            getniccmd = 'python3 -c "from riaps.utils.config import Config; c=Config(); print(c.NIC_NAME)"'
-            ok, res = run_step([c.sudo,{"hide":hide},getniccmd])
+        nic_name = res.stdout.strip()
+        if nic_name != None:
+            maccmd = 'ip link show %s | awk \'/ether/ {print $2}\'' % nic_name
+            ok, res = run_step([c.sudo,{"hide":hide},maccmd])
             if not ok:
-                results.append((getniccmd,res))
-                if isinstance(res,BaseException):
+                results.append((maccmd,res))
+                if isinstance(res, BaseException):
                     return results
-            
-            nic_name = res.stdout.strip()
-            if nic_name != None:
-                maccmd = 'ip link show %s | awk \'/ether/ {print $2}\'' % nic_name
-                ok, res = run_step([c.sudo,{"hide":hide},maccmd])
-                if not ok:
-                    results.append((maccmd,res))
-                    if isinstance(res, BaseException):
-                        return results
-                mac = res.stdout.strip()
-                host_last_4 = mac[-5:-3] + mac[-2:]
-            else:                           # Should have set the NIC_NAME ...
-                host_last_4 = '0000'
+            mac = res.stdout.strip()
+            host_last_4 = mac[-5:-3] + mac[-2:]
+        else:                           # Should have set the NIC_NAME ...
+            host_last_4 = '0000'
         lsriapsapps = f"\ls {riapsApps}"
         ok, res = run_step([c.sudo,{"hide":hide},lsriapsapps])
         if not ok:
