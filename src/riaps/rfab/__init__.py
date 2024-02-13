@@ -35,18 +35,21 @@ class RfabProgram(Program):
         core_args = super().core_args()
         extra_args = [Argument(names=('role','r'), help = "RIAPS role name to run command for",default="remote"),
                       Argument(names=('v'), kind=bool, help = "Show remote output"),
-                      Argument(names=('host','H'),help = "Run command on host (repeatable)",kind=list)]
+                      Argument(names=('host','H'),help = "Run command on host (repeatable)",kind=list),
+                      Argument(names=('hostfile'),help="Path to a riaps-hosts.conf file",kind=str)]
         return core_args + extra_args
     
     def update_config(self, merge: bool = True) -> None:
         if self.args.host.got_value:
             if self.args.role.got_value:
                 raise Exit(f"ERROR: cannot set both \"role\" and \"host\"")
+            if self.args.hostfile.got_value:
+                raise Exit(f"ERROR: cannot set both \"hostfile\" and \"host\"")
             self.config._set(hosts=ThreadingGroup(*self.args.host.value))
             self.config._set(role="hostlist")
         else:
             self.config._set(role=self.args.role.value)
-            self.config._set(hosts=utils.load_role(self.args.role.value))
+            self.config._set(hosts=utils.load_role(self.args.role.value,hostfile=self.args.hostfile.value))
         self.config._set(hide=not self.args.v.value)
         super().update_config(merge)
     

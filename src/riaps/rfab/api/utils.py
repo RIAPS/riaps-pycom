@@ -89,12 +89,13 @@ def load_hostfile(hosts_file,validate=False):
                 }
     return roledefs
 
-def load_role(role, validate=False) -> ThreadingGroup:
-    riapsHome = os.getenv('RIAPSHOME')
-    if riapsHome is None:
-        riapsHome = os.getcwd()
-        print(f"RIAPS Configuration - RIAPSHOME is not set, using {riapsHome}")
-    hostfile = riapsHome+'/etc/riaps-hosts.conf'
+def load_role(role, hostfile = None, validate=False) -> ThreadingGroup:
+    if hostfile is None:
+        riapsHome = os.getenv('RIAPSHOME')
+        if riapsHome is None:
+            riapsHome = os.getcwd()
+            print(f"RIAPS Configuration - RIAPSHOME is not set, using {riapsHome}")
+        hostfile = riapsHome+'/etc/riaps-hosts.conf'
     roledefs = load_hostfile(hostfile,validate)
     if roledefs is None:
         exit(-1)
