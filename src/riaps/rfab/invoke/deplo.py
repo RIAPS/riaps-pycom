@@ -8,7 +8,7 @@ from .helpers import assert_role_in
 
 @task(pre=[call(assert_role_in,'nodes','remote')])
 def start(c: Context):
-    """Start service"""
+    """Start deployment service"""
     res = api.deplo.start(c.config.hosts,hide=c.config.hide)
     res.pretty_print()
 
@@ -22,7 +22,7 @@ def start(c: Context):
 
 @task(pre=[call(assert_role_in,'nodes','remote')])
 def startManual(c: Context):
-    """Start deplo on hosts without service"""
+    """Start deplo on hosts as standard process"""
     res = api.deplo.startManual(c.config.hosts,hide=c.config.hide)
     res.pretty_print()
     # hostname = env.host_string
@@ -31,25 +31,25 @@ def startManual(c: Context):
 
 @task(pre=[call(assert_role_in,'nodes','remote')])
 def restart(c: Context):
-    """Restart service"""
+    """Restart deployment service"""
     res = api.deplo.restart(c.config.hosts,hide=c.config.hide)
     res.pretty_print()
 
 @task(pre=[call(assert_role_in,'nodes','remote')])
 def stop(c: Context):
-    """Stop service"""
+    """Stop deployment service"""
     res = api.deplo.stop(c.config.hosts,hide=c.config.hide)
     res.pretty_print()
 
 @task(pre=[call(assert_role_in,'nodes','remote')])
 def enable(c: Context):
-    """Enable service"""
+    """Enable restarts for crash/startup"""
     res = api.deplo.enable(c.config.hosts,hide=c.config.hide)
     res.pretty_print()
 
 @task(pre=[call(assert_role_in,'nodes','remote')])
 def disable(c: Context):
-    """Disable service"""
+    """Disable restarts for crash/startup"""
     res = api.deplo.disable(c.config.hosts,hide=c.config.hide)
     res.pretty_print()
 
@@ -67,7 +67,7 @@ def status(c: Context, n='10', grep=''):
       help={'n':'number of lines to collect (default: 10)',
             'grep':'arbitrary grep args to filter results, in quotes'})
 def journal(c: Context, n='10', grep=''):
-    """Get journalctl service log"""
+    """Get journald service log"""
     if grep != '':
         grep=" | grep " + grep
     res = api.deplo.journal(c.config.hosts,hide=c.config.hide,n=n,grep=grep)

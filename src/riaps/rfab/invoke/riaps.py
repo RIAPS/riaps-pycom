@@ -8,7 +8,7 @@ from .helpers import assert_role_in
 
 @task(pre=[call(assert_role_in,'control','remote','all')])
 def update(c: Context):
-    """Update RIAPS packages from official release"""
+    """Update RIAPS packages from stable release"""
     kwargs = {'dry':c.config.run.dry,'hide':c.config.hide}
     res = api.sys.sudo('apt-get update',c.config.hosts,hide=c.config.hide)
     if len(res.excepted) + len(res.failed) > 0:
@@ -42,7 +42,7 @@ def updateNodeKey(c: Context, keep_password=False):
 
 @task
 def updateAptKey(c: Context):
-    """Update RIAPS apt key"""
+    """Update RIAPS apt repo key"""
     res = api.riaps.updateAptKey(c.config.hosts,hide=c.config.hide)
 
 @task(help={'clean': 'Overwrite RIAPS config files'},
@@ -70,7 +70,7 @@ def uninstall(c: Context, purge=False):
 
 @task(pre=[call(assert_role_in,'nodes','remote')])
 def reset(c: Context):
-    """Kill riaps_, clean, restart riaps_*"""
+    """Kill riaps_, clean state, restart riaps_*"""
     api.riaps.reset(c.config.hosts,c.config.hide)
 
 
