@@ -54,8 +54,7 @@ def put(c: Context, local_file, remote_dir=''):
             'name':'local name to use for file(s)'},)
 def get(c: Context, remote_file, local_dir='', name=''):
     '''
-    Copies a remote file from the host(s) into
-    subfolders named for their respective hosts
+    Copies a remote file from the host(s) to local folder(s)
     '''
     res = api.sys.get(c.config.hosts,remote_file,local_dir,name)
     res.pretty_print()
@@ -70,7 +69,7 @@ def run(c: Context, command):
 @task(positional=['command'],
       help={'command':'shell command to run, in quotes'})
 def sudo(c: Context, command):
-    """Sudo execute command as user:<command>"""
+    """Sudo execute command as root:<command>"""
     res = api.sys.sudo(command,c.config.hosts,hide=c.config.hide)
     res.pretty_print()
 
@@ -90,7 +89,8 @@ def flushIPTables(c: Context):
     res = api.sys.sudo('iptables --flush',c.config.hosts,hide=c.config.hide)
     res.pretty_print()
 
-@task(pre=[call(assert_role_in,'nodes','remote')])
+@task(pre=[call(assert_role_in,'nodes','remote')],
+      help={'size':"(int) number of MB"})
 def setJournalLogSize(c: Context, size):
     """Adjust journalctl log file size"""
     newSize = f'SystemMaxUse={size}M'
