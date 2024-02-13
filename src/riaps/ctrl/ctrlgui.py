@@ -164,28 +164,33 @@ class ControlGUIClient(object):
         '''
         global guiLock
         fabcmd = self.consoleIn.get_text()
-        if len(fabcmd) == 0: fabcmd = "help"
-        fcmd = "fab"
-        fflag = "-f"
-        fpath = self.controller.fabModule
+        if len(fabcmd) == 0: fabcmd = "-h"
+        # fcmd = "fab"
+        fcmd = "riaps_fab"
+        # fflag = "-f"
+        # fpath = self.controller.fabModule
         hosts = self.controller.getClients()
         tPath = None
         if len(hosts) == 0:
             self.log('? No hosts connected - using default')
-            cmd = str.join(' ',(fcmd, fflag, fpath, fabcmd))
+            # cmd = str.join(' ',(fcmd, fflag, fpath, fabcmd))
+            cmd = str.join(' ',(fcmd, fabcmd))
         else:
             cHost = self.getIPaddress(self.controller.nodeName)
             hNames = [ self.getIPaddress(socket.getfqdn(host)) for host in hosts]
             hConf =  { 'RIAPS' : { 'nodes' : hNames, 'control' : cHost }}
-            fAppsFolder = ""
-            if cHost in hNames:
-                appsFolder = os.getenv('riapsApps',None)
-                fAppsFolder = "--set RIAPSAPPS=%s" % appsFolder if appsFolder else ""
+            # 
+            # fAppsFolder = ""
+            # if cHost in hNames:
+            #     appsFolder = os.getenv('riapsApps',None)
+            #     fAppsFolder = "--set RIAPSAPPS=%s" % appsFolder if appsFolder else ""
             _drop, tPath = tempfile.mkstemp(text=True)
             with open(tPath,"w") as tFd:
                 toml.dump(hConf,tFd)
-            fhostsFile = ("--set hostsFile=" + tPath)
-            cmd = str.join(' ',(fcmd, fflag, fpath, fabcmd, fhostsFile, fAppsFolder))
+            # fhostsFile = ("--set hostsFile=" + tPath)
+            fhostsFile = ("--hostfile=" + tPath)
+            # cmd = str.join(' ',(fcmd, fflag, fpath, fabcmd, fhostsFile, fAppsFolder))
+            cmd = str.join(' ',(fcmd, fhostsFile, fabcmd))
         self.log(cmd)
         proc = subprocess.run(shlex.split(cmd),stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
         resp = proc.stdout.decode('utf-8')
