@@ -242,3 +242,21 @@ def reset(hosts: Group, hide = True):
     deplo.enable(hosts,hide).pretty_print()
     print("Restarting deplo...")
     deplo.start(hosts,hide)
+
+from api.task import Task as RTask
+class CleanupTask(RTask):
+    '''find&kill all riaps_ procs, delete state
+
+    NOTE: Recommend stopping/starting deplo before/after this task
+    '''
+    pass
+
+
+# STEP pkill riaps_* BUT NOT FAB
+# STEP pgrep check?
+# STEP getnic
+# STEP *gethost_last_4
+# STEP ls RIAPS_APPS
+# STEP * rm each app
+# STEP rm lmdbs
+#TODO: Does this also need to delete app user?

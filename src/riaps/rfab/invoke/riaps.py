@@ -74,6 +74,14 @@ def reset(c: Context):
     api.riaps.reset(c.config.hosts,c.config.hide)
 
 
+from api.riaps import ResetTask
+def new_reset(c: Context):
+    kwargs = {'dry':c.config.run.dry,'hide':c.config.hide,'pty':True}
+    cleanup_task = CleanupTask(c.config.hosts,**kwargs)
+    cleanup_task.run() # Maybe be able to pass in streams?
+    
+
+
 ns = Collection('riaps')
 ns.add_task(update)
 ns.add_task(updateNodeKey)
