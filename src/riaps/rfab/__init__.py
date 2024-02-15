@@ -36,7 +36,7 @@ class RfabProgram(Program):
         extra_args = [Argument(names=('role','r'), help = "RIAPS role name to run command for",default="remote"),
                       Argument(names=('v'), kind=bool, help = "Show remote output"),
                       Argument(names=('host','H'),help = "Run command on host (repeatable)",kind=list),
-                      Argument(names=('hostfile'),help="Path to a riaps-hosts.conf file",kind=str)]
+                      Argument(name='hostfile',help="Path to a riaps-hosts.conf file",kind=str)]
         return core_args + extra_args
     
     def update_config(self, merge: bool = True) -> None:
