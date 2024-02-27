@@ -20,7 +20,7 @@ def disable(hosts: Group, hide=True):
     return groupSudo('systemctl disable riaps-deplo.service',hosts,hide=hide)
 
 def status(hosts: Group, hide=True, n='10', grep=''):
-    return groupSudo(f"systemctl status riaps-deplo --no-pager -n {n} {grep}",hosts,hide=hide)
+    return groupSudo(f"systemctl status riaps-deplo --no-pager -n {n} {grep}",hosts,test= lambda x: x.exited in [0,3], hide=hide)
 
 def journal(hosts: Group, hide=True, n='10', grep=''):
     return groupSudo(f"journalctl -u riaps-deplo.service --no-pager -n {n} {grep}",hosts,hide=hide)
