@@ -7,6 +7,7 @@ from pathlib import Path
 import riaps.rfab.api.deplo as deplo
 from invoke.exceptions import UnexpectedExit
 
+
 packages = ['riaps-timesync','riaps-pycom']
 
 def update_control(host: str,**kwargs):
@@ -243,20 +244,113 @@ def reset(hosts: Group, hide = True):
     print("Restarting deplo...")
     deplo.start(hosts,hide)
 
-from api.task import Task as RTask
-class CleanupTask(RTask):
-    '''find&kill all riaps_ procs, delete state
+from riaps.rfab.api.task import Task
+from fabric import Result
+from time import sleep
+class ResetTask(Task):
+    '''stop deplo, find&kill all riaps_ procs, delete state, start deplo
 
-    NOTE: Recommend stopping/starting deplo before/after this task
     '''
-    pass
+    @Task.step
+    def stop_deplo(c, **kwargs):
+        return c.sudo('systemctl stop riaps-deplo.service',**kwargs)
+    
+    @Task.step
+    def disable_deplo(c, **kwargs):
+        return c.sudo('systemctl disable riaps-deplo.service',**kwargs)
 
+    @Task.step
+    def kill_riaps(c: Connection,**kwargs):
+        killcmd = 'pkill -SIGKILL "(riaps_deplo|riaps_disco|riaps_actor|riaps_device)"'
+        # if zero procs are killed, pgrep exits 1, which raises invoke..UnexpectedExit
+        #   warn=True surpresses this
+        return c.sudo(killcmd,**{**kwargs,'warn':True})
 
-# STEP pkill riaps_* BUT NOT FAB
-# STEP pgrep check?
-# STEP getnic
-# STEP *gethost_last_4
-# STEP ls RIAPS_APPS
-# STEP * rm each app
-# STEP rm lmdbs
+    @Task.step
+    def pgrep_riaps(c,**kwargs):
+        pgrepcmd = 'pgrep -l "(riaps_deplo|riaps_disco|riaps_actor|riaps_device)"'
+        res = c.sudo(pgrepcmd,**{**kwargs,'warn':True})
+        if len(res.stdout.strip())>0:
+            pass
+            #TODO: Log output of processes still "running"
+        return res
+
+    @Task.step
+    def getnic(c,**kwargs):
+        getniccmd = 'bash --login -c "python3 -c \'from riaps.utils.config import Config; c=Config(); print(c.NIC_NAME)\'"'
+        return c.sudo(getniccmd,**kwargs)
+
+    @Task.step(input=getnic)
+    def gethost_last_4(c,**kwargs):
+        getnic_res = kwargs.pop("getnic")
+        nic_name = getnic_res.stdout.strip()
+        maccmd = 'ip link show %s | awk \'/ether/ {print $2}\' | sed \'s/://g\'| rev | cut -c 1-4 | rev' % nic_name
+        return c.sudo(maccmd,**kwargs)
+    
+    @Task.step
+    def lsriapsapps(c,**kwargs):
+        cmd = f"bash --login -c \"ls \$RIAPSAPPS -I riaps-disco.lmdb -I riaps-apps.lmdb\""
+        return c.sudo(cmd,**kwargs)
+    
+    @Task.step(input=lsriapsapps)
+    def rmapps(c: Connection, **kwargs):
+        lsres = kwargs.pop('lsriapsapps')
+        applist = lsres.stdout.split()
+        if len(applist)<1:
+            return Result(connection=c,stdout="",stderr="",exited=0)
+        print(f"Removing applist: {applist}")
+        #TODO: Log apps to remove
+        a = " ".join([f"\$RIAPSAPPS/{app.strip()}/" for app in applist])
+        rmcmd = f"bash --login -c \"rm -R {a}\""
+        return c.sudo(rmcmd,**kwargs)
+    
+    @Task.step(input=[gethost_last_4,lsriapsapps])
+    def userdel(c: Connection, **kwargs):
+        host_last_4 = kwargs.pop('gethost_last_4').stdout.strip()
+        applist = kwargs.pop('lsriapsapps').stdout.split()
+        cmd = ";".join([f"userdel {app}{host_last_4}" for app in applist])
+        return c.sudo(cmd,**{**kwargs,'warn':True})
+
+    @Task.step
+    def rmlmdbs(c: Connection, **kwargs):
+        cmd = "bash --login -c \"rm -r \$RIAPSAPPs/riaps-apps.lmbd \$RIAPSAPPS/riaps-disco.lmdb"
+        return c.sudo(cmd,**{**kwargs,'warn':True})
+    
+    @Task.step
+    def enable_deplo(c, **kwargs):
+        return c.sudo('systemctl enable riaps-deplo.service',**kwargs)
+    
+    @Task.step
+    def disable_deplo(c, **kwargs):
+        return c.sudo('systemctl start riaps-deplo.service',**kwargs)
+    
+
+class DevelopmentTask(Task):
+
+    @Task.step
+    def getnic(c: Connection, **kwargs):
+        getniccmd = 'bash --login -c "python3 -c \'from riaps.utils.config import Config; c=Config(); print(c.NIC_NAME)\'"'
+        # getniccmd = 'source /etc/riaps/env.conf && echo $RIAPSHOME'
+        res = c.run(getniccmd,**kwargs)
+        return res
+
+    # @Task.step(input=getnic)
+    # def gethost_last_4(c: Connection, **kwargs):
+    #     getnic_res = kwargs.pop('getnic')
+    #     nic_name = getnic_res.stdout.strip()
+    #     maccmd = 'ip link show %s | awk \'/ether/ {print $2}\'' % nic_name
+    #     kwargs.update(hide=False)
+    #     res =  c.sudo(maccmd, **kwargs)
+    #     print(f"getmac :{res.stdout.strip()}")
+
+    
+    
+
+    # STEP pkill riaps_
+    # STEP pgrep check?
+    # STEP getnic
+    # STEP *gethost_last_4
+    # STEP ls RIAPS_APPS
+    # STEP * rm each app
+    # STEP rm lmdbs
 #TODO: Does this also need to delete app user?

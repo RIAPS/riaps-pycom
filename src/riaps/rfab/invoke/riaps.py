@@ -74,18 +74,30 @@ def reset(c: Context):
     api.riaps.reset(c.config.hosts,c.config.hide)
 
 
-from api.riaps import ResetTask
+from riaps.rfab.api.riaps import ResetTask
+@task
 def new_reset(c: Context):
-    kwargs = {'dry':c.config.run.dry,'hide':c.config.hide,'pty':True}
-    cleanup_task = CleanupTask(c.config.hosts,**kwargs)
+    kwargs = {'dry':c.config.run.dry,'hide':c.config.hide}
+    cleanup_task = ResetTask(c.config.hosts,**kwargs)
     cleanup_task.run() # Maybe be able to pass in streams?
+    cleanup_task.pretty_print()
+
+from riaps.rfab.api.riaps import DevelopmentTask
+@task
+def dummy(c: Context):
+    kwargs = {'dry':c.config.run.dry,'hide':c.config.hide}
+    dummy_task = DevelopmentTask(c.config.hosts,**kwargs)
+    dummy_task.run()
+    dummy_task.pretty_print()
+    
     
 
 
 ns = Collection('riaps')
+ns.add_task(dummy)
 ns.add_task(update)
 ns.add_task(updateNodeKey)
 ns.add_task(updateAptKey)
 ns.add_task(install)
 ns.add_task(uninstall)
-ns.add_task(reset)
+ns.add_task(new_reset)
