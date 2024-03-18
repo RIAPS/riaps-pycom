@@ -4,7 +4,7 @@ from fabric import Group, GroupResult, Result
 from fabric.exceptions import GroupException
 import socket
 from riaps.rfab import api
-from .helpers import assert_role_in
+from riaps.rfab.invoke.helpers import assert_role_in
 
 @task(pre=[call(assert_role_in,'control','remote','all')])
 def update(c: Context):
@@ -75,12 +75,13 @@ def reset(c: Context):
 
 
 from riaps.rfab.api.riaps import ResetTask
-@task
+@task(pre=[call(assert_role_in,'nodes','remote')])
 def new_reset(c: Context):
     kwargs = {'dry':c.config.run.dry,'hide':c.config.hide}
     cleanup_task = ResetTask(c.config.hosts,**kwargs)
     cleanup_task.run() # Maybe be able to pass in streams?
-    cleanup_task.pretty_print()
+    if not c.config.hide:
+        cleanup_task.pretty_print()
 
 from riaps.rfab.api.riaps import DevelopmentTask
 @task

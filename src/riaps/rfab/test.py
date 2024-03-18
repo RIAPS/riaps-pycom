@@ -1,4 +1,5 @@
-from riaps.rfab.api.riaps import ResetTask
+import riaps.rfab.api
 from fabric import Connection
-c = ResetTask([Connection("1.2.3.4"),Connection("5.6.7.8")])
+c = riaps.rfab.api.riaps.ResetTask([Connection("riaps-bcf6.local")])
 c.run()
+c.pretty_print()

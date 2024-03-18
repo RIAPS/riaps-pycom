@@ -3,7 +3,7 @@ import os
 from fabric import ThreadingGroup, Group, GroupResult, Result
 from fabric.transfer import Result as TransferResult
 from fabric.exceptions import GroupException
-from .exceptions import RFabException
+from riaps.rfab.api.exceptions import RFabException
 import socket
 
 def isIPaddress(addr):

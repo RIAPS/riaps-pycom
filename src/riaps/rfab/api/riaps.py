@@ -1,6 +1,6 @@
 from fabric import Group, Connection
-from .helpers import *
-from .utils import load_role
+from riaps.rfab.api.helpers import *
+from riaps.rfab.api.utils import load_role
 import os
 from riaps.consts.defs import *
 from pathlib import Path
@@ -244,7 +244,7 @@ def reset(hosts: Group, hide = True):
     print("Restarting deplo...")
     deplo.start(hosts,hide)
 
-from riaps.rfab.api.task import Task
+from .task import Task,SkipResult
 from fabric import Result
 from time import sleep
 class ResetTask(Task):
@@ -252,86 +252,87 @@ class ResetTask(Task):
 
     '''
     @Task.step
-    def stop_deplo(c, **kwargs):
+    def stop_deplo(c,log, **kwargs):
         return c.sudo('systemctl stop riaps-deplo.service',**kwargs)
     
     @Task.step
-    def disable_deplo(c, **kwargs):
+    def disable_deplo(c,log, **kwargs):
         return c.sudo('systemctl disable riaps-deplo.service',**kwargs)
 
     @Task.step
-    def kill_riaps(c: Connection,**kwargs):
+    def kill_riaps(c: Connection,log,**kwargs):
         killcmd = 'pkill -SIGKILL "(riaps_deplo|riaps_disco|riaps_actor|riaps_device)"'
         # if zero procs are killed, pgrep exits 1, which raises invoke..UnexpectedExit
         #   warn=True surpresses this
         return c.sudo(killcmd,**{**kwargs,'warn':True})
 
     @Task.step
-    def pgrep_riaps(c,**kwargs):
+    def pgrep_riaps(c,log,**kwargs):
         pgrepcmd = 'pgrep -l "(riaps_deplo|riaps_disco|riaps_actor|riaps_device)"'
         res = c.sudo(pgrepcmd,**{**kwargs,'warn':True})
         if len(res.stdout.strip())>0:
-            pass
-            #TODO: Log output of processes still "running"
+            log.warn(f"Processes still running: {res.stdout.splitlines()}")
         return res
 
     @Task.step
-    def getnic(c,**kwargs):
-        getniccmd = 'bash --login -c "python3 -c \'from riaps.utils.config import Config; c=Config(); print(c.NIC_NAME)\'"'
-        return c.sudo(getniccmd,**kwargs)
+    def getnic(c,log,**kwargs):
+        getniccmd = 'python3 -c \'from riaps.utils.config import Config; c=Config(); print(c.NIC_NAME)\''
+        return c.run(getniccmd,**kwargs)
 
     @Task.step(input=getnic)
-    def gethost_last_4(c,**kwargs):
+    def gethost_last_4(c,log,**kwargs):
         getnic_res = kwargs.pop("getnic")
         nic_name = getnic_res.stdout.strip()
         maccmd = 'ip link show %s | awk \'/ether/ {print $2}\' | sed \'s/://g\'| rev | cut -c 1-4 | rev' % nic_name
         return c.sudo(maccmd,**kwargs)
     
     @Task.step
-    def lsriapsapps(c,**kwargs):
-        cmd = f"bash --login -c \"ls \$RIAPSAPPS -I riaps-disco.lmdb -I riaps-apps.lmdb\""
+    def lsriapsapps(c,log,**kwargs):
+        cmd = "ls $RIAPSAPPS -I riaps-disco.lmdb -I riaps-apps.lmdb"
         return c.sudo(cmd,**kwargs)
     
     @Task.step(input=lsriapsapps)
-    def rmapps(c: Connection, **kwargs):
+    def rmapps(c: Connection,log,**kwargs):
         lsres = kwargs.pop('lsriapsapps')
         applist = lsres.stdout.split()
-        if len(applist)<1:
-            return Result(connection=c,stdout="",stderr="",exited=0)
-        print(f"Removing applist: {applist}")
         #TODO: Log apps to remove
-        a = " ".join([f"\$RIAPSAPPS/{app.strip()}/" for app in applist])
-        rmcmd = f"bash --login -c \"rm -R {a}\""
+        a = " ".join([f"$RIAPSAPPS/{app.strip()}/" for app in applist])
+        rmcmd = f"rm -R {a}"
+        if len(applist)<1:
+            return SkipResult(c,rmcmd,"No apps, skipping...")
         return c.sudo(rmcmd,**kwargs)
     
     @Task.step(input=[gethost_last_4,lsriapsapps])
-    def userdel(c: Connection, **kwargs):
+    def userdel(c: Connection,log,**kwargs):
         host_last_4 = kwargs.pop('gethost_last_4').stdout.strip()
         applist = kwargs.pop('lsriapsapps').stdout.split()
-        cmd = ";".join([f"userdel {app}{host_last_4}" for app in applist])
+        log.info(f"===APPLIST===: {applist}")
+        cmd = ";".join([f"userdel {app.lower()}{host_last_4}" for app in applist])
+        if len(applist)<1:
+            return SkipResult(c,cmd,"No users, skipping...")
         return c.sudo(cmd,**{**kwargs,'warn':True})
 
     @Task.step
-    def rmlmdbs(c: Connection, **kwargs):
-        cmd = "bash --login -c \"rm -r \$RIAPSAPPs/riaps-apps.lmbd \$RIAPSAPPS/riaps-disco.lmdb"
+    def rmlmdbs(c: Connection,log,**kwargs):
+        cmd = "rm -r $RIAPSAPPS/riaps-apps.lmdb $RIAPSAPPS/riaps-disco.lmdb"
         return c.sudo(cmd,**{**kwargs,'warn':True})
     
     @Task.step
-    def enable_deplo(c, **kwargs):
+    def enable_deplo(c,log,**kwargs):
         return c.sudo('systemctl enable riaps-deplo.service',**kwargs)
     
     @Task.step
-    def disable_deplo(c, **kwargs):
+    def start_deplo(c,log,**kwargs):
         return c.sudo('systemctl start riaps-deplo.service',**kwargs)
     
 
 class DevelopmentTask(Task):
 
     @Task.step
-    def getnic(c: Connection, **kwargs):
-        getniccmd = 'bash --login -c "python3 -c \'from riaps.utils.config import Config; c=Config(); print(c.NIC_NAME)\'"'
+    def getnic(c: Connection, log,**kwargs):
+        getniccmd = "env"
         # getniccmd = 'source /etc/riaps/env.conf && echo $RIAPSHOME'
-        res = c.run(getniccmd,**kwargs)
+        res = c.sudo(getniccmd,**kwargs)
         return res
 
     # @Task.step(input=getnic)

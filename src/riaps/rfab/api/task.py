@@ -8,7 +8,24 @@ import time
 from invoke.exceptions import UnexpectedExit
 from riaps.rfab.api.helpers import RFabGroupResult
 import socket
-from fabric import Result
+from fabric import Result as FabResult
+import logging
+
+class Result(FabResult):
+    def to_log(self):
+        log = [f"Command: {self.command}",
+               f"Exited: {self.exited}"]
+        for t,stream in zip(["STDOUT","STDERR"],[self.stdout,self.stderr]):
+            if len(stream) > 0:
+                # out = stream.splitlines()
+                # if len(out) > 1:
+                #     lines =  "\n".join([f"{t}:",]+out)
+                #     log.extend(lines)
+                # else:
+                #     lines = f"{t}: {out[0]}"
+                #     log.append(lines)
+                log.append(f"{t}: {stream}")
+        return "\n".join(log)
 
 from enum import Enum, auto
 class STATE(Enum):
@@ -20,10 +37,13 @@ class STATE(Enum):
 class _step_factory:
     def __init__(self,func,**kwargs):
         self.__name__ = func.__name__
-        self.func = func,
+        self.func = func
         self.kwargs = kwargs
 
     def __call__(self,owner):
+        '''
+        owner: a _ctx instance
+        '''
         class _step:
             '''Single command
             Customizeable pass/fail test
@@ -47,13 +67,16 @@ class _step_factory:
                 return self.func(*args,**kwargs)
         return _step(self.func,owner,**self.kwargs)
 
+def SkipResult(connection,command,msg):
+    return Result(connection=connection,command=command,stdout=msg,stderr='',exited=0)
+
 
 def _make_ctx_factory(steps: dict): #dict[str,_step_factory]
-    def ctx_factory(conn,**kwargs):
+    def ctx_factory(conn,logger,**kwargs):
         class _ctx:
             '''A single Connection object's context, instances of steps
             '''
-            def __init__(self,conn,**kwargs):
+            def __init__(self,conn,logger,**kwargs):
                 self.conn = conn
                 self.kwargs = kwargs
                 self.steps = {k:v(self) for k,v in steps.items()} #dict[str,_step]
@@ -63,12 +86,15 @@ def _make_ctx_factory(steps: dict): #dict[str,_step_factory]
                 self._step_gen = (iter(self.steps.keys()))
                 self.curr_step: str = next(self._step_gen)
                 self.final_res = None
-                # self._result = None
+                self.logger = logger
 
             def run_one(self) -> bool:
                 sfunc = self.steps[self.curr_step]
+                self.logger.info(f"Running {sfunc.func.__qualname__}...")
                 try:
-                    self.results[self.curr_step] = sfunc(self.conn,**kwargs)
+                    res: Result = sfunc(self.conn,self.logger,**kwargs)
+                    self.logger.info(Result.to_log(res))
+                    self.results[self.curr_step] = res
                     self.curr_step = next(self._step_gen)
                     return True
                 except StopIteration:
@@ -77,9 +103,13 @@ def _make_ctx_factory(steps: dict): #dict[str,_step_factory]
                 except UnexpectedExit as e:
                     self.final_res = self.results[self.curr_step] = e.result
                     self.s = STATE.FAILED
+                    self.logger.warn(Result.to_log(e.result))
+                    self.logger.warn(f"{sfunc.func.__qualname__} FAILED")
                 except Exception as e:
                     self.final_res = self.results[self.curr_step] = e
                     self.s = STATE.EXCEPTED
+                    self.logger.error(f"{sfunc.func.__qualname__} EXCEPTION")
+                    self.logger.exception(e)
                 return False
 
             def run_all(self):
@@ -89,9 +119,12 @@ def _make_ctx_factory(steps: dict): #dict[str,_step_factory]
             def done(self) -> bool:
                 return self.s != STATE.INIT
 
-        return _ctx(conn,**kwargs)
+        return _ctx(conn,logger,**kwargs)
     return ctx_factory
 
+
+from pathlib import Path
+from shutil import rmtree
 class Task(dict): # dict[Connection,_ctx]
     '''Base class for Rfab tasks, executes N steps for M connections
     All M connections must be able to execute all N steps. If more complicated
@@ -103,7 +136,7 @@ class Task(dict): # dict[Connection,_ctx]
     _steps = {} # Must be filled by subclass
     _make_ctx = None
 
-    #TODO: This should probably return a step factory, instead of a step that gets copied
+
     def step(func=None, **kwargs):
         if func: # Case where step() decorator is used without args
             return _step_factory(func)
@@ -115,7 +148,6 @@ class Task(dict): # dict[Connection,_ctx]
     def __init_subclass__(cls) -> None:
         super().__init_subclass__()
         cls._steps = {name:f for name,f in cls.__dict__.items() if isinstance(f,_step_factory)}
-        #TODO: Try to make _steps a list of step factories
         cls._make_ctx = staticmethod(_make_ctx_factory(cls._steps))
 
     def __init__(self,
@@ -130,19 +162,26 @@ class Task(dict): # dict[Connection,_ctx]
         """
         self.connections = connections
         self.kwargs = kwargs
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger.setLevel("INFO")
+        logdir = Path("/tmp",self.__class__.__name__)
+        if logdir.exists():
+            rmtree(logdir)
+        logdir.mkdir()
         for c in self.connections:
-            self[c] = self._make_ctx(c,**self.kwargs)
+            logger = self.logger.getChild(c.host)
+            logger.propagate = False
+            logger.addHandler(logging.FileHandler(Path(logdir,c.host)))
+            self[c] = self._make_ctx(c,logger,**self.kwargs)
 
 
     def run(self):
-        # for k,func in self.steps.items():
-        #     func()
+        #TODO: Enable configuration of serial/stepped execution
         self._run_parallel()
-        # If lock-step, start&join threads for each step
-        # if not lock-step, dispatch all steps to thread? 
-        # If RR/single, repeat lock-step for each conn in loop?
+
 
     def _run_parallel(self):
+        #TODO: Possible move to asyncio?
         threads = [Thread(None,ctx.run_all,name=f"thread_{c.host}") for c,ctx in self.items()]
         [t.start() for t in threads]
         running = True
@@ -151,7 +190,7 @@ class Task(dict): # dict[Connection,_ctx]
             waitlist = ', '.join([t.name for t in threads if t.is_alive()])
             if len(waitlist) == 0:
                 break
-            print(f"Waiting on: {waitlist}")
+            # print(f"Waiting on: {waitlist}")
         
 
     def _run_serial(self):
