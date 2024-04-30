@@ -1,41 +1,52 @@
 from invoke import task, Collection, Context
 from invoke.tasks import call
-from fabric import Group, GroupResult
-from fabric.exceptions import GroupException
-from riaps.rfab import api
+from riaps.rfab.api.timesync import *
+from riaps.rfab.api.task import TaskRunner
+from riaps.rfab.api.utils import make_log_folder
 
 
 @task(positional = ["mode"],
-      help={'mode':'One of: standalone, master, slave'})
+      help={'mode':' Configure timesync to one of: standalone, master, slave'})
 def config(c: Context, mode):
     """Change timesync configuration"""
-    res = api.timesync.config(c.config.hosts,mode,hide=c.config.hide)
-    res.pretty_print()
+    kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
+    TimeConfig.configure(mode)
+    runner = TaskRunner(c.config.hosts,TimeConfig,**kwargs)
+    runner.set_log_folder(make_log_folder("time-config"))
+    runner.run()
 
 @task
 def status(c: Context):
     """Get timesync status"""
-    res = api.timesync.status(c.config.hosts,hide=c.config.hide)
-    res.pretty_print()
+    kwargs = {'dry':c.config.run.dry,'verbose':True}
+    runner = TaskRunner(c.config.hosts,TimeStatus,**kwargs)
+    runner.set_log_folder(make_log_folder("time-status"))
+    runner.run()
 
 @task
 def restart(c: Context):
     """Restart timesync"""
-    res = api.timesync.restart(c.config.hosts,hide=c.config.hide)
-    res.pretty_print()
+    kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
+    runner = TaskRunner(c.config.hosts,TimeRestart,**kwargs)
+    runner.set_log_folder(make_log_folder("time-restart"))
+    runner.run()
     
 @task
 def date(c: Context):
     """Get the system time"""
-    res = api.timesync.date(c.config.hosts,hide=c.config.hide)
-    res.pretty_print()
+    kwargs = {'dry':c.config.run.dry,'verbose':True}
+    runner = TaskRunner(c.config.hosts,TimeDate,**kwargs)
+    runner.set_log_folder(make_log_folder("time-date"))
+    runner.run()
 
 
 @task
 def rdate(c: Context):
     """Update the system time"""
-    res = api.timesync.rdate(c.config.hosts,hide=c.config.hide)
-    res.pretty_print()
+    kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
+    runner = TaskRunner(c.config.hosts,TimeRdate,**kwargs)
+    runner.set_log_folder(make_log_folder("time-rdate"))
+    runner.run()
 
 
 ns = Collection('time')

@@ -5,6 +5,39 @@ from fabric.transfer import Result as TransferResult
 from fabric.exceptions import GroupException
 from riaps.rfab.api.exceptions import RFabException
 import socket
+from pathlib import Path
+from shutil import rmtree
+import logging
+import time
+
+def make_log_folder(func_name,logsdir='/home/riaps/.riaps/rfab/logs'):
+    assert func_name[-1] != '_', "function name cannot end in \"_\""
+    logger = logging.getLogger("TaskRunner") # TODO:Fix relationship between this func and TaskRunner
+    base = Path(logsdir)
+    base.mkdir(parents=True,exist_ok=True)
+    
+    # Sort by last modification time in ascending order
+    history = [(p,p.stat().st_mtime) for p in base.glob(f"{func_name}_*")]
+    history.sort(key = lambda x: x[1],reverse=True)
+
+    excess = len(history) - 9
+    for _ in range(0,excess):
+            path,_ = history.pop()
+            logger.info(f"Removing {path.name}") # TODO: Fix when this logs
+            rmtree(path)
+
+    now = time.localtime()
+    new_path = base / f"{func_name}_{now.tm_hour:02}_{now.tm_min:02}_{now.tm_sec:02}"
+    new_path.mkdir()
+    symlink_path: Path = base / func_name
+    if symlink_path.is_symlink() or not symlink_path.exists():
+        symlink_path.unlink(missing_ok=True)
+    else:
+        raise Exception(f"{symlink_path} is not a symlink, so something is wrong. Delete all log contents and try again.")
+    symlink_path.symlink_to(new_path)
+    return new_path
+
+
 
 def isIPaddress(addr):
     try:
@@ -89,12 +122,13 @@ def load_hostfile(hosts_file,validate=False):
                 }
     return roledefs
 
-def load_role(role, validate=False) -> ThreadingGroup:
-    riapsHome = os.getenv('RIAPSHOME')
-    if riapsHome is None:
-        riapsHome = os.getcwd()
-        print(f"RIAPS Configuration - RIAPSHOME is not set, using {riapsHome}")
-    hostfile = riapsHome+'/etc/riaps-hosts.conf'
+def load_role(role, hostfile=None, validate=False) -> ThreadingGroup:
+    if hostfile is None:
+        riapsHome = os.getenv('RIAPSHOME')
+        if riapsHome is None:
+            riapsHome = os.getcwd()
+            print(f"RIAPS Configuration - RIAPSHOME is not set, using {riapsHome}")
+        hostfile = riapsHome+'/etc/riaps-hosts.conf'
     roledefs = load_hostfile(hostfile,validate)
     if roledefs is None:
         exit(-1)

@@ -1,26 +1,55 @@
 from fabric import Group
+from riaps.rfab.api.task import Task
 from .helpers import *
 
-def start(hosts: Group, hide=True):
-    return groupSudo('systemctl start riaps-deplo.service',hosts,hide=hide)
+class DeploStart(Task):
+    def deplo_start(self):
+        return self.sudo('systemctl start riaps-deplo.service')
 
-def startManual(hosts: Group, hide=True):
-    return groupSudo('riaps_deplo >~/riaps-$(hostname).log 2>&1 &',hosts,hide=hide,pty=True)
+class DeploStartManual(Task):
+    def deplo_start_manual(self):
+        return self.sudo('riaps_deplo >~/riaps-$(hostname).log 2>&1 &',pty=True)
 
-def restart(hosts: Group, hide=True):
-    return groupSudo('systemctl restart riaps-deplo.service',hosts,hide=hide)
+class DeploRestart(Task):
+    def deplo_restart(self):
+        return self.sudo('systemctl restart riaps-deplo.service')
 
-def stop(hosts: Group, hide=True):
-    return groupSudo('systemctl stop riaps-deplo.service',hosts,hide=hide)
+class DeploStop(Task):
+    def deplo_stop(self):
+        return self.sudo('systemctl stop riaps-deplo.service')
+    
+class DeploEnable(Task):
+    def deplo_enable(self):
+        return self.sudo('systemctl enable riaps-deplo.service')
 
-def enable(hosts: Group, hide=True):
-    return groupSudo('systemctl enable riaps-deplo.service',hosts,hide=hide)
+class DeploDisable(Task):
+    def deplo_disable(self):
+        return self.sudo('systemctl disable riaps-deplo.service')
 
-def disable(hosts: Group, hide=True):
-    return groupSudo('systemctl disable riaps-deplo.service',hosts,hide=hide)
+class DeploStatus(Task):
+    num_lines = " -n 10"
+    grep_pattern = ''
 
-def status(hosts: Group, hide=True, n='10', grep=''):
-    return groupSudo(f"systemctl status riaps-deplo --no-pager -n {n} {grep}",hosts,hide=hide)
+    @classmethod
+    def configure(cls,n,grep):
+        cls.num_lines = f" -n {n}"
+        if grep != '':
+            grep=f" | grep {grep}"
+        cls.grep_pattern = grep
 
-def journal(hosts: Group, hide=True, n='10', grep=''):
-    return groupSudo(f"journalctl -u riaps-deplo.service --no-pager -n {n} {grep}",hosts,hide=hide)
+    def deplo_status(self):
+        return self.sudo(f"systemctl status riaps-deplo --no-pager{self.num_lines}{self.grep_pattern}")
+
+class DeploJournal(Task):
+    num_lines = " -n 10"
+    grep_pattern = ''
+
+    @classmethod
+    def configure(cls,n,grep):
+        cls.num_lines = f" -n {n}"
+        if grep != '':
+            grep=f" | grep {grep}"
+        cls.grep_pattern = grep
+
+    def deplo_journal(self):
+        return self.sudo(f"journalctl -u riaps-deplo.service --no-pager{self.num_lines}{self.grep_pattern}")

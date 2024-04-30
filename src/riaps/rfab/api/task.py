@@ -3,29 +3,41 @@
 '''
 
 import functools
+import logging.handlers
 from threading import Thread
 import time
 from invoke.exceptions import UnexpectedExit
 from riaps.rfab.api.helpers import RFabGroupResult
 import socket
-from fabric import Result as FabResult
+from fabric import Result
+from fabric.connection import Connection
+from fabric.transfer import Result as TransferResult
 import logging
+import sys
 
-class Result(FabResult):
-    def to_log(self):
-        log = [f"Command: {self.command}",
-               f"Exited: {self.exited}"]
-        for t,stream in zip(["STDOUT","STDERR"],[self.stdout,self.stderr]):
-            if len(stream) > 0:
-                # out = stream.splitlines()
-                # if len(out) > 1:
-                #     lines =  "\n".join([f"{t}:",]+out)
-                #     log.extend(lines)
-                # else:
-                #     lines = f"{t}: {out[0]}"
-                #     log.append(lines)
-                log.append(f"{t}: {stream}")
-        return "\n".join(log)
+
+def Result_to_log(res):
+    log = [f"Command: {res.command}",
+            f"Exited: {res.exited}"]
+    for t,stream in zip(["STDOUT","STDERR"],[res.stdout,res.stderr]):
+        if len(stream) > 0:
+            # out = stream.splitlines()
+            # if len(out) > 1:
+            #     lines =  "\n".join([f"{t}:",]+out)
+            #     log.extend(lines)
+            # else:
+            #     lines = f"{t}: {out[0]}"
+            #     log.append(lines)
+            log.append(f"{t}: {stream}")
+    return "\n".join(log)
+    
+def TransferResult_to_log(res):
+    log = [f"TRANSFER FILE",
+           f"Local  (rel): {res.orig_local}",
+           f"Local  (abs): {res.local}",
+           f"Remote (rel): {res.orig_remote}",
+           f"Remote (abs): {res.remote}"]
+    return "\n".join(log)
 
 from enum import Enum, auto
 class STATE(Enum):
@@ -34,124 +46,38 @@ class STATE(Enum):
     FAILED = auto()
     EXCEPTED = auto()
 
-class _step_factory:
-    def __init__(self,func,**kwargs):
-        self.__name__ = func.__name__
-        self.func = func
-        self.kwargs = kwargs
+class SkipResult(Result):
+    def __init__(self,connection,command,stdout,stderr='',exited=0):
+        super().__init__(connection=connection,command=command,stdout=stdout,stderr=stderr,exited=exited)
 
-    def __call__(self,owner):
-        '''
-        owner: a _ctx instance
-        '''
-        class _step:
-            '''Single command
-            Customizeable pass/fail test
-            Accepts kwargs for Connection command?
-            Leaf instances are in a specific _conntext
-            '''
-            def __init__(self,func,owner,**kwargs):
-                functools.update_wrapper(self,func)
-                self.func = func
-                self.input_iter = None
-                self.owner = owner
-                if input := kwargs.get('input',None):
-                    try:
-                        self.input_iter = iter(input)
-                    except TypeError:
-                        self.input_iter = iter([input])
-
-            def __call__(self,*args,**kwargs):
-                if self.input_iter:
-                    kwargs = {**kwargs , **{i.__name__ : self.owner.results.get(i.__name__) for i in self.input_iter}}
-                return self.func(*args,**kwargs)
-        return _step(self.func,owner,**self.kwargs)
-
-def SkipResult(connection,command,msg):
-    return Result(connection=connection,command=command,stdout=msg,stderr='',exited=0)
-
-
-def _make_ctx_factory(steps: dict): #dict[str,_step_factory]
-    def ctx_factory(conn,logger,**kwargs):
-        class _ctx:
-            '''A single Connection object's context, instances of steps
-            '''
-            def __init__(self,conn,logger,**kwargs):
-                self.conn = conn
-                self.kwargs = kwargs
-                self.steps = {k:v(self) for k,v in steps.items()} #dict[str,_step]
-                self.results = {n:None for n in self.steps.keys()}
-
-                self.s = STATE.INIT
-                self._step_gen = (iter(self.steps.keys()))
-                self.curr_step: str = next(self._step_gen)
-                self.final_res = None
-                self.logger = logger
-
-            def run_one(self) -> bool:
-                sfunc = self.steps[self.curr_step]
-                self.logger.info(f"Running {sfunc.func.__qualname__}...")
-                try:
-                    res: Result = sfunc(self.conn,self.logger,**kwargs)
-                    self.logger.info(Result.to_log(res))
-                    self.results[self.curr_step] = res
-                    self.curr_step = next(self._step_gen)
-                    return True
-                except StopIteration:
-                    self.final_res = self.results[self.curr_step]
-                    self.s = STATE.SUCCEEDED
-                except UnexpectedExit as e:
-                    self.final_res = self.results[self.curr_step] = e.result
-                    self.s = STATE.FAILED
-                    self.logger.warn(Result.to_log(e.result))
-                    self.logger.warn(f"{sfunc.func.__qualname__} FAILED")
-                except Exception as e:
-                    self.final_res = self.results[self.curr_step] = e
-                    self.s = STATE.EXCEPTED
-                    self.logger.error(f"{sfunc.func.__qualname__} EXCEPTION")
-                    self.logger.exception(e)
-                return False
-
-            def run_all(self):
-                while(more_steps := self.run_one()):
-                    pass
-            
-            def done(self) -> bool:
-                return self.s != STATE.INIT
-
-        return _ctx(conn,logger,**kwargs)
-    return ctx_factory
 
 
 from pathlib import Path
 from shutil import rmtree
-class Task(dict): # dict[Connection,_ctx]
-    '''Base class for Rfab tasks, executes N steps for M connections
-    All M connections must be able to execute all N steps. If more complicated
-    patterns are needed, use multiple Tasks.
-    - Multi-threaded: yes/no
-        - If multithreaded, lock-step yes/no
-    - Stop on problem or keep going
-    '''
-    _steps = {} # Must be filled by subclass
-    _make_ctx = None
 
+class Task:
 
-    def step(func=None, **kwargs):
-        if func: # Case where step() decorator is used without args
-            return _step_factory(func)
-        else: # Decorator has args passed
-            def wrapper(func):
-                return _step_factory(func,**kwargs)
-            return wrapper
+    # def step(func=None, **kwargs):
+    #     if func: # Case where step() decorator is used without args
+    #         return _step_factory(func)
+    #     else: # Decorator has args passed
+    #         def wrapper(func):
+    #             return _step_factory(func,**kwargs)
+    #         return wrapper
 
     def __init_subclass__(cls) -> None:
         super().__init_subclass__()
-        cls._steps = {name:f for name,f in cls.__dict__.items() if isinstance(f,_step_factory)}
-        cls._make_ctx = staticmethod(_make_ctx_factory(cls._steps))
+        cls._steps = {}
+        cls._params = {}
+        for name,f in cls.__dict__.items():
+            if name[0:2] != '__':
+                if callable(f):
+                    cls._steps[name] = f
+                else:
+                    cls._params[name] = f
 
     def __init__(self,
-        connections,
+        connection,
         **kwargs,
     ):
         """Creates instance with instantiated contexts for each connection
@@ -160,29 +86,107 @@ class Task(dict): # dict[Connection,_ctx]
             connections (list[fabric.Connection]): Connections to each targeted host
             kwargs: kwargs passed to each connection-context
         """
-        self.connections = connections
+        self.connection = connection
         self.kwargs = kwargs
-        self.logger = logging.getLogger(self.__class__.__name__)
+        self.kwargs['hide'] = True
+        self.results = {name:None for name in self._steps.values()}
+        self.state = STATE.INIT
+        self.final_res = None
+        parentlogger = logging.getLogger(self.__class__.__name__)
+        self.logger = parentlogger.getChild(self.connection.host)
         self.logger.setLevel("INFO")
-        logdir = Path("/tmp",self.__class__.__name__)
-        if logdir.exists():
-            rmtree(logdir)
-        logdir.mkdir()
-        for c in self.connections:
-            logger = self.logger.getChild(c.host)
-            logger.propagate = False
-            logger.addHandler(logging.FileHandler(Path(logdir,c.host)))
-            self[c] = self._make_ctx(c,logger,**self.kwargs)
+        self._step_gen = (iter(self._steps.keys()))
+        self.curr_step: str = next(self._step_gen)
+
+
+    def _run_one(self):
+        func = self._steps[self.curr_step]
+        self.logger.info(f"Running {self.curr_step}...")
+        try:
+            res = func(self)
+            if isinstance(res,TransferResult):
+                self.logger.info(TransferResult_to_log(res))
+            elif isinstance(res,Result):
+                self.logger.info(Result_to_log(res))
+            self.results[self.curr_step] = res
+            self.curr_step = next(self._step_gen)
+            return True
+        except StopIteration:
+            self.final_res = self.results[self.curr_step]
+            self.state = STATE.SUCCEEDED
+        except UnexpectedExit as e:
+            self.final_res = self.results[self.curr_step] = e.result
+            self.state = STATE.FAILED
+            self.logger.warn(Result_to_log(e.result))
+            self.logger.warn(f"{func.__qualname__} FAILED")
+        except Exception as e:
+            self.final_res = self.results[self.curr_step] = e
+            self.state = STATE.EXCEPTED
+            self.logger.error(f"{func.__qualname__} EXCEPTION")
+            self.logger.exception(e)
+        return False
+    
+    def _run_all(self):
+        while(more_steps := self._run_one()):
+            pass
+
+    def done(self) -> bool:
+        return self.state != STATE.INIT
+
+    def put(self, file, **kwargs):
+        return self.connection.put(file,**kwargs)
+    
+    def get(self, remote, local, **kwargs):
+        return self.connection.get(remote,local,**kwargs)
+                
+    def sudo(self,cmd,**kwargs):
+        kw = self.kwargs | kwargs
+        return self.connection.sudo(cmd,**kw)
+    
+    def run(self,cmd,**kwargs):
+        kw = self.kwargs | kwargs
+        return self.connection.run(cmd,**kw)
+
+def _print_multiline(log_func,header_str,stream,indent=0):
+        lines = stream.splitlines()
+        if len(lines) == 1:
+            log_func(f"{' '.rjust(indent)}{header_str} {lines[0]}")
+            return
+        log_func(f"{' '.rjust(indent)}{header_str}")
+        [log_func(f"{' '.rjust(indent+2)}{l}") for l in lines]
+
+class TaskRunner:
+    def __init__(self,hosts,task,**kwargs):
+        super().__init__()
+        self.taskClass = task
+        self.hosts = hosts
+        self.logger = logging.getLogger("TaskRunner")
+        # Logging TODO:
+        # - Make log deletion msgs only go to taskrunner log?
+        # 
+        self.logger.setLevel("INFO")
+        if kwargs.pop('verbose',False):
+            self.logger.addHandler(logging.StreamHandler(sys.stdout))
+        self.kwargs = kwargs
+        self.kwargs
+        self.ctxs = {c:task(c,**kwargs) for c in hosts}
+
+    def set_log_folder(self,path):
+        logdir = Path(path)
+        assert logdir.exists(), f"Log folder does not exist: {logdir.absolute()}"
+        for conn,ctx in self.ctxs.items():
+            ctx.logger.addHandler(logging.FileHandler(Path(logdir,conn.host)))
+            ctx.logger.propagate = False
+        self.logger.addHandler(logging.FileHandler(Path(logdir,"task-runner")))
 
 
     def run(self):
-        #TODO: Enable configuration of serial/stepped execution
         self._run_parallel()
-
+        self.pretty_print()
 
     def _run_parallel(self):
         #TODO: Possible move to asyncio?
-        threads = [Thread(None,ctx.run_all,name=f"thread_{c.host}") for c,ctx in self.items()]
+        threads = [Thread(None,ctx._run_all,name=f"thread_{c.host}") for c,ctx in self.ctxs.items()]
         [t.start() for t in threads]
         running = True
         while(running):
@@ -191,37 +195,35 @@ class Task(dict): # dict[Connection,_ctx]
             if len(waitlist) == 0:
                 break
             # print(f"Waiting on: {waitlist}")
-        
 
-    def _run_serial(self):
-        for _, ctx in self.items():
-            ctx.run_all()
-    
+    def ok(self) -> bool:
+        return all([ctx.state == STATE.SUCCEEDED for ctx in self.ctxs.values()])
+
     def pretty_print(self):
-        _succeeded = {c:ctx for c,ctx in self.items() if ctx.s == STATE.SUCCEEDED}
-        _failed = {c:ctx for c,ctx in self.items() if ctx.s == STATE.FAILED}
-        _excepted = {c:ctx for c,ctx in self.items() if ctx.s == STATE.EXCEPTED}
-        for c, ctx in self.items():
+        _succeeded = {c:ctx for c,ctx in self.ctxs.items() if ctx.state == STATE.SUCCEEDED}
+        _failed = {c:ctx for c,ctx in self.ctxs.items() if ctx.state == STATE.FAILED}
+        _excepted = {c:ctx for c,ctx in self.ctxs.items() if ctx.state == STATE.EXCEPTED}
+        for c, ctx in self.ctxs.items():
             try:
                 assert(ctx.done())
             except AssertionError:
-                print(f"NOT DONE FOR {c.host}")
+                self.logger.error(f"NOT DONE FOR {c.host}")
         
         if _succeeded:
-            print(f"Succeeded ({len(_succeeded)}):")
+            self.logger.info(f"Succeeded ({len(_succeeded)}):")
             for c,ctx in _succeeded.items():
                 r = ctx.final_res
-                RFabGroupResult._print_multiline(f"{c.host}:",r.stdout,2)
+                _print_multiline(self.logger.info,f"{c.host}:",r.stdout,2)
         if _failed:
-            print(f"Failed ({len(_failed)}):")
+            self.logger.error(f"Failed ({len(_failed)}):")
             for c,ctx in _failed.items():
                 r: Result = ctx.final_res
-                print(f"  {c.host}:")
-                print(f"  {r.command}")
-                RFabGroupResult._print_multiline(f"STDOUT:",r.stdout,4)
-                RFabGroupResult._print_multiline(f"STDERR:",r.stderr,4)
+                self.logger.error(f"  {c.host}:")
+                self.logger.error(f"  {r.command}")
+                _print_multiline(self.logger.error,f"STDOUT:",r.stdout,4)
+                _print_multiline(self.logger.error,f"STDERR:",r.stderr,4)
         if _excepted:
-            print(f"Excepted ({len(_excepted)}):")
+            self.logger.error(f"Excepted ({len(_excepted)}):")
             for c,ctx in _excepted.items():
                 r: f = ctx.final_res
                 hint=None
@@ -230,10 +232,7 @@ class Task(dict): # dict[Connection,_ctx]
                     T, h = eh
                     if isinstance(r,T):
                         hint = h
-                RFabGroupResult._print_multiline(f"{c.host}.exception:",str(r),2)
+                _print_multiline(self.logger.error,f"{c.host}.exception:",str(r),2)
                 if hint is not None:
-                    RFabGroupResult._print_multiline(f"^^^ HINT:",hint,2)
+                    _print_multiline(self.logger.error,f"^^^ HINT:",hint,2)
 
-        
-        
-            

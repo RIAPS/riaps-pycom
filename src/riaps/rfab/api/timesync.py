@@ -1,17 +1,32 @@
 from fabric import Group
+from riaps.rfab.api.task import Task
 from .helpers import *
 
-def config(hosts: Group, mode, hide=True):
-    return groupSudo("timesyncctl config "+ mode,hosts,hide=hide)
+class TimeConfig(Task):
+    mode = None
 
-def status(hosts: Group, hide=True):
-    return groupSudo("timesyncctl status",hosts,hide=hide)
+    @classmethod
+    def configure(cls, mode):
+        assert(mode in ['standalone','slave','master'])
+        cls.mode = mode
 
-def restart(hosts: Group, hide=True):
-    return groupSudo("timesyncctl restart",hosts,hide=hide)
+    def get_config(self):
+        if self.mode is None:
+            raise Exception("TimeConfig must be configure(d) with a mode")
+        return self.sudo(f"timesyncctl config {self.mode}")
 
-def date(hosts: Group, hide=True):
-    return groupRun("date",hosts,hide=hide)
+class TimeStatus(Task):
+    def get_status(self):
+        return self.sudo("timesyncctl status")
 
-def rdate(hosts: Group, hide=True):
-    return groupSudo("rdate -s -n -4 time.nist.gov",hosts,hide=hide)
+class TimeRestart(Task):
+    def restart(self):
+        return self.sudo("timesyncctl restart")
+
+class TimeDate(Task):
+    def get_date(self):
+        return self.run("date")
+
+class TimeRdate(Task):
+    def run_rdate(self):
+        return self.sudo("rdate -s -n -4 time.nist.gov")

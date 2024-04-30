@@ -3,6 +3,9 @@ from invoke.tasks import call
 from fabric import Group, GroupResult
 from fabric.exceptions import GroupException
 from riaps.rfab import api
+from riaps.rfab.api.task import TaskRunner
+from riaps.rfab.api.sys import *
+from riaps.rfab.api.utils import make_log_folder
 from .helpers import assert_role_in
 from os.path import isfile
 from pathlib import Path
@@ -12,8 +15,11 @@ def check(c: Context):
     '''
     Confims a connection can be made
     '''
-    res = api.sys.check(c.config.hosts,hide=c.config.hide)
-    res.pretty_print()
+    kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
+    runner = TaskRunner(c.config.hosts,SysCheck,**kwargs)
+    runner.set_log_folder(make_log_folder("sys-check"))
+    runner.run()
+
 
 @task(optional=['when','why'],pre=[call(assert_role_in,"remote")],
       help={'when':'time passed to \'shutdown\', default "now"',
@@ -42,11 +48,17 @@ def put(c: Context, local_file, remote_dir=''):
     '''
     Copies a local file to the target(s)
     '''
-    if not isfile(Path(c.cwd,local_file)):
-        print(f"ERROR: {local_file} is not a file")
-        exit(-1)
-    res = api.sys.put(c.config.hosts, local_file, remote_dir)
-    res.pretty_print()
+    # if not isfile(Path(c.cwd,local_file)):
+    #     print(f"ERROR: {local_file} is not a file")
+    #     exit(-1)
+    # res = api.sys.put(c.config.hosts, local_file, remote_dir)
+    # res.pretty_print()
+    kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
+    SysPut.configure(local_file,remote_dir)
+    runner = TaskRunner(c.config.hosts,SysPut,**kwargs)
+    runner.set_log_folder(make_log_folder("sys-put"))
+    runner.run()
+
 
 @task(pre=[call(assert_role_in,'remote','nodes')],
       help={'remote_file':'remote filename to copy locally',
@@ -63,8 +75,11 @@ def get(c: Context, remote_file, local_dir='', name=''):
       help={'command':'shell command to run, in quotes'})
 def run(c: Context, command):
     """Execute command as user:<command>"""
-    res = api.sys.run(command,c.config.hosts,hide=c.config.hide)
-    res.pretty_print()
+    kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
+    SysRun.configure(command)
+    runner = TaskRunner(c.config.hosts,SysRun,**kwargs)
+    runner.set_log_folder(make_log_folder("sys-run"))
+    runner.run()
 
 @task(positional=['command'],
       help={'command':'shell command to run, in quotes'})
