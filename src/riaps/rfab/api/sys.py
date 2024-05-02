@@ -3,15 +3,9 @@ from riaps.rfab.api.task import Task
 from .helpers import *
 from pathlib import Path
 
-# def check(hosts: Group, hide=True) -> RFabGroupResult:
-#     return groupRun("hostname",hosts,hide=hide)
-
 class SysCheck(Task):
     def sys_check(self):
         return self.sudo("hostname")
-
-# def shutdown(hosts: Group, when='now', why='',hide=True) -> RFabGroupResult:
-#     return groupSudo(f"shutdown {when} {why}",hosts,hide=hide)
 
 class SysShutdown(Task):
     when = 'now'
@@ -25,14 +19,13 @@ class SysShutdown(Task):
     def sys_shutdown(self):
         return self.sudo(f"shutdown {self.when} {self.why}")
 
-# def reboot(hosts: Group, hide=True) -> RFabGroupResult:
-#     return groupSudo(f"reboot &",hosts,hide=hide)
-
 class SysReboot(Task):
     def sys_reboot(self):
         return self.sudo("reboot &")
 
-# sudo = groupSudo
+class SysClearJournal(Task):
+    def clear_journal(self):
+        return self.sudo('journalctl --rotate && journalctl --vacuum-time=1s')
 
 class SysSudo(Task):
     cmd = None
@@ -46,8 +39,6 @@ class SysSudo(Task):
             raise Exception("SysSudo doesn't have a cmd configure(d)")
         return self.sudo(self.cmd)
 
-# run = groupRun
-
 class SysRun(Task):
     cmd = None
 
@@ -60,16 +51,13 @@ class SysRun(Task):
             raise Exception("SysRun doesn't have a cmd configure(d)")
         return self.run(self.cmd)
 
-def put(hosts: Group, local_file, remote):
+class SysPut(Task):
     '''SFTP a file from caller to host(s)
     
     :param hosts: A fabric.Group of Connection objects to "put" to
     :param local_file: Relative path to send to host(s)
     :param remote: Folder
     '''
-    return groupPut(hosts, local_file, remote)
-
-class SysPut(Task):
     local_file = None
     remote = None
 
@@ -85,23 +73,39 @@ class SysPut(Task):
             raise Exception("SysPut doesn't have a remote configure(d)")
         return self.put(self.local_file,remote=self.remote)
 
-def get(hosts: Group, 
-        remote_file: str, 
-        local_dir: str = '', 
-        local_name: str = ''
-    ) -> RFabGroupResult: 
+class SysGet(Task):
     '''SFTP a file from host(s) to caller
-
-    Local folders WILL be created to satisfy local paths.
-    
-    :param hosts: a fabric.Group of Connection objects to "get" from
-    :param remote_file: Remote filename relative to SSH user's home dir,
-                        Cannot be a path
-    :param local_dir: Dir to store transferred file(s) into
      '''
+    remote_file = None
+    local_path = None
 
-    local_path = "{host}/"
-    local_path += local_name if len(local_name)>0 else "{basename}"
-    if len(local_dir) > 0:
-        local_path = local_dir+"/"+local_path
-    return groupGet(hosts, remote_file,local_path)
+    @classmethod
+    def configure(cls,remote_file,local_dir='',local_name=''):
+        '''Set paths to transfer
+
+        Local folders WILL be created to satisfy local paths.
+        :param remote_file: Remote filename relative to SSH user's home dir,
+                        Cannot be a path
+        :param local_dir: Dir to store transferred file(s) into
+        :param local_name: Name for resulting file(s)
+        '''
+        local_path = "{host}/"
+        local_path += local_name if len(local_name)>0 else "{basename}"
+        if len(local_dir) > 0:
+            local_path = local_dir+"/"+local_path
+        cls.remote_file = remote_file
+        cls.local_path = local_path
+
+    def do_get(self):
+        if self.local_path is None:
+            raise Exception("SysGet was never configure(d)")
+        return self.get(self.remote_file,self.local_path)
+    
+class SysArch(Task):
+    def get_arch(self):
+        return self.run('dpkg --print-architecture')
+    
+class SysFlushIPTables(Task):
+    def flush_iptables(self):
+        return self.sudo('iptables --flush')
+    

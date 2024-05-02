@@ -44,7 +44,7 @@ class RfabProgram(Program):
     def update_config(self, merge: bool = True) -> None:
         p = None
         if self.args.hostfile.got_value:
-            p = Path(self.args.hostfile)
+            p = Path(self.args.hostfile.value)
             if not p.exists():
                 raise FileNotFoundError(f"{self.args.hostfile}")
         if self.args.host.got_value:

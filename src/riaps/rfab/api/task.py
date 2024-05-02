@@ -2,12 +2,10 @@
 - Some tasks will have a step that requires output from a prior step
 '''
 
-import functools
 import logging.handlers
 from threading import Thread
 import time
 from invoke.exceptions import UnexpectedExit
-from riaps.rfab.api.helpers import RFabGroupResult
 import socket
 from fabric import Result
 from fabric.connection import Connection
@@ -56,15 +54,6 @@ from pathlib import Path
 from shutil import rmtree
 
 class Task:
-
-    # def step(func=None, **kwargs):
-    #     if func: # Case where step() decorator is used without args
-    #         return _step_factory(func)
-    #     else: # Decorator has args passed
-    #         def wrapper(func):
-    #             return _step_factory(func,**kwargs)
-    #         return wrapper
-
     def __init_subclass__(cls) -> None:
         super().__init_subclass__()
         cls._steps = {}
@@ -106,6 +95,7 @@ class Task:
             res = func(self)
             if isinstance(res,TransferResult):
                 self.logger.info(TransferResult_to_log(res))
+                res = Result(connection=res.connection,stdout=f"{res.local} <--> {res.remote}")
             elif isinstance(res,Result):
                 self.logger.info(Result_to_log(res))
             self.results[self.curr_step] = res
@@ -160,15 +150,13 @@ class TaskRunner:
         super().__init__()
         self.taskClass = task
         self.hosts = hosts
-        self.logger = logging.getLogger("TaskRunner")
-        # Logging TODO:
-        # - Make log deletion msgs only go to taskrunner log?
-        # 
-        self.logger.setLevel("INFO")
+        self.rootlogger = logging.getLogger("TaskRunner")
+        self.rootlogger.addHandler(logging.StreamHandler(sys.stdout))
+        self.rootlogger.setLevel("WARN")
         if kwargs.pop('verbose',False):
-            self.logger.addHandler(logging.StreamHandler(sys.stdout))
+            self.rootlogger.setLevel("INFO")
+        self.logger = self.rootlogger.getChild('task-runner')
         self.kwargs = kwargs
-        self.kwargs
         self.ctxs = {c:task(c,**kwargs) for c in hosts}
 
     def set_log_folder(self,path):
@@ -218,10 +206,13 @@ class TaskRunner:
             self.logger.error(f"Failed ({len(_failed)}):")
             for c,ctx in _failed.items():
                 r: Result = ctx.final_res
-                self.logger.error(f"  {c.host}:")
-                self.logger.error(f"  {r.command}")
-                _print_multiline(self.logger.error,f"STDOUT:",r.stdout,4)
-                _print_multiline(self.logger.error,f"STDERR:",r.stderr,4)
+                self.logger.error(f"  HOST: {c.host}:")
+                self.logger.error(f"  CMD:  {r.command}")
+                self.logger.error(f"  EXITED: {r.exited}")
+                if len(r.stdout):
+                    _print_multiline(self.logger.error,f"STDOUT:",r.stdout,4)
+                if len(r.stderr):
+                    _print_multiline(self.logger.error,f"STDERR:",r.stderr,4)
         if _excepted:
             self.logger.error(f"Excepted ({len(_excepted)}):")
             for c,ctx in _excepted.items():

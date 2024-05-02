@@ -14,16 +14,6 @@ from time import sleep
 
 packages = ['riaps-timesync','riaps-pycom']
 
-# def update_control(host: str,**kwargs):
-#     results = {}
-#     for pack in packages:
-#         if pack == 'riaps-pycom':
-#             package = pack + '-dev'
-#         else:
-#             package = pack + '-$(dpkg --print-architecture)'
-#         results[pack] = Connection(host).sudo(f"apt-get install {package} -y",pty=True,**kwargs)
-#     return results
-
 class UpdateControl(Task):
     def update_timesync(self):
         return self.sudo(f"apt-get install riaps-timesync-$(dpkg --print-architecture) -y")
@@ -37,52 +27,6 @@ class UpdateRemote(Task):
     
     def update_pycom(self):
         return self.sudo(f"apt-get install riaps-pycom -y")
-
-# def updateNodeKey(hosts: Group, keep_password=False, hide=True):
-#     '''
-#     Copies local keys to remote node, saving old ones as backups
-#     '''
-#     def _updateNodeKey(c: Connection, hide,keepPasswd):
-#         etc_key_path = "/etc/riaps/"
-#         ssh_key_path = "/home/riaps/.ssh/"
-#         ssh_pubkey_name = os.path.join(ssh_key_path, str(const.ctrlPublicKey))
-#         # ssh_privatekey_name = os.path.join(ssh_key_path, str(const.ctrlPrivateKey))
-#         ssh_privatekey_name = '/home/riaps/.ssh/id_rsa'
-#         ssh_cert_name = os.path.join(ssh_key_path, str(const.ctrlCertificate))
-#         ssh_zmqcert_name = os.path.join(ssh_key_path, str(const.zmqCertificate))
-#         riaps_pubkey_name = os.path.join(etc_key_path, str(const.ctrlPublicKey))
-#         riaps_privatekey_name = os.path.join(etc_key_path, str(const.ctrlPrivateKey))
-#         riaps_cert_name = os.path.join(etc_key_path, str(const.ctrlCertificate))
-#         riaps_zmqcert_name = os.path.join(etc_key_path, str(const.zmqCertificate)) 
-#         steps = [
-#             [c.put,{},ssh_privatekey_name,'.ssh'],
-#             [c.sudo,{},'cp ' + ssh_privatekey_name + ' ' + riaps_privatekey_name],
-#             [c.sudo,{},'chown root:riaps ' + riaps_privatekey_name],
-#             [c.sudo,{},'chmod 440 ' + riaps_privatekey_name],
-#             [c.run,{},'chmod 400 ' + ssh_privatekey_name],
-#             [c.sudo,{},'ssh-keygen -y -f ' + ssh_privatekey_name + ' > /home/riaps/.ssh/authorized_keys'],
-#             [c.sudo,{},'cp /home/riaps/.ssh/authorized_keys ' + riaps_pubkey_name],
-#             [c.sudo,{},'chown root:riaps ' + riaps_pubkey_name],
-#             [c.sudo,{},'chmod 440 ' + riaps_pubkey_name],
-#             [c.sudo,{},'rm ' + ssh_privatekey_name],
-
-#             [c.put,{},ssh_cert_name,'.ssh'],
-#             [c.sudo,{},'cp ' + ssh_cert_name + ' ' + riaps_cert_name],
-#             [c.sudo,{},'chown root:riaps ' + riaps_cert_name],
-#             [c.sudo,{},'chmod 440 ' + riaps_cert_name],
-#             [c.run,{},'rm ' + ssh_cert_name],
-
-#             [c.put,{},ssh_zmqcert_name,'.ssh'],
-#             [c.sudo,{},'cp ' + ssh_zmqcert_name + ' ' + riaps_zmqcert_name],
-#             [c.sudo,{},'chown root:riaps ' + riaps_zmqcert_name],
-#             [c.sudo,{},'chmod 444 ' + riaps_zmqcert_name],
-#             [c.run,{},'rm ' + ssh_zmqcert_name],
-#         ]
-#         if keepPasswd == False:
-#             steps.append([c.sudo,{},'passwd -q -d riaps'])
-
-#         return run_multiple_steps(steps)
-#     return {conn:_updateNodeKey(conn,hide,keep_password) for conn in hosts}
 
 class UpdateNodeKey(Task):
     keep_password = None
@@ -127,7 +71,7 @@ class UpdateNodeKey(Task):
         return self.sudo(f"mv id_rsa.pub {self.riaps_pubkey}")
 
     def add_authorized_key(self):
-        return self.sudo(f"cat {self.riaps_pubkey} >> /home/riaps/.ssh/authorized_keys")
+        return self.sudo(f"cat {self.riaps_pubkey} > /home/riaps/.ssh/authorized_keys")
 
     def chown_pub_key(self):
         return self.sudo(f"chown root:riaps {self.riaps_pubkey}")
@@ -181,10 +125,6 @@ class UpdateNodeKey(Task):
             return SkipResult(self.connection,cmd,"keep_password is set, skipping...")
         return self.sudo(cmd)
         
-# def updateAptKey(hosts: Group, hide=True):
-    # return groupSudo('wget -qO - https://riaps.isis.vanderbilt.edu/keys/riapspublic.key | apt-key add -')
-
-
 class UpdateAptKey(Task):
     def run_update(self):
         return self.sudo('wget -qO - https://riaps.isis.vanderbilt.edu/keys/riapspublic.key | apt-key add -')
@@ -219,48 +159,49 @@ class TimesyncInstallTask(Task):
         self.timesync = f"riaps-timesync-{self.arch}.deb"
         #Hack to simplify following steps...
         return SkipResult(self.connection,"Set packages to install",f"Timesync: {self.timesync}")
-
-    # def put_pycom(self):
-    #     filepath = Path(self.file_dir,self.pycom)
-    #     if not filepath.exists():
-    #         return SkipResult(self.connection,"",f"{self.pycom} isn't in {self.file_dir}, skipping transfer...",exited=-1)
-    #     return self.put(filepath)
-    
-    # def install_pycom(self):
-    #     put_pycom_res = self.results.get("put_pycom")
-    #     if isinstance(put_pycom_res,SkipResult):
-    #         return SkipResult(self.connection,"","Pycom wasn't transferred, skipping install...")
-    #     remote_file = put_pycom_res.remote
-    #     pycom_filename = self.pycom
-    #     keep = '--force-confold' if self.clean else '--force-confnew'
-    #     log_filename = f"riaps-install-{pycom_filename}.log"
-    #     cmd = f"dpkg {keep} -i {remote_file} > {log_filename}"
-    #     return self.sudo(cmd)
-    
-    # def remove_pycom_deb(self):
-    #     remote_path = self.results.get('put_pycom').remote
-    #     cmd = f"rm -r {remote_path}"
-    #     return self.sudo(cmd)
     
     def put_timesync(self):
-        timesync_file = self.timesync
-        filepath = Path(self.pkg_folder,timesync_file)
+        filepath = Path(self.pkg_folder,self.timesync)
         if not filepath.exists():
-            raise UnexpectedExit(SkipResult(self.connection,"",f"{timesync_file} isn't in {self.pkg_folder}, skipping transfer...",exited=-1))
-        return self.put(filepath) 
+            raise UnexpectedExit(SkipResult(self.connection,"",f"{self.timesync} isn't in {self.pkg_folder}, skipping transfer...",exited=-1))
+        res = self.put(filepath)
+        self.remote_timesync = res.remote
+        return res
     
     def install_timesync(self):
-        timesync_filename = self.timesync
-        remote_file = self.results.get("put_timesync").remote
         keep = '--force-confold' if self.clean else '--force-confnew'
-        self.log_filename = f"riaps-install-{timesync_filename}.log"
-        cmd = f"dpkg {keep} -i {remote_file} > {self.log_filename}"
+        self.log_filename = f"riaps-install-{self.timesync}.log"
+        cmd = f"dpkg {keep} -i {self.remote_timesync} > {self.log_filename}"
         return self.sudo(cmd)
 
     def retrieve_timesync_logs(self):
         return self.get(self.log_filename,f"{self.log_folder}/{self.connection.host}-{self.timesync}")
 
+class TimesyncUninstallTask(Task):
+    controlhost = "riaps-VirtualBox.local"
+    purge = None
 
+    @classmethod
+    def configure(cls,purge: bool):
+        cls.purge = purge
+
+    def get_arch(self):
+        if self.purge is None:
+            raise Exception("TimesyncUninstallTask was not configure(d)")
+        res = self.run('dpkg --print-architecture')
+        self.arch = res.stdout.strip()
+        self.timesync = f"riaps-timesync-{self.arch}"
+        return SkipResult(self.connection,"Set packages to uninstall",f"timesync: {self.timesync}")
+
+    def uninstall_timesync(self):
+        cmd = f"apt-get remove -y {self.timesync}"
+        return self.sudo(cmd)
+
+    def purge_timesync(self):
+        if self.purge:
+            return self.sudo(f"dpkg --purge {self.timesync}")
+        return SkipResult(self.connection,"Not set to purge dpkg, skipping...","")
+    
 class PycomInstallTask(Task):
     controlhost = 'riaps-VirtualBox.local'
     pkg_folder = None
@@ -298,24 +239,22 @@ class PycomInstallTask(Task):
 
     def put_pycom(self):
         filepath = Path(self.pkg_folder,self.pycom)
-        return self.put(filepath)
+        res = self.put(filepath)
+        self.remote_file = res.remote
+        return res
     
     def install_pycom(self):
-        put_pycom_res = self.results.get("put_pycom")
-        remote_file = put_pycom_res.remote
         keep = '--force-confnew' if self.clean else '--force-confold'
-        log_filename = f"riaps-install-{self.pycom}.log"
-        cmd = f"dpkg {keep} -i {remote_file} > {log_filename}"
+        self.log_filename = f"riaps-install-{self.pycom}.log"
+        cmd = f"dpkg {keep} -i {self.remote_file} > {self.log_filename}"
         return self.sudo(cmd)
     
     def remove_pycom_deb(self):
-        remote_path = self.results.get('put_pycom').remote
-        cmd = f"rm -r {remote_path}"
+        cmd = f"rm -r {self.remote_file}"
         return self.sudo(cmd)
     
     def retrieve_pycom_logs(self):
-        log_filename = f"riaps-install-{self.pycom}.log"
-        return self.get(log_filename,f"{self.log_folder}/{self.connection.host}-{self.pycom}.log")
+        return self.get(self.log_filename,f"{self.log_folder}/{self.connection.host}-{self.pycom}.log")
 
 
 class PycomUninstallTask(Task):
@@ -411,11 +350,3 @@ class ResetTask(Task):
     def start_deplo(self):
         return self.sudo('systemctl start riaps-deplo.service')
     
-
-class DevelopmentTask(Task):
-
-    def getnic(self):
-        getniccmd = "env"
-        # getniccmd = 'source /etc/riaps/env.conf && echo $RIAPSHOME'
-        res = self.sudo(getniccmd)
-        return res

@@ -1,5 +1,6 @@
 from fabric import Group
 from riaps.rfab.api.task import Task
+from invoke.exceptions import UnexpectedExit
 from .helpers import *
 
 class DeploStart(Task):
@@ -38,7 +39,14 @@ class DeploStatus(Task):
         cls.grep_pattern = grep
 
     def deplo_status(self):
-        return self.sudo(f"systemctl status riaps-deplo --no-pager{self.num_lines}{self.grep_pattern}")
+        try:
+            return self.sudo(f"systemctl status riaps-deplo --no-pager{self.num_lines}{self.grep_pattern}")
+        except UnexpectedExit as e:
+            if str(e.result.exited) in ('1','2','3'): # Don't "Fail" for certain return codes
+                return e.result
+            else:
+                raise e
+
 
 class DeploJournal(Task):
     num_lines = " -n 10"

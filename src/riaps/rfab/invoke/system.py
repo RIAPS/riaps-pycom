@@ -26,20 +26,27 @@ def check(c: Context):
             'why':'message logged for shutdown reason'})
 def shutdown(c: Context, when='now', why=''):
     """Shutdown the hosts"""
-    res = api.sys.shutdown(c.config.hosts,when,why,hide=c.config.hide)
-    res.pretty_print()
+    kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
+    SysShutdown.configure(when,why)
+    runner = TaskRunner(c.config.hosts,SysShutdown,**kwargs)
+    runner.set_log_folder(make_log_folder("sys-shutdown"))
+    runner.run()
 
 @task(pre=[call(assert_role_in,"remote")])
 def reboot(c: Context):
     """Reboot the hosts"""
-    res = api.sys.reboot(c.config.hosts,hide=c.config.hide)
-    res.pretty_print()
+    kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
+    runner = TaskRunner(c.config.hosts,SysReboot,**kwargs)
+    runner.set_log_folder(make_log_folder("sys-reboot"))
+    runner.run()
 
 @task(pre=[call(assert_role_in,"remote","nodes")])
 def clearJournal(c: Context):
     """Clear system journal"""
-    res = api.sys.sudo('journalctl --rotate && journalctl --vacuum-time=1s', c.config.hosts,hide = c.config.hide)
-    res.pretty_print()
+    kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
+    runner = TaskRunner(c.config.hosts,SysClearJournal,**kwargs)
+    runner.set_log_folder(make_log_folder("sys-clear-journal"))
+    runner.run()
 
 @task(positional=["local_file"],
       help={'local_file':'path to local file',
@@ -48,11 +55,7 @@ def put(c: Context, local_file, remote_dir=''):
     '''
     Copies a local file to the target(s)
     '''
-    # if not isfile(Path(c.cwd,local_file)):
-    #     print(f"ERROR: {local_file} is not a file")
-    #     exit(-1)
-    # res = api.sys.put(c.config.hosts, local_file, remote_dir)
-    # res.pretty_print()
+
     kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
     SysPut.configure(local_file,remote_dir)
     runner = TaskRunner(c.config.hosts,SysPut,**kwargs)
@@ -68,8 +71,12 @@ def get(c: Context, remote_file, local_dir='', name=''):
     '''
     Copies a remote file from the host(s) to local folder(s)
     '''
-    res = api.sys.get(c.config.hosts,remote_file,local_dir,name)
-    res.pretty_print()
+    kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
+    SysGet.configure(remote_file,local_dir,name)
+    runner = TaskRunner(c.config.hosts,SysGet,**kwargs)
+    runner.set_log_folder(make_log_folder("sys-get"))
+    runner.run()
+
 
 @task(positional=['command'],
       help={'command':'shell command to run, in quotes'})
@@ -85,39 +92,42 @@ def run(c: Context, command):
       help={'command':'shell command to run, in quotes'})
 def sudo(c: Context, command):
     """Sudo execute command as root:<command>"""
-    res = api.sys.sudo(command,c.config.hosts,hide=c.config.hide)
-    res.pretty_print()
+    kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
+    SysSudo.configure(command)
+    runner = TaskRunner(c.config.hosts,SysSudo,**kwargs)
+    runner.set_log_folder(make_log_folder("sys-sudo"))
+    runner.run()
 
 @task
 def arch(c: Context):
     '''
     Get architecture of host(s)
     '''
-    res = api.sys.run("dpkg --print-architecture",c.config.hosts,hide=c.config.hide)
-    res.pretty_print()
+    kwargs = {'dry':c.config.run.dry,'verbose':True}
+    runner = TaskRunner(c.config.hosts,SysArch,**kwargs)
+    runner.set_log_folder(make_log_folder("sys-arch"))
+    runner.run()
 
 @task(pre=[call(assert_role_in,'nodes','remote')])
 def flushIPTables(c: Context):
     '''
     Flush the iptables
     '''
-    res = api.sys.sudo('iptables --flush',c.config.hosts,hide=c.config.hide)
-    res.pretty_print()
+    kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
+    runner = TaskRunner(c.config.hosts,SysFlushIPTables,**kwargs)
+    runner.set_log_folder(make_log_folder("sys-flush-iptables"))
+    runner.run()
 
 @task(pre=[call(assert_role_in,'nodes','remote')],
       help={'size':"(int) number of MB"})
 def setJournalLogSize(c: Context, size):
     """Adjust journalctl log file size"""
     newSize = f'SystemMaxUse={size}M'
-    res = api.sys.sudo(f'sed -i "/SystemMaxUse/c\{newSize}" /etc/systemd/journald.conf',c.config.hosts,hide=c.config.hide)
-    res.pretty_print()
-
-@task(pre=[call(assert_role_in,'nodes','remote')])
-def getConfig(c: Context):
-    '''
-    Get configuration information from target nodes
-    '''
-    pass
+    kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
+    SysSudo.configure(f'sed -i "/SystemMaxUse/c\{newSize}" /etc/systemd/journald.conf')
+    runner = TaskRunner(c.config.hosts,SysSudo,**kwargs)
+    runner.set_log_folder(make_log_folder("sys-set-journal-log-size"))
+    runner.run()
     
 ns = Collection('sys')
 ns.add_task(check)

@@ -12,7 +12,7 @@ import time
 
 def make_log_folder(func_name,logsdir='/home/riaps/.riaps/rfab/logs'):
     assert func_name[-1] != '_', "function name cannot end in \"_\""
-    logger = logging.getLogger("TaskRunner") # TODO:Fix relationship between this func and TaskRunner
+    logger = logging.getLogger("TaskRunner")
     base = Path(logsdir)
     base.mkdir(parents=True,exist_ok=True)
     
@@ -23,7 +23,7 @@ def make_log_folder(func_name,logsdir='/home/riaps/.riaps/rfab/logs'):
     excess = len(history) - 9
     for _ in range(0,excess):
             path,_ = history.pop()
-            logger.info(f"Removing {path.name}") # TODO: Fix when this logs
+            logger.debug(f"Removing {path.name}")
             rmtree(path)
 
     now = time.localtime()
