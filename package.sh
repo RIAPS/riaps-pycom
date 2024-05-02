@@ -37,7 +37,6 @@ if [ $dev == "false" ]; then
   cp -r DEBIAN/pkgfiles/postinst package/$package_name/DEBIAN/postinst
   cp -r DEBIAN/pkgfiles/postrm package/$package_name/DEBIAN/postrm
   cp -r DEBIAN/pkgfiles/prerm package/$package_name/DEBIAN/prerm
-  cp -r DEBIAN/pkgfiles/preinst package/$package_name/DEBIAN/preinst
   cp -r DEBIAN/pkgfiles/conffiles package/$package_name/DEBIAN/conffiles
 else
   cp -r DEBIAN/pkgfiles/control-dev package/$package_name/DEBIAN/control
