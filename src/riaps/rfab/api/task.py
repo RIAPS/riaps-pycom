@@ -1,7 +1,3 @@
-'''
-- Some tasks will have a step that requires output from a prior step
-'''
-
 import logging.handlers
 from threading import Thread
 import time
@@ -216,7 +212,7 @@ class TaskRunner:
         if _excepted:
             self.logger.error(f"Excepted ({len(_excepted)}):")
             for c,ctx in _excepted.items():
-                r: f = ctx.final_res
+                r = ctx.final_res
                 hint=None
                 exception_hints=[(socket.gaierror,"No known address for host")]
                 for eh in exception_hints:

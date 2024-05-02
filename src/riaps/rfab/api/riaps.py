@@ -1,7 +1,5 @@
 from fabric import Group, Connection
-from riaps.rfab.api.helpers import *
 from riaps.rfab.api.utils import load_role
-import os
 from riaps.consts.defs import *
 from pathlib import Path
 import riaps.rfab.api.deplo as deplo

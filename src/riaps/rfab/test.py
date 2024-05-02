@@ -4,7 +4,6 @@ from fabric import Connection
 # c.run()
 # c.pretty_print()
 from riaps.rfab.api.task import STATE, TaskRunner
-from riaps.rfab.api.helpers import RFabGroupResult
 import socket
 from threading import Thread
 import time
