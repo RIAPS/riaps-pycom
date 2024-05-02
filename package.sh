@@ -33,6 +33,7 @@ mkdir -p package/$package_name/DEBIAN
 
 if [ $dev == "false" ]; then
   cp -r DEBIAN/pkgfiles/control package/$package_name/DEBIAN/control
+  cp -r DEBIAN/pkgfiles/preinst package/$package_name/DEBIAN/preinst
   cp -r DEBIAN/pkgfiles/postinst package/$package_name/DEBIAN/postinst
   cp -r DEBIAN/pkgfiles/postrm package/$package_name/DEBIAN/postrm
   cp -r DEBIAN/pkgfiles/prerm package/$package_name/DEBIAN/prerm
@@ -82,4 +83,3 @@ sed s/@version@/$pycomversion/g -i package/$package_name/DEBIAN/control
 
 fakeroot dpkg-deb --build package/$package_name
 cp package/$package_name.deb .
-

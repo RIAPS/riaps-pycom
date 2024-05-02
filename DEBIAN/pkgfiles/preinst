@@ -1,0 +1,4 @@
+#!/bin/bash
+
+echo "RIAPSAPPS=/home/riaps/riaps_apps" >> /etc/environment
+echo "RIAPSHOME=/usr/local/riaps" >> /etc/environment

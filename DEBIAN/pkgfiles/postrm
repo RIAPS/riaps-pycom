@@ -20,4 +20,7 @@ pip3 uninstall -y riaps-pycom || true
 # Remove apparmor file from the cache
 rm -f /etc/apparmor.d/cache/usr.local.bin.riaps_actor || true
 
+sed -i -E '/^RIAPSAPPS=/d' /etc/environment || true
+sed -i -E '/^RIAPSHOME=/d' /etc/environment || true
+
 systemctl daemon-reload
