@@ -1,6 +1,7 @@
 from fabric import Group
-from riaps.rfab.api.task import Task
+from riaps.rfab.api.task import Task, SkipResult
 from invoke.exceptions import UnexpectedExit
+import time
 
 class DeploStart(Task):
     def deplo_start(self):
@@ -8,7 +9,11 @@ class DeploStart(Task):
 
 class DeploStartManual(Task):
     def deplo_start_manual(self):
-        return self.sudo('riaps_deplo >~/riaps-$(hostname).log 2>&1 &',pty=True)
+        # nohup handles redirection of stderr to stdout for us
+        # backgrounding (with "&") didn't seem to work with fab2, but disown does
+        cmd = '-E nohup riaps_deplo > ~/riaps-$(hostname).log'
+        _ = self.sudo(cmd,disown=True)
+        return SkipResult(self.connection,cmd,stdout='')
 
 class DeploRestart(Task):
     def deplo_restart(self):
