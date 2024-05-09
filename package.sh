@@ -48,12 +48,14 @@ fi
 
 mkdir -p package/$package_name/opt/riaps-pycom/
 mkdir -p package/$package_name/etc/
+mkdir -p package/$package_name/usr/local/bin/
 mkdir -p package/$package_name/$PYCOM_ETC_DIR/
 mkdir -p package/$package_name/$PYCOM_LN_DIR/etc/
 mkdir -p package/$package_name/$PYCOM_LN_DIR/keys/
 mkdir -p package/$package_name/$PYCOM_LN_DIR/lang/
 
 cp -r DEBIAN/sysfiles/etc/* package/$package_name/etc/.
+cp -r DEBIAN/sysfiles/usr/local/bin/* package/$package_name/usr/local/bin/.
 cp -r pyproject.toml package/$package_name/opt/riaps-pycom/.
 cp -r LICENSE package/$package_name/opt/riaps-pycom/.
 cp -r README.md package/$package_name/opt/riaps-pycom/.
