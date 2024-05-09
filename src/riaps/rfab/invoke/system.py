@@ -120,7 +120,7 @@ def flushIPTables(c: Context):
 
 @task(pre=[call(assert_role_in,'nodes','remote')],
       help={'size':"(int) number of MB"})
-def setJournalLogSize(c: Context, size):
+def setJournalLogSize(c: Context, size=64):
     """Adjust journalctl log file size"""
     newSize = f'SystemMaxUse={size}M'
     kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
