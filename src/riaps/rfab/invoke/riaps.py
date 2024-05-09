@@ -44,6 +44,18 @@ def updateAptKey(c: Context):
     runner.set_log_folder(make_log_folder("riaps-update-apt-key"))
     runner.run()
 
+
+@task(pre=[call(assert_role_in,'remote','node')])
+def updateLogConfig(c: Context):
+    """Move riaps-log.conf from CWD to node"""
+    kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
+    if not Path(c.cwd,"riaps-log.conf").exists():
+        print("ERROR: riaps-log.conf not in current working directory")
+        exit(1)
+    runner = TaskRunner(c.config.hosts,UpdateLogConfig,**kwargs)
+    runner.set_log_folder(make_log_folder("riaps-update-log-config"))
+    runner.run()
+
 @task(help={'package':"One of: timesync, pycom",
             'clean': 'Overwrite RIAPS config files'},
       auto_shortflags=False)
@@ -68,15 +80,27 @@ def install(c: Context, package, clean=False):
         runner.run()
 
 @task(pre=[call(assert_role_in,'remote')],
-      help={'purge': "Purge RIAPS config files"},
+      help={'package':"One of: timesync, pycom",
+            'purge': "Purge RIAPS config files"},
+      positional=['package'], 
       auto_shortflags=False)
-def uninstall(c: Context, purge=False):
+def uninstall(c: Context, package, purge=False):
     """Uninstall all RIAPS packages from nodes"""
     kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose,'pty':True}
-    PycomUninstallTask.configure(purge)
-    runner = TaskRunner(c.config.hosts,PycomUninstallTask,**kwargs)
-    runner.set_log_folder(make_log_folder("riaps-uninstall-pycom"))
-    runner.run()
+    if not package in ('timesync','pycom'):
+        print(f"ERROR: cannot uninstall {package}, choose from: timesync, pycom")
+        exit(-1)
+    if package == 'pycom':
+        PycomUninstallTask.configure(purge)
+        runner = TaskRunner(c.config.hosts,PycomUninstallTask,**kwargs)
+        runner.set_log_folder(make_log_folder("riaps-uninstall-pycom"))
+        runner.run()
+    else:
+        TimesyncUninstallTask.configure(purge)
+        runner = TaskRunner(c.config.hosts,TimesyncUninstallTask,**kwargs)
+        runner.set_log_folder(make_log_folder("riaps-uninstall-timesync"))
+        runner.run()
+        
 
 @task(pre=[call(assert_role_in,'nodes','remote')])
 def reset(c: Context):
@@ -93,6 +117,7 @@ ns = Collection('riaps')
 ns.add_task(update)
 ns.add_task(updateNodeKey)
 ns.add_task(updateAptKey)
+ns.add_task(updateLogConfig)
 ns.add_task(install)
 ns.add_task(uninstall)
 ns.add_task(reset)

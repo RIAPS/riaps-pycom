@@ -4,7 +4,7 @@ from pathlib import Path
 
 class SysCheck(Task):
     def sys_check(self):
-        return self.sudo("hostname")
+        return self.sudo("uname -a")
 
 class SysShutdown(Task):
     when = 'now'
@@ -23,8 +23,11 @@ class SysReboot(Task):
         return self.sudo("reboot &")
 
 class SysClearJournal(Task):
-    def clear_journal(self):
-        return self.sudo('journalctl --rotate && journalctl --vacuum-time=1s')
+    def rotate_logs(self):
+        return self.sudo('journalctl --rotate')
+        
+    def set_vacuum_time(self):
+        return self.sudo('journalctl --vacuum-time=1s')
 
 class SysSudo(Task):
     cmd = None

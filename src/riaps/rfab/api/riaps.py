@@ -127,6 +127,16 @@ class UpdateAptKey(Task):
     def run_update(self):
         return self.sudo('wget -qO - https://riaps.isis.vanderbilt.edu/keys/riapspublic.key | apt-key add -')
 
+class UpdateLogConfig(Task):
+    def put_log_conf(self):
+        return self.put('riaps-log.conf')
+    
+    def move_log_conf(self):
+        return self.sudo("mv riaps-log.conf /etc/riaps/riaps-log.conf")
+ 
+    def chown_log_conf(self):
+        return self.sudo("chown root:root /etc/riaps/riaps-log.conf")
+    
 
 class TimesyncInstallTask(Task):
     pkg_folder = None
