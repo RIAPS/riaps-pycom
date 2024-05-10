@@ -1,4 +1,4 @@
-# Last Modified: Mar 12 2021
+# Last Modified: May 10 2024
 # Initial AppArmor security profile for RIAPS actors
 #
 # *** NOT RECOMMENDED FOR USE IN ENFORCE MODE WHILE DEVELOPING A RIAPS APP ***
@@ -17,7 +17,7 @@
 # Location of RIAPS scripts (i.e riaps_actor)
 @{RIAPSEXEC}=/usr/local/bin
 # Python version
-@{PYTHONVERSION}=3.10
+@{PYTHONVERSION}=3.11
 
 #include <tunables/global>
 
