@@ -272,7 +272,7 @@ class DiscoClient(object):
     
     def registerEndpoint(self, bundle):
         # bundle = [(partName,partTypeName),PortInfo]
-        self.logger.info("registerEndpoint: %s" % str(bundle))
+        self.logger.info("registerEndpoint: %r", bundle)
         # print ("DiscoClient.registerEndpoint",bundle)
         # Prefix: (partName, partType)
         # (pub,local,name,type,host,port)
