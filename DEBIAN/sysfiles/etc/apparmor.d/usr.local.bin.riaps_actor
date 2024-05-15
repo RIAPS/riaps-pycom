@@ -1,4 +1,4 @@
-# Last Modified: May 10 2024
+# Last Modified: Mar 12 2021
 # Initial AppArmor security profile for RIAPS actors
 #
 # *** NOT RECOMMENDED FOR USE IN ENFORCE MODE WHILE DEVELOPING A RIAPS APP ***
@@ -6,7 +6,7 @@
 # To install:
 # - Edit the 4 variables at the top for the final installation
 # - Edit the main profile name (s.t. it refers to the riaps_actor executable script)
-# - Rename the fsile corresponding to the value of @{RIAPSEXEC}/riaps_actor
+# - Rename the file corresponding to the value of @{RIAPSEXEC}/riaps_actor
 #   According to the AppArmor spec, all '/' must be replace with '.' , except the first one
 # - Copy the resulting file into /etc/apparmor.d, or load it into the kernel using apparmor_parser
 
