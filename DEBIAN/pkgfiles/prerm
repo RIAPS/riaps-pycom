@@ -1,6 +1,8 @@
 #!/bin/bash
 
 # Stop and remove RIAPS services
+systemctl stop riaps-apparmor-pyversion.service
+systemctl disable riaps-apparmor-pyversion.service || true
 systemctl stop riaps-rm-cgroups.service || true
 systemctl disable riaps-rm-cgroups.service
 systemctl stop riaps-rm-quota.service || true

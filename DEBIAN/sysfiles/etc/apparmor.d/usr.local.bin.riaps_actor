@@ -6,7 +6,7 @@
 # To install:
 # - Edit the 4 variables at the top for the final installation
 # - Edit the main profile name (s.t. it refers to the riaps_actor executable script)
-# - Rename the file corresponding to the value of @{RIAPSEXEC}/riaps_actor
+# - Rename the fsile corresponding to the value of @{RIAPSEXEC}/riaps_actor
 #   According to the AppArmor spec, all '/' must be replace with '.' , except the first one
 # - Copy the resulting file into /etc/apparmor.d, or load it into the kernel using apparmor_parser
 
@@ -17,7 +17,7 @@
 # Location of RIAPS scripts (i.e riaps_actor)
 @{RIAPSEXEC}=/usr/local/bin
 # Python version
-@{PYTHONVERSION}=3.11
+@{PYTHONVERSION}=3.10
 
 #include <tunables/global>
 
