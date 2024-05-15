@@ -43,12 +43,15 @@ ln -s $PYCOM_ETC_DIR/riaps-ctrl.glade $PYCOM_LN_DIR/etc/riaps-ctrl.glade
 
 # Set permissions for root device softlink script (quota)
 chmod -f 755 /usr/local/bin/link_root_device.sh
+chmod -f 755 /usr/local/bin/set_apparmor_pyversion.sh
 
 # Remove location used while installing riaps-pycom package
 rm -rf /opt/riaps-pycom/ || true
 
 # Enable and start RIAPS services
 systemctl daemon-reload
+systemctl enable riaps-apparmor-pyversion.service
+systemctl start riaps-apparmor-pyversion.service || true
 systemctl enable riaps-rm-cgroups.service
 systemctl start riaps-rm-cgroups.service || true
 systemctl enable riaps-rm-quota.service
