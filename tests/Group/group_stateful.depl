@@ -1,0 +1,29 @@
+<<<<<<< HEAD
+// 
+app GroupApp {
+	// Message test
+	// on all GroupActorA(gs='12',tl='m'), GroupActorB(gs='23',tl='m'), GroupActorC(gs='13',tl='m');
+		
+	// Leader message test
+	// on all GroupActorA(gs='1',tl='l'), GroupActorB(gs='1',tl='l'), GroupActorC(gs='1',tl='l');	
+	
+	// Vote test (topic)
+	// on all GroupActorA(gs='1',tl='v'), GroupActorB(gs='1',tl='v'), GroupActorC(gs='1',tl='v');
+
+	// Vote test (action)
+	// on all GroupActorA(gs='1',tl='t'), GroupActorB(gs='1',tl='t'), GroupActorC(gs='1',tl='t');
+	
+	// Group leave test
+	on all GroupActorA(gs='1',tl='d'), GroupActorB(gs='1',tl='d'), GroupActorC(gs='1',tl='d');
+	
+	// Group leave test (with messages)
+	// on all GroupActorA(gs='1',tl='cdm'), GroupActorB(gs='1',tl='cdm'), GroupActorC(gs='1',tl='cdm');
+
+	// Not test activity, just get election going
+	// on all GroupActorA(gs='1'), GroupActorB(gs='1'), GroupActorC(gs='1'), GroupActorD(gs='1');
+=======
+app GroupFSM {
+    on (10.1.1.111) StateGroupie();
+    on (10.1.1.115) StateGroupie();
+>>>>>>> dd77520 (StatefulGroupie: currently just joins then waits)
+}

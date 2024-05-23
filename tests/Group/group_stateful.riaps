@@ -1,0 +1,60 @@
+// RIAPS Group 
+
+app GroupFSM {
+	// Message types used in the app
+    message Msg;
+    
+    group TheGroup with leader using Msg
+	; 
+      
+	// Component
+    component Groupie(name,gs,tl) {
+      timer clock 5000; 							
+    }
+   component StatefulGroupie() {
+      timer sporadic;
+   }
+    
+     
+    // Actor
+    actor GroupActorA(gs='',tl='') {
+    //   local Msg; 
+       {  
+          groupie : Groupie(name='A',gs=gs,tl=tl);
+       }
+    }
+    
+    // Actor
+    actor GroupActorB(gs='',tl='') {
+    //   local Msg; 
+       {  
+          groupie : Groupie(name='B',gs=gs,tl=tl);
+       }
+    }
+
+    // Actor
+    actor GroupActorC(gs='',tl='') {
+    //   local Msg; 
+       {  
+          groupie : Groupie(name='C',gs=gs,tl=tl);
+       }
+    }
+<<<<<<< HEAD
+    
+    // Actor
+    actor GroupActorD(gs='',tl='') {
+    //   local Msg; 
+       {  
+          groupie : Groupie(name='D',gs=gs,tl=tl);
+       }
+    }	
+=======
+
+    actor StateGroupie() {
+      {
+         groupie : StatefulGroupie();
+      }
+    }
+	
+>>>>>>> dd77520 (StatefulGroupie: currently just joins then waits)
+}
