@@ -3,22 +3,27 @@ app GroupFSM {
     // Message types used in the app
     message Msg;
 
-    group TheGroup with leader using Msg;
+    group TheGroup with leader using Msg
+      heartbeat = 2000,
+      electionMin = 3000,
+      electionMax = 4000, 
+      peerTimeout = 6000,
+      consensusTimeout = 3000;
 
     //-------------------
     //  Components
     //-------------------
 
-    component Groupie(uid) {
+    component Member(uid) {
       timer clock 1000 msec;
     }
 
     //-------------------
     //  Actors
     //-------------------
-    actor GroupActor(uid="") {
+    actor Group_ACTOR(uid="") {
        {
-          groupie : Groupie(uid=uid);
+          member : Member(uid=uid);
        }
     }
 }

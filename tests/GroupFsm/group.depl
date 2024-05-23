@@ -2,10 +2,12 @@
 app GroupFSM {
 
     host all {
-        network 172.21.20.70; //IP address of riaps_app_log_server
+        network 192.168.0.100; //IP address of riaps_app_log_server
     }
 
-    on (172.21.20.45) GroupActor(uid="2");
-    on (172.21.20.55) GroupActor(uid="1");
+    on (192.168.0.101) Group_ACTOR(uid="1");
+    on (192.168.0.102) Group_ACTOR(uid="2");
+    on (192.168.0.103) Group_ACTOR(uid="3");
+
 
 }
