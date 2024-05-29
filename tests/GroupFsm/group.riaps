@@ -4,11 +4,11 @@ app GroupFSM {
     message Msg;
 
     group TheGroup with leader using Msg
-      heartbeat = 2000,
-      electionMin = 3000,
-      electionMax = 4000, 
-      peerTimeout = 6000,
-      consensusTimeout = 3000;
+      heartbeat = 1000,
+      electionMin = 1500,
+      electionMax = 2000, 
+      peerTimeout = 3000,
+      consensusTimeout = 1500;
 
     //-------------------
     //  Components

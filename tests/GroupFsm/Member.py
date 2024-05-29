@@ -20,6 +20,8 @@ class Member(Component):
         self.current_group = None
         self.activated = False
         self.group_id = None
+        self.round_without_leader = 0
+        self.round_limit = 20
 
     def update_group(self):
         if self.current_group:
@@ -42,11 +44,34 @@ class Member(Component):
         if self.activated and not self.current_group:
             self.update_group()
         if self.current_group:
-            self.logger.info(
-                f"Node: {self.name} Group: {self.current_group.getGroupName()} has leader? {self.current_group.hasLeader()}"
-            )
             if self.current_group.hasLeader():
+                self.round_without_leader = 0
                 self.update_group()
+            else:
+                self.round_without_leader += 1
+
+                self.logger.info(
+                    f"Node: {self.name} Group: {self.current_group.getGroupName()} Leader: {self.current_group.hasLeader()} Round: {self.round_without_leader}"
+                )
+                # seconds_to_timeout = self.current_group.groupThread.timeout
+                # # self.logger.info(f"Time until next timeout: {seconds_to_timeout}")
+                # # if seconds_to_timeout <= 1000:
+                # if self.round_without_leader >= self.round_limit:
+                #     self.round_without_leader = 0
+                #     old_election_min = self.current_group.electionMin
+                #     old_election_max = self.current_group.electionMax
+                #     old_peer_timeout = self.current_group.peerTimeout
+                #     election_min = old_election_min + 5000
+                #     election_max = old_election_max + 5000
+                #     peer_timeout = old_peer_timeout + 5000
+                #     self.current_group.electionMin = election_min
+                #     self.current_group.electionMax = election_max
+                #     self.current_group.peerTimeout = peer_timeout
+                #     self.logger.info(
+                #         f"Increase election timeout"
+                #         f"from [{old_election_min}:{old_election_max}]"
+                #         f"to [{election_min}:{election_max}]"
+                #     )
 
     def handleActivate(self):
         self.activated = True
