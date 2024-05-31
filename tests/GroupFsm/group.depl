@@ -8,6 +8,4 @@ app GroupFSM {
     on (192.168.0.101) Group_ACTOR(uid="1");
     on (192.168.0.102) Group_ACTOR(uid="2");
     on (192.168.0.103) Group_ACTOR(uid="3");
-
-
 }
