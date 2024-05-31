@@ -8,3 +8,4 @@
 # import riaps.test_suite.test_api as test_api
 
 from riaps.test_suite.fixtures.LogServer import log_server, platform_log_server
+from riaps.test_suite.fixtures.pytest_logger import testslogger
