@@ -46,7 +46,8 @@ class UpdateNodeKey(Task):
             raise TypeError(keep_password)
 
     def put_ssh(self):
-        res = self.put(self.ssh_privatekey,remote='.ssh')
+        self.run('[ -e /etc/riaps ]',fail_msg='/etc/riaps doesn\'t exist. Is riaps-pycom installed?')
+        res = self.put(self.ssh_privatekey,remote='/home/riaps/.ssh/')
         self.remote_ssh_privatekey_path = Path(res.remote)
         return res
 
