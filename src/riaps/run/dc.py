@@ -131,17 +131,18 @@ class GroupThread(threading.Thread):
         self.groupConsensusTimeout = group.consensusTimeout # const.groupConsensusTimeout
         self.timeout = None
         self.leaderDeadline = None                          # deadline to recv an expected heartbeat from leader
+        self.peers = {}
         self.numPeers = -1
         self.leader = None
         self.ownId = None 
     
     def setup(self):
         self.group.setup(self)
+        actorId = self.group.parent.parent.owner.parent.getActorID()
+        # Assumption: id can be represented on 8 bytes
+        self.ownId = actorId + id(self.group).to_bytes(8, 'big')
+        assert(len(self.ownId) == 16)
         if self.coordinated:
-            actorId = self.group.parent.parent.owner.parent.getActorID()
-            # Assumption: id can be represented on 8 bytes
-            self.ownId = actorId + id(self.group).to_bytes(8, 'big')
-            assert(len(self.ownId) == 16)
             self.peers = {}
             self.numPeers = len(self.peers)
             self.timeout = self.groupHeartbeat
@@ -335,7 +336,7 @@ class GroupThread(threading.Thread):
                     self.groupSocket.send_multipart([zmq.Frame(Group.GROUP_ERR), zmq.Frame(pickle.dumps(e))])
                     self.logger.error("error sending GROUP_RTC:%s", str(e)) 
         elif cmd == Group.GROUP_MLT:    # Our component is leaving the group
-            self.logger.info("GroupThread.handleCompMessage(GROUP_MLT,...)")
+            self.logger.info(f"GroupThread.handleCompMessage(GROUP_MLT,{self.ownId.hex()})")
             self.pubPort.sendGroup(Group.GROUP_MLT,zmq.Frame(self.ownId))
             toStop = True 
         else:
@@ -424,10 +425,13 @@ class GroupThread(threading.Thread):
             frame = msgFrames[1]
             leaver = struct.unpack('!16s', frame)[0]
             if leaver in self.peers:
+                self.logger.info(f"GroupThread.handleNetMessage(GROUP_MLT,{leaver.hex()})")
                 self.sendChangeMessage(Group.GROUP_MLT,leaver)
-                del self.peers[leaver] 
+                del self.peers[leaver]
+            else:
+                self.logger.warning(f"GroupThread.handleNetMessage(GROUP_MLT,{leaver.hex()}) - not peer")
             self.numPeers = len(self.peers)
-        if self.coordinated:  # Non-data messages are meaningful only for coordinated groups 
+        elif self.coordinated:  # Non-data messages are meaningful only for coordinated groups 
             assert(now != None)
             frame = msgFrames[1]
             self.logger.info("... [%s].%d:%s", \
@@ -817,6 +821,7 @@ class GroupThread(threading.Thread):
             if toStop: break
         self.done = False
         self.group.unsetup(self)
+        time.sleep(const.groupDiscoDelay/1000)
 
 
 class Group(object):
@@ -878,7 +883,7 @@ class Group(object):
         # ???
         msg = ('group', self.groupType, self.groupInstance, self.messageType, host, pubPort, partName, partType, portName) 
         self.thread.sendControl(msg)
-        time.sleep(1.0)  # 
+        time.sleep(const.groupDiscoDelay/1000)# 
     
     GROUP_PARAMETERS = {'heartbeat' : const.groupHeartbeat, 
                         'electionMin' : const.groupElectionMin,
@@ -902,7 +907,11 @@ class Group(object):
     def leave(self):
         self.logger.info("Group.leave(): %s" % self.groupInstanceName)
         # 
-        comp = self.parent.parent
+        msgFrames = [zmq.Frame(Group.GROUP_MLT)]    # Send out message the component is leaving group
+        self.compSocket.send_multipart(msgFrames)
+        self.groupThread.join()
+               
+        comp = self.parent.parent                   # Inform component/disco about leaving the group
         partName = comp.getName()
         partType = comp.getTypeName()
         portName = self.groupInstanceName
@@ -911,10 +920,6 @@ class Group(object):
         msg = ('ungroup', self.groupType, self.groupInstance, self.messageType, host, pubPort, partName, partType, portName) 
         self.thread.sendControl(msg)
         
-        msgFrames = [zmq.Frame(Group.GROUP_MLT)]    # Send out message the component is leaving group
-        self.compSocket.send_multipart(msgFrames)
-        self.groupThread.join()
-
         self.compSocket.close()
     
     def getGroupName(self):
@@ -1387,10 +1392,12 @@ class Coordinator(object):
         key = self.groupName(groupType, groupInstance)
         res = None
         if key in self.groupMembers:
+            self.logger.info("Coordinator.joinGroup - known group (%s)" % key)
             res = self.groupMembers[key]
         else:
             res = Group(self, thread, groupType, groupInstance, componentId, groupSpec, groupMinSize)
             self.groupMembers[key] = res
+            self.logger.info("Coordinator.joinGroup - new group (%s)" % key)
         return res
     
     def getGroup(self, groupType, groupInstance):
