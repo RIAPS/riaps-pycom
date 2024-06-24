@@ -44,6 +44,7 @@ class Member(Component):
         if self.activated and not self.current_group:
             self.update_group()
         if self.current_group:
+            self.logger.info(f"Group size: {self.current_group.groupSize()}")
             if self.current_group.hasLeader():
                 self.round_without_leader = 0
                 self.update_group()
