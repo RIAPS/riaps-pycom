@@ -2,14 +2,14 @@ import pathlib
 import pytest
 import queue
 import time
-from riaps.test_suite import test_api, monitor
+from riaps.test_suite import test_api
 from riaps.test_suite.fixtures import utils
 
 # ------------ #
 # -- Config -- #
 # ------------ #
 scott_config = {
-    "VM_IP": "192.168.0.100",
+    "VM_IP": "192.168.10.100",
     "app_folder_path": pathlib.Path(__file__).parents[1],
     "app_file_name": "group.riaps",
     "depl_file_name": "group.depl",
@@ -61,7 +61,7 @@ def test_app(platform_log_server, log_server):
         app_folder_path=app_folder_path,
         app_file_name=app_file_name,
         depl_file_name=depl_file_name,
-        database_type="dht",
+        database_type="redis",
         required_clients=client_list,
     )
 
