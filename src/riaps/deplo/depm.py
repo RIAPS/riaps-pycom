@@ -790,7 +790,7 @@ class DeploymentManager(threading.Thread):
         self.procm.release(qualName)
         
         self.executor.submit(self.terminateActor,proc,appName,actorName)
-        time.sleep(0)
+        time.sleep(0.1)
         
         record = self.actors[qualName]
         zdevice = record.zdevice
