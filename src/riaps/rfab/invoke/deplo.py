@@ -13,7 +13,7 @@ def start(c: Context):
     """Start deployment service"""
     kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
     runner = TaskRunner(c.config.hosts,DeploStart,**kwargs)
-    runner.set_log_folder(make_log_folder("deplo-start"))
+    runner.set_log_folder(make_log_folder("deplo.start"))
     runner.run()
 
 # @serial
@@ -29,7 +29,7 @@ def startManual(c: Context):
     """Start deplo on hosts as standard process"""
     kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
     runner = TaskRunner(c.config.hosts,DeploStartManual,**kwargs)
-    runner.set_log_folder(make_log_folder("deplo-start-manual"))
+    runner.set_log_folder(make_log_folder("deplo.startManual"))
     runner.run()
 
 @task(pre=[call(assert_role_in,'nodes','remote')])
@@ -37,7 +37,7 @@ def restart(c: Context):
     """Restart deployment service"""
     kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
     runner = TaskRunner(c.config.hosts,DeploRestart,**kwargs)
-    runner.set_log_folder(make_log_folder("deplo-restart"))
+    runner.set_log_folder(make_log_folder("deplo.restart"))
     runner.run()
 
 @task(pre=[call(assert_role_in,'nodes','remote')])
@@ -45,7 +45,7 @@ def stop(c: Context):
     """Stop deployment service"""
     kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
     runner = TaskRunner(c.config.hosts,DeploStop,**kwargs)
-    runner.set_log_folder(make_log_folder("deplo-stop"))
+    runner.set_log_folder(make_log_folder("deplo.stop"))
     runner.run()
 
 @task(pre=[call(assert_role_in,'nodes','remote')])
@@ -53,7 +53,7 @@ def enable(c: Context):
     """Enable restarts for crash/startup"""
     kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
     runner = TaskRunner(c.config.hosts,DeploEnable,**kwargs)
-    runner.set_log_folder(make_log_folder("deplo-enable"))
+    runner.set_log_folder(make_log_folder("deplo.enable"))
     runner.run()
 
 @task(pre=[call(assert_role_in,'nodes','remote')])
@@ -61,7 +61,7 @@ def disable(c: Context):
     """Disable restarts for crash/startup"""
     kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
     runner = TaskRunner(c.config.hosts,DeploDisable,**kwargs)
-    runner.set_log_folder(make_log_folder("deplo-disable"))
+    runner.set_log_folder(make_log_folder("deplo.disable"))
     runner.run()
 
 @task(pre=[call(assert_role_in,'nodes','remote')],
@@ -72,7 +72,7 @@ def status(c: Context, n='10', grep=''):
     kwargs = {'dry':c.config.run.dry,'verbose':True}
     DeploStatus.configure(n,grep)
     runner = TaskRunner(c.config.hosts,DeploStatus,**kwargs)
-    runner.set_log_folder(make_log_folder("deplo-status"))
+    runner.set_log_folder(make_log_folder("deplo.status"))
     runner.run()
 
 @task(pre=[call(assert_role_in,'nodes','remote')],
@@ -83,7 +83,7 @@ def journal(c: Context, n='10', grep=''):
     kwargs = {'dry':c.config.run.dry,'verbose':True}
     DeploJournal.configure(n,grep)
     runner = TaskRunner(c.config.hosts,DeploJournal,**kwargs)
-    runner.set_log_folder(make_log_folder("deplo-journal"))
+    runner.set_log_folder(make_log_folder("deplo.journal"))
     runner.run()
 
 ns = Collection('deplo')

@@ -17,12 +17,12 @@ def update(c: Context):
     if c.config.role in ('control','all'):
         print("Updating the control node...")
         runner = TaskRunner(c.config.hosts,UpdateControl,**kwargs)
-        runner.set_log_folder(make_log_folder("riaps-update-control"))
+        runner.set_log_folder(make_log_folder("riaps.update-control"))
         runner.run()
     if c.config.role in ('remote','all'):
         print("Updating the remote node(s)...")
         runner = TaskRunner(c.config.hosts,UpdateRemote,**kwargs)
-        runner.set_log_folder(make_log_folder("riaps-update-remote"))
+        runner.set_log_folder(make_log_folder("riaps.update-remote"))
         runner.run()
 
 @task(pre=[call(assert_role_in,'remote')],
@@ -33,7 +33,7 @@ def updateNodeKey(c: Context, keep_password=False):
     kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
     UpdateNodeKey.configure(keep_password)
     runner = TaskRunner(c.config.hosts,UpdateNodeKey,**kwargs)
-    runner.set_log_folder(make_log_folder("riaps-update-node-key"))
+    runner.set_log_folder(make_log_folder("riaps.updateNodeKey"))
     runner.run()
         
 @task
@@ -41,7 +41,7 @@ def updateAptKey(c: Context):
     """Update RIAPS apt repo key"""
     kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
     runner = TaskRunner(c.config.hosts,UpdateAptKey,**kwargs)
-    runner.set_log_folder(make_log_folder("riaps-update-apt-key"))
+    runner.set_log_folder(make_log_folder("riaps.updateAptKey"))
     runner.run()
 
 
@@ -53,7 +53,7 @@ def updateLogConfig(c: Context):
         print("ERROR: riaps-log.conf not in current working directory")
         exit(1)
     runner = TaskRunner(c.config.hosts,UpdateLogConfig,**kwargs)
-    runner.set_log_folder(make_log_folder("riaps-update-log-config"))
+    runner.set_log_folder(make_log_folder("riaps.updateLogConfig"))
     runner.run()
 
 @task(pre=[call(assert_role_in,'remote','node')])
@@ -82,12 +82,12 @@ def install(c: Context, package, clean=False):
     if package == 'pycom':
         PycomInstallTask.configure(c.cwd,logs_folder,clean)
         runner = TaskRunner(c.config.hosts,PycomInstallTask,**kwargs)
-        runner.set_log_folder(make_log_folder("riaps-install-pycom"))
+        runner.set_log_folder(make_log_folder("riaps.install-pycom"))
         runner.run()
     else:
         TimesyncInstallTask.configure(c.cwd,logs_folder,clean)
         runner = TaskRunner(c.config.hosts,TimesyncInstallTask,**kwargs)
-        runner.set_log_folder(make_log_folder("riaps-install-timesync"))
+        runner.set_log_folder(make_log_folder("riaps.install-timesync"))
         runner.run()
 
 @task(pre=[call(assert_role_in,'remote')],
@@ -104,12 +104,12 @@ def uninstall(c: Context, package, purge=False):
     if package == 'pycom':
         PycomUninstallTask.configure(purge)
         runner = TaskRunner(c.config.hosts,PycomUninstallTask,**kwargs)
-        runner.set_log_folder(make_log_folder("riaps-uninstall-pycom"))
+        runner.set_log_folder(make_log_folder("riaps.uninstall-pycom"))
         runner.run()
     else:
         TimesyncUninstallTask.configure(purge)
         runner = TaskRunner(c.config.hosts,TimesyncUninstallTask,**kwargs)
-        runner.set_log_folder(make_log_folder("riaps-uninstall-timesync"))
+        runner.set_log_folder(make_log_folder("riaps.uninstall-timesync"))
         runner.run()
         
 
@@ -118,7 +118,7 @@ def reset(c: Context):
     """Stop all RIAPS procs & remove all apps, restart from clean state"""
     kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
     runner = TaskRunner(c.config.hosts,ResetTask,**kwargs)
-    runner.set_log_folder(make_log_folder("riaps-reset"))
+    runner.set_log_folder(make_log_folder("riaps.reset"))
     runner.run()
 
 @task(auto_shortflags=False)
@@ -151,6 +151,7 @@ def getAppLogs(c: Context, name: str):
             exit(1)
     logfolder.mkdir(exist_ok=True)
     runner = TaskRunner(c.config.hosts,GetAppLogsTask.configure(name,logfolder),**kwargs)
+    runner.set_log_folder(make_log_folder("riaps.getAppLogs"))
     runner.run()
 
 

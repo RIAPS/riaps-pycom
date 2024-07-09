@@ -17,7 +17,7 @@ def check(c: Context):
     '''
     kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
     runner = TaskRunner(c.config.hosts,SysCheck,**kwargs)
-    runner.set_log_folder(make_log_folder("sys-check"))
+    runner.set_log_folder(make_log_folder("sys.check"))
     runner.run()
 
 
@@ -29,7 +29,7 @@ def shutdown(c: Context, when='now', why=''):
     kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
     SysShutdown.configure(when,why)
     runner = TaskRunner(c.config.hosts,SysShutdown,**kwargs)
-    runner.set_log_folder(make_log_folder("sys-shutdown"))
+    runner.set_log_folder(make_log_folder("sys.shutdown"))
     runner.run()
 
 @task(pre=[call(assert_role_in,"remote")])
@@ -37,7 +37,7 @@ def reboot(c: Context):
     """Reboot the hosts"""
     kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
     runner = TaskRunner(c.config.hosts,SysReboot,**kwargs)
-    runner.set_log_folder(make_log_folder("sys-reboot"))
+    runner.set_log_folder(make_log_folder("sys.reboot"))
     runner.run()
 
 @task(pre=[call(assert_role_in,"remote","nodes")])
@@ -45,7 +45,7 @@ def clearJournal(c: Context):
     """Clear system journal"""
     kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
     runner = TaskRunner(c.config.hosts,SysClearJournal,**kwargs)
-    runner.set_log_folder(make_log_folder("sys-clear-journal"))
+    runner.set_log_folder(make_log_folder("sys.clearJournal"))
     runner.run()
 
 @task(positional=["local_file"],
@@ -59,7 +59,7 @@ def put(c: Context, local_file, remote_dir=''):
     kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
     SysPut.configure(local_file,remote_dir)
     runner = TaskRunner(c.config.hosts,SysPut,**kwargs)
-    runner.set_log_folder(make_log_folder("sys-put"))
+    runner.set_log_folder(make_log_folder("sys.put"))
     runner.run()
 
 
@@ -74,7 +74,7 @@ def get(c: Context, remote_file, local_dir='', name=''):
     kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
     SysGet.configure(remote_file,local_dir,name)
     runner = TaskRunner(c.config.hosts,SysGet,**kwargs)
-    runner.set_log_folder(make_log_folder("sys-get"))
+    runner.set_log_folder(make_log_folder("sys.get"))
     runner.run()
 
 
@@ -85,7 +85,7 @@ def run(c: Context, command):
     kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
     SysRun.configure(command)
     runner = TaskRunner(c.config.hosts,SysRun,**kwargs)
-    runner.set_log_folder(make_log_folder("sys-run"))
+    runner.set_log_folder(make_log_folder("sys.run"))
     runner.run()
 
 @task(positional=['command'],
@@ -95,7 +95,7 @@ def sudo(c: Context, command):
     kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
     SysSudo.configure(command)
     runner = TaskRunner(c.config.hosts,SysSudo,**kwargs)
-    runner.set_log_folder(make_log_folder("sys-sudo"))
+    runner.set_log_folder(make_log_folder("sys.sudo"))
     runner.run()
 
 @task
@@ -105,7 +105,7 @@ def arch(c: Context):
     '''
     kwargs = {'dry':c.config.run.dry,'verbose':True}
     runner = TaskRunner(c.config.hosts,SysArch,**kwargs)
-    runner.set_log_folder(make_log_folder("sys-arch"))
+    runner.set_log_folder(make_log_folder("sys.arch"))
     runner.run()
 
 @task(pre=[call(assert_role_in,'nodes','remote')])
@@ -115,7 +115,7 @@ def flushIPTables(c: Context):
     '''
     kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
     runner = TaskRunner(c.config.hosts,SysFlushIPTables,**kwargs)
-    runner.set_log_folder(make_log_folder("sys-flush-iptables"))
+    runner.set_log_folder(make_log_folder("sys.flushIPTables"))
     runner.run()
 
 @task(pre=[call(assert_role_in,'nodes','remote')],
@@ -126,7 +126,7 @@ def setJournalLogSize(c: Context, size=64):
     kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
     SysSudo.configure(f'sed -i "/SystemMaxUse/c\{newSize}" /etc/systemd/journald.conf')
     runner = TaskRunner(c.config.hosts,SysSudo,**kwargs)
-    runner.set_log_folder(make_log_folder("sys-set-journal-log-size"))
+    runner.set_log_folder(make_log_folder("sys.setJournalLogSize"))
     runner.run()
 
 @task(pre=[call(assert_role_in,'nodes','remote','all')])
@@ -142,6 +142,7 @@ def getConfig(c: Context):
             exit(1)
     logfolder.mkdir(exist_ok=True)
     runner = TaskRunner(c.config.hosts,SysGetConfig.configure(logfolder),**kwargs)
+    runner.set_log_folder(make_log_folder("sys.getConfig"))
     runner.run()
 
 

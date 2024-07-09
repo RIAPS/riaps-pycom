@@ -12,7 +12,7 @@ def config(c: Context, mode):
     kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
     TimeConfig.configure(mode)
     runner = TaskRunner(c.config.hosts,TimeConfig,**kwargs)
-    runner.set_log_folder(make_log_folder("time-config"))
+    runner.set_log_folder(make_log_folder("time.config"))
     runner.run()
 
 @task
@@ -20,7 +20,7 @@ def status(c: Context):
     """Get timesync status"""
     kwargs = {'dry':c.config.run.dry,'verbose':True}
     runner = TaskRunner(c.config.hosts,TimeStatus,**kwargs)
-    runner.set_log_folder(make_log_folder("time-status"))
+    runner.set_log_folder(make_log_folder("time.status"))
     runner.run()
 
 @task
@@ -28,7 +28,7 @@ def restart(c: Context):
     """Restart timesync"""
     kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
     runner = TaskRunner(c.config.hosts,TimeRestart,**kwargs)
-    runner.set_log_folder(make_log_folder("time-restart"))
+    runner.set_log_folder(make_log_folder("time.restart"))
     runner.run()
     
 @task
@@ -36,7 +36,7 @@ def date(c: Context):
     """Get the system time"""
     kwargs = {'dry':c.config.run.dry,'verbose':True}
     runner = TaskRunner(c.config.hosts,TimeDate,**kwargs)
-    runner.set_log_folder(make_log_folder("time-date"))
+    runner.set_log_folder(make_log_folder("time.date"))
     runner.run()
 
 
@@ -45,7 +45,7 @@ def rdate(c: Context):
     """Update the system time"""
     kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
     runner = TaskRunner(c.config.hosts,TimeRdate,**kwargs)
-    runner.set_log_folder(make_log_folder("time-rdate"))
+    runner.set_log_folder(make_log_folder("time.rdate"))
     runner.run()
 
 
