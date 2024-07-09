@@ -136,7 +136,22 @@ def security(c: Context, on=False,off=False):
     runner = TaskRunner(c.config.hosts,SetSecurityTask.configure(on),**kwargs)
     runner.set_log_folder(make_log_folder("riaps.security"))
     runner.run()
-    
+
+
+@task()
+def getAppLogs(c: Context, name: str):
+    '''Copy actor logs to local folder ./logs/
+    '''
+    kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
+    #Make log folder
+    logfolder = Path(c.cwd,"logs")
+    if logfolder.exists() and logfolder.is_dir():
+        if len(list(logfolder.iterdir())):
+            print(f"ERROR: {c.cwd}/logs is not empty! No files copied. Exiting...")
+            exit(1)
+    logfolder.mkdir(exist_ok=True)
+    runner = TaskRunner(c.config.hosts,GetAppLogsTask.configure(name,logfolder),**kwargs)
+    runner.run()
 
 
 ns = Collection('riaps')
@@ -145,6 +160,7 @@ ns.add_task(updateNodeKey)
 ns.add_task(updateAptKey)
 ns.add_task(updateLogConfig)
 ns.add_task(updateRiapsConfig)
+ns.add_task(getAppLogs)
 ns.add_task(security)
 ns.add_task(install)
 ns.add_task(uninstall)

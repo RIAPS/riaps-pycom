@@ -39,7 +39,7 @@ class SysSudo(Task):
     def do_sudo(self):
         if self.cmd is None:
             raise Exception("SysSudo doesn't have a cmd configure(d)")
-        return self.sudo(self.cmd)
+        return self.sudo(self.cmd)``
 
 class SysRun(Task):
     cmd = None
@@ -111,3 +111,45 @@ class SysFlushIPTables(Task):
     def flush_iptables(self):
         return self.sudo('iptables --flush')
     
+
+class SysGetConfig(Task):
+    logfolder = None
+
+    @classmethod
+    def configure(cls, logfolder: Path):
+        cls.logfolder = logfolder
+        return cls
+    
+    def clear_file(self):
+        if self.logfolder is None:
+            raise Exception(f"{self.__class__.__name__}.logfolder not configured")
+        self.log = '/tmp/rfab-getsysconfig'
+        return self.sudo(f'rm -f {self.log}')
+
+    def get_config(self):
+        steps = ['echo "### system"',
+            'echo "hostname: " `hostname` ',
+            'uname -a ',
+            'lsb_release -a ',
+            'python3 --version ',
+            'echo "### apt packages" ',
+            'dpkg -l | grep zmq ',
+            'dpkg -l | grep riaps ',
+            'echo "### riaps.conf" ',
+            'cat /etc/riaps/riaps.conf ',
+            'echo "### pip packages" ',
+            'pip3 list ',
+            'echo "### local libraries" ',
+            'ls -l /usr/local/lib/lib* ',
+            'echo "### riaps-log.conf" ',
+            'cat /etc/riaps/riaps-log.conf ',
+            'echo "### redis version" ',
+            'redis-server --version ',
+            'echo "### redis.conf" ',
+            'cat /etc/redis/redis.conf'
+            ]
+        kwargs={'warn':True} # Ignore invoke.exceptions.UnexpectedExit
+        for s in steps:
+            self.run(f"{s} >> {self.log}",**kwargs)
+
+        return self.get(remote=self.log,local=f"{self.logfolder}/{self.connection.host}-config.txt")

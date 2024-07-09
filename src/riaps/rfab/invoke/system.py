@@ -128,6 +128,23 @@ def setJournalLogSize(c: Context, size=64):
     runner = TaskRunner(c.config.hosts,SysSudo,**kwargs)
     runner.set_log_folder(make_log_folder("sys-set-journal-log-size"))
     runner.run()
+
+@task(pre=[call(assert_role_in,'nodes','remote','all')])
+def getConfig(c: Context):
+    '''Collect system state date to local folder ./logs/
+    '''
+    kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
+    #Make log folder
+    logfolder = Path(c.cwd,"logs")
+    if logfolder.exists() and logfolder.is_dir():
+        if len(list(logfolder.iterdir())):
+            print(f"ERROR: {c.cwd}/logs is not empty! No commands run. Exiting...")
+            exit(1)
+    logfolder.mkdir(exist_ok=True)
+    runner = TaskRunner(c.config.hosts,SysGetConfig.configure(logfolder),**kwargs)
+    runner.run()
+
+
     
 ns = Collection('sys')
 ns.add_task(check)
@@ -141,4 +158,5 @@ ns.add_task(sudo)
 ns.add_task(arch)
 ns.add_task(flushIPTables)
 ns.add_task(setJournalLogSize)
+ns.add_task(getConfig)
 

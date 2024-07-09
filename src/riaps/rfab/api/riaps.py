@@ -399,3 +399,22 @@ class SetSecurityTask(Task):
     
     def start_deplo(self):
         return self.sudo('systemctl start riaps-deplo.service')
+
+class GetAppLogsTask(Task):
+    app_name = None
+    logfolder = None
+
+    @classmethod
+    def configure(cls, app_name: str, logfolder: Path):
+        cls.app_name = app_name
+        cls.logfolder = logfolder
+        return cls
+    
+    def get_logs(self):
+        #TODO: Check if app folder is readable/has 'riaps' ownership
+        if self.app_name is None:
+            raise Exception(f"{self.__class__.__name__}.app_name is not configured!")
+        if self.logfolder is None:
+            raise Exception(f"{self.__class__.__name__}.logfolder is not configured!")
+        return self.get(remote=f'$RIAPSAPPS/{self.app_name}/*.log',local=self.logfolder)
+                    

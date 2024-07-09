@@ -75,7 +75,7 @@ class Task:
             connections (list[fabric.Connection]): Connections to each targeted host
             kwargs: kwargs passed to each connection-context
         """
-        self.connection : Connection = connection
+        self.connection: Connection = connection
         self.kwargs = kwargs
         self.kwargs['hide'] = True
         self.results = {name:None for name in self._steps.values()}
