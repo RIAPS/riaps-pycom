@@ -138,6 +138,17 @@ class UpdateLogConfig(Task):
     def chown_log_conf(self):
         return self.sudo("chown root:root /etc/riaps/riaps-log.conf")
     
+class UpdateRiapsConfig(Task):
+    def put_conf(self):
+        self.run('[ -e /etc/riaps ]',fail_msg='Remote dir "/etc/riaps" doesn\'t exist. Is riaps-pycom installed?')
+        return self.put('riaps.conf')
+
+    def move_conf(self):
+        return self.sudo("mv riaps.conf /etc/riaps/riaps.conf")
+
+    def chown_conf(self):
+        return self.sudo("chown root:root /etc/riaps/riaps.conf")
+    
 
 class TimesyncInstallTask(Task):
     pkg_folder = None
@@ -359,3 +370,32 @@ class ResetTask(Task):
     def start_deplo(self):
         return self.sudo('systemctl start riaps-deplo.service')
     
+class SetSecurityTask(Task):
+    security_on = None
+
+    @classmethod
+    def configure(cls,security_on: bool):
+        cls.security_state = 'on' if security_on else 'off'
+        return cls
+
+    def check_config(self):
+        if self.security_state is None:
+            raise Exception("SetSecurityTask.security_on not configured")
+        self.run('[ -e /etc/riaps/riaps.conf ]',fail_msg='"/etc/riaps/riaps.conf" doesn\'t exist. Is riaps-pycom installed?')
+        result = self.run('grep -n \'^\\s*security\\s*=.*$\' /etc/riaps/riaps.conf',
+                          fail_msg='riaps.conf doesn\'t have any "security" line defined! Don\'t trust its contents')
+        res = result.stdout.splitlines()
+        if len(res) != 1:
+            raise Exception(f"riaps.conf didn't find exactly one \"security = (on|off)\" line")
+        self.line_num = res[0].split(':')[0]
+        return result
+    
+    def stop_deplo(self):
+        return self.sudo('systemctl stop riaps-deplo.service')
+
+    def edit_security(self):
+        sed_cmd = f'sed -i \'{self.line_num} s/^\\s*security\\s*=.*$/security = {self.security_state}/g\' /etc/riaps/riaps.conf'
+        return self.sudo(sed_cmd)
+    
+    def start_deplo(self):
+        return self.sudo('systemctl start riaps-deplo.service')

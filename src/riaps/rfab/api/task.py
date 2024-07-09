@@ -53,7 +53,6 @@ class BadExit(UnexpectedExit):
         super().__init__(exc.result,exc.reason)
         self.msg = msg or ""
 
-
 class Task:
     def __init_subclass__(cls) -> None:
         super().__init_subclass__()
@@ -87,7 +86,6 @@ class Task:
         self.logger.setLevel("INFO")
         self._step_gen = (iter(self._steps.keys()))
         self.curr_step: str = next(self._step_gen)
-
 
     def _run_one(self):
         func = self._steps[self.curr_step]
@@ -173,6 +171,7 @@ class TaskRunner:
         self.rootlogger.setLevel("WARN")
         if kwargs.pop('verbose',False):
             self.rootlogger.setLevel("INFO")
+        self.log_folder = kwargs.pop('log_folder',None)
         self.logger = self.rootlogger.getChild('task-runner')
         self.kwargs = kwargs
         self.ctxs = {c:task(c,**kwargs) for c in hosts}
@@ -184,7 +183,6 @@ class TaskRunner:
             ctx.logger.addHandler(logging.FileHandler(Path(logdir,conn.host)))
             ctx.logger.propagate = False
         self.logger.addHandler(logging.FileHandler(Path(logdir,"task-runner")))
-
 
     def run(self):
         self._run_parallel()

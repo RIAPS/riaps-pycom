@@ -56,6 +56,17 @@ def updateLogConfig(c: Context):
     runner.set_log_folder(make_log_folder("riaps-update-log-config"))
     runner.run()
 
+@task(pre=[call(assert_role_in,'remote','node')])
+def updateRiapsConfig(c: Context):
+    """Move riaps.conf from CWD to node"""
+    kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
+    if not Path(c.cwd,"riaps.conf").exists():
+        print("ERROR: riaps.conf not in current working directory")
+        exit(1)
+    runner = TaskRunner(c.config.hosts,UpdateRiapsConfig,**kwargs)
+    runner.set_log_folder(make_log_folder("riaps.updateRiapsConfig"))
+    runner.run()
+
 @task(help={'package':"One of: timesync, pycom",
             'clean': 'Overwrite RIAPS config files'},
       auto_shortflags=False)
@@ -82,7 +93,7 @@ def install(c: Context, package, clean=False):
 @task(pre=[call(assert_role_in,'remote')],
       help={'package':"One of: timesync, pycom",
             'purge': "Purge RIAPS config files"},
-      positional=['package'], 
+      positional=['package'],
       auto_shortflags=False)
 def uninstall(c: Context, package, purge=False):
     """Uninstall all RIAPS packages from nodes"""
@@ -110,6 +121,21 @@ def reset(c: Context):
     runner.set_log_folder(make_log_folder("riaps-reset"))
     runner.run()
 
+@task(auto_shortflags=False)
+def security(c: Context, on=False,off=False):
+    """Enable/Disable security
+    Whether passing "--on" or "--off", this function:
+        1. Stops riaps-deplo
+        2. Edits riaps.conf for on/off
+        3. Starts riaps-deplo
+    """
+    if (on == off):
+        print('ERROR: pass "--on" or "--off"')
+        exit(1)
+    kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
+    runner = TaskRunner(c.config.hosts,SetSecurityTask.configure(on),**kwargs)
+    runner.set_log_folder(make_log_folder("riaps.security"))
+    runner.run()
     
 
 
@@ -118,6 +144,8 @@ ns.add_task(update)
 ns.add_task(updateNodeKey)
 ns.add_task(updateAptKey)
 ns.add_task(updateLogConfig)
+ns.add_task(updateRiapsConfig)
+ns.add_task(security)
 ns.add_task(install)
 ns.add_task(uninstall)
 ns.add_task(reset)
