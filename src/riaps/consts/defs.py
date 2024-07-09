@@ -98,6 +98,7 @@ const.groupElectionMin = 1500               # Minimum leader election timeout
 const.groupElectionMax = 2000               # Maximum leader election timeout
 const.groupPeerTimeout = 3000               # Peer is declared lost after this timeout
 const.groupConsensusTimeout = 1500          # Deadline for consensus vote 
+const.groupDiscoDelay = 1000                # Delay to let disco update
 
 # Heartbeat period for ctrl and deplo (in sec) - 0 means disabled 
 const.ctrlHeartbeat = 5.0

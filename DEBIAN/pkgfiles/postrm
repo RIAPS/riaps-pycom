@@ -12,10 +12,9 @@ rm -f $PYCOM_LN_DIR/keys/riaps-sys.cert $PYCOM_LN_DIR/keys/x509.pem || true
 # Remove soft links to conffiles
 rm -f $PYCOM_LN_DIR/etc/riaps.conf  $PYCOM_LN_DIR/etc/riaps-log.conf || true
 rm -f $PYCOM_LN_DIR/etc/redis.conf || true
-rm -f $PYCOM_LN_DIR/etc/riaps-hosts.conf $PYCOM_LN_DIR/etc/riaps-ctrl.glade || true
 
 # Uninstall riaps-pycom package
-pip3 uninstall riaps-pycom -y || true
+pip3 uninstall --break-system-packages riaps-pycom -y || true
 
 # Remove apparmor file from the cache
 rm -f /etc/apparmor.d/cache/usr.local.bin.riaps_actor || true

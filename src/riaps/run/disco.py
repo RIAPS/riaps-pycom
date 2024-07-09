@@ -272,7 +272,7 @@ class DiscoClient(object):
     
     def registerEndpoint(self, bundle):
         # bundle = [(partName,partTypeName),PortInfo]
-        self.logger.info("registerEndpoint: %s" % str(bundle))
+        self.logger.info("registerEndpoint: %r", bundle)
         # print ("DiscoClient.registerEndpoint",bundle)
         # Prefix: (partName, partType)
         # (pub,local,name,type,host,port)
@@ -304,13 +304,11 @@ class DiscoClient(object):
         msgType = messageType + '@' + groupType + '.' + groupName    
         regReqBundle = [(partName, partType), 
                         PortInfo(portKind="gpub", portScope=PortScope.GLOBAL, 
-                                 portName=portName, 
-                                 msgType=msgType, 
+                                 portName=portName, msgType=msgType, 
                                  portHost=host, portNum=pubPort)]
         lookupReqBundle = [(partName, partType), 
                            PortInfo(portKind="gsub", portScope=PortScope.GLOBAL,
-                                    portName=portName, 
-                                    msgType=msgType,
+                                    portName=portName, msgType=msgType,
                                     portHost='',portNum=0)]  
         # (1) lookupReq -> (2) regReq
         result = self.handleLookupReq(lookupReqBundle)
@@ -327,7 +325,8 @@ class DiscoClient(object):
                                      portHost=host, portNum=pubPort)]
         unlookupReqBundle = [(partName, partType),
                                 PortInfo(portKind="gsub", portScope=PortScope.GLOBAL,
-                                         portName=portName,msgType=msgType,portHost='',portNum=0)]  
+                                         portName=portName,msgType=msgType,
+                                         portHost='',portNum=0)]  
         # (1) unlookupReq -> (2) unreqReq
         result = self.handleUnlookupReq(unlookupReqBundle)
         self.handleUnregReq(unregReqBundle)

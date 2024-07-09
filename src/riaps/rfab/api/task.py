@@ -3,11 +3,13 @@ from threading import Thread
 import time
 from invoke.exceptions import UnexpectedExit
 import socket
-from fabric import Result
+from fabric import Result as FabResult
 from fabric.connection import Connection
 from fabric.transfer import Result as TransferResult
 import logging
 import sys
+from pathlib import Path
+from shutil import rmtree
 
 
 def Result_to_log(res):
@@ -40,14 +42,16 @@ class STATE(Enum):
     FAILED = auto()
     EXCEPTED = auto()
 
-class SkipResult(Result):
+class SkipResult(FabResult):
     def __init__(self,connection,command,stdout,stderr='',exited=0):
         super().__init__(connection=connection,command=command,stdout=stdout,stderr=stderr,exited=exited)
 
+class Result(FabResult): pass
 
-
-from pathlib import Path
-from shutil import rmtree
+class BadExit(UnexpectedExit):
+    def __init__(self,exc: UnexpectedExit,msg=None):
+        super().__init__(exc.result,exc.reason)
+        self.msg = msg or ""
 
 class Task:
     def __init_subclass__(cls) -> None:
@@ -71,7 +75,7 @@ class Task:
             connections (list[fabric.Connection]): Connections to each targeted host
             kwargs: kwargs passed to each connection-context
         """
-        self.connection = connection
+        self.connection : Connection = connection
         self.kwargs = kwargs
         self.kwargs['hide'] = True
         self.results = {name:None for name in self._steps.values()}
@@ -83,7 +87,6 @@ class Task:
         self._step_gen = (iter(self._steps.keys()))
         self.curr_step: str = next(self._step_gen)
 
-
     def _run_one(self):
         func = self._steps[self.curr_step]
         self.logger.info(f"Running {self.curr_step}...")
@@ -92,7 +95,7 @@ class Task:
             if isinstance(res,TransferResult):
                 self.logger.info(TransferResult_to_log(res))
                 res = Result(connection=res.connection,stdout=f"{res.local} <--> {res.remote}")
-            elif isinstance(res,Result):
+            elif isinstance(res,FabResult):
                 self.logger.info(Result_to_log(res))
             self.results[self.curr_step] = res
             self.curr_step = next(self._step_gen)
@@ -101,9 +104,13 @@ class Task:
             self.final_res = self.results[self.curr_step]
             self.state = STATE.SUCCEEDED
         except UnexpectedExit as e:
-            self.final_res = self.results[self.curr_step] = e.result
+            if not isinstance(e,BadExit):
+                e = BadExit(e)
+            self.final_res = self.results[self.curr_step] = e
             self.state = STATE.FAILED
             self.logger.warn(Result_to_log(e.result))
+            if len(e.msg):
+                self.logger.warn(f"Hint: {e.msg}")
             self.logger.warn(f"{func.__qualname__} FAILED")
         except Exception as e:
             self.final_res = self.results[self.curr_step] = e
@@ -127,11 +134,24 @@ class Task:
                 
     def sudo(self,cmd,**kwargs):
         kw = self.kwargs | kwargs
-        return self.connection.sudo(cmd,**kw)
+        fail_msg = kwargs.pop("fail_msg",None)
+        try: 
+            return self.connection.sudo(cmd,**kw)
+        except UnexpectedExit as e:
+            if fail_msg:
+                raise BadExit(e,fail_msg)
+            raise e
     
     def run(self,cmd,**kwargs):
+        fail_msg = kwargs.pop("fail_msg",None)
         kw = self.kwargs | kwargs
-        return self.connection.run(cmd,**kw)
+        try:
+            return self.connection.run(cmd,**kw)
+        except UnexpectedExit as e:
+            if fail_msg:
+                raise BadExit(e,fail_msg)
+            raise e
+
 
 def _print_multiline(log_func,header_str,stream,indent=0):
         lines = stream.splitlines()
@@ -151,6 +171,7 @@ class TaskRunner:
         self.rootlogger.setLevel("WARN")
         if kwargs.pop('verbose',False):
             self.rootlogger.setLevel("INFO")
+        self.log_folder = kwargs.pop('log_folder',None)
         self.logger = self.rootlogger.getChild('task-runner')
         self.kwargs = kwargs
         self.ctxs = {c:task(c,**kwargs) for c in hosts}
@@ -162,7 +183,6 @@ class TaskRunner:
             ctx.logger.addHandler(logging.FileHandler(Path(logdir,conn.host)))
             ctx.logger.propagate = False
         self.logger.addHandler(logging.FileHandler(Path(logdir,"task-runner")))
-
 
     def run(self):
         self._run_parallel()
@@ -201,14 +221,16 @@ class TaskRunner:
         if _failed:
             self.logger.error(f"Failed ({len(_failed)}):")
             for c,ctx in _failed.items():
-                r: Result = ctx.final_res
-                self.logger.error(f"  HOST: {c.host}:")
-                self.logger.error(f"  CMD:  {r.command}")
-                self.logger.error(f"  EXITED: {r.exited}")
-                if len(r.stdout):
-                    _print_multiline(self.logger.error,f"STDOUT:",r.stdout,4)
-                if len(r.stderr):
-                    _print_multiline(self.logger.error,f"STDERR:",r.stderr,4)
+                e: BadExit = ctx.final_res
+                self.logger.error(f"  host: {c.host}:")
+                self.logger.error(f"  cmd:  {e.result.command}")
+                self.logger.error(f"  exit code: {e.result.exited}")
+                if len(e.msg):
+                    self.logger.error(f"  Hint: {e.msg}")
+                if len(e.result.stdout):
+                    _print_multiline(self.logger.error,f"STDOUT:",e.result.stdout,4)
+                if len(e.result.stderr):
+                    _print_multiline(self.logger.error,f"STDERR:",e.result.stderr,4)
         if _excepted:
             self.logger.error(f"Excepted ({len(_excepted)}):")
             for c,ctx in _excepted.items():

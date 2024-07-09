@@ -31,7 +31,9 @@ KEY_FILE = const.ctrlPrivateKey
 PUB_FILE = const.ctrlPublicKey
 ZMQ_CERT_FILE = const.zmqCertificate
 
-def generate_keys(cert_dir):
+def generate_keys(cert_dir) -> RSAPrivateKey:
+    '''Generate RSA keypair, save as files
+    '''
     if exists(join(cert_dir, KEY_FILE)) or exists(join(cert_dir, PUB_FILE)) :
         sys.exit("Error: %s or %s already exists - move them first" % (KEY_FILE, PUB_FILE))
 
@@ -55,7 +57,9 @@ def generate_keys(cert_dir):
     return private_key
 
 
-def generate_self_signed_cert(cert_dir,key):
+def generate_self_signed_cert(cert_dir,key) -> None:
+    '''Generate x509 certificate
+    '''
     if exists(join(cert_dir, CERT_FILE)):
         sys.exit("Error: %s already exists - move it first" % (CERT_FILE))
     subject = issuer = x509.Name([
@@ -79,7 +83,9 @@ def generate_self_signed_cert(cert_dir,key):
         f.write(cert.public_bytes(serialization.Encoding.PEM))
 
 
-def generate_zmq_cert(cert_dir):
+def generate_zmq_cert(cert_dir) -> None:
+    '''Generate riaps-sys.cert
+    '''
     if exists(join(cert_dir, ZMQ_CERT_FILE)):
         sys.exit("Error: %s already exists - move it first" % (ZMQ_CERT_FILE))
     _public,cert = zmq.auth.create_certificates(cert_dir, "riaps",None)

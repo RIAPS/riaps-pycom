@@ -18,7 +18,37 @@ The send and receive timeouts for messages ports in the framework can be individ
 
 ### Ethernet Interface
 
-The **nic_name** indicates the ethernet interface used to communication with other RIAPS nodes.  The default value is set assuming the remote target nodes are Beaglebone Black development systems, since systems will most likely include multiple of these nodes.  This name will need to be configured for the development environment, which typically has a different interface naming scheme.  
+The **nic_name** indicates the ethernet interface used to communication with other RIAPS nodes. The default value is set assuming the remote target nodes are Beaglebone Black or TI SK-AM64B. `riaps-pycom` nodifies this value when creating a package intended for the VM.
+
+#### Changing the RIAPS ethernet interface
+
+1) Determine the desired ethernet interface
+
+```
+ifconfig
+```   
+
+2) Open riaps.conf in `nano`
+
+```
+sudo nano $RIAPSHOME/etc/riaps.conf
+```   
+
+3) Make sure the NIC name matchs the desired ethernet interface name from 'ifconfig'
+
+```conf
+# NIC name
+# Typical VM interface
+# nic_name = eth0 ##COMMENTED OUT
+nic_name = enp0s8
+```
+
+4)  After changing the NIC name, restart the rpyc running in the background.
+
+```
+sudo systemctl restart riaps-rpyc-registry.service
+```
+
 
 ### Debug Server Options
 

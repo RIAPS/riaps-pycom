@@ -331,7 +331,7 @@
             <property name="can_focus">False</property>
             <child>
               <object class="GtkButton" id="fabLabel">
-                <property name="label" translatable="yes">fab:</property>
+                <property name="label" translatable="yes">riaps_fab:</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>

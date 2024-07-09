@@ -31,7 +31,8 @@ import capnp
 from concurrent.futures.thread import ThreadPoolExecutor
 
 import zmq
-from zmq import devices
+# from zmq import devices
+from riaps.deplo.relay import Relay 
 
 try:
     import cPickle
@@ -62,11 +63,14 @@ DeploAppRecord = namedtuple('DeploAppRecord', 'model hash file home hosts networ
 # Record of a user
 DeploUserRecord = namedtuple('DeploUserRecord', 'name home uid gid')
 # Record of an actor
-DeploActorRecord = namedtuple('DeploActorRecord', 'app model actor args zdevice zdeviceCtrl control monitor')
+DeploActorRecord = namedtuple('DeploActorRecord', 
+                              'app model actor args zdevice zdeviceCtrl control monitor')
 # Record of an device actor
-DeploDeviceRecord = namedtuple('DeploDeviceRecord', 'app model type inst args zdevice zdeviceCtrl control monitor')
+DeploDeviceRecord = namedtuple('DeploDeviceRecord', 
+                               'app model type inst args zdevice zdeviceCtrl control monitor')
 # Record of an app actor command 
-DeploActorCommand = namedtuple('DeploActorCommand', 'app model actor args cmd pid firewall isdevice')
+DeploActorCommand = namedtuple('DeploActorCommand', 
+                               'app model actor args cmd pid firewall isdevice')
 # Record of the disco command
 DeploDiscoCommand = namedtuple('DeploDiscoCommand', 'cmd pid args')
 
@@ -786,7 +790,7 @@ class DeploymentManager(threading.Thread):
         self.procm.release(qualName)
         
         self.executor.submit(self.terminateActor,proc,appName,actorName)
-        time.sleep(0)
+        time.sleep(0.1)
         
         record = self.actors[qualName]
         zdevice = record.zdevice
@@ -1185,8 +1189,9 @@ class DeploymentManager(threading.Thread):
         clientPID  = self.launchMap[qualName].pid
         
         iface = 'tcp://127.0.0.1'
-        zmqDevice = devices.ThreadProxySteerable(zmq.DEALER,zmq.PAIR,zmq.PUB,zmq.PAIR)
+        # zmqDevice = devices.ThreadProxySteerable(zmq.DEALER,zmq.PAIR,zmq.PUB,zmq.PAIR)
         identity = actorIdentity(appName, appActorName, clientPID)
+        zmqDevice = Relay(self.context,identity,zmq.DEALER,zmq.PAIR,zmq.PUB,zmq.PAIR)
         self.logger.info("zmqDevice ID = %s" % identity)
         zmqDevice.setsockopt_in(zmq.IDENTITY, identity.encode(encoding='utf_8'))
         # device.setsockopt_in(zmq.RCVTIMEO,const.deplEndpointRecvTimeout)
@@ -1209,18 +1214,21 @@ class DeploymentManager(threading.Thread):
         actorMonitor.setsockopt(zmq.SUBSCRIBE, b'')
         actorMonitor.connect(monAddr)
 
-        ctrlPort = zmqDevice.bind_ctrl_to_random_port(iface)
+        ctrlPort = self.binder()
+        ctrlAddr = "%s:%i" % (iface, ctrlPort)
+        zmqDevice.bind_ctrl(ctrlAddr)
+        
         zdeviceCtrl = self.context.socket(zmq.PAIR)
-        zdeviceCtrl.connect("%s:%i" % (iface, ctrlPort))
+        zdeviceCtrl.connect(ctrlAddr)
          
         self.addMonitor(appName,appActorName,actorMonitor)
         self.fm.addClientDevice(appName,appActorName,zmqDevice)
         
-        
         time.sleep(0.1)
         zmqDevice.start()
         time.sleep(0.1)
-
+        self.logger.info(f"handleActorReg: ({appName},{appActorName}) proxy: {zmqDevice.native_id})")
+        
         actorArgs = _actorRecord.args
         appModel = _actorRecord.model
         if isDevice:
@@ -1559,10 +1567,12 @@ class DeploymentManager(threading.Thread):
         '''
         Handle messages from process monitor: restart disco/actor/device 
         '''
+        
         msgFrames = self.procmon.recv_multipart()
         identity = msgFrames[0]
         msg = pickle.loads(msgFrames[1])
         (qualName,) = msg
+        self.logger.info(f"handleProcmon: {qualName}")
         if qualName == self.DISCONAME:
             self.logger.info("restarting disco")
             self.startDisco()
