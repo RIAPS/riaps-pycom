@@ -1,1 +1,1 @@
-export pycomversion="2.0.0rc8"
+export pycomversion="2.0.0rc10"
