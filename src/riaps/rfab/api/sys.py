@@ -39,7 +39,7 @@ class SysSudo(Task):
     def do_sudo(self):
         if self.cmd is None:
             raise Exception("SysSudo doesn't have a cmd configure(d)")
-        return self.sudo(self.cmd)``
+        return self.sudo(self.cmd)
 
 class SysRun(Task):
     cmd = None
