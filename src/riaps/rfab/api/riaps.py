@@ -13,6 +13,9 @@ from time import sleep
 packages = ['riaps-timesync','riaps-pycom']
 
 class UpdateControl(Task):
+    def update_aptrepos(self):
+        return self.sudo(f"apt-get update")
+    
     def update_timesync(self):
         return self.sudo(f"apt-get install riaps-timesync-$(dpkg --print-architecture) -y")
     
@@ -20,6 +23,9 @@ class UpdateControl(Task):
         return self.sudo(f"apt-get install riaps-pycom-dev -y")
 
 class UpdateRemote(Task):
+    def update_aptrepos(self):
+        return self.sudo(f"apt-get update")
+    
     def update_timesync(self):
         return self.sudo(f"apt-get install riaps-timesync-$(dpkg --print-architecture) -y")
     
@@ -123,10 +129,19 @@ class UpdateNodeKey(Task):
         if self.keep_password:
             return SkipResult(self.connection,cmd,"keep_password is set, skipping...")
         return self.sudo(cmd)
-        
+
 class UpdateAptKey(Task):
-    def run_update(self):
-        return self.sudo('wget -qO - https://riaps.isis.vanderbilt.edu/keys/riapspublic.key | apt-key add -')
+    def create_apt_file(self):
+        return self.sudo(f"touch /etc/apt/sources.list.d/riaps.list")
+
+    def get_gpg_key(self):
+        return self.sudo(f"wget -O- https://riaps.isis.vanderbilt.edu/keys/riapspublic.key | gpg --dearmor | sudo tee /usr/share/keyrings/riaps-archive-keyring.gpg >/dev/null")
+
+    def write_apt_file(self):
+        return self.sudo(f"sudo echo 'deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/riaps-archive-keyring.gpg] https://riaps.isis.vanderbilt.edu/aptrepo/ $(lsb_release -sc) main' >> /etc/apt/sources.list.d/riaps.list")
+
+    def update_aptrepos(self):
+        return self.sudo(f"apt-get update")
 
 class UpdateLogConfig(Task):
     def put_log_conf(self):
