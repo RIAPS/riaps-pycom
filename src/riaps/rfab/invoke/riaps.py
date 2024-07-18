@@ -147,8 +147,7 @@ def getAppLogs(c: Context, name: str):
     logfolder = Path(c.cwd,"logs")
     if logfolder.exists() and logfolder.is_dir():
         if len(list(logfolder.iterdir())):
-            print(f"ERROR: {c.cwd}/logs is not empty! No files copied. Exiting...")
-            exit(1)
+            print(f"WARNING: {c.cwd}/logs is not empty! Files with the same name will be overwritten. Continuing...")
     logfolder.mkdir(exist_ok=True)
     runner = TaskRunner(c.config.hosts,GetAppLogsTask.configure(name,logfolder),**kwargs)
     runner.set_log_folder(make_log_folder("riaps.getAppLogs"))

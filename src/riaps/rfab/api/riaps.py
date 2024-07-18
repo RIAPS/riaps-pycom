@@ -138,7 +138,7 @@ class UpdateAptKey(Task):
         return self.sudo(f"wget -O- https://riaps.isis.vanderbilt.edu/keys/riapspublic.key | gpg --dearmor | sudo tee /usr/share/keyrings/riaps-archive-keyring.gpg >/dev/null")
 
     def write_apt_file(self):
-        return self.sudo(f"sudo echo 'deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/riaps-archive-keyring.gpg] https://riaps.isis.vanderbilt.edu/aptrepo/ $(lsb_release -sc) main' >> /etc/apt/sources.list.d/riaps.list")
+        return self.sudo(f"echo deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/riaps-archive-keyring.gpg] https://riaps.isis.vanderbilt.edu/aptrepo/ $(lsb_release -sc) main | sudo tee /etc/apt/sources.list.d/riaps.list")
 
     def update_aptrepos(self):
         return self.sudo(f"apt-get update")
@@ -426,10 +426,17 @@ class GetAppLogsTask(Task):
         return cls
     
     def get_logs(self):
-        #TODO: Check if app folder is readable/has 'riaps' ownership
         if self.app_name is None:
             raise Exception(f"{self.__class__.__name__}.app_name is not configured!")
         if self.logfolder is None:
             raise Exception(f"{self.__class__.__name__}.logfolder is not configured!")
-        return self.get(remote=f'$RIAPSAPPS/{self.app_name}/*.log',local=self.logfolder)
-                    
+
+        log_files = self.run(f'ls $RIAPSAPPS/{self.app_name}/*.log',
+                             fail_msg='If application log files exist, make sure the application is stopped (but not removed) before pulling the log files.')
+        logs = log_files.stdout.splitlines()
+
+        for log in logs:
+            result  = self.get(remote=f"{log}",local=f"{self.logfolder}/{self.connection.host}/")
+        
+        #TODO: only the last result is passed back, make sure that is desired
+        return result

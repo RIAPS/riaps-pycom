@@ -7,7 +7,7 @@ class SysCheck(Task):
         return self.sudo("uname -a")
 
 class SysShutdown(Task):
-    when = 'now'
+    when = '1'
     why = ''
 
     @classmethod
@@ -16,7 +16,7 @@ class SysShutdown(Task):
         cls.why = why
 
     def sys_shutdown(self):
-        return self.sudo(f"shutdown {self.when} {self.why}")
+        return self.sudo(f"shutdown -h {self.when} {self.why}")
 
 class SysReboot(Task):
     def sys_reboot(self):

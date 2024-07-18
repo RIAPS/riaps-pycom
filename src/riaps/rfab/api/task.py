@@ -10,6 +10,7 @@ import logging
 import sys
 from pathlib import Path
 from shutil import rmtree
+import traceback
 
 
 def Result_to_log(res):
@@ -115,6 +116,7 @@ class Task:
         except Exception as e:
             self.final_res = self.results[self.curr_step] = e
             self.state = STATE.EXCEPTED
+            traceback.print_exc(file=sys.stdout)
             self.logger.error(f"{func.__qualname__} EXCEPTION")
             self.logger.exception(e)
         return False
