@@ -31,9 +31,9 @@ class ServerLogDriver(BaseDriver):
         self.write_display(node_name=node_name, msg=msg["data"])
 
     def set_pane(self, pane, node_name=None):
-        pane_id = pane.get("pane_id")
+        pane_id = pane.id
         pane_name = node_name if node_name else f"pane_{pane_id}"
-        _tty = pane.get("pane_tty")
+        _tty = pane.pane_tty
         pane_tty = os.open(_tty, os.O_NOCTTY | os.O_WRONLY)
         self.nodes[pane_name] = { "tty" : pane_tty, "pane" : pane }
         pane.cmd("select-pane", '-t', f"{pane_id}", "-T", f"{pane_name}")
@@ -64,7 +64,7 @@ class ServerLogDriver(BaseDriver):
     def get_session(self):
         if not self.server.has_session(target_session=self.session_name):
             self.start_session()
-        session = self.server.find_where({"session_name": self.session_name})
+        session = self.server.sessions.get(session_name=self.session_name)
         return session
 
     def close(self):

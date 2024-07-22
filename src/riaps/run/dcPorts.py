@@ -273,8 +273,8 @@ class GroupAnsPort(BindPort,GroupDuplexPort):
     def updatePoller(self, poller):
         if self.portNum != None:
             self.socket.setsockopt(zmq.LINGER, 0)
-            poller.register(self.self.socket, 0)  # Unregister old socket as tainted
-            self.socket.close()  # Close and destroy old socket
+            poller.unregister(self.self.socket)     # Unregister old socket as tainted
+            self.socket.close()                     # Close and destroy old socket
             del self.socket
             self.socket = self.context.socket(zmq.ROUTER)  # Create new socket
             self.setupCurve(True)  # Set up encryption

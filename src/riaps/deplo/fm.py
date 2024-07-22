@@ -37,7 +37,7 @@ class FMMonitor(threading.Thread):
         self.groups = { }   # groupName : { peers* } - peers in group    
         self.actors = { }   # appName : { actors* }  - actors in apps
         self.uuid = None
-        self.logger.info('FMMon:__inited__')
+        self.logger.info(f'FMMon:__inited__({hostAddress},{riapsHome})')
     
     def setup(self):
         self.logger.info('FMMon:setup()')
@@ -174,11 +174,12 @@ class FMMonitor(threading.Thread):
                 group = event.group()
                 _headers = event.headers()
                 msg = event.get_msg()
-#                 if eType != b'EVASIVE':
+                if eType == b'EVASIVE':
 #                     print("# %s %s %s %s %s %s %s" 
 #                           % (str(eType),str(_pName),str(pUUID),str(pAddr),
 #                              str(group),str(_headers),str(msg)))
-                if eType == b'ENTER':
+                    continue
+                elif eType == b'ENTER':
                     self.logger.info("FMMon.ENTER %s from %s" % (str(pUUID),str(pAddr)))
                     try:
                         pAddrStr = pAddr.decode('UTF-8')
@@ -358,11 +359,13 @@ class ActorFaultManager(object):
         self.actorName = actorName
         self.proc = None
         self.started = False
+        self.device = None
     
-    def addClientDevice(self,_device):
+    def addClientDevice(self,device):
         appName = self.parent.appName
         actorName = self.actorName
         self.logger.info('actor.addClientDevice %s.%s' % (appName,actorName))
+        self.device = device
     
     def startActor(self,proc):
         # Setup CPU fault monitor
