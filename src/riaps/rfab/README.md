@@ -207,7 +207,7 @@ riaps_fab sys.get --remote-file="remote-data.txt"
 riaps_fab sys.get --remote-file="notes/remote-data.txt" --name="remote-data-notes.txt" --local-dir="test-results"
 ```
 
-- To copy a local file over to the remote node's `riaps` user folder (`/home/riaps`), use the **put** command. Use the `--local-file=` option to specify the location of the file. Relative paths are possible from the current local directory. The remote node directory option (`--remote-dir=`) indicates where to place the file within the `riaps` users folder.
+- To copy a local file over to the remote node's `riaps` user folder (`/home/riaps`), use the **put** command. Use the `--local-file=` option to specify the location of the file. Relative paths are possible from the current local directory. The remote node directory option (`--remote-dir=`) indicates where to place the file within the `riaps` users folder. This remote directory must already exist.
 ```
 riaps_fab sys.put --local-file="test-setup.py" 
 riaps_fab sys.put --local-file="test-setup.py" --remote-dir="temp"
