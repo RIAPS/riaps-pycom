@@ -1,6 +1,6 @@
 # RIAPS Configuration Files
 
-This folder contains configuration files used by the RIAPS framework.  Some configuration files (such as redis.conf and riaps-ctl.glade) are specific to the RIAPS framework and are not expected to be modified by users.  But others (such as riaps.conf and riaps-log.conf) allow the user to configure the specific instance of the RIAPS framework to met the needs of their current activity.  The riaps-hosts.conf file will allow the user to indicate the RIAPS host nodes that are available in their system by indicating their hostnames.  This file is available for use when an action is needed on all hosts.  Users can customize these files on specific platforms (i.e. the host machine and/or specific target nodes) by modifying the files located in **/usr/local/riaps/etc**.
+This folder contains configuration files used by the RIAPS framework.  Some configuration files (such as redis.conf and riaps-ctl.glade) are specific to the RIAPS framework and are not expected to be modified by users.  But others (such as riaps.conf and riaps-log.conf) allow the user to configure the specific instance of the RIAPS framework to met the needs of their current activity.  The riaps-hosts.conf file will allow the user to indicate the RIAPS host nodes that are available in their system by indicating their hostnames.  This file is available for use when an action is needed on all hosts.  Users can customize these files on specific platforms (i.e. the host machine and/or specific target nodes) by modifying the files located in **/etc/riaps**.
 
 > Note:  User changes made to riaps.conf, riaps-log.conf, riaps-hosts.conf will be preserved when the platform is updated (i.e. new version installed).  But the redis.conf and riaps-ctl.glade will be overwritten during the RIAPS update process.
 
@@ -49,6 +49,13 @@ nic_name = enp0s8
 sudo systemctl restart riaps-rpyc-registry.service
 ```
 
+### Discovery implementation 
+
+There are two types of discovery implementations available: **redis** and **opendht**.  The preferred version is opendt.  To change the option used, change the following option:
+
+```
+disco_type = opendht
+```
 
 ### Debug Server Options
 
@@ -111,10 +118,38 @@ the file is located.
 
 Log statements from the framework and application component code are provided on the stdout by default.  The component information can be logged to a file on the deployed target node by setting **app_logs = log** on that node.  The log file will be saved in ```~/riaps_apps/<app name>/<actor name>.log```.
 
+### Heartbeat Options
+
+A heartbeat message is available for both controller and RIAPS nodes.  These messages can be helpful when debugging a system issue, but they will also increase the message volume.  Therefore, the default for this option is to turn the heartbeats off.  To turn on either heartbeat, set to ```= on```.
+
+```
+ctrl_heartbeat = off
+node_heartbeat = off
+```
+
+### Network Monitoring Option
+
+This option turns **on** or **off** the network monitoring feature of RIAPS.  The current solution tends to stress the processing power of the remote nodes when many nodes are used in the system.  There are situations where this feature is desired and can be turned on with this option.
+
+```
+netmon = off
+```
+
+### Security Feature Control
+
+Security can be turned **on** or **off** based on desired system configuration.  The default will be to turn on security features.  
+
+```
+security = on
+```
+
+The easiest way to update a system with multiple nodes to modify this option is to use the ```riaps_fab riaps.security --off``` (or ```--on```).
+
+
 ## RIAPS Logging Configuration File (riaps-log.conf)
 
 This file allows configuration of the RIAPS Framework logging output to indicate what information will be available (loggers), how it will be displayed (handlers), and general output format (formatters).  The default configuration will output framework warnings (root).  If more information is needed to debug an issue, additional module information can be added by including the desired module (such as riaps.deplo.depm) in the comma separated **keys** list.  
 
 ## RIAPS Host Definition File (riaps-hosts.conf)
 
-This file is used by **riaps_fab** to know which hosts to interact with when using riaps_fab commands.  This file should be configured when setting up a system or when hosts are added or removed.  Hostnames can either be specified as the IP address or the hostname seen when logging into the node.  The RIAPS configured Beaglebone Bones will have hostnames with a format of 'bbb-xxxx.local', where xxxx is that last four digits of the host's MAC address.  It is not recommended to put the VM hostname (localhost) into this file since most system actions will be directed to the deployment nodes which are typically external to the control node.  The hostnames are enclosed in double quotes and comma separated without spaces.
+This file is used by **riaps_fab** to know which hosts to interact with when using riaps_fab commands.  This file should be configured when setting up a system or when hosts are added or removed.  Hostnames can either be specified as the IP address or the hostname seen when logging into the node.  The RIAPS configured remote nodes (listed as **nodes**) will have hostnames with a format of 'riaps-xxxx.local', where xxxx is that last four digits of the host's MAC address.  It is not recommended to put the VM hostname (localhost) into the **nodes** list even if a deployment node is started on the VM. The VM hostname should be listed as the **control** value.  The hostnames are enclosed in double quotes and comma separated.
