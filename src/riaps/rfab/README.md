@@ -204,13 +204,13 @@ riaps_fab sys.sudo "ls -al /etc/riaps"
 - To copy a file from remote nodes to a development machine use the **get** command. The desired remote file must be located in a folder within the remote `riaps` user's folder (`/home/riaps`). The desired remote filename is specified using the `--remote-file=` option and can be a relative path from the user's home folder. If a new name is desired for the file on the development machine, use the `--name=` option to indicate the new name. The copied file could be placed in a different folder by using the `--local-dir=` option, which will create the folder if it does not already exist.
 ```
 riaps_fab sys.get --remote-file="remote-data.txt"
-riaps_fab sys.get --remote-file="notes/remote-data.txt" --name="remote-data-notes.txt" --local-dir="./test-results"
+riaps_fab sys.get --remote-file="notes/remote-data.txt" --name="remote-data-notes.txt" --local-dir="test-results"
 ```
 
 - To copy a local file over to the remote node's `riaps` user folder (`/home/riaps`), use the **put** command. Use the `--local-file=` option to specify the location of the file. Relative paths are possible from the current local directory. The remote node directory option (`--remote-dir=`) indicates where to place the file within the `riaps` users folder.
 ```
 riaps_fab sys.put --local-file="test-setup.py" 
-riaps_fab sys.put --local-file="test-setup.py" --remote-dir="./temp/"
+riaps_fab sys.put --local-file="test-setup.py" --remote-dir="temp"
 ```
 
 - When debugging a system setup, the **getConfig** command can be used to pull the relevant information into separate files for all the nodes.  This information can then be passed to RIAPS experts to assist in understanding how the system is configured at that time.  These files will be placed under a `logs/` directory with each node indicated in the filename:  `sysconfig-<hostname>.log`.  
