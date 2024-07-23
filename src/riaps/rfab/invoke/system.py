@@ -22,9 +22,9 @@ def check(c: Context):
 
 
 @task(optional=['when','why'],pre=[call(assert_role_in,"remote")],
-      help={'when':'time passed to \'shutdown\', default "now"',
+      help={'when':'time passed to \'shutdown\', default "1"',
             'why':'message logged for shutdown reason'})
-def shutdown(c: Context, when='now', why=''):
+def shutdown(c: Context, when='1', why=''):
     """Shutdown the hosts"""
     kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
     SysShutdown.configure(when,why)

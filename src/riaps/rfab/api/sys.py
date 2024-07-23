@@ -7,7 +7,7 @@ class SysCheck(Task):
         return self.sudo("uname -a")
 
 class SysShutdown(Task):
-    when = '1'
+    when = ''
     why = ''
 
     @classmethod

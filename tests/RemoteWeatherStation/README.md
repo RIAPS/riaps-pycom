@@ -40,14 +40,14 @@ sudo pip3 install pyserial
 - In **.bashrc**, add setup environment variables for these tools
 ```
 export SLOTS=/sys/devices/platform/bone_capemgr/slots
-export PINS=/sys/kernel/debug/pinctrl/44e10800.pinmux/pins 
+export PINS=/sys/kernel/debug/pinctrl/44e10800.pinmux/pins
 ```
 
 - Update **visudo** to retain the environment variables on a su call
   - After **Defaults env_reset**, add
 ```
 Defaults    env_keep += "SLOTS"  
-Defaults    env_keep += "PINS" 
+Defaults    env_keep += "PINS"
 ```
 
 - To deal with user permission on UART
