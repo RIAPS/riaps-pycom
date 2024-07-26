@@ -447,8 +447,13 @@ class GetAppLogsTask(Task):
                              fail_msg='If application log files exist, make sure the application is stopped (but not removed) before pulling the log files.')
         logs = log_files.stdout.splitlines()
 
+        self.logger.info(f"Logfiles to collect: {logs}")
+
         for log in logs:
             result  = self.get(remote=f"{log}",local=f"{self.logfolder}/{self.connection.host}/")
+            self.logger.info(f"Retrieved {result.orig_remote}")
         
-        #TODO: only the last result is passed back, make sure that is desired
+        #TODO: Task expects a Result object as it expects each "step" to do a single thing. However, steps like this make multiple seperate transfers,
+        #       so there are actually multiple "results". Maybe modify Task to accept a list of Results? But for now, just log each transfer so there
+        #       is at least something to debug with
         return result
