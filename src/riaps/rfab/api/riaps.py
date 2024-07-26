@@ -13,6 +13,9 @@ from time import sleep
 packages = ['riaps-timesync','riaps-pycom']
 
 class UpdateControl(Task):
+    def run_rdate(self):
+        return self.sudo("rdate -s -n -4 time.nist.gov")
+
     def update_aptrepos(self):
         return self.sudo(f"apt-get update")
     
@@ -23,6 +26,9 @@ class UpdateControl(Task):
         return self.sudo(f"apt-get install riaps-pycom-dev -y")
 
 class UpdateRemote(Task):
+    def run_rdate(self):
+        return self.sudo("rdate -s -n -4 time.nist.gov")
+
     def update_aptrepos(self):
         return self.sudo(f"apt-get update")
     
@@ -188,6 +194,9 @@ class TimesyncInstallTask(Task):
         else:
             raise TypeError(clean)
 
+    def run_rdate(self):
+        return self.sudo("rdate -s -n -4 time.nist.gov")
+
     def get_arch(self):
         res = self.run('dpkg --print-architecture')
         self.arch = res.stdout.strip()
@@ -260,6 +269,9 @@ class PycomInstallTask(Task):
             cls.clean = clean
         else:
             raise TypeError(clean)
+
+    def run_rdate(self):
+        return self.sudo("rdate -s -n -4 time.nist.gov")
 
     def get_arch(self):
         res = self.run('dpkg --print-architecture')
