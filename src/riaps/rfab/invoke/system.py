@@ -9,6 +9,7 @@ from riaps.rfab.api.utils import make_log_folder
 from .helpers import assert_role_in
 from os.path import isfile
 from pathlib import Path
+from sys import exit
 
 @task
 def check(c: Context):
@@ -19,6 +20,8 @@ def check(c: Context):
     runner = TaskRunner(c.config.hosts,SysCheck,**kwargs)
     runner.set_log_folder(make_log_folder("sys.check"))
     runner.run()
+    if not runner.ok():
+        exit(1)
 
 
 @task(optional=['when','why'],pre=[call(assert_role_in,"remote")],
