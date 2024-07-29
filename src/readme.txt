@@ -3,12 +3,12 @@ Required packages that should be installed manually
 
 redis
 url = http://redis.io/
-version = http://download.redis.io/releases/redis-4.3.4.tar.gz
+version = http://download.redis.io/releases/redis-5.0.1.tar.gz
 
 
 capnproto:
 url = https://capnproto.org/
-version = https://capnproto.org/capnproto-c++-0.8.0.tar.gz
+version = https://capnproto.org/capnproto-c++-1.0.1.1.tar.gz
 
 rpyc:
 url = https://github.com/tomerfiliba/rpyc
@@ -16,40 +16,42 @@ version = rpyc-master (i.e. the version on github, not the release!)
 
 PYGObject:
 url = https://wiki.gnome.org/action/show/Projects/PyGObject
-version = focal (20.04LTS)
+version = jammy (22.04LTS)
 
 #Other Packages Required
 
-textX >= 3.0.0
-redis >= 4.3.4
-hiredis >= 2.0.0
-pyzmq >= 23.2.1
-pycapnp >= 1.0.0
-netifaces >= 0.11.0
-paramiko >= 2.11.0
-cryptography >= 3.3.2
-python-magic >= 0.4.27
+bcrypt>=4.0.1
+butter >= 0.13.1
 cgroups >= 0.1.0
 cgroupspy >= 0.2.2
-psutil >= 5.9.2
-pydot >= 1.4.2
-butter >= 0.13.1
-lmdb >= 1.3.0
-fabric3 >= 1.14.post1
-pyroute2 >= 0.7.2
+cryptography >= 3.4.8
 czmq >= 4.2.1
-zyre >= 2.0.1
+fabric >= 3.2.2
+filelock==3.15.4
+gitpython >= 3.1.37 (due to gitdb and gitdb2 changes)
 graphviz >= 0.20.1
-gitpython >= 3.1.27 (due to gitdb and gitdb2 changes)
-pymultigen >= 0.2.0
+hiredis >= 2.3.2
 Jinja2 >= 3.1.2
-pybind11 >= 2.10.0
+libtmux>=0.23.2
+lmdb >= 1.4.1
+netifaces2 >= 0.0.9
+paramiko >= 3.4.0
+parse>=1.19.1
+psutil >= 5.9.0
+pybind11 >= 2.11.1
+pycapnp >= 2.0.0b2
+pycryptodomex >= 3.19.0 (python3-crypto and python3-keyrings.alt must be removed)
+pydot >= 1.4.2
+pymultigen >= 0.2.0
+pyroute2 >= 0.7.2
+python-magic >= 0.4.27
+PyYAML >= 5.4.1
+pyzmq >= 25.1.2
+redis >= 5.0.1
+spdlog==2.0.6
+textX >= 3.1.1
 toml >= 0.10.2
-pycryptodomex >= 3.15.0 (python3-crypto and python3-keyrings.alt must be removed)
-PyYAML >= 6.0 (must use --ignore-installed since this is upgrading a distribution package which can not be uninstalled)
-libtmux>=0.15.7
-parse>=1.19.0
-bcrypt>=3.2.2
+zyre >= 2.0.1
 
 use: apt install python3-pip python3-dev libhiredis-dev libcapnp-dev libssl-dev libffi-dev glade python3-gi
 
