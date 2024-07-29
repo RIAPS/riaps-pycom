@@ -28,17 +28,16 @@ from apparmor_monkeys import patch_modules
 patch_modules()
 
 import faulthandler
-faulthandler.enable()
-
+  
 from riaps.utils.config import Config
 from riaps.utils.trace import riaps_trace
 
 from .actor import Actor
 
-# : Singleton Actor object
+# Singleton Actor object
 theActor = None
 
-# : Singleton Config object, holds the configuration information. 
+# Singleton Config object, holds the configuration information. 
 theConfig = None 
 
 
@@ -55,7 +54,8 @@ def termHandler(signal, frame):
     Simply calls the Actor.terminate() method.
     '''
     global theActor
-    theActor.terminate()
+    if theActor is not None:
+        theActor.terminate()
 
 # def sigXCPUHandler(signal,frame):
 #     global theActor
@@ -111,9 +111,12 @@ def main(debug=True):
     logging.Formatter.default_time_format = '%H:%M:%S'
     logging.Formatter.default_msec_format = '%s,%03d'
 
+   
+    signal.signal(signal.SIGTERM, termHandler)  # Termination signal handler
+    faulthandler.enable()
+
     global theActor
     theActor = Actor(model, args.model, aName, rest)  # Construct the Actor
-    signal.signal(signal.SIGTERM, termHandler)  # Termination signal handler
 #     signal.signal(signal.SIGXCPU,sigXCPUHandler)    # CPU limit exceeded handler 
 #     signal.signal(signal.SIGUSR1,sigXMEMHandler)    # Mem limit exceeded handler 
 #     signal.signal(signal.SIGUSR2,sigXSPCHandler)    # Spc limit exceeded handler     

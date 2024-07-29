@@ -1,0 +1,12 @@
+[Unit]
+Description=RIAPS AppArmor Python Version Service
+Before=riaps-deplo.service
+
+[Service]
+Type=oneshot
+SyslogIdentifier=RIAPS-AA-PYVERSION
+ExecStart=/usr/local/bin/set_apparmor_pyversion.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

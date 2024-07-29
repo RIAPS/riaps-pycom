@@ -341,7 +341,7 @@ class DhtDbase(DiscoDbase):
         self.clients = { }
         self.listeners = { }
         self.cancelled = []
-        self.deletedMap = { }
+        self.deleted = set()
         self.noClientsMap = { }
         
         self.republishMap = { }
@@ -528,13 +528,13 @@ class DhtDbase(DiscoDbase):
             self.logger.info('dhtValueCallback[%s].value: %r(%r)' % (key,value_,expired))
             if expired or self.isDelValue(value_) or \
                 (key,value_) in self.republishMap or \
-                self.deletedMap.get(key,None) == value_:
+                (key,value_) in self.deleted:
                 pass
             else:
                 self.updates += [(key,value_)]
             if expired or self.isDelValue(value_):
                 _value = self.orgValue(value_)
-                self.deletedMap[key] = _value
+                self.deleted.add((key,_value))
                 self.updates = [(k,v) for (k,v) in self.updates if k != key and v != _value]
             return True
     
@@ -560,7 +560,7 @@ class DhtDbase(DiscoDbase):
         values = self.dhtGet(key)
         if value in values: 
             _res = self.dhtPut(key,self.delValue(value))
-            self.deletedMap[key] = value
+            self.deleted.add((key,value))
         return list(set(values) - set([value]))
                     
     def dhtAddClient(self,key,client):
@@ -580,8 +580,10 @@ class DhtDbase(DiscoDbase):
     
     def dhtDelClient(self,key,client):
         '''
+        Remove a client from the key.
         '''
         self.logger.info('dhtdelClient(%s,%r)' % (key,client))
+        listener = None
         with self.dataLock:
             if client in self.clients.get(key,[]):
                 self.clients[key].remove(client)
@@ -590,14 +592,16 @@ class DhtDbase(DiscoDbase):
                     if listener:
                         self.cancelled += [key]
                         # self.dht.cancelListen(listener)
-                        # del self.listeners[key]
-
+                        del self.listeners[key]
+                        del listener
+                        
     def dhtDelete(self,key):
         '''
         Delete all the values of a key.
         Cancel the listener (if any), mark all values as deleted  
         '''
         self.logger.info('dhtDelete[%s]' % (key,))
+        listener = None
         with self.dataLock:
             values = self.dhtGet(key)
             clients = self.clients.get(key,[])
@@ -606,10 +610,11 @@ class DhtDbase(DiscoDbase):
             if listener:
                 self.cancelled += [key]
                 # self.dht.cancelListen(listener)
-                # del self.listeners[key]
+                del self.listeners[key]
+                del listener
             for value in values:
                 _res = self.dhtPut(key,self.delValue(value))
-                self.deletedMap[key] = value
+                self.deleted.add((key,value))
         return values
     
     def dhtRepublishWorker(self):
@@ -700,6 +705,8 @@ class DhtDbase(DiscoDbase):
                 _res = self.dhtPut(key,value)
                 self.regDb.addKeyValue(key, value)              # Save k/v into backup db
                 self.addToRepublish(key,value)                  # Add k/v to republisher
+                if (key ,value) in self.deleted:                # If key was in the deleted map, remove it
+                    self.deleted.remove((key.value))
                 clientsToNotify = self.clients.get(key,[])      # Return interested clients
             return clientsToNotify
         except Exception:

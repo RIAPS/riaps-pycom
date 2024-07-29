@@ -33,6 +33,7 @@ mkdir -p package/$package_name/DEBIAN
 
 if [ $dev == "false" ]; then
   cp -r DEBIAN/pkgfiles/control package/$package_name/DEBIAN/control
+  cp -r DEBIAN/pkgfiles/preinst package/$package_name/DEBIAN/preinst
   cp -r DEBIAN/pkgfiles/postinst package/$package_name/DEBIAN/postinst
   cp -r DEBIAN/pkgfiles/postrm package/$package_name/DEBIAN/postrm
   cp -r DEBIAN/pkgfiles/prerm package/$package_name/DEBIAN/prerm
@@ -47,12 +48,14 @@ fi
 
 mkdir -p package/$package_name/opt/riaps-pycom/
 mkdir -p package/$package_name/etc/
+mkdir -p package/$package_name/usr/local/bin/
 mkdir -p package/$package_name/$PYCOM_ETC_DIR/
 mkdir -p package/$package_name/$PYCOM_LN_DIR/etc/
 mkdir -p package/$package_name/$PYCOM_LN_DIR/keys/
 mkdir -p package/$package_name/$PYCOM_LN_DIR/lang/
 
 cp -r DEBIAN/sysfiles/etc/* package/$package_name/etc/.
+cp -r DEBIAN/sysfiles/usr/local/bin/* package/$package_name/usr/local/bin/.
 cp -r pyproject.toml package/$package_name/opt/riaps-pycom/.
 cp -r LICENSE package/$package_name/opt/riaps-pycom/.
 cp -r README.md package/$package_name/opt/riaps-pycom/.
@@ -82,4 +85,3 @@ sed s/@version@/$pycomversion/g -i package/$package_name/DEBIAN/control
 
 fakeroot dpkg-deb --build package/$package_name
 cp package/$package_name.deb .
-

@@ -4,10 +4,11 @@ Actors are processes that act as shells for components that run in their own thr
  
 '''
 
+import spdlog
 from .part import Part
 from .peripheral import Peripheral
 from .exc import BuildError
-import sys
+import sys 
 import zmq
 import time
 from riaps.run.disco import DiscoClient
@@ -17,7 +18,7 @@ from riaps.proto import disco_capnp
 from riaps.proto import deplo_capnp
 from riaps.consts.defs import *
 from riaps.utils.ifaces import getNetworkInterfaces
-from riaps.utils.appdesc import AppDescriptor
+from riaps.utils.appdesc import AppDescriptor  
 import getopt
 import logging
 import traceback
@@ -34,7 +35,6 @@ from riaps.utils.config import Config
 from riaps.utils.appdesc import AppDescriptor
 import zmq.auth
 from zmq.auth.thread import ThreadAuthenticator
-
 
 class Actor(object):
     '''The actor class implements all the management and control functions over its components
@@ -110,7 +110,7 @@ class Actor(object):
                 spdlog_setup.from_file(const.logConfFile)      
         except Exception as e:
             self.logger.error("error while configuring componentLogger: %s" % repr(e))  
-        
+
         messages = gModel["messages"]  # Global message types (global on the network)
         self.messageNames = []
         for messageSpec in messages:
@@ -161,6 +161,7 @@ class Actor(object):
         instSpecs = self.model["instances"]
         compSpecs = gModel["components"]
         ioSpecs = gModel["devices"]
+        
         for instName in instSpecs:  # Create the component instances: the 'parts'
             instSpec = instSpecs[instName]
             instType = instSpec['type']
@@ -405,7 +406,7 @@ class Actor(object):
         '''
         Relay the endpoint registration message to the discovery service client 
         '''
-        self.logger.info("registerEndpoint")
+        self.logger.info("registerEndpoint %r", bundle)
         result = self.disco.registerEndpoint(bundle)
         for res in result:
             (partName, portName, host, port) = res
@@ -500,33 +501,33 @@ class Actor(object):
         '''
         Handle a service update message from the discovery service
         '''
-        msgUpd = disco_capnp.DiscoUpd.from_bytes(msgBytes)       # Parse the incoming message
-        which = msgUpd.which()
-        if which == 'portUpdate':
-            msg = msgUpd.portUpdate
-            client = msg.client
-            actorHost = client.actorHost
-            # assert actorHost == self.globalHost                 # It has to be addressed to this actor
-            actorName = client.actorName
-            # assert actorName == self.name
-            instanceName = client.instanceName
-            # It has to be for a part of this actor
-            # assert instanceName in self.components, "%r not in %r" % (instanceName,self.components)  
-            portName = client.portName
-            scope = msg.scope
-            socket = msg.socket
-            host = socket.host
-            port = socket.port 
-            if actorHost != self.globalHost or actorName != self.name or instanceName not in self.components:
-                self.logger.warning('handleServiceUpdate(): discard message for %r.%r.%r.%r.%r.%r' \
-                                    % (actorHost, actorName, instanceName, portName, host, port))
-                return
-            if scope != "global":
-                assert host == self.localHost                   # Local/internal ports are host-local
-            self.updatePart(instanceName, portName, host, port) # Update the selected part
-        elif which == 'groupUpdate':
-            msg = msgUpd.groupUpdate                            # Placeholder 
-            self.logger.info('handleServiceUpdate():groupUpdate')
+        with disco_capnp.DiscoUpd.from_bytes(msgBytes) as msgUpd:   # Parse the incoming message
+            which = msgUpd.which()
+            if which == 'portUpdate':
+                msg = msgUpd.portUpdate
+                client = msg.client
+                actorHost = client.actorHost
+                # assert actorHost == self.globalHost                 # It has to be addressed to this actor
+                actorName = client.actorName
+                # assert actorName == self.name
+                instanceName = client.instanceName
+                # It has to be for a part of this actor
+                # assert instanceName in self.components, "%r not in %r" % (instanceName,self.components)  
+                portName = client.portName
+                scope = msg.scope
+                socket = msg.socket
+                host = socket.host
+                port = socket.port 
+                if actorHost != self.globalHost or actorName != self.name or instanceName not in self.components:
+                    self.logger.warning('handleServiceUpdate(): discard message for %r.%r.%r.%r.%r.%r' \
+                                        % (actorHost, actorName, instanceName, portName, host, port))
+                    return
+                if scope != "global":
+                    assert host == self.localHost                   # Local/internal ports are host-local
+                self.updatePart(instanceName, portName, host, port) # Update the selected part
+            elif which == 'groupUpdate':
+                msg = msgUpd.groupUpdate                            # Placeholder 
+                self.logger.info('handleServiceUpdate():groupUpdate')
 
     def updatePart(self, instanceName, portName, host, port):
         '''
@@ -540,35 +541,35 @@ class Actor(object):
         '''
         Handle a message from the deployment service
         '''
-        msgUpd = deplo_capnp.DeplCmd.from_bytes(msgBytes)   # Parse the incoming message
-        which = msgUpd.which()
-        if which == 'resourceMsg':
-            what = msgUpd.resourceMsg.which()
-            if what == 'resCPUX':
-                self.handleCPULimit()
-            elif what == 'resMemX':
-                self.handleMemLimit()
-            elif what == 'resSpcX':
-                self.handleSpcLimit()
-            elif what == 'resNetX':
-                self.handleNetLimit()
+        with deplo_capnp.DeplCmd.from_bytes(msgBytes) as msgUpd:   # Parse the incoming message
+            which = msgUpd.which()
+            if which == 'resourceMsg':
+                what = msgUpd.resourceMsg.which()
+                if what == 'resCPUX':
+                    self.handleCPULimit()
+                elif what == 'resMemX':
+                    self.handleMemLimit()
+                elif what == 'resSpcX':
+                    self.handleSpcLimit()
+                elif what == 'resNetX':
+                    self.handleNetLimit()
+                else:
+                    self.logger.error("unknown resource msg from deplo: '%s'" % what)
+                    pass
+            elif which == 'reinstateCmd':
+                self.handleReinstate()
+            elif which == 'nicStateMsg':
+                stateMsg = msgUpd.nicStateMsg
+                state = str(stateMsg.nicState)
+                self.handleNICStateChange(state)
+            elif which == 'peerInfoMsg':
+                peerMsg = msgUpd.peerInfoMsg
+                state = str(peerMsg.peerState)
+                uuid = peerMsg.uuid
+                self.handlePeerStateChange(state, uuid)
             else:
-                self.logger.error("unknown resource msg from deplo: '%s'" % what)
+                self.logger.error("unknown msg from deplo: '%s'" % which)
                 pass
-        elif which == 'reinstateCmd':
-            self.handleReinstate()
-        elif which == 'nicStateMsg':
-            stateMsg = msgUpd.nicStateMsg
-            state = str(stateMsg.nicState)
-            self.handleNICStateChange(state)
-        elif which == 'peerInfoMsg':
-            peerMsg = msgUpd.peerInfoMsg
-            state = str(peerMsg.peerState)
-            uuid = peerMsg.uuid
-            self.handlePeerStateChange(state, uuid)
-        else:
-            self.logger.error("unknown msg from deplo: '%s'" % which)
-            pass
 
     def handleReinstate(self):
         self.logger.info('handleReinstate')

@@ -86,19 +86,19 @@ class DiscoClient(object):
                   
         msgBytes = reqt.to_bytes()
         respBytes = self.rpcDisco(msgBytes,"registerActor",True)
-        resp = disco_capnp.DiscoRep.from_bytes(respBytes)
-        which = resp.which()
-        if which == 'actorReg':
-            respMessage = resp.actorReg
-            status = respMessage.status
-            port = respMessage.port
-            if status == 'ok':
-                self.logger.info("registerActor:connecting to 127.0.0.1:%s" % str(port))
-                self.channel.connect("tcp://127.0.0.1:" + str(port))
+        with disco_capnp.DiscoRep.from_bytes(respBytes) as resp:
+            which = resp.which()
+            if which == 'actorReg':
+                respMessage = resp.actorReg
+                status = respMessage.status
+                port = respMessage.port
+                if status == 'ok':
+                    self.logger.info("registerActor:connecting to 127.0.0.1:%s" % str(port))
+                    self.channel.connect("tcp://127.0.0.1:" + str(port))
+                else:
+                    raise SetupError("registerActor: Error response from disco")
             else:
-                raise SetupError("registerActor: Error response from disco")
-        else:
-            raise SetupError("registerActor: Unexpected response from disco")
+                raise SetupError("registerActor: Unexpected response from disco")
         return
      
     def reconnect(self):
@@ -134,17 +134,17 @@ class DiscoClient(object):
         
         msgBytes = req.to_bytes()
         respBytes = self.rpcDisco(msgBytes,"handleRegReq",True)
-        resp = disco_capnp.DiscoRep.from_bytes(respBytes)          
-        which = resp.which()
-        if which == 'serviceReg':
-            repMessage = resp.serviceReg
-            status = repMessage.status
-            if status == 'err':
-                raise SetupError("handleRegReq: Error response from disco")
+        with disco_capnp.DiscoRep.from_bytes(respBytes) as resp:          
+            which = resp.which()
+            if which == 'serviceReg':
+                repMessage = resp.serviceReg
+                status = repMessage.status
+                if status == 'err':
+                    raise SetupError("handleRegReq: Error response from disco")
+                else:
+                    pass
             else:
-                pass
-        else:
-            raise SetupError("handleRegReq: Unexpected response from disco")
+                raise SetupError("handleRegReq: Unexpected response from disco")
         return
     
     def handleLookupReq(self, bundle):
@@ -173,23 +173,23 @@ class DiscoClient(object):
         
         msgBytes = req.to_bytes()
         respBytes = self.rpcDisco(msgBytes,"handleLookupReq",True)
-        resp = disco_capnp.DiscoRep.from_bytes(respBytes)
-        which = resp.which()
         returnValue = []
-        if which == 'serviceLookup':
-            repMessage = resp.serviceLookup
-            status = repMessage.status
-            if status == 'err':
-                raise SetupError('handleLookupReq: error response from disco')
-            sockets = repMessage.sockets
-            for sock in sockets:
-                host = sock.host
-                port = sock.port
-                returnValue.append((partName, portName, host, port))
+        with disco_capnp.DiscoRep.from_bytes(respBytes) as resp:
+            which = resp.which()
+            if which == 'serviceLookup':
+                repMessage = resp.serviceLookup
+                status = repMessage.status
+                if status == 'err':
+                    raise SetupError('handleLookupReq: error response from disco')
+                sockets = repMessage.sockets
+                for sock in sockets:
+                    host = sock.host
+                    port = sock.port
+                    returnValue.append((partName, portName, host, port))
+                else:
+                    pass
             else:
-                pass
-        else:
-            raise SetupError("handleLookupReq: Bad response from disco")
+                raise SetupError("handleLookupReq: Bad response from disco")
         return returnValue
     
     def handleUnregReq(self, bundle):
@@ -217,17 +217,17 @@ class DiscoClient(object):
         msgBytes = req.to_bytes()
         respBytes = self.rpcDisco(msgBytes,"handleUnregReq",True)
         
-        resp = disco_capnp.DiscoRep.from_bytes(respBytes)  
-        which = resp.which()
-        if which == 'serviceUnreg':
-            repMessage = resp.serviceUnreg
-            status = repMessage.status
-            if status == 'err':
-                raise SetupError("handleUnregReq: Error response from disco")
+        with disco_capnp.DiscoRep.from_bytes(respBytes) as resp:  
+            which = resp.which()
+            if which == 'serviceUnreg':
+                repMessage = resp.serviceUnreg
+                status = repMessage.status
+                if status == 'err':
+                    raise SetupError("handleUnregReq: Error response from disco")
+                else:
+                    pass
             else:
-                pass
-        else:
-            raise SetupError("handleUnregReq: Unexpected response from disco")
+                raise SetupError("handleUnregReq: Unexpected response from disco")
         return
     
     def handleUnlookupReq(self, bundle):
@@ -256,23 +256,23 @@ class DiscoClient(object):
         
         msgBytes = req.to_bytes()
         respBytes = self.rpcDisco(msgBytes,"handleUnlookupReq",True)
-        resp = disco_capnp.DiscoRep.from_bytes(respBytes)
-        which = resp.which()
         returnValue = []
-        if which == 'serviceUnlookup':
-            repMessage = resp.serviceUnlookup
-            status = repMessage.status
-            if status == 'err':
-                raise SetupError('handleUnlookupReq: error response from disco')
+        with disco_capnp.DiscoRep.from_bytes(respBytes) as resp:
+            which = resp.which()
+            if which == 'serviceUnlookup':
+                repMessage = resp.serviceUnlookup
+                status = repMessage.status
+                if status == 'err':
+                    raise SetupError('handleUnlookupReq: error response from disco')
+                else:
+                    pass
             else:
-                pass
-        else:
-            raise SetupError("handleUnlookupReq: Bad response from disco")
+                raise SetupError("handleUnlookupReq: Bad response from disco")
         return returnValue
     
     def registerEndpoint(self, bundle):
         # bundle = [(partName,partTypeName),PortInfo]
-        self.logger.info("registerEndpoint: %s" % str(bundle))
+        self.logger.info("registerEndpoint: %r", bundle)
         # print ("DiscoClient.registerEndpoint",bundle)
         # Prefix: (partName, partType)
         # (pub,local,name,type,host,port)
@@ -304,13 +304,11 @@ class DiscoClient(object):
         msgType = messageType + '@' + groupType + '.' + groupName    
         regReqBundle = [(partName, partType), 
                         PortInfo(portKind="gpub", portScope=PortScope.GLOBAL, 
-                                 portName=portName, 
-                                 msgType=msgType, 
+                                 portName=portName, msgType=msgType, 
                                  portHost=host, portNum=pubPort)]
         lookupReqBundle = [(partName, partType), 
                            PortInfo(portKind="gsub", portScope=PortScope.GLOBAL,
-                                    portName=portName, 
-                                    msgType=msgType,
+                                    portName=portName, msgType=msgType,
                                     portHost='',portNum=0)]  
         # (1) lookupReq -> (2) regReq
         result = self.handleLookupReq(lookupReqBundle)
@@ -327,7 +325,8 @@ class DiscoClient(object):
                                      portHost=host, portNum=pubPort)]
         unlookupReqBundle = [(partName, partType),
                                 PortInfo(portKind="gsub", portScope=PortScope.GLOBAL,
-                                         portName=portName,msgType=msgType,portHost='',portNum=0)]  
+                                         portName=portName,msgType=msgType,
+                                         portHost='',portNum=0)]  
         # (1) unlookupReq -> (2) unreqReq
         result = self.handleUnlookupReq(unlookupReqBundle)
         self.handleUnregReq(unregReqBundle)
@@ -355,18 +354,18 @@ class DiscoClient(object):
             self.logger.info("terminate: unregistering")
             respBytes = self.rpcDisco(msgBytes,"unregister",True)
             
-            resp = disco_capnp.DiscoRep.from_bytes(respBytes)
-            which = resp.which()
-            if which == 'actorUnreg':
-                respMessage = resp.actorUnreg
-                status = respMessage.status
-                port = respMessage.port
-                if status == 'ok':
-                    self.logger.info("terminate: disconnecting 127.0.0.1:%s" % str(port))
-                    try:
-                        self.channel.disconnect("tcp://127.0.0.1:" + str(port))
-                    except:
-                        pass
+            with disco_capnp.DiscoRep.from_bytes(respBytes) as resp:
+                which = resp.which()
+                if which == 'actorUnreg':
+                    respMessage = resp.actorUnreg
+                    status = respMessage.status
+                    port = respMessage.port
+                    if status == 'ok':
+                        self.logger.info("terminate: disconnecting 127.0.0.1:%s" % str(port))
+                        try:
+                            self.channel.disconnect("tcp://127.0.0.1:" + str(port))
+                        except:
+                            pass
         except:
             pass                # Ignore all errors if disco is not running anymore
 

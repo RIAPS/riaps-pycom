@@ -535,6 +535,7 @@ class BindPort(Port):
                 self.socket.unbind(self.bindAddr)
                 self.bindAddr = None
             self.socket.close()
+            del self.socket
             self.socket = None
 
 class ConnPort(Port):
@@ -575,6 +576,7 @@ class ConnPort(Port):
                 self.socket.disconnect(srvPort)
                 self.servers = set()
             self.socket.close()
+            del self.socket
             self.socket = None
     
     def resetConnSocket(self,zmqType,sockopts=[]):

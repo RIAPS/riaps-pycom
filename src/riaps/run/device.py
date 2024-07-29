@@ -4,7 +4,7 @@ Created on Jan 7, 2017
 
 @author: riaps
 '''
-
+import spdlog
 from .part import Part
 from .peripheral import Peripheral
 from .exc import BuildError

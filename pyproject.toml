@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools", "setuptools_scm", "testresources"]
+requires = ["setuptools", "testresources"]
 # in future add "cython>=0.29.0 to requires
 build-backend = "setuptools.build_meta"
 
@@ -90,5 +90,5 @@ riaps_logger = "riaps.logger.main:main"
 riaps_ctrl_host = "riaps.utils.ctrlhost:main"
 riaps_depll = "riaps.lang.depll:main"
 riaps_gen_cert = "riaps.utils.gencert:main"
-riaps_fab = "riaps.fabfile.fabfile:main"
+riaps_fab = "riaps.rfab.main:main"
 riaps_log_config_test = "riaps.logger.riaps_log_config_test:main"

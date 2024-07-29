@@ -9,16 +9,14 @@ DO NOT USE THESE KEYS IN ANY PRODUCTION SYSTEM!**
 
 1) Set up a Development Environment using VirtualBox:  https://github.com/RIAPS/riaps-integration/tree/master/riaps-x86runtime
 
-2) Wait until the "vagrant up" shell has completely finished before using the VM
-
-3) Log in as the RIAPS app developer:  
+2) Log in as the RIAPS app developer:  
 
 ```
 	Username:  riaps
 	Password:  riaps
 ```
 
-4) Install RIAPS on target nodes (Beaglebone Black devices):  https://github.com/RIAPS/riaps-integration/tree/master/riaps-bbbruntime
+1) Install RIAPS on target nodes (Beaglebone Black devices):  https://github.com/RIAPS/riaps-integration/tree/master/riaps-node-runtime
 
 ## Files Application Developer Writes
 
@@ -48,7 +46,7 @@ To run this application execute the following operations in Eclipse
 - launch 'riaps ctrl'
 - launch 'riaps deplo'
 
-***rpyc_registry*** will be running as a service in the background.
+> Note: ***rpyc_registry*** will be running as a service in the background.
 
 To run this from a command line in the development environment, run the following commands in different terminal sessions
 
@@ -72,34 +70,21 @@ This last step will transfer the application's files to the RIAPS deplo manager 
 Once the application is running, it can be stopped using 'Stop' button on the
 gui. This will instruct the deplo manager to terminate all actors. Then the RIAPS controller can be terminated (by closing its window) and all the other process launched (using the Eclipse 'teminate all' button or Ctl C in each terminal window).  
 
-#### Debugging a Single Actor
-To concentrate on debugging application actors from Eclipse (or a command line) use the following steps:
-- launch ```riaps_disco```
-- launch ```riaps_actor app model actor args```
-
-where  
-- app    : Name of parent app
-- model  : Name of processed (JSON) model file
-- actor  : Name of specific actor from the model this process will run
-- args   : List of arguments for the actor of the form: --argName argValue
-
-Place breakpoints in the code where desired.
-
 ### Running a RIAPS App on a Network of Hardware Nodes Connected to a Physical Network
 
 This method runs the control application on a development machine and applications on separate hardware nodes that are attached to the same local network using a router.
 
-As indicated in the previous method, create the project (***pro***), model file (***pro.riaps***) and deployment file (***pro.deplo***).  This deployment file will identify the IP address (xxx.xxx.xxx.xxx) or hostname (bbb-xxxx.local) of the hardware nodes that each actor will run.  If the actor is intended run on **all** nodes, utilize the ***all*** keyword.  The hostname is configured to be the last four digits of the hardware MAC address, be sure to include the .local added to the end.  An example of the possible node identification forms are shown below
+As indicated in the previous method, create the project (***pro***), model file (***pro.riaps***) and deployment file (***pro.deplo***).  This deployment file will identify the IP address (xxx.xxx.xxx.xxx) or hostname (riaps-xxxx.local) of the hardware nodes that each actor will run.  If the actor is intended run on **all** nodes, utilize the ***all*** keyword.  The hostname is configured to be the last four digits of the hardware MAC address, be sure to include the .local added to the end.  An example of the possible node identification forms are shown below
 ```
 on 192.168.1.103 a1
-on bbb-1234.local a2
+on riaps-1234.local a2
 on all a3
 ```
 
 To run this application execute the following operations in Eclipse on the development environment
 - launch ***riaps ctrl***
 
-***rpyc_registry*** will be running as a service in the background.
+> Note: ***rpyc_registry*** will be running as a service in the background.
 
 To run this from a command line in the development environment, run the following commands in different terminal sessions
 
@@ -107,22 +92,7 @@ To run this from a command line in the development environment, run the followin
 riaps_ctrl
 ```
 
-To start RIAPS on the hardware nodes:
-1) 'ssh' into each hardware node
-
-```
-ssh riaps@xxx.xxx.xxx.xxx
-			or
-ssh riaps@bbb-xxxx.local
-```
-
-2) Start the RIAPS deployment service on the node pointing to the IP address of the development environment network location
-
-```
-sudo -E riaps_deplo -n xxx.xxx.xxx.xxx
-```
-
-Once each hardware node is ready (in deployment mode), then use the 'RIAPS Control' app gui to
+Once each hardware node is registered in the control application, then use the 'RIAPS Control' app gui to
 
 1) Select the application folder (.../pro)
 
@@ -130,12 +100,19 @@ Once each hardware node is ready (in deployment mode), then use the 'RIAPS Contr
 
 3) Select the deployment file (pro.depl)
 
-4) Click the **Launch** button on to start the actor(s) of the app.
+4) Click the **Load** button to transfer the application's files to the RIAPS deplo manager of each node
+   
+5) Once the application transfer is complete, a button will appear with the application name in the "App" column which contains the controls for running the application (**Launch**, **Stop**, **Remove**)
+   
+6)  Select **Launch** to start the actor(s) of the application on the nodes
 
-This last step will transfer the application's files to the RIAPS deplo manager that in turn will start the actor(s) of the application.
+7)  Once the application is running, it can be stopped using **Stop** button on the gui. This will instruct the deplo manager to terminate all actors.  All application files and any log files created by the application are still available on the nodes.
 
-Once the application is running, it can be stopped using **Stop** button on the
-gui. This will instruct the deplo manager to terminate all actors. Then the RIAPS controller can be terminated (by closing its window) and all the other process launched (using the Eclipse **teminate all** button or **Ctl C** in each terminal window).  
+8)  To pull any application log data to the development machines, open a new terminal window and run ```riaps_fab riaps.getAppLogs```.  This command will pull all the log files from each node and place them in a `./logs` folder with a subfolder for each node.
+   
+9)  When use of the application is complete, the application should be removed using **Remove** option found when hitting the specific application button.
+
+Then the RIAPS controller can be terminated (by closing its window) and all the other process launched (using the Eclipse **teminate all** button or **Ctl C** in each terminal window).  
 
 
 #### Debugging an Application on Remote Nodes
@@ -165,5 +142,5 @@ A typical good place for the **settrace()** statement is the component construct
 
 ## [RIAPS on a single VM Host](mininet.md)
 
-See mn/README.md
+See [mn/README.md](https://github.com/RIAPS/riaps-pycom/tree/master/mn)
 

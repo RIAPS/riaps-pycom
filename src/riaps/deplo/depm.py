@@ -31,7 +31,8 @@ import capnp
 from concurrent.futures.thread import ThreadPoolExecutor
 
 import zmq
-from zmq import devices
+# from zmq import devices
+from riaps.deplo.relay import Relay 
 
 try:
     import cPickle
@@ -62,11 +63,14 @@ DeploAppRecord = namedtuple('DeploAppRecord', 'model hash file home hosts networ
 # Record of a user
 DeploUserRecord = namedtuple('DeploUserRecord', 'name home uid gid')
 # Record of an actor
-DeploActorRecord = namedtuple('DeploActorRecord', 'app model actor args zdevice zdeviceCtrl control monitor')
+DeploActorRecord = namedtuple('DeploActorRecord', 
+                              'app model actor args zdevice zdeviceCtrl control monitor')
 # Record of an device actor
-DeploDeviceRecord = namedtuple('DeploDeviceRecord', 'app model type inst args zdevice zdeviceCtrl control monitor')
+DeploDeviceRecord = namedtuple('DeploDeviceRecord', 
+                               'app model type inst args zdevice zdeviceCtrl control monitor')
 # Record of an app actor command 
-DeploActorCommand = namedtuple('DeploActorCommand', 'app model actor args cmd pid firewall isdevice')
+DeploActorCommand = namedtuple('DeploActorCommand', 
+                               'app model actor args cmd pid firewall isdevice')
 # Record of the disco command
 DeploDiscoCommand = namedtuple('DeploDiscoCommand', 'cmd pid args')
 
@@ -786,7 +790,7 @@ class DeploymentManager(threading.Thread):
         self.procm.release(qualName)
         
         self.executor.submit(self.terminateActor,proc,appName,actorName)
-        time.sleep(0)
+        time.sleep(0.1)
         
         record = self.actors[qualName]
         zdevice = record.zdevice
@@ -846,19 +850,18 @@ class DeploymentManager(threading.Thread):
                 self.logger.error("No response from discovery service: %s" % e.args)
                 return
             
-            resp = disco_capnp.DiscoRep.from_bytes(respBytes)
-            which = resp.which()
-            if which == 'actorUnreg':
-                respMessage = resp.actorUnreg
-                status = respMessage.status
-                if status == 'ok':
-                    self.logger.info("unregistered '%s.%s'" % (appName,actorName))
+            with disco_capnp.DiscoRep.from_bytes(respBytes) as resp:
+                which = resp.which()
+                if which == 'actorUnreg':
+                    respMessage = resp.actorUnreg
+                    status = respMessage.status
+                    if status == 'ok':
+                        self.logger.info("unregistered '%s.%s'" % (appName,actorName))
+                    else:
+                        self.logger.error("Bad response from disco service at app unregistration")
                 else:
-                    self.logger.error("Bad response from disco service at app unregistration")
-            else:
-                self.logger.error("Unexpected response from disco service at app unregistration")
-                                
-                
+                    self.logger.error("Unexpected response from disco service at app unregistration")
+
     def queryApps(self):
         reply = {}
         # This should be self.actors 
@@ -1104,18 +1107,18 @@ class DeploymentManager(threading.Thread):
         '''
         self.logger.info("handleClient")
         try:
-            msg = deplo_capnp.DeplReq.from_bytes(msgBytes)
-            which = msg.which()
-            if which == 'actorReg':
-                self.handleActorReg(msg)
-            elif which == 'deviceGet':
-                self.handleDeviceReq(msg)
-            elif which == 'deviceRel':
-                self.handleDeviceRel(msg)
-            elif which == 'reportEvent':
-                self.handleReportEvent(msg)
-            else:
-                pass
+            with deplo_capnp.DeplReq.from_bytes(msgBytes) as msg:
+                which = msg.which()
+                if which == 'actorReg':
+                    self.handleActorReg(msg)
+                elif which == 'deviceGet':
+                    self.handleDeviceReq(msg)
+                elif which == 'deviceRel':
+                    self.handleDeviceRel(msg)
+                elif which == 'reportEvent':
+                    self.handleReportEvent(msg)
+                else:
+                    pass
         except: 
             info = sys.exc_info()
             self.logger.error("Error in handleClient '%s': %s %s" % (which, info[0], info[1]))
@@ -1186,8 +1189,9 @@ class DeploymentManager(threading.Thread):
         clientPID  = self.launchMap[qualName].pid
         
         iface = 'tcp://127.0.0.1'
-        zmqDevice = devices.ThreadProxySteerable(zmq.DEALER,zmq.PAIR,zmq.PUB,zmq.PAIR)
+        # zmqDevice = devices.ThreadProxySteerable(zmq.DEALER,zmq.PAIR,zmq.PUB,zmq.PAIR)
         identity = actorIdentity(appName, appActorName, clientPID)
+        zmqDevice = Relay(self.context,identity,zmq.DEALER,zmq.PAIR,zmq.PUB,zmq.PAIR)
         self.logger.info("zmqDevice ID = %s" % identity)
         zmqDevice.setsockopt_in(zmq.IDENTITY, identity.encode(encoding='utf_8'))
         # device.setsockopt_in(zmq.RCVTIMEO,const.deplEndpointRecvTimeout)
@@ -1210,18 +1214,21 @@ class DeploymentManager(threading.Thread):
         actorMonitor.setsockopt(zmq.SUBSCRIBE, b'')
         actorMonitor.connect(monAddr)
 
-        ctrlPort = zmqDevice.bind_ctrl_to_random_port(iface)
+        ctrlPort = self.binder()
+        ctrlAddr = "%s:%i" % (iface, ctrlPort)
+        zmqDevice.bind_ctrl(ctrlAddr)
+        
         zdeviceCtrl = self.context.socket(zmq.PAIR)
-        zdeviceCtrl.connect("%s:%i" % (iface, ctrlPort))
+        zdeviceCtrl.connect(ctrlAddr)
          
         self.addMonitor(appName,appActorName,actorMonitor)
         self.fm.addClientDevice(appName,appActorName,zmqDevice)
         
-        
         time.sleep(0.1)
         zmqDevice.start()
         time.sleep(0.1)
-
+        self.logger.info(f"handleActorReg: ({appName},{appActorName}) proxy: {zmqDevice.native_id})")
+        
         actorArgs = _actorRecord.args
         appModel = _actorRecord.model
         if isDevice:
@@ -1560,10 +1567,12 @@ class DeploymentManager(threading.Thread):
         '''
         Handle messages from process monitor: restart disco/actor/device 
         '''
+        
         msgFrames = self.procmon.recv_multipart()
         identity = msgFrames[0]
         msg = pickle.loads(msgFrames[1])
         (qualName,) = msg
+        self.logger.info(f"handleProcmon: {qualName}")
         if qualName == self.DISCONAME:
             self.logger.info("restarting disco")
             self.startDisco()
@@ -1654,23 +1663,23 @@ class DeploymentManager(threading.Thread):
         '''
         Handle a  message that has been sent to the actor
         '''
-        msg = deplo_capnp.DeplCmd.from_bytes(msgBytes)      
-        which = msg.which()
-        if which == 'resourceMsg':      # Resource violation
-            what = msg.resourceMsg.which()
-            self.logger.info('handleActorMessage: %s.%s - %s' 
-                             % (appName,actorName,what))
-            # TODO: send message to fault manager
-        elif which == 'reinstateCmd':   # Reinstate command - ignore
-            pass
-        elif which == 'nicStateMsg':    # NIC state has changed - ignore
-            pass
-        elif which == 'peerInfoMsg':    # Peer info has changed - ignore
-            pass
-        else:
-            self.logger.error("unknown msg from monitor: '%s'" % which)
-            pass              
-    
+        with deplo_capnp.DeplCmd.from_bytes(msgBytes) as msg:      
+            which = msg.which()
+            if which == 'resourceMsg':      # Resource violation
+                what = msg.resourceMsg.which()
+                self.logger.info('handleActorMessage: %s.%s - %s' 
+                                 % (appName,actorName,what))
+                # TODO: send message to fault manager
+            elif which == 'reinstateCmd':   # Reinstate command - ignore
+                pass
+            elif which == 'nicStateMsg':    # NIC state has changed - ignore
+                pass
+            elif which == 'peerInfoMsg':    # Peer info has changed - ignore
+                pass
+            else:
+                self.logger.error("unknown msg from monitor: '%s'" % which)
+                pass
+        
     def terminate(self):
         if self.started:
             self.terminated.set()

@@ -5,7 +5,7 @@ PYCOM_ETC_DIR="/etc/riaps"
 PYCOM_LN_DIR="/usr/local/riaps"
 
 # Install riaps-pycom pip package
-pip3 install /opt/riaps-pycom/. --verbose
+pip3 install --break-system-packages /opt/riaps-pycom/. --verbose
 
 # Make sure key directories are available
 mkdir -p $PYCOM_LN_DIR/keys/
@@ -41,11 +41,17 @@ ln -s $PYCOM_ETC_DIR/x509.pem $PYCOM_LN_DIR/keys/x509.pem
 ln -s $PYCOM_ETC_DIR/riaps-hosts.conf $PYCOM_LN_DIR/etc/riaps-hosts.conf
 ln -s $PYCOM_ETC_DIR/riaps-ctrl.glade $PYCOM_LN_DIR/etc/riaps-ctrl.glade
 
+# Set permissions for root device softlink script (quota)
+chmod -f 755 /usr/local/bin/link_root_device.sh
+chmod -f 755 /usr/local/bin/set_apparmor_pyversion.sh
+
 # Remove location used while installing riaps-pycom package
 rm -rf /opt/riaps-pycom/ || true
 
 # Enable and start RIAPS services
 systemctl daemon-reload
+systemctl enable riaps-apparmor-pyversion.service
+systemctl start riaps-apparmor-pyversion.service || true
 systemctl enable riaps-rm-cgroups.service
 systemctl start riaps-rm-cgroups.service || true
 systemctl enable riaps-rm-quota.service

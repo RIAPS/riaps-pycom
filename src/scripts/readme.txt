@@ -2,12 +2,6 @@ Files in this folder are for running various parts of riaps by the riaps APP dev
 These scripts are usually installed in a folder that is accessible via the PATH on the app developer's machine
 (e.g. /usr/local/bin). The scripts assume that the environment variables RIAPSHOME and RIAPSAPPS are set up.
 
-These scripts are used only when mininet is used:
-- riaps-dev.mn : launches the simple mininet configuration, uses sshd.py (which should be in the path)
-- riaps-dev.ctrl: script to be run on the 'lead' node of mininet, launches the registry and the controller
-- riaps-dev.node: script to be run on the 'slave' nodes of mininet, launches the deplo manager
-- sshd.py: starts mininet with a 4 node network, each node running sshd.
-
 The scripts listed below are used by all riaps installations (both on a development machine and the
 embedded targets):
 - riaps_actor:     the actor
@@ -17,10 +11,13 @@ embedded targets):
 - riaps_deplo:     the deployment manager
 - riaps_device:    the device
 - riaps_disco:     the discovery service
+- riaps_fab:       a tool for managing multiple RIAPS nodes
 - riaps_gviz:      a graphical visualizer for an application model
 - riaps_lang:      the modeling language processor
+- riaps_logger:    the framework log server
 - rpyc_registry:   background communication between the controller and the deployment manager
 
 The following scripts are available for developers to utilize:
-- riaps_gen:       component code generation tool
-- riaps_gen_cert:  generate public/private key pair and self-signed certificate
+- riaps_gen:              component code generation tool
+- riaps_gen_cert:         generate public/private key pair and self-signed certificate
+- riaps_log_config_test:  test app for log configuration file

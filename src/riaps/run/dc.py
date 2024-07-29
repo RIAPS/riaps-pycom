@@ -61,7 +61,7 @@ class Poll(object):
         self.deadline = deadline
         self.member = member
         self.numPeers = numPeers
-        self.threshold = int(numPeers / 2 + 1)
+        self.threshold = int(numPeers // 2 + 1)
         self.voteCnt = 0
         self.yesCnt = 0
    
@@ -131,19 +131,20 @@ class GroupThread(threading.Thread):
         self.groupConsensusTimeout = group.consensusTimeout # const.groupConsensusTimeout
         self.timeout = None
         self.leaderDeadline = None                          # deadline to recv an expected heartbeat from leader
-        self.numPeers = -1
+        self.peers = {}
+        self.numPeers = len(self.peers)
         self.leader = None
         self.ownId = None 
     
     def setup(self):
         self.group.setup(self)
+        actorId = self.group.parent.parent.owner.parent.getActorID()
+        # Assumption: id can be represented on 8 bytes
+        self.ownId = actorId + id(self.group).to_bytes(8, 'big')
+        assert(len(self.ownId) == 16)
         if self.coordinated:
-            actorId = self.group.parent.parent.owner.parent.getActorID()
-            # Assumption: id can be represented on 8 bytes
-            self.ownId = actorId + id(self.group).to_bytes(8, 'big')
-            assert(len(self.ownId) == 16)
-            self.peers = {}
-            self.numPeers = len(self.peers)
+            # self.peers = {}
+            # self.numPeers = len(self.peers)
             self.timeout = self.groupHeartbeat
             self.setLeaderDeadline()
             self.lastWait = 0
@@ -177,7 +178,7 @@ class GroupThread(threading.Thread):
         '''
         Calculate the threshold for leader election, based on membership list 
         '''
-        return int(self.numPeers / 2 + 1)  # Threshold for votes for leader election
+        return int(self.numPeers // 2 + 1)  # Threshold for votes for leader election
     
     def setTimeout(self, value, now):
         '''
@@ -207,10 +208,7 @@ class GroupThread(threading.Thread):
         '''
         Update membership list (with the current time as the last time a peer was heard from)
         '''
-        leavers = []
-        for peer in \
-            [p for p in self.peers if int((now - self.peers[p]) * 1000) > self.groupPeerTimeout]:
-                leavers += [peer] 
+        leavers = [p for p in self.peers if int((now - self.peers[p]) * 1000) > self.groupPeerTimeout]
         if len(leavers) > 0:
             for leaver in leavers:
                 self.sendChangeMessage(Group.GROUP_MLT, leaver)  # Member dropped out
@@ -309,11 +307,11 @@ class GroupThread(threading.Thread):
                         if (ok):
                             self.pubPort.sendGroup(Group.GROUP_RCM, msg)  # Send RCM to group
                         else: 
-                            rfv = dc_capnp.GroupVote.from_bytes(msg)        # Poll failed (before it got started)        
-                            which = rfv.which()
-                            assert(which == 'rfv')
-                            rfvId = rfv.rfv.rfvId
-                            self.announceConsensus(rfvId, 'timeout')
+                            with dc_capnp.GroupVote.from_bytes(msg) as rfv:        # Poll failed (before it got started)        
+                                which = rfv.which()
+                                assert(which == 'rfv')
+                                rfvId = rfv.rfv.rfvId
+                                self.announceConsensus(rfvId, 'timeout')
                     else:
                         self.qryPort.sendToLeader(Group.GROUP_RFV, msgFrames[1])
                         self.groupSocket.send_multipart([zmq.Frame(Group.GROUP_ACK)])
@@ -335,7 +333,7 @@ class GroupThread(threading.Thread):
                     self.groupSocket.send_multipart([zmq.Frame(Group.GROUP_ERR), zmq.Frame(pickle.dumps(e))])
                     self.logger.error("error sending GROUP_RTC:%s", str(e)) 
         elif cmd == Group.GROUP_MLT:    # Our component is leaving the group
-            self.logger.info("GroupThread.handleCompMessage(GROUP_MLT,...)")
+            self.logger.info(f"GroupThread.handleCompMessage(GROUP_MLT,{self.ownId.hex()})")
             self.pubPort.sendGroup(Group.GROUP_MLT,zmq.Frame(self.ownId))
             toStop = True 
         else:
@@ -353,8 +351,8 @@ class GroupThread(threading.Thread):
         self.checkAllPolls(now)
         if self.state == GroupThread.FOLLOWER:  
             if self.leaderDeadline and now > self.leaderDeadline:       # Past leader heartbeat deadline (if set)
-                if self.numPeers > int(self.groupMinSize / 2) + 1:      # To start an election, we need quorum
-                    self.logger.info("... FOLLOWER --> CANDIDATE, starting leader election")                     
+                if self.numPeers > int(self.groupMinSize // 2) + 1:      # To start an election, we need quorum
+                    self.logger.info(f"... FOLLOWER --> CANDIDATE, starting leader election in group of {self.numPeers}")                     
                     if self.leader != None:
                         self.logger.info("... past leader %s deadline" % self.leader.hex())
                         self.sendChangeMessage(Group.GROUP_LEX, self.leader)  # Leader exited
@@ -369,7 +367,7 @@ class GroupThread(threading.Thread):
                     self.leaderDeadline = None                          # No leader heartbeat deadline, we are in election mode
                     self.leader = None
                 else:
-                    self.logger.info("... FOLLOWER, no majority in group to start election")
+                    self.logger.info(f"... FOLLOWER, no majority in group of {self.numPeers} to start election")
                     self.setLeaderDeadline()                            # Update leader heartbeat deadline  
                     self.setTimeout(self.groupHeartbeat,now)
             else:
@@ -398,13 +396,13 @@ class GroupThread(threading.Thread):
             pass  # Error : timeout in unknown state")
     
     
-    def handleNetMessage(self, now=None):
+    def handleNetMessage(self, now):
         '''
         Handle (broadcast) messages coming from the group. 
         Messages could be data messages (to be handed over to the component), 
         peer heartbeat messages, or  election-related messages
         '''
-        self.logger.info("GroupThread.handleNetMessage()")
+        self.logger.info("GroupThread.handleNetMessage...")
         msgFrames = self.subPort.recvGroup()
         cmd = msgFrames[0]
         if cmd == Group.GROUP_MSG:
@@ -419,26 +417,29 @@ class GroupThread(threading.Thread):
             self.groupSocket.send_multipart(msgOut)
             if self.coordinated:
                 self.updateTimeout(now)
-            return 
         elif cmd == Group.GROUP_MLT:    # One of our peers left the group
             frame = msgFrames[1]
             leaver = struct.unpack('!16s', frame)[0]
             if leaver in self.peers:
+                self.logger.info(f"GroupThread.handleNetMessage(GROUP_MLT,{leaver.hex()})")
                 self.sendChangeMessage(Group.GROUP_MLT,leaver)
-                del self.peers[leaver] 
+                del self.peers[leaver]
+            else:
+                self.logger.warning(f"GroupThread.handleNetMessage(GROUP_MLT,{leaver.hex()}) - not peer")
             self.numPeers = len(self.peers)
-        if self.coordinated:  # Non-data messages are meaningful only for coordinated groups 
-            assert(now != None)
+        elif self.coordinated:  # Non-data messages are meaningful only for coordinated groups 
             frame = msgFrames[1]
-            self.logger.info("... [%s].%d:%s", \
-                             self.group.getGroupName(), self.state, cmd.decode('utf-8'))
+            if cmd != GroupThread.HEARTBEAT:
+                self.logger.info("... [%s].%d:%s", \
+                                 self.group.getGroupName(), self.state, cmd.decode('utf-8'))
             if cmd == GroupThread.HEARTBEAT:  # Incoming peer heartbeat message
                 try:
                     peer = struct.unpack('!16s', frame)[0]
                 except:
-                    self.logger.error("... invalid peer in heartbeat: %s" % str(frame))
+                    self.logger.error(f"... invalid peer in heartbeat: {str(frame)}")
                     return
                 if peer not in self.peers:
+                    self.logger.info(f"... peer {peer.hex()} added")
                     self.sendChangeMessage(Group.GROUP_MJD, peer)
                 self.peers[peer] = now
                 self.numPeers = len(self.peers)
@@ -609,24 +610,24 @@ class GroupThread(threading.Thread):
         Start a poll for a member based on message
         '''
         self.logger.info("GroupThread.startPoll()")
-        rfv = dc_capnp.GroupVote.from_bytes(msg)
-        which = rfv.which()
-        if which == 'rfv':
-            now = time.time()
-            rfvId = rfv.rfv.rfvId
-            started = rfv.rfv.started
-            timeout = rfv.rfv.timeout
-            if timeout == 0.0: timeout = self.groupConsensusTimeout
-            delta = now - started
-            if delta > timeout:  # We are past the timeout
+        with dc_capnp.GroupVote.from_bytes(msg) as rfv:
+            which = rfv.which()
+            if which == 'rfv':
+                now = time.time()
+                rfvId = rfv.rfv.rfvId
+                started = rfv.rfv.started
+                timeout = rfv.rfv.timeout
+                if timeout == 0.0: timeout = self.groupConsensusTimeout
+                delta = now - started
+                if delta > timeout:  # We are past the timeout
+                    return False
+                deadline = started + timeout - delta  # Compensate for initial delay 
+                poll = Poll(self, rfv.rfv, member, timeout, deadline, self.numPeers)
+                self.polls[rfvId] = poll
+                return True
+            else:
+                self.logger.error('GroupThread.startPoll(): invalid message type %s', str(which))
                 return False
-            deadline = started + timeout - delta  # Compensate for initial delay 
-            poll = Poll(self, rfv.rfv, member, timeout, deadline, self.numPeers)
-            self.polls[rfvId] = poll
-            return True
-        else:
-            self.logger.error('GroupThread.startPoll(): invalid message type %s', str(which))
-            return False
     
     def announceConsensus(self, rfvId, vote):
         '''
@@ -677,21 +678,21 @@ class GroupThread(threading.Thread):
         Update poll with the vote in msg
         '''
         self.logger.info("GroupThread.updatePoll()")
-        rtc = dc_capnp.GroupVote.from_bytes(msg)
-        which = rtc.which()
-        if which == 'rtc':
-            rfvId = rtc.rtc.rfvId
-            if rfvId in self.polls:
-                poll = self.polls[rfvId] 
-                now = time.time()
-                vote = True if rtc.rtc.vote == 'yes' else False
-                poll.vote(vote)
-                done = self.checkPoll(poll, now)
-                if done:
-                    del self.polls[rfvId]
-            else:
-                self.logger.info("... rpfId is not in polls")
-                pass
+        with dc_capnp.GroupVote.from_bytes(msg) as rtc:
+            which = rtc.which()
+            if which == 'rtc':
+                rfvId = rtc.rtc.rfvId
+                if rfvId in self.polls:
+                    poll = self.polls[rfvId] 
+                    now = time.time()
+                    vote = True if rtc.rtc.vote == 'yes' else False
+                    poll.vote(vote)
+                    done = self.checkPoll(poll, now)
+                    if done:
+                        del self.polls[rfvId]
+                else:
+                    self.logger.info("... rpfId is not in polls")
+                    pass
             
     def handleMessageForLeader(self):
         '''
@@ -718,11 +719,11 @@ class GroupThread(threading.Thread):
             if (ok):
                 self.pubPort.sendGroup(Group.GROUP_RCM, msg)  # Send RCM to group
             else: 
-                rfv = dc_capnp.GroupVote.from_bytes(msg)   # Poll failed (before it got started)        
-                which = rfv.which()
-                assert(which == 'rfv')
-                rfvId = rfv.rfv.rfvId
-                self.announceConsensus(rfvId, 'timeout')
+                with dc_capnp.GroupVote.from_bytes(msg) as rfv:  # Poll failed (before it got started)        
+                    which = rfv.which()
+                    assert(which == 'rfv')
+                    rfvId = rfv.rfv.rfvId
+                    self.announceConsensus(rfvId, 'timeout')
         elif cmd == Group.GROUP_RTC:  # Reply to consensus to leader
             self.logger.info('...: consensus vote to leader')
             msg = msgFrames[1]
@@ -817,6 +818,7 @@ class GroupThread(threading.Thread):
             if toStop: break
         self.done = False
         self.group.unsetup(self)
+        time.sleep(const.groupDiscoDelay/1000)
 
 
 class Group(object):
@@ -878,7 +880,7 @@ class Group(object):
         # ???
         msg = ('group', self.groupType, self.groupInstance, self.messageType, host, pubPort, partName, partType, portName) 
         self.thread.sendControl(msg)
-        time.sleep(1.0)  # 
+        time.sleep(const.groupDiscoDelay//1000)# 
     
     GROUP_PARAMETERS = {'heartbeat' : const.groupHeartbeat, 
                         'electionMin' : const.groupElectionMin,
@@ -902,7 +904,11 @@ class Group(object):
     def leave(self):
         self.logger.info("Group.leave(): %s" % self.groupInstanceName)
         # 
-        comp = self.parent.parent
+        msgFrames = [zmq.Frame(Group.GROUP_MLT)]    # Send out message the component is leaving group
+        self.compSocket.send_multipart(msgFrames)
+        self.groupThread.join()
+               
+        comp = self.parent.parent                   # Inform component/disco about leaving the group
         partName = comp.getName()
         partType = comp.getTypeName()
         portName = self.groupInstanceName
@@ -911,10 +917,6 @@ class Group(object):
         msg = ('ungroup', self.groupType, self.groupInstance, self.messageType, host, pubPort, partName, partType, portName) 
         self.thread.sendControl(msg)
         
-        msgFrames = [zmq.Frame(Group.GROUP_MLT)]    # Send out message the component is leaving group
-        self.compSocket.send_multipart(msgFrames)
-        self.groupThread.join()
-
         self.compSocket.close()
     
     def getGroupName(self):
@@ -1059,31 +1061,31 @@ class Group(object):
                 if self.isTimed:  # If group is timed, store values
                     self.recvTime = msgFrames[2]
                     self.sendTime = msgFrames[3]
-                rfv = dc_capnp.GroupVote.from_bytes(msg)
-                which = rfv.which()
-                if which == 'rfv':
-                    topic = rfv.rfv.topic
-                    rfvId = rfv.rfv.rfvId
-                    subject = rfv.rfv.subject
-                    self.msgQueue.append(topic)
-                    if subject == Poll.ACTION:  # Call member's appropriate message handler
-                        when = rfv.rfv.release
-                        self.parent.parent.handleActionVoteRequest(self, rfvId, when)    
-                    elif subject == Poll.VALUE:
-                        self.parent.parent.handleVoteRequest(self, rfvId)
-                    else:
-                        self.logger.error("handleMessage() - unknown poll subject %s", str(subject))
+                with dc_capnp.GroupVote.from_bytes(msg) as rfv:
+                    which = rfv.which()
+                    if which == 'rfv':
+                        topic = rfv.rfv.topic
+                        rfvId = rfv.rfv.rfvId
+                        subject = rfv.rfv.subject
+                        self.msgQueue.append(topic)
+                        if subject == Poll.ACTION:  # Call member's appropriate message handler
+                            when = rfv.rfv.release
+                            self.parent.parent.handleActionVoteRequest(self, rfvId, when)    
+                        elif subject == Poll.VALUE:
+                            self.parent.parent.handleVoteRequest(self, rfvId)
+                        else:
+                            self.logger.error("handleMessage() - unknown poll subject %s", str(subject))
             elif cmd == Group.GROUP_ANN:
                 msg = msgFrames[1]
                 if self.isTimed:  # If group is timed, store values
                     self.recvTime = msgFrames[2]
                     self.sendTime = msgFrames[3]
-                ann = dc_capnp.GroupVote.from_bytes(msg)
-                which = ann.which()
-                if which == 'ann':
-                    rfvId = ann.ann.rfvId
-                    vote = ann.ann.vote
-                    self.parent.parent.handleVoteResult(self, rfvId, vote)  # Call member's message handler
+                with dc_capnp.GroupVote.from_bytes(msg) as ann:
+                    which = ann.which()
+                    if which == 'ann':
+                        rfvId = ann.ann.rfvId
+                        vote = ann.ann.vote
+                        self.parent.parent.handleVoteResult(self, rfvId, vote)  # Call member's message handler
             elif cmd == Group.GROUP_MJD:
                 memberId = msgFrames[1]
                 self.parent.parent.handleMemberJoined(self, memberId)
@@ -1387,10 +1389,12 @@ class Coordinator(object):
         key = self.groupName(groupType, groupInstance)
         res = None
         if key in self.groupMembers:
+            self.logger.info("Coordinator.joinGroup - known group (%s)" % key)
             res = self.groupMembers[key]
         else:
             res = Group(self, thread, groupType, groupInstance, componentId, groupSpec, groupMinSize)
             self.groupMembers[key] = res
+            self.logger.info("Coordinator.joinGroup - new group (%s)" % key)
         return res
     
     def getGroup(self, groupType, groupInstance):

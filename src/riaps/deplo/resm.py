@@ -22,6 +22,7 @@ from riaps.utils.config import Config
 from butter.eventfd import Eventfd
 import traceback
 import pwd
+from filelock import FileLock
 from pwd import getpwnam  
 from riaps.deplo.cpumon import CPUMonitorThread
 from riaps.deplo.memmon import MemMonitorThread
@@ -345,8 +346,9 @@ class AppResourceManager(object):
             pass
         if self.uid == -1:                              # Unknown uid
             try:
-                time.sleep(random.random())             # Hack to avoid sim. adduser-s
-                _res = riaps_sudo('adduser --disabled-login --gecos GECOS --no-create-home %s' % self.userName)
+                lock = FileLock("/tmp/riaps.adduser.lock")
+                with lock:
+                    _res = riaps_sudo('adduser --disabled-login --gecos GECOS --no-create-home %s' % self.userName)
                 self.uid = getpwnam(self.userName).pw_uid
             except:
                 # traceback.print_exc()
