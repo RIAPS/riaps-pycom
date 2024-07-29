@@ -42,8 +42,7 @@ This section explains the tools available and how to use them.
 	- Show remote results regardless of success/failure.
 - `--role(-r) <rolename>`: Specify target role
 
-  `riaps_fab` uses *roles* to form groups of nodes, and commands can be executed
-for specific groups. Based on the `nodes` and the `control` settings, two more roles are populated, shown on the table below.  
+  `riaps_fab` uses *roles* to form groups of nodes, and commands can be executed for specific groups. Based on the `nodes` and the `control` settings, two more roles are populated, shown on the table below.  
 
 	| Role      | Description        | Members                  |
 	| ----------|------------------- |------------------------------------|
