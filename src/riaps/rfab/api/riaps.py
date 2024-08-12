@@ -219,7 +219,7 @@ class TimesyncInstallTask(Task):
         return self.sudo(cmd)
 
     def retrieve_timesync_logs(self):
-        return self.get(self.log_filename,f"{self.log_folder}/{self.connection.host}-{self.timesync}")
+        return self.get(self.log_filename,f"{self.log_folder}/{self.connection.host}-{self.timesync}.log")
 
 class TimesyncUninstallTask(Task):
     controlhost = "riaps-VirtualBox.local"
