@@ -55,6 +55,7 @@ class BadExit(UnexpectedExit):
         self.msg = msg or ""
 
 class Task:
+    @classmethod
     def __init_subclass__(cls) -> None:
         super().__init_subclass__()
         cls._steps = {}
@@ -78,7 +79,7 @@ class Task:
         """
         self.connection: Connection = connection
         self.kwargs = kwargs
-        self.kwargs['hide'] = True
+        self.kwargs['hide'] = 'out'
         self.results = {name:None for name in self._steps.values()}
         self.state = STATE.INIT
         self.final_res = None
@@ -216,12 +217,12 @@ class TaskRunner:
                 self.logger.error(f"NOT DONE FOR {c.host}")
         
         if _succeeded:
-            self.logger.info(f"Succeeded ({len(_succeeded)}):")
+            self.logger.info(f"success ({len(_succeeded)}):")
             for c,ctx in _succeeded.items():
                 r = ctx.final_res
                 _print_multiline(self.logger.info,f"{c.host}:",r.stdout,2)
         if _failed:
-            self.logger.error(f"Failed ({len(_failed)}):")
+            self.logger.error(f"failure ({len(_failed)}):")
             for c,ctx in _failed.items():
                 e: BadExit = ctx.final_res
                 self.logger.error(f"  host: {c.host}:")
@@ -234,7 +235,7 @@ class TaskRunner:
                 if len(e.result.stderr):
                     _print_multiline(self.logger.error,f"STDERR:",e.result.stderr,4)
         if _excepted:
-            self.logger.error(f"Excepted ({len(_excepted)}):")
+            self.logger.error(f"Exception ({len(_excepted)}):")
             for c,ctx in _excepted.items():
                 r = ctx.final_res
                 hint=None

@@ -308,8 +308,8 @@ class GroupThread(threading.Thread):
                             self.pubPort.sendGroup(Group.GROUP_RCM, msg)  # Send RCM to group
                         else: 
                             with dc_capnp.GroupVote.from_bytes(msg) as rfv:        # Poll failed (before it got started)        
-                                which = rfv.which()
-                                assert(which == 'rfv')
+                                tag = rfv.which()
+                                assert(tag == 'rfv')
                                 rfvId = rfv.rfv.rfvId
                                 self.announceConsensus(rfvId, 'timeout')
                     else:
@@ -611,8 +611,8 @@ class GroupThread(threading.Thread):
         '''
         self.logger.info("GroupThread.startPoll()")
         with dc_capnp.GroupVote.from_bytes(msg) as rfv:
-            which = rfv.which()
-            if which == 'rfv':
+            tag = rfv.which()
+            if tag == 'rfv':
                 now = time.time()
                 rfvId = rfv.rfv.rfvId
                 started = rfv.rfv.started
@@ -626,7 +626,7 @@ class GroupThread(threading.Thread):
                 self.polls[rfvId] = poll
                 return True
             else:
-                self.logger.error('GroupThread.startPoll(): invalid message type %s', str(which))
+                self.logger.error(f'GroupThread.startPoll(): invalid message type %s', str(tag))
                 return False
     
     def announceConsensus(self, rfvId, vote):
@@ -679,8 +679,8 @@ class GroupThread(threading.Thread):
         '''
         self.logger.info("GroupThread.updatePoll()")
         with dc_capnp.GroupVote.from_bytes(msg) as rtc:
-            which = rtc.which()
-            if which == 'rtc':
+            tag = rtc.which()
+            if tag == 'rtc':
                 rfvId = rtc.rtc.rfvId
                 if rfvId in self.polls:
                     poll = self.polls[rfvId] 
@@ -720,8 +720,8 @@ class GroupThread(threading.Thread):
                 self.pubPort.sendGroup(Group.GROUP_RCM, msg)  # Send RCM to group
             else: 
                 with dc_capnp.GroupVote.from_bytes(msg) as rfv:  # Poll failed (before it got started)        
-                    which = rfv.which()
-                    assert(which == 'rfv')
+                    tag = rfv.which()
+                    assert(tag == 'rfv')
                     rfvId = rfv.rfv.rfvId
                     self.announceConsensus(rfvId, 'timeout')
         elif cmd == Group.GROUP_RTC:  # Reply to consensus to leader
@@ -1062,8 +1062,8 @@ class Group(object):
                     self.recvTime = msgFrames[2]
                     self.sendTime = msgFrames[3]
                 with dc_capnp.GroupVote.from_bytes(msg) as rfv:
-                    which = rfv.which()
-                    if which == 'rfv':
+                    tag = rfv.which()
+                    if tag == 'rfv':
                         topic = rfv.rfv.topic
                         rfvId = rfv.rfv.rfvId
                         subject = rfv.rfv.subject
@@ -1081,8 +1081,8 @@ class Group(object):
                     self.recvTime = msgFrames[2]
                     self.sendTime = msgFrames[3]
                 with dc_capnp.GroupVote.from_bytes(msg) as ann:
-                    which = ann.which()
-                    if which == 'ann':
+                    tag = ann.which()
+                    if tag == 'ann':
                         rfvId = ann.ann.rfvId
                         vote = ann.ann.vote
                         self.parent.parent.handleVoteResult(self, rfvId, vote)  # Call member's message handler

@@ -111,8 +111,9 @@ def main():
     theLogger = logging.getLogger("riaps.logger")
     theLogger.propagate = False
     
-    (globalIPs,_globalMACs,_globalNames,_localIP) = getNetworkInterfaces()
+    (found,globalIPs,_globalMACs,_globalNames,_localIP) = getNetworkInterfaces()
     assert len(globalIPs) > 0 and len(_globalMACs) > 0, "Error: no active network interface"
+    if not found: theLogger.warning("Configured network interface not found - using first available") 
     default_host = globalIPs[0]
     default_port = RIAPS_LOGGER_DEFAULT_TCP_PORT
 

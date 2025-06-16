@@ -4,11 +4,19 @@ Created on Dec 16, 2017
 @author: riaps
 '''
 import traceback
-import pydevd
+
+PYDEVD = False
+try:
+    import pydevd
+    PYDEVD = True
+except:
+    pass
+
 from riaps.utils.config import Config
 
 
 def riaps_trace_setup(debug):
+    if PYDEVD is False: return False
     pair = debug.split(':')
     try:
         if len(pair) == 1:  # We got a hostname, no port
@@ -17,15 +25,15 @@ def riaps_trace_setup(debug):
             (host, port) = pair
             host = None if len(host) == 0 else host
             port = 5678 if len(port) == 0 else int(port)  # Default pydevd debug port
-            print('Waiting on debug server using \'%s:%s\'' % (str(host), str(port)))
+            print(f"Waiting for debug server using '{host}:{port}'")
             pydevd.settrace(host=host, port=port)
             return True
         else:
-            print('Invalid debug argument: %s - ignored' % debug)
+            print(f'Invalid debug argument: {debug} - ignored')
             return False
     except:
         traceback.print_exc()
-        print('Unable to connect debug server using \'%s\' - no tracing' % debug)
+        print(f"Unable to connect debug server using {debug}- no tracing")
         return False
 
     
@@ -43,6 +51,7 @@ def riaps_trace(debug=None, prog=None):
     Returns: True of False depending on whether the program is running in trace mode.
      
     '''
+    if PYDEVD is False: return False 
     ok = False
     if debug != None: ok = riaps_trace_setup(debug)
     if not ok and prog != None and hasattr(Config, prog):

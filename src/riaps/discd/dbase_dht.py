@@ -109,7 +109,7 @@ class DhtPeerMon(threading.Thread):
                 break
             if type(reader) == zyre.c_void_p and reader.value == self.command.underlying:
                 msg = self.command.recv_pyobj()
-                self.logger.info('DhtPeerMon.run - command: %s' % str(msg))
+                self.logger.info(f'DhtPeerMon.run - command: {msg}')
                 cmd = msg[0]
                 if cmd == 'stop':
                     break 
@@ -344,16 +344,16 @@ class DhtDbase(DiscoDbase):
         self.deleted = set()
         self.noClientsMap = { }
         
-        self.republishMap = { }
-        self.republisherStart = threading.Event()
-        self.republisherDelay  = threading.Event()
-        self.republisherDelayFunc = functools.partial(self.republisherDelay.wait)
-        self.republisher = sched.scheduler(time.time,self.republisherDelayFunc)
-        self.republisherThread = threading.Thread(name='dhtRepublisher',
-                                                  target=self.dhtRepublishWorker,
-                                                  daemon=False)
-        self.republisherStop = False
-        self.republishLock = RLock()
+        # self.republishMap = { }
+        # self.republisherStart = threading.Event()
+        # self.republisherDelay  = threading.Event()
+        # self.republisherDelayFunc = functools.partial(self.republisherDelay.wait)
+        # self.republisher = sched.scheduler(time.time,self.republisherDelayFunc)
+        # self.republisherThread = threading.Thread(name='dhtRepublisher',
+        #                                           target=self.dhtRepublishWorker,
+        #                                           daemon=False)
+        # self.republisherStop = False
+        # self.republishLock = RLock()
 
         self.regDb = DhtBackup()
         self.private_key = None
@@ -409,7 +409,7 @@ class DhtDbase(DiscoDbase):
         self.peerMon.start()
         time.sleep(0.1)
         self.cleanupRegDb()                                     # If something in the backup db, discard from the dht
-        self.republisherThread.start()                          # Start republisher
+        # self.republisherThread.start()                          # Start republisher
     
     def bootstrap(self,peerIP:str,peerDhtPort:str):
         self.dht.bootstrap(peerIP,peerDhtPort)
@@ -460,22 +460,22 @@ class DhtDbase(DiscoDbase):
         '''
         return self.decryptData(value.data).decode('UTF-8')
             
-    @staticmethod
-    def delValue(value: str) -> str:
-        return '-' + value
-    
-    @staticmethod
-    def orgValue(value : str) -> str:
-        return value[1:] if value[0] == '-' else value
-    
-    @staticmethod
-    def isDelValue(value: str) -> bool:
-        return value[0] == '-'
-
-    @staticmethod
-    def filterDelValues(values : [str]) -> [str]:
-        out = [v[1:] for v in values if v[0] == '-']
-        return [v for v in values if v[0] != '-' and v not in out]
+    # @staticmethod
+    # def delValue(value: str) -> str:
+    #     return '-' + value
+    #
+    # @staticmethod
+    # def orgValue(value : str) -> str:
+    #     return value[1:] if value[0] == '-' else value
+    #
+    # @staticmethod
+    # def isDelValue(value: str) -> bool:
+    #     return value[0] == '-'
+    #
+    # @staticmethod
+    # def filterDelValues(values : [str]) -> [str]:
+    #     out = [v[1:] for v in values if v[0] == '-']
+    #     return [v for v in values if v[0] != '-' and v not in out]
     
     def dhtGet(self,key : str) -> [str]:
         '''
@@ -500,7 +500,8 @@ class DhtDbase(DiscoDbase):
         Add a value to key. Lowest level op. Note: one key may have multiple values. 
         '''
         keyhash = dht.InfoHash.get(key)
-        res = self.dht.put(keyhash,self.dhtValue(value))
+        # res = self.dht.put(keyhash,self.dhtValue(value))
+        res = self.dht.put(keyhash,self.dhtValue(value),permanent=True)
         self.logger.info('dhtPut[%s]:= %r (%r)' % (key,value,res))
         return res
                        
@@ -526,16 +527,26 @@ class DhtDbase(DiscoDbase):
                 self.logger.error('dhtValueCallback[%s]: <INVALID>(%r)' % (key,expired))
                 return True
             self.logger.info('dhtValueCallback[%s].value: %r(%r)' % (key,value_,expired))
-            if expired or self.isDelValue(value_) or \
-                (key,value_) in self.republishMap or \
-                (key,value_) in self.deleted:
-                pass
+            # if expired or \
+            #     self.isDelValue(value_) or \
+            #     (key,value_) in self.republishMap or \
+            #     (key,value_) in self.deleted:
+            #     pass
+            # else:
+            #     self.updates += [(key,value_)]
+            # if expired or self.isDelValue(value_):
+            #     _value = self.orgValue(value_)
+            #     self.deleted.add((key,_value))
+            #     self.updates = [(k,v) for (k,v) in self.updates if k != key and v != _value]
+            # if expired or self.isDelValue(value_):
+            #     _value = self.orgValue(value_)
+            #     self.deleted.add((key,_value))
+            #     self.updates = [(k,v) for (k,v) in self.updates if k != key and v != _value]
+            if expired or (key,value_) in self.deleted:
+                self.updates = [(k,v) for (k,v) in self.updates if k != key and v != value_]
             else:
                 self.updates += [(key,value_)]
-            if expired or self.isDelValue(value_):
-                _value = self.orgValue(value_)
-                self.deleted.add((key,_value))
-                self.updates = [(k,v) for (k,v) in self.updates if k != key and v != _value]
+    
             return True
     
     def dhtListen(self,key):
@@ -559,7 +570,9 @@ class DhtDbase(DiscoDbase):
         self.logger.info('dhtRemove[%s]=%r' % (key,value))
         values = self.dhtGet(key)
         if value in values: 
-            _res = self.dhtPut(key,self.delValue(value))
+            # _res = self.dhtPut(key,self.delValue(value))
+            keyhash = dht.InfoHash.get(key)
+            self.dht.cancelPut(keyhash,self.dhtValue(value))
             self.deleted.add((key,value))
         return list(set(values) - set([value]))
                     
@@ -611,85 +624,86 @@ class DhtDbase(DiscoDbase):
                 self.cancelled += [key]
                 # self.dht.cancelListen(listener)
                 del self.listeners[key]
-                del listener
+                # del listener
             for value in values:
-                _res = self.dhtPut(key,self.delValue(value))
+                # _res = self.dhtPut(key,self.delValue(value))
+                self.dht.cancelPut(key,self.dhtValue(value))
                 self.deleted.add((key,value))
         return values
     
-    def dhtRepublishWorker(self):
-        '''
-        Worker thread that runs the 'republisher' scheduler.
-        '''
-        self.republisherDelay.clear()
-        while True:
-            self.republisherStart.wait()                # Wait for re(start)
-            self.republisher.run()                      # Run scheduler
-            self.republisherStart.clear()
-            if self.republisherStop: break              # Stop when flag is set 
-            self.logger.info('republisher cycle')
-            
-    def dhtRepublish(self,key,value):           
-        '''
-        Do the actual republishing. Called by the scheduler.
-        '''
-        self.logger.info('dhtRepublish[%s]=%r' % (key,value))
-        if self.republisherStop: return
-        with self.republishLock:
-            event = self.republishMap.get((key,value),None)     # Check if this republisher is still active
-            if event:
-                self.dhtPut(key,value)                          # Republish k/v pair on the dht
-                self.republishMap[(key,value)] = \
-                    self.republisher.enter(const.discoDhtRepublishTimeout,
-                                           1,
-                                           self.dhtRepublish,[key,value])       # Re-register for the next cycle. 
+    # def dhtRepublishWorker(self):
+    #     '''
+    #     Worker thread that runs the 'republisher' scheduler.
+    #     '''
+    #     self.republisherDelay.clear()
+    #     while True:
+    #         self.republisherStart.wait()                # Wait for re(start)
+    #         self.republisher.run()                      # Run scheduler
+    #         self.republisherStart.clear()
+    #         if self.republisherStop: break              # Stop when flag is set 
+    #         self.logger.info('republisher cycle')
+    #
+    # def dhtRepublish(self,key,value):           
+    #     '''
+    #     Do the actual republishing. Called by the scheduler.
+    #     '''
+    #     self.logger.info('dhtRepublish[%s]=%r' % (key,value))
+    #     if self.republisherStop: return
+    #     with self.republishLock:
+    #         event = self.republishMap.get((key,value),None)     # Check if this republisher is still active
+    #         if event:
+    #             self.dhtPut(key,value)                          # Republish k/v pair on the dht
+    #             self.republishMap[(key,value)] = \
+    #                 self.republisher.enter(const.discoDhtRepublishTimeout,
+    #                                        1,
+    #                                        self.dhtRepublish,[key,value])       # Re-register for the next cycle. 
         
-    def addToRepublish(self,key,value):
-        '''
-        Add a k/v pair to the republisher
-        '''
-        self.logger.info('dhtAddToRepublish[%s]=%r' % (key,value))
-        with self.republishLock:
-            event = self.republisher.enter(const.discoDhtRepublishTimeout,
-                                           1,
-                                           self.dhtRepublish,
-                                           [key,value])
-            self.republishMap[(key,value)] = event
-            self.republisherStart.set()
+    # def addToRepublish(self,key,value):
+    #     '''
+    #     Add a k/v pair to the republisher
+    #     '''
+    #     self.logger.info('dhtAddToRepublish[%s]=%r' % (key,value))
+    #     with self.republishLock:
+    #         event = self.republisher.enter(const.discoDhtRepublishTimeout,
+    #                                        1,
+    #                                        self.dhtRepublish,
+    #                                        [key,value])
+    #         self.republishMap[(key,value)] = event
+    #         self.republisherStart.set()
     
-    def delFromRepublish(self,key,value):
-        '''
-        Remove a k/v pair from the republisher. 
-        '''
-        self.logger.info('dhtDelFromRepublish[%s]=%r' % (key,value))
-        with self.republishLock:
-            event = self.republishMap.get((key,value),None)
-            if event:
-                self.republisher.cancel(event)
-                del self.republishMap[(key,value)]
-
-    def delFromRepublishAll(self,key,values):
-        '''
-        Remove all k/v pair/s from the republisher. 
-        '''
-        self.logger.info('dhtRemoveFromRepublish[%s]=%r' % (key,str(values)))
-        with self.republishLock:
-            for value in values:
-                event = self.republishMap.get((key,value),None)
-                if event:
-                    self.republisher.cancel(event)
-                    del self.republishMap[(key,value)]
-                    
-    def stopRepublisher(self):
-        self.republisherStop = True
-        with self.republishLock:
-            for (_pair,event) in self.republishMap.items():
-                if event:
-                    self.republisher.cancel(event)
-        self.republisherStart.set()
-        self.republisherDelay.set()
-        self.republisherThread.join()
-        self.logger.info("dht.republisher stopped")
+    # def delFromRepublish(self,key,value):
+    #     '''
+    #     Remove a k/v pair from the republisher. 
+    #     '''
+    #     self.logger.info('dhtDelFromRepublish[%s]=%r' % (key,value))
+    #     with self.republishLock:
+    #         event = self.republishMap.get((key,value),None)
+    #         if event:
+    #             self.republisher.cancel(event)
+    #             del self.republishMap[(key,value)]
+    #
+    # def delFromRepublishAll(self,key,values):
+    #     '''
+    #     Remove all k/v pair/s from the republisher. 
+    #     '''
+    #     self.logger.info('dhtRemoveFromRepublish[%s]=%r' % (key,str(values)))
+    #     with self.republishLock:
+    #         for value in values:
+    #             event = self.republishMap.get((key,value),None)
+    #             if event:
+    #                 self.republisher.cancel(event)
+    #                 del self.republishMap[(key,value)]
+    #
+    # def stopRepublisher(self):
+    #     self.republisherStop = True
+    #     with self.republishLock:
+    #         for (_pair,event) in self.republishMap.items():
+    #             if event:
+    #                 self.republisher.cancel(event)
+    #     self.republisherStart.set()
+    #     self.republisherDelay.set()
+    #     self.republisherThread.join()
+    #     self.logger.info("dht.republisher stopped")
                     
     def insert(self,key:str,value:str) -> [str]:
         '''
@@ -704,7 +718,7 @@ class DhtDbase(DiscoDbase):
             if value not in _values:  
                 _res = self.dhtPut(key,value)
                 self.regDb.addKeyValue(key, value)              # Save k/v into backup db
-                self.addToRepublish(key,value)                  # Add k/v to republisher
+                # self.addToRepublish(key,value)                  # Add k/v to republisher
                 if (key ,value) in self.deleted:                # If key was in the deleted map, remove it
                     self.deleted.remove((key.value))
                 clientsToNotify = self.clients.get(key,[])      # Return interested clients
@@ -722,7 +736,8 @@ class DhtDbase(DiscoDbase):
         self.logger.info("dht.fetch[%r] -> %r" % (key,client))
         try:
             self.dhtAddClient(key,client)
-            values = self.filterDelValues(self.dhtGet(key))
+            # values = self.filterDelValues(self.dhtGet(key))
+            values = self.dhtGet(key)
             self.logger.info("dht.fetch[%r] = %r" % (key,values))
             return values
         except Exception:
@@ -737,7 +752,7 @@ class DhtDbase(DiscoDbase):
         '''
         self.logger.info("dht.remove[%r]:%r" % (key,value))
         try:
-            self.delFromRepublish(key,value)                    # Delete k/v from republisher
+            # self.delFromRepublish(key,value)                    # Delete k/v from republisher
             self.regDb.delKeyValue(key, value)                  # Delete k/v from db
             values = self.dhtRemove(key,value)
             return values
@@ -756,7 +771,7 @@ class DhtDbase(DiscoDbase):
     def terminate(self):
         self.logger.info("dht.terminate")
         self.regDb.closeDbase()
-        self.stopRepublisher()
+        # self.stopRepublisher()
         if self.peerMon: 
             self.peerMon.terminate()
             self.logger.info("peerMon terminated")

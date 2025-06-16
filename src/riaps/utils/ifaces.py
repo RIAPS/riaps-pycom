@@ -11,7 +11,6 @@ from random import randint
 from contextlib import closing
 from riaps.utils.config import Config
 
-
 def getNetworkInterfaces(nicName=None):
     '''
      Determine the IP address of  the network interfaces
@@ -24,7 +23,8 @@ def getNetworkInterfaces(nicName=None):
     ipAddressList = []
     macAddressList = []
     ifNameList = []
-    ifNames = netifaces.interfaces()      
+    ifNames = netifaces.interfaces()
+    found = False      
     for ifName in ifNames:
         ifInfo = netifaces.ifaddresses(ifName)
         if netifaces.AF_INET in ifInfo:
@@ -41,10 +41,20 @@ def getNetworkInterfaces(nicName=None):
                 if(nicName == ifName):
                     ipAddressList = [ipAddressList[-1]]
                     ifNameList = [ifName]
-                    macAddressList = [macAddressList[-1]] 
+                    macAddressList = [macAddressList[-1]]
+                    found = True 
                     break
-    return (ipAddressList, macAddressList, ifNameList, local)
+    
+    return (found, ipAddressList, macAddressList, ifNameList, local)
 
+def gethost():
+    '''
+    Retrieve a host IP address for the default interface (used by RIAPS)
+    '''
+    (_found,globalIPs,_globalMACs,_globalNames,_localIP) = getNetworkInterfaces()
+    assert len(globalIPs) > 0 and len(_globalMACs) > 0, "Error: no active network interface"
+    return str(globalIPs[0])
+    
 def is_valid_ipv4_address(address):
     ''' Determine if the argument is a valid IP address
     '''

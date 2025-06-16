@@ -14,9 +14,11 @@ from os.path import join
 from _collections import OrderedDict
 import re
 import logging
+import readline
 import cmd
 import traceback
 import socket
+import threading
 import subprocess
 
 gi.require_version('Gtk', '3.0')
@@ -28,11 +30,34 @@ cmdLock = RLock()  # Global GUI lock
 cmdClient = None
 
 
+class ControlCLITerm(threading.Thread):
+    endpoint = "inproc://riaps-cli"
+    
+    def __init__(self,context):
+        threading.Thread.__init__(self,name='ControlCLITerm',daemon=False)
+        self.context = context
+        
+    def run(self):
+        self.cmdSocket = self.context.socket(zmq.PAIR)
+        self.cmdSocket.connect(ControlCLITerm.endpoint)
+        while True:
+            try:
+                command = input('? ')
+                self.cmdSocket.send_pyobj(command)
+            except EOFError:
+                self.cmdSocket.send_pyobj('EOF')
+            _r = self.cmdSocket.recv_pyobj()
+            if _r == 'quit': break
+        self.cmdSocket.disconnect(ControlCLITerm.endpoint)
+        self.cmdSocket.close()
+        
 class ControlCLIClient(object):
     '''
     Controller GUI class
     '''
 
+    TRACEBACK = True
+    
     def __init__(self, port, controller,script):
         '''
         Builds the GUI, connects it to the server (thread). The GUI is just another client of
@@ -46,17 +71,25 @@ class ControlCLIClient(object):
         self.context = controller.context
         self.script = script
         self.prompt = '$ '
-        (self.stdin,self.echo) = (sys.stdin,False) if self.script == '-' else (open(script,'r'),True)
         self.stdout = sys.stdout
-#         self.conn = rpyc.connect(self.controller.hostAddress, port)  # Local connection to the service
-#         GLib.io_add_watch(self.conn, 1, GLib.IO_IN, self.bg_server)  # Register the callback with the service
-#         GLib.io_add_watch(self.stdin, 1, GLib.IO_IN, self.cmd_server)
-#         self.conn.root.login("*gui*", self.on_serverMessage)  # Log in to the service
+        (self.stdin,self.echo) = (sys.stdin,False) if self.script == '-' else (open(script,'r'),True)
+        
+        self.ctrlSocket = self.context.socket(zmq.PULL)
+        self.ctrlSocket.bind(self.controller.endpoint)
+        GLib.io_add_watch(self.ctrlSocket.fileno(), GLib.IO_IN, self.on_serverMessage)        
 
-        self.socket = self.context.socket(zmq.PULL)
-        self.socket.bind(self.controller.endpoint)
-        GLib.io_add_watch(self.socket.fileno(), 1, GLib.IO_IN, self.on_serverMessage)
-        GLib.io_add_watch(self.stdin, 1, GLib.IO_IN, self.cmd_server)
+        if self.script == '-':
+            self.echo = False
+            self.terminal = ControlCLITerm(self.context)
+            self.termSocket = self.context.socket(zmq.PAIR)
+            self.termSocket.bind(ControlCLITerm.endpoint)
+            GLib.io_add_watch(self.termSocket.fileno(), GLib.IO_IN, self.on_termMessage)
+            self.terminal.start()
+        else:
+            self.echo = True
+            self.terminal = None
+            self.termSocket = None 
+            GLib.io_add_watch(self.stdin, 1, GLib.IO_IN, self.cmd_server)
         
         self.appDownLoaded = False
         self.appFolder = None
@@ -75,85 +108,95 @@ class ControlCLIClient(object):
             super(parent.CtrlCmdShell, self).__init__()
             self.parent = parent
             
-        def do_f(self,arg):
-            '''Select app folder: f path'''
-            self.parent.cmdSelectFolder(arg)
+        def do_a(self,arg):
+            '''Select app folder: a[pp] path'''
+            self.parent.cmdSelectApp(arg)
             
         def do_m(self,arg):
-            '''Select app model: m app.riaps'''
-            self.parent.cmdSelectApp(arg)
+            '''Select app model: m[odel] app.riaps'''
+            self.parent.cmdSelectModel(arg)
         
         def do_d(self,arg):
-            '''Select deployment model: d app.depl '''
+            '''Select deployment model: d[eployment] app.depl '''
             self.parent.cmdSelectDepl(arg)
             
         def do_i(self,arg):
-            '''Install app: i app'''
-            self.parent.cmdLoadApp(arg)
+            '''Install app: i[nstall] app'''
+            self.parent.cmdInstallApp(arg)
             
         def do_l(self,arg):
-            '''Launch app: g app'''
+            '''Launch app: l[aunch] app'''
             self.parent.cmdLaunchApp(arg)
             
         def do_h(self,arg):
-            '''Halt app: h app'''
-            self.parent.cmdStopApp(arg)
-    
-        def do_r(self,arg):
-            '''Remove app: r app'''
-            self.parent.cmdRemoveApp(arg)
+            '''Halt app: h[alt] app'''
+            self.parent.cmdHaltApp(arg)
+        
+        def do_u(self,arg):
+            '''Uninstall app: u[ninstall] app'''
+            self.parent.cmdUninstallApp(arg)
+                 
+        def do_r(self,_arg):
+            '''Reset all nodes: r{eset}'''
+            self.parent.cmdResetNodes()
+            
+        def do_s(self,arg):
+            '''Stop all nodes s{top}'''
+            self.parent.cmdStopNodes()
             
         def do_w(self,arg):
-            '''Wait: w sec'''
+            '''Wait: w[ait] sec'''
             # self.parent.conn.poll_all(int(arg))
             #             poller = zmq.Poller()
             #             poller.register(self.parent.socket, zmq.POLLIN)
             #             socks = dict(poller.poll(int(arg)))
             #             if self.parent.socket in socks:
             #                 self.parent.on_serverMessage()
-            time.sleep(int(arg))
+            if arg.isnumeric():
+                delay = abs(int(arg))
+                time.sleep(delay)
+            else:
+                raise RuntimeError(f'wait "{arg}" - int expected')
 
         def do_e(self,arg):
-            ''' Echo argument: e message'''
+            ''' Echo argument: e[cho] message'''
             self.stdout.write(arg + '\r\n')
             self.stdout.flush()
                 
+        def do_fab(self,arg):
+            '''Execute fab command: f[ab] args*'''
+            self.parent.cmdFab(arg)
+        
         def do_shell(self,arg):
-            ''' Execute command: e ls -l'''
-            subprocess.call(arg.split())
+            ''' Execute command: shell ls -l'''
+            try:
+                subprocess.call(arg.split())
+            except:
+                raise
         
         def do_j(self,args):
-            ''' Join host(s): j [hosts]+ [wait]'''
-            try:
-                items = args.split()
-                wait = None
-                if len(items) >= 2:
-                    last = items[-1]
-                    if last.isnumeric(): wait = abs(int(last)); items = items[0:-1]
-                expected = set(items)
-                expected = { socket.gethostbyname(host) for host in expected }
-                while(True):
-                    clients = set(self.parent.controller.getClients())
-                    if expected.issubset(clients):
-                        break
-                    elif wait is not None: 
-                        if wait > 0: 
-                            time.sleep(1.0)
-                            wait -= 1
-                        else:
-                            self.stdout.write('? join timeout ' + args + '\r\n')
-                            self.stdout.flush()
-                            break
-            except Exception as e:
-                self.stdout.write('exception: ' + str(e) + '\r\n')
-                self.stdout.flush()                      
+            ''' Join host(s): j[oin] [hosts]+ [timeout]'''
+            items = args.split()
+            tout = 60                   # Default timeout value
+            if len(items) >= 2:
+                last = items[-1]
+                if last.isnumeric(): tout = abs(int(last)); items = items[0:-1]
+                elif last == '-': tout = None; items = items[0:-1]
+            expected = { socket.gethostbyname(host) for host in set(items) }
+            while(True):
+                clients = set(self.parent.controller.getClients())
+                time.sleep(1.0)
+                if expected.issubset(clients):
+                    break
+                elif tout is not None: 
+                    if tout > 0: tout -= 1
+                    else: raise RuntimeError(f'join {args} - timeout')                     
             
         def do_q(self,arg):
-            '''Quit program'''
+            ''' Quit: q[uit] '''
             self.parent.cmdQuit()
         
     def run(self):
-        self.do_prompt()
         self.shell = self.CtrlCmdShell(self)
         self.loop.run()
     
@@ -164,20 +207,27 @@ class ControlCLIClient(object):
 #             return True
 #         else:
 #             return False
-    
-    def do_prompt(self):
-        if not self.echo:
-            self.stdout.write(self.prompt)
-            self.stdout.flush()
 
     def cmd_script(self,fname,fnames=[]):
+        '''
+        Execute a script from file 'fname', save file name to 'fnames'
+        '''
         fnames.append(fname)
         with open(fname) as f:
             for line in f.readlines():
-                self.cmd_line(line.rstrip('\r\n'),fnames)
+                try:
+                    self.cmd_line(line.rstrip('\r\n'),fnames)
+                except:
+                    if self.TRACEBACK: traceback.print_exc()
+                    else: print(f"(err): {traceback.format_exc().splitlines()[-1]}")
+                    self.cmdQuit()
     
     def cmd_line(self,line,fnames=[]):
-        if self.echo: print('(cmd) %s' % line)
+        '''
+        Execute one line. Skip comments (#), launch script if line starts
+        with '@' - keep track of script names to avoid infinite recursion.    
+        '''
+        if self.echo: print(f"(cmd) {line}")
         if not len(line): return
         first = line[0]
         if first == '#':
@@ -185,17 +235,21 @@ class ControlCLIClient(object):
         elif first == '@':
             line = line.lstrip('@ ')
             if line in fnames:
-                pass                            # Error
+                self.log(f"(inf) recursive script {line} - ignored")
+                pass                            
             else:
                 echo = self.echo
                 self.echo = True
-                self.cmd_script(line,fnames)    # Load the script
+                self.cmd_script(line,fnames)    # Run the script
                 self.echo = echo
         else:
-
             self.shell.onecmd(line)
             
     def cmd_server(self, source=None, _cond=None):
+        '''
+        Callback used by the service thread: reads one line from the script (file)
+        and executes it. Terminates on error. 
+        '''
         if source == None: return
         line = source.readline()
         if not len(line):
@@ -209,26 +263,50 @@ class ControlCLIClient(object):
             try:
                 self.cmd_line(line)
             except:
-                traceback.print_exc()
+                if self.TRACEBACK: traceback.print_exc()
+                else: print(f"Error: {traceback.format_exc().splitlines()[-1]}")
+                self.cmdQuit()
             self.stdout.flush()
             source.flush()
-            self.do_prompt()
         return True
 
     def log(self,text):
         global cmdLock
         with cmdLock:
-            text = '\n> ' + text + '\n'
-            print(text)
-        
-    def on_serverMessage(self, _channel=None, _cond=None):
+            print(f"(log) {text}")
+            
+    def on_termMessage(self, _channel=None, _cond=None):
         '''
-        Callback used by the service thread(s): it prints a log message.
+        Callback used by the service thread: it receives the command from the terminal.
+        Does not terminate on error. 
         '''
         while True:
             try:
-                text = self.socket.recv_pyobj(flags=zmq.NOBLOCK)
+                line = self.termSocket.recv_pyobj(flags=zmq.NOBLOCK)
+                if line == 'EOF':
+                    self.cmdQuit()
+                    return False
+                else:
+                    try:
+                        self.cmd_line(line)
+                    except Exception:
+                        if self.TRACEBACK: traceback.print_exc()
+                        else: print(f"Error: {traceback.format_exc().splitlines()[-1]}")
+                self.termSocket.send_pyobj('_')
+            except zmq.error.ZMQError:
+                break
+        return True
+        
+    def on_serverMessage(self, _channel=None, _cond=None):
+        '''
+        Callback used by the service thread: it prints a log message.
+        '''
+        while True:
+            try:
+                text = self.ctrlSocket.recv_pyobj(flags=zmq.NOBLOCK)
                 self.log(text)
+                if text.startswith('* '):
+                    self.cmdQuit()
             except zmq.error.ZMQError:
                 break
         return True
@@ -237,12 +315,22 @@ class ControlCLIClient(object):
         aName = self.appName
         dName = self.deplName
         return (aName != None and aName != '' and dName != None and dName != '')
-
-    def cmdSelectApp(self,fileName):
+    
+    def cmdSelectApp(self,folderName):
+        '''
+        Select app folder
+        '''
+        if folderName != None:
+            self.controller.setAppFolder(folderName)
+            self.appFolder = folderName
+    
+    def cmdSelectModel(self,fileName):
         if fileName != None:
             # Check if file exists
             self.appName = fileName
-            self.controller.compileApplication(fileName, self.appFolder)
+            res = self.controller.compileApplication(fileName, self.appFolder)
+            if res is None:
+                raise RuntimeError(f'error(s) compiling app model {fileName}')
         
     def cmdClearApp(self):
         '''
@@ -252,9 +340,10 @@ class ControlCLIClient(object):
           
     def cmdSelectDepl(self,fileName):
         if fileName != None:
-            # Check if file exists
             self.deplName = fileName
-            self.controller.compileDeployment(fileName) 
+            res = self.controller.compileDeployment(fileName)
+            if res is None:
+                raise RuntimeError(f'error(s) compiling deployment model {fileName}')
 
     def cmdClearDepl(self):
         '''
@@ -262,33 +351,54 @@ class ControlCLIClient(object):
         '''
         self.deplName = ''
 
-            
-    def cmdSelectFolder(self,folderName):
-        if folderName != None:
-            # Check if folder exists
-            self.appFolder = folderName
-            self.controller.setAppFolder(folderName)
-    
     def cmdQuit(self):
         '''
         Quit the app. Forces a return from the CMD loop
         '''
         # self.conn.close()
-        self.socket.close()
+        if self.terminal:
+            self.termSocket.send_pyobj('quit')
+            time.sleep(0.01)
+            self.termSocket.close()
+            
+        self.ctrlSocket.close()
         self.loop.quit()   
 
-    def cmdLoadApp(self,appSelected):
-        self.controller.loadByName(appSelected)
+    def cmdInstallApp(self,appSelected):
+        res = self.controller.loadByName(appSelected)
+        if res is False:
+            raise RuntimeError(f'error(s) installing app {appSelected}')    
         
     def cmdLaunchApp(self,appSelected):
-        self.controller.launchByName(appSelected)
+        res = self.controller.launchByName(appSelected)
+        if res is False:
+            raise RuntimeError(f'error(s) launching app {appSelected}')    
               
-    def cmdStopApp(self,appSelected):
-        self.controller.haltByName(appSelected)
-       
-    def cmdRemoveApp(self,appSelected):
-        self.controller.removeAppByName(appSelected)
+    def cmdHaltApp(self,appSelected):
+        res = self.controller.haltByName(appSelected)
+        if res is False:
+            raise RuntimeError(f'error(s) halting app {appSelected}')
+        
+    def cmdUninstallApp(self,appSelected):
+        res = self.controller.removeAppByName(appSelected)
+        if res is False:
+            raise RuntimeError(f'error(s) uninstalling app {appSelected}')
+            
+    def cmdResetNodes(self):
+        res = self.controller.cleanAll()
+        if res is False:
+            raise RuntimeError(f'error(s) resetting nodes')
+    
+    def cmdStopNodes(self):
+        res = self.controller.cleanAll()
+        self.controller.killAll()
+        if res is False:
+            raise RuntimeError(f'error(s) killing apps/nodes')
 
+    def cmdFab(self,arg):
+        print(f'fab:  {arg}')
+        self.controller.executeFabCommand(arg)
+        
     def clearApplication(self):
         self.cmdClearApp()
         

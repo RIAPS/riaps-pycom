@@ -35,7 +35,7 @@ class RfabProgram(Program):
     def core_args(self) -> List[Argument]:
         core_args = super().core_args()
         extra_args = [Argument(names=('role','r'), help = "RIAPS role name to run command for",default="remote"),
-                      Argument(names=('v'), kind=bool, help = "Show remote output"),
+                      Argument(names=('verbose','v'), kind=bool, help = "Show remote output"),
                       Argument(names=('host','H'),help = "Run command on host (repeatable)",kind=list),
                       Argument(name='hostfile', help = "Path to riaps-hosts.conf file"),
                       Argument(names=('i'),help = "SSH Private Key to use")]
@@ -60,8 +60,9 @@ class RfabProgram(Program):
         if self.args.i.got_value:
             for conn in self.config.hosts:
                 conn.connect_kwargs['key_filename'] = self.args.i.value
-        self.config._set(hide=not self.args.v.value)
-        self.config._set(verbose=self.args.v.value)
+        # self.config._set(hide=not self.args.verbose.value)
+        self.config._set(verbose=self.args.verbose.value)
+        self.config._set(echo=self.args.echo.value)
         super().update_config(merge)
     
 _program = RfabProgram(version='0.0.1',namespace=ns)

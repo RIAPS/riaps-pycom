@@ -59,9 +59,10 @@ class DeploJournal(Task):
     @classmethod
     def configure(cls,n,grep):
         cls.num_lines = f" -n {n}"
-        if grep != '':
-            grep=f" | grep {grep}"
-        cls.grep_pattern = grep
+        cls.grep_pattern = f" | grep {grep}" if grep != '' else ''
 
     def deplo_journal(self):
         return self.sudo(f"journalctl -u riaps-deplo.service --no-pager{self.num_lines}{self.grep_pattern}")
+    
+    
+    

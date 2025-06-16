@@ -6,12 +6,12 @@ import socket
 from riaps.rfab.api.deplo import *
 from riaps.rfab.api.task import TaskRunner
 from riaps.rfab.api.utils import make_log_folder
-from .helpers import assert_role_in
+from .helpers import assert_role_in, pass_args
 
 @task(pre=[call(assert_role_in,'nodes','remote')])
 def start(c: Context):
     """Start deployment service"""
-    kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
+    kwargs = pass_args(c)
     runner = TaskRunner(c.config.hosts,DeploStart,**kwargs)
     runner.set_log_folder(make_log_folder("deplo.start"))
     runner.run()
@@ -27,7 +27,7 @@ def start(c: Context):
 @task(pre=[call(assert_role_in,'nodes','remote')])
 def startManual(c: Context):
     """Start deplo on hosts as standard process"""
-    kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
+    kwargs = pass_args(c)
     runner = TaskRunner(c.config.hosts,DeploStartManual,**kwargs)
     runner.set_log_folder(make_log_folder("deplo.startManual"))
     runner.run()
@@ -35,7 +35,7 @@ def startManual(c: Context):
 @task(pre=[call(assert_role_in,'nodes','remote')])
 def restart(c: Context):
     """Restart deployment service"""
-    kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
+    kwargs = pass_args(c)
     runner = TaskRunner(c.config.hosts,DeploRestart,**kwargs)
     runner.set_log_folder(make_log_folder("deplo.restart"))
     runner.run()
@@ -43,7 +43,7 @@ def restart(c: Context):
 @task(pre=[call(assert_role_in,'nodes','remote')])
 def stop(c: Context):
     """Stop deployment service"""
-    kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
+    kwargs = pass_args(c)
     runner = TaskRunner(c.config.hosts,DeploStop,**kwargs)
     runner.set_log_folder(make_log_folder("deplo.stop"))
     runner.run()
@@ -51,7 +51,7 @@ def stop(c: Context):
 @task(pre=[call(assert_role_in,'nodes','remote')])
 def enable(c: Context):
     """Enable restarts for crash/startup"""
-    kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
+    kwargs = pass_args(c)
     runner = TaskRunner(c.config.hosts,DeploEnable,**kwargs)
     runner.set_log_folder(make_log_folder("deplo.enable"))
     runner.run()
@@ -59,7 +59,7 @@ def enable(c: Context):
 @task(pre=[call(assert_role_in,'nodes','remote')])
 def disable(c: Context):
     """Disable restarts for crash/startup"""
-    kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
+    kwargs = pass_args(c)
     runner = TaskRunner(c.config.hosts,DeploDisable,**kwargs)
     runner.set_log_folder(make_log_folder("deplo.disable"))
     runner.run()
@@ -69,7 +69,7 @@ def disable(c: Context):
             'grep':'arbitrary grep args to filter results, in quotes'})
 def status(c: Context, n='10', grep=''):
     """Get systemctl service status"""
-    kwargs = {'dry':c.config.run.dry,'verbose':True}
+    kwargs = pass_args(c)
     DeploStatus.configure(n,grep)
     runner = TaskRunner(c.config.hosts,DeploStatus,**kwargs)
     runner.set_log_folder(make_log_folder("deplo.status"))
@@ -80,7 +80,8 @@ def status(c: Context, n='10', grep=''):
             'grep':'arbitrary grep args to filter results, in quotes'})
 def journal(c: Context, n='10', grep=''):
     """Get journald service log"""
-    kwargs = {'dry':c.config.run.dry,'verbose':True}
+    kwargs = pass_args(c)
+    kwargs['verbose'] = True
     DeploJournal.configure(n,grep)
     runner = TaskRunner(c.config.hosts,DeploJournal,**kwargs)
     runner.set_log_folder(make_log_folder("deplo.journal"))

@@ -4,7 +4,7 @@ from pathlib import Path
 
 class SysCheck(Task):
     def sys_check(self):
-        return self.sudo("uname -a")
+        return self.run("uname -a")
 
 class SysShutdown(Task):
     when = ''

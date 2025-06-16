@@ -54,10 +54,11 @@ def generate_keys(cert_dir):
                 ))
     return private_key
 
-
-def generate_self_signed_cert(cert_dir,key):
+def check_self_signed_cert(cert_dir,key):
     if exists(join(cert_dir, CERT_FILE)):
         sys.exit("Error: %s already exists - move it first" % (CERT_FILE))
+
+def generate_self_signed_cert(cert_dir,key):
     subject = issuer = x509.Name([
         x509.NameAttribute(NameOID.COUNTRY_NAME, u"US"),
         x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, u"Tennessee"),
@@ -78,10 +79,11 @@ def generate_self_signed_cert(cert_dir,key):
     with open(join(cert_dir, CERT_FILE), "wb") as f:
         f.write(cert.public_bytes(serialization.Encoding.PEM))
 
-
-def generate_zmq_cert(cert_dir):
+def check_zmq_cert(cert_dir):
     if exists(join(cert_dir, ZMQ_CERT_FILE)):
         sys.exit("Error: %s already exists - move it first" % (ZMQ_CERT_FILE))
+
+def generate_zmq_cert(cert_dir):
     _public,cert = zmq.auth.create_certificates(cert_dir, "riaps",None)
     shutil.move(cert,join(cert_dir, const.zmqCertificate))
 
@@ -101,8 +103,11 @@ def main():
     else:
         key = generate_keys(output_dir)
 
-    generate_self_signed_cert(output_dir,key)
+    check_zmq_cert(output_dir)
+    check_self_signed_cert(output_dir,key)
+
     generate_zmq_cert(output_dir)
+    generate_self_signed_cert(output_dir,key)
 
 if __name__ == '__main__':
     main()

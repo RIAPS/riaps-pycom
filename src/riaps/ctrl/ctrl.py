@@ -18,6 +18,7 @@ import subprocess
 import functools
 import logging
 import json
+import shlex
 import git
 from git import Repo
 import datetime
@@ -29,6 +30,8 @@ import tempfile
 import shutil
 import threading
 import concurrent.futures
+import tarfile
+import toml
 # from collections import namedtuple
 from Cryptodome.PublicKey import RSA
 from Cryptodome.Signature import PKCS1_v1_5
@@ -52,7 +55,7 @@ from riaps.ctrl.ctrlcli import ControlCLIClient
 from riaps.lang.lang import compileModel
 from riaps.lang.depl import DeploymentModel
 from riaps.run.exc import BuildError
-import tarfile
+
 
 # App status
 @unique
@@ -126,21 +129,18 @@ class Controller(object):
         self.launchList = []        # List of launch operations
         self.setupHostKeys()
         self.discoType = None     
-        try:
-            self.fabModule = importlib.util.find_spec('riaps.fabfile').submodule_search_locations[0]
-        except:
-            self.fabModule = 'fabfile'
 
     def setupIfaces(self):
         '''
         Find the IP addresses of the (host-)local and network(-global) interfaces
         '''
-        (globalIPs,globalMACs,_globalNames,_localIP) = getNetworkInterfaces()
+        (found,globalIPs,globalMACs,_globalNames,_localIP) = getNetworkInterfaces()
         try:
             assert len(globalIPs) > 0 and len(globalMACs) > 0
         except:
             self.logger.error("Error: no active network interface")
             raise
+        if not found: self.logger.warning("Configured network interface not found - using first available") 
         globalIP = globalIPs[0]
         globalMAC = globalMACs[0]
         self.hostAddress = globalIP
@@ -355,9 +355,11 @@ class Controller(object):
             self.dropClient(client)
                 
     def cleanAll(self):
+        res = True
         appNames = [app for app in self.appInfo.keys()]
         for appName in appNames:
-            self.removeAppByName(appName)
+            res &= self.removeAppByName(appName)
+        return res
     
     def queryClient(self,client):
         '''
@@ -860,7 +862,10 @@ class Controller(object):
         Halt an app 
         '''
         self.logger.info('halt app %r' % appName)
-        status = self.appInfo[appName].status
+        if appName not in self.appInfo:
+            return False
+        else:
+            status = self.appInfo[appName].status
         launchList, haltMap, clients = [], {}, set()
         found = False
         # Gather all (client, actor*)* for the app
@@ -1052,11 +1057,13 @@ class Controller(object):
             self.log("R %s " % appName)     # Flag a problem (redundant) 
         else: 
             self.log("? %s " % appName)     # Make gui update
-        del self.appInfo[appName]           # remove app info
+        if appName in self.appInfo:
+            del self.appInfo[appName]           # remove app info
+        return ok
 
     def setAppFolder(self,appFolderPath):
-        self.riaps_appFolder = appFolderPath
         os.chdir(appFolderPath)
+        self.riaps_appFolder = appFolderPath
     
     def addRecoveredAppInfo(self,data,client):
         for item in data:
@@ -1099,7 +1106,7 @@ class Controller(object):
                 self.appInfo[appNameKey] = AppInfo(model=None,depl=None,appFolder=None,status=AppStatus.NotLoaded)
             elif self.appInfo[appNameKey].status != AppStatus.NotLoaded:
                 self.log("Application %s already deployed" % appModelName)
-                self.gui.clearApplication()
+                # self.gui.clearApplication()
                 return None
             self.appInfo[appNameKey].model = appModel
             self.appInfo[appNameKey].appFolder = appFolder
@@ -1136,6 +1143,73 @@ class Controller(object):
             self.gui.clearDeployment()
             return None
 
+    def executeFabCommand(self, fabcmd):
+        '''
+        Execute a fab command
+        '''
+        if len(fabcmd) == 0: fabcmd = "-h"
+        fcmd = "riaps_fab"
+        hosts = self.getClients()
+        tPath = None
+        if len(hosts) == 0:
+            self.log('? No hosts connected - using default')
+            cmd = str.join(' ', (fcmd, fabcmd))
+        else:
+            cHost = self.nodeAddr  
+            hNames = hosts
+            hConf = { 'RIAPS': { 'nodes': hNames, 'control': cHost }}
+            _drop, tPath = tempfile.mkstemp(text=True)
+            with open(tPath, "w") as tFd:
+                toml.dump(hConf, tFd)
+            fhostsFile = f"--hostfile {tPath}"
+            fRole = "--role nodes"
+            fV = "-v"
+            cmd = str.join(' ', (fcmd, fV, fRole, fhostsFile, fabcmd))
+        self.log(cmd)
+        proc = subprocess.run(shlex.split(cmd), stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        resp = proc.stdout.decode('utf-8')
+        if tPath: os.unlink(tPath)
+        for line in resp.split('\n'):
+            if len(line) > 0: 
+                self.log(f"{line}  ")
+                
+                
+    def startClientMonitor(self,client):
+        if client.sshClient: return
+        client.sshClient = paramiko.client.SSHClient()
+        client.sshClient.load_system_host_keys()
+        client.sshClient.set_missing_host_key_policy(paramiko.client.AutoAddPolicy())
+        agent = paramiko.Agent()
+        agent_keys = agent.get_keys() 
+        rsa_private_key = join(self.riaps_Folder,"keys/" + str(const.ctrlPrivateKey))
+        agent_keys=self.addKeyToAgent(agent_keys,rsa_private_key)
+        rsa_private_key = os.path.expanduser(os.path.join('~','.ssh',str(const.ctrlPrivateKey)))        
+        agent_keys=self.addKeyToAgent(agent_keys,rsa_private_key)
+        if len(agent_keys) == 0:
+            self.logger.error('no suitable key found.')
+            return
+        for key in agent_keys:
+            self.logger.info('trying user %s ssh-agent key %s' % (Config.TARGET_USER,key.get_fingerprint().hex()))
+            try:
+                client.sshClient.get_host_keys().add(client.name,'ssh-rsa',key)
+                client.sshClient.connect(client.name,username=Config.TARGET_USER)
+                _cmd = 'journalctl -u riaps-deplo.service --no-pager --follow -n 24'
+                client.ssh_stdin,client.ssh_stdout,client.ssh_stderr = client.sshClient.exec_command(_cmd,bufsize=80)
+                self.logger.info ('... success!')
+                return True
+            except paramiko.SSHException as e:
+                self.logger.info ('... failed! - %s' % str(e))
+                continue
+        client.sshClient = None
+        self.logger.error(f'SSHCLient.connect/cmd - failed to connect: {client.name}')
+        return False
 
-
-
+    def stopClientMonitor(self,client):
+        if client.sshClient is None: return
+        client.ssh_stdin.close()
+        client.ssh_stdout.close()
+        client.ssh_stderr.close()
+        client.sshClient.close()
+        client.sshClient = None
+        client.ssh_stdin, client.ssh_stdout, client.ssh_stderr = None,None,None
+        

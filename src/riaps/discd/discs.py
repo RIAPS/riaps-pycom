@@ -52,12 +52,13 @@ class DiscoService(object):
         '''
         Find the IP addresses of the (host-)local and network(-global) interfaces
         '''
-        (globalIPs,globalMACs,globalNames,_localIP) = getNetworkInterfaces()
+        (found,globalIPs,globalMACs,globalNames,_localIP) = getNetworkInterfaces()
         try:
             assert len(globalIPs) > 0 and len(globalMACs) > 0
         except:
             self.logger.error("Error: no active network interface")
             raise
+        if not found: self.logger.warning("Configured network interface not found - using first available") 
         globalIP = globalIPs[0]
         globalMAC = globalMACs[0]
         if Config.NIC_NAME != globalNames[0]:
@@ -72,7 +73,7 @@ class DiscoService(object):
         self.server.bind(endpoint)
         
         self.dbase.start()                                      # Start database
-        time.sleep(0.0001)                                      # Yield to database so that it can start
+        time.sleep(0.001)                                      # Yield to database so that it can start
         
         self.poller = zmq.Poller()                              # Set up initial poller (only on the main server socket)  
         self.poller.register(self.server,zmq.POLLIN)
@@ -464,20 +465,20 @@ class DiscoService(object):
         Dispatch the request based on the message type
         '''
         with disco_capnp.DiscoReq.from_bytes(msgBytes) as msg:
-            which = msg.which()
-            if which == 'actorReg':
+            tag = msg.which()
+            if tag == 'actorReg':
                 self.handleActorReg(msg)
-            elif which == "serviceReg":
+            elif tag == "serviceReg":
                 self.handleServiceReg(msg)
-            elif which == "serviceLookup":
+            elif tag == "serviceLookup":
                 self.handleServiceLookup(msg)
-            elif which == 'actorUnreg':
+            elif tag == 'actorUnreg':
                 self.handleActorUnreg(msg)
-            elif which == 'serviceUnlookup':
+            elif tag == 'serviceUnlookup':
                 self.handleServiceUnlookup(msg)
-            elif which == 'serviceUnreg':
+            elif tag == 'serviceUnreg':
                 self.handleServiceUnreg(msg)
-            elif which == 'groupJoin':
+            elif tag == 'groupJoin':
                 self.handleGroupJoin(msg)
             else:
                 pass

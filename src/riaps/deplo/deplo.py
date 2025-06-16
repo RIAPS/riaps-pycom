@@ -84,12 +84,13 @@ class DeploService(object):
         '''
         Find the IP addresses of the (host-)local and network(-global) interfaces
         '''
-        (globalIPs,globalMACs,globalNames,_localIP) = getNetworkInterfaces()
+        (found,globalIPs,globalMACs,globalNames,_localIP) = getNetworkInterfaces()
         try:
             assert len(globalIPs) > 0 and len(globalMACs) > 0
         except:
             self.logger.error("Error: no active network interface")
             raise
+        if not found: self.logger.warning("Configured network interface not found - using first available") 
         globalIP = globalIPs[0]
         globalMAC = globalMACs[0]
         if Config.NIC_NAME != globalNames[0]:
@@ -137,6 +138,7 @@ class DeploService(object):
                     else:
                         self.conn = rpyc.connect(host,port,
                                                  config = {"allow_public_attrs" : True})
+                    break
                 except socket.error as e:
                     self.logger.info('Failed to connect via rpyc[%s:%s]: %s' % (str(host),str(port),str(e)))
                     pass

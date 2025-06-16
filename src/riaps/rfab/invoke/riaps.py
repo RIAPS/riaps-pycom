@@ -9,11 +9,12 @@ from riaps.rfab.api.riaps import *
 from riaps.rfab.api.task import TaskRunner
 from riaps.rfab.api.utils import make_log_folder
 from pathlib import Path
+from .helpers import pass_args
 
 @task(pre=[call(assert_role_not_in,'hostlist','nodes')])
 def update(c: Context):
     """Update RIAPS packages from stable release"""
-    kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
+    kwargs = pass_args(c)
     if c.config.role in ('control','all'):
         print("Updating the control node...")
         runner = TaskRunner(c.config.hosts,UpdateControl,**kwargs)
@@ -30,7 +31,7 @@ def update(c: Context):
       help={'keep-password':'prevents removal of password-authenticated login'})
 def updateNodeKey(c: Context, keep_password=False):
     """Rekey the remote nodes with newly generated keys"""
-    kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
+    kwargs = pass_args(c)
     UpdateNodeKey.configure(keep_password)
     runner = TaskRunner(c.config.hosts,UpdateNodeKey,**kwargs)
     runner.set_log_folder(make_log_folder("riaps.updateNodeKey"))
@@ -39,7 +40,7 @@ def updateNodeKey(c: Context, keep_password=False):
 @task
 def updateAptKey(c: Context):
     """Update RIAPS apt repo key"""
-    kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
+    kwargs = pass_args(c)
     runner = TaskRunner(c.config.hosts,UpdateAptKey,**kwargs)
     runner.set_log_folder(make_log_folder("riaps.updateAptKey"))
     runner.run()
@@ -48,7 +49,7 @@ def updateAptKey(c: Context):
 @task(pre=[call(assert_role_in,'remote','node')])
 def updateLogConfig(c: Context):
     """Move riaps-log.conf from CWD to node"""
-    kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
+    kwargs = pass_args(c)
     if not Path(c.cwd,"riaps-log.conf").exists():
         print("ERROR: riaps-log.conf not in current working directory")
         exit(1)
@@ -59,7 +60,7 @@ def updateLogConfig(c: Context):
 @task(pre=[call(assert_role_in,'remote','node')])
 def updateRiapsConfig(c: Context):
     """Move riaps.conf from CWD to node"""
-    kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
+    kwargs = pass_args(c)
     if not Path(c.cwd,"riaps.conf").exists():
         print("ERROR: riaps.conf not in current working directory")
         exit(1)
@@ -72,7 +73,8 @@ def updateRiapsConfig(c: Context):
       auto_shortflags=False)
 def install(c: Context, package, clean=False):
     """Install a package from the current directory"""
-    kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose,'pty':True}
+    kwargs = pass_args(c)
+    kwargs['pty'] = True 
     if not package in ('timesync','pycom'):
         print(f"ERROR: cannot install {package}, choose from: timesync, pycom")
         exit(-1)
@@ -97,7 +99,8 @@ def install(c: Context, package, clean=False):
       auto_shortflags=False)
 def uninstall(c: Context, package, purge=False):
     """Uninstall all RIAPS packages from nodes"""
-    kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose,'pty':True}
+    kwargs = pass_args(c)
+    kwargs['pty'] = True
     if not package in ('timesync','pycom'):
         print(f"ERROR: cannot uninstall {package}, choose from: timesync, pycom")
         exit(-1)
@@ -116,7 +119,7 @@ def uninstall(c: Context, package, purge=False):
 @task(pre=[call(assert_role_in,'nodes','remote')])
 def reset(c: Context):
     """Stop all RIAPS procs & remove all apps, restart from clean state"""
-    kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
+    kwargs = pass_args(c)
     runner = TaskRunner(c.config.hosts,ResetTask,**kwargs)
     runner.set_log_folder(make_log_folder("riaps.reset"))
     runner.run()
@@ -132,7 +135,7 @@ def security(c: Context, on=False,off=False):
     if (on == off):
         print('ERROR: pass "--on" or "--off"')
         exit(1)
-    kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
+    kwargs = pass_args(c)
     runner = TaskRunner(c.config.hosts,SetSecurityTask.configure(on),**kwargs)
     runner.set_log_folder(make_log_folder("riaps.security"))
     runner.run()
@@ -142,7 +145,7 @@ def security(c: Context, on=False,off=False):
 def getAppLogs(c: Context, name: str):
     '''Copy actor logs to local folder ./logs/
     '''
-    kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
+    kwargs = pass_args(c)
     #Make log folder
     logfolder = Path(c.cwd,"logs")
     if logfolder.exists() and logfolder.is_dir():

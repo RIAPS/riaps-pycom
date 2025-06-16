@@ -15,7 +15,7 @@ from riaps.run.disco import DiscoClient
 from riaps.run.deplc import DeplClient
 from riaps.proto import disco_capnp
 from riaps.consts.defs import *
-from riaps.utils.ifaces import getNetworkInterfaces
+# from riaps.utils.ifaces import getNetworkInterfaces
 from riaps.utils.config import Config
 from riaps.utils.appdesc import AppDescriptor
 import getopt

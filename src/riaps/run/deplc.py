@@ -75,8 +75,8 @@ class DeplClient(object):
             return False
       
         with deplo_capnp.DeplRep.from_bytes(respBytes) as resp:
-            which = resp.which()
-            if which == 'actorReg':
+            tag = resp.which()
+            if tag == 'actorReg':
                 respMessage = resp.actorReg
                 status = respMessage.status
                 port = respMessage.port
@@ -136,8 +136,8 @@ class DeplClient(object):
             return False
        
         with deplo_capnp.DeplRep.from_bytes(respBytes) as resp:
-            which = resp.which()
-            if which == 'deviceGet':
+            tag = resp.which()
+            if tag == 'deviceGet':
                 respMessage = resp.deviceGet
                 status = respMessage.status
                 if status == 'ok':
@@ -186,8 +186,8 @@ class DeplClient(object):
             return False
        
         with deplo_capnp.DeplRep.from_bytes(respBytes) as resp:
-            which = resp.which()
-            if which == 'deviceRel':
+            tag = resp.which()
+            if tag == 'deviceRel':
                 respMessage = resp.deviceRel
                 status = respMessage.status
                 if status == 'ok':
@@ -234,8 +234,8 @@ class DeplClient(object):
             return False
       
         with deplo_capnp.DeplRep.from_bytes(respBytes) as resp:
-            which = resp.which()
-            if which == 'reportEvent':
+            tag = resp.which()
+            if tag == 'reportEvent':
                 respMessage = resp.reportEvent
                 status = respMessage.status
                 if status == 'ok':

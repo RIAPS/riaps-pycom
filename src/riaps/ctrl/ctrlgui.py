@@ -17,8 +17,8 @@ import logging
 import subprocess
 import shlex
 from riaps.lang.gviz import gviz
-import toml
-import tempfile 
+from threading import Thread
+
 import socket
 
 gi.require_version('Gtk', '3.0')
@@ -30,6 +30,40 @@ guiLock = RLock()  # Global GUI lock
 
 guiClient = None
 
+class ClientMonitor(Thread):
+    def __init__(self,builder_file,client,gui,ip):
+        Thread.__init__(self)
+        self.client = client
+        self.gui = gui
+        self.ip = ip
+        self.builder = Gtk.Builder()
+        self.builder.add_from_file(builder_file)
+        self.window = self.builder.get_object("hostWindow")
+        self.window.connect("delete-event",self.destroy)
+        self.window.set_title(f"RIAPS target journal:{self.client.name}")
+        self.window.show_all()
+        self.text = self.window.get_child().get_child().get_buffer()
+        # self.client_stdin, self.client_stdout, self.client_stderr = client.ssh_stdin,client.ssh_stdout,client.ssh_stderr 
+        pass
+    def log(self,line):
+        self.text.insert(self.text.get_end_iter(),line)
+    def destroy(self,_w1,_w2):
+        self.gui.handleHostSelection(self.ip)
+    def run(self):
+        # self.window.show_all()
+        # msg = f"[{self.client.name}]:<"
+        # self.log(msg)
+        try:
+            while(True):
+                line = self.client.ssh_stdout.readline()
+                if "" == line: break
+                msg = f"{line.rstrip()}\n"
+                self.log(msg)
+        except:
+            pass
+        # msg = f"[{self.client.name}]:>"
+        # self.log(msg)
+        self.window.destroy()
 
 class ControlGUIClient(object):
     '''
@@ -50,13 +84,16 @@ class ControlGUIClient(object):
         GObject.threads_init()
         self.builder = Gtk.Builder()
         riaps_folder = os.getenv('RIAPSHOME', './')
+        self.builder_file = None
         try:
-            self.builder.add_from_file(join(riaps_folder, "etc/riaps-ctrl.glade"))  # GUI construction
+            self.builder_file = join(riaps_folder, "etc/riaps-ctrl.glade")
+            self.builder.add_from_file(self.builder_file)  # GUI construction
         except RuntimeError:
             self.logger.error('Cannot find GUI configuration file')
             raise
         self.builder.connect_signals({"onDeleteWindow": self.on_Quit,
-                                      "onConsoleEntryActivate": self.on_ConsoleEntry,
+                                      "onFabEntryActivate": self.on_FabEntry,
+                                      "onCmdEntryActivate": self.on_CmdEntry,
                                       "onSelectApplication": self.on_SelectApplication,
                                       "onSelectDeployment": self.on_SelectDeployment,
                                       "onFolderEntryActivate": self.on_folderEntryActivate,
@@ -78,10 +115,15 @@ class ControlGUIClient(object):
         # GLib.io_add_watch(self.conn, 1, GLib.IO_IN, self.bg_server)  # Register the callback with the service
         # self.conn.root.login("*gui*", self.on_serverMessage)  # Log in to the service
 
-        self.mainWindow = self.builder.get_object("window1")
+        self.mainWindow = self.builder.get_object("mainWindow")
         self.messages = self.builder.get_object("messageTextBuffer")
-        self.logWindow = self.builder.get_object("scrolledwindow1")
-        self.consoleIn = self.builder.get_object("consoleEntryBuffer")
+        self.hostLogs = self.builder.get_object("hostLogTextBuffer")
+        self.appLogs = self.builder.get_object("appLogTextBuffer")
+        self.messageWindow = self.builder.get_object("messageScrolledwindow")
+        self.hostLogWindow = self.builder.get_object("hostLogScrolledwindow")
+        self.appLogWindow = self.builder.get_object("appLogScrolledwindow")
+        self.fabIn = self.builder.get_object("fabEntryBuffer")
+        self.cmdIn = self.builder.get_object("cmdEntryBuffer")
         self.appNameEntry = self.builder.get_object("appNameEntry")
         self.deplNameEntry = self.builder.get_object("deplNameEntry")
         self.folderEntry = self.builder.get_object("folderEntry")
@@ -108,11 +150,17 @@ class ControlGUIClient(object):
         self.nodeIDDict = OrderedDict()
         self.appStatusDict = OrderedDict()
         self.init_GridTable()
-
+        self.ip2Label = { }
+        self.ip2Handler = { }
+        self.eBox2IP = { }
+        self.clientMonitors = { }
         self.mainWindow.show_all()
 
     def run(self):
-        self.messages.insert(self.messages.get_end_iter(), " "*256 + "\n")
+        block =  " "*256 + "\n"
+        self.messages.insert(self.messages.get_end_iter(),block)
+        self.hostLogs.insert(self.hostLogs.get_end_iter(),block)
+        self.appLogs.insert(self.appLogs.get_end_iter(),block)
         Gtk.main()
 
     def log(self,text,prompt='> '):
@@ -123,9 +171,9 @@ class ControlGUIClient(object):
             self.messages.insert(end, text)
         self.updateStatus(text)
         
-    def on_LogChanged(self,*_args):
+    def on_LogChanged(self,logWidget,*_args):
         with guiLock:
-            adj = self.logWindow.get_vadjustment()
+            adj = logWidget.get_vadjustment()
             upper,page = adj.get_upper(),adj.get_page_size()
             adj.set_value(upper - page)
                       
@@ -158,39 +206,68 @@ class ControlGUIClient(object):
             except socket.error:
                 return hName
     
-    def on_ConsoleEntry(self, *args):
+    def on_FabEntry(self, *args):
         '''
-        Called when the console entry receives an 'activate' event
+        Called when the fab entry receives an 'activate' event
         '''
         global guiLock
-        fabcmd = self.consoleIn.get_text()
-        if len(fabcmd) == 0: fabcmd = "-h"
-        fcmd = "riaps_fab"
-        hosts = self.controller.getClients()
-        tPath = None
-        if len(hosts) == 0:
-            self.log('? No hosts connected - using default')
-            cmd = str.join(' ',(fcmd, fabcmd))
-        else:
-            cHost = self.getIPaddress(self.controller.nodeName)
-            hNames = [ self.getIPaddress(socket.getfqdn(host)) for host in hosts]
-            hConf =  { 'RIAPS' : { 'nodes' : hNames, 'control' : cHost }}
-            _drop, tPath = tempfile.mkstemp(text=True)
-            with open(tPath,"w") as tFd:
-                toml.dump(hConf,tFd)
-            fhostsFile = ("--hostfile=" + tPath)
-            cmd = str.join(' ',(fcmd, fhostsFile, fabcmd))
+        fabcmd = self.fabIn.get_text()
+        self.controller.executeFabCommand(fabcmd)
+        # if len(fabcmd) == 0: fabcmd = "-h"
+        # # fcmd = "fab"
+        # fcmd = "riaps_fab"
+        # hosts = self.controller.getClients()
+        # tPath = None
+        # if len(hosts) == 0:
+        #     self.log('? No hosts connected - using default')
+        #     # cmd = str.join(' ',(fcmd, fflag, fpath, fabcmd))
+        #     cmd = str.join(' ',(fcmd, fabcmd))
+        # else:
+        #     cHost = self.controller.nodeAddr    # self.getIPaddress(self.controller.nodeName)
+        #     hNames = hosts # [ self.getIPaddress(socket.getfqdn(host)) for host in hosts]
+        #     hConf =  { 'RIAPS' : { 'nodes' : hNames, 'control' : cHost }}
+        #     # 
+        #     # fAppsFolder = ""
+        #     # if cHost in hNames:
+        #     #     appsFolder = os.getenv('riapsApps',None)
+        #     #     fAppsFolder = "--set RIAPSAPPS=%s" % appsFolder if appsFolder else ""
+        #     _drop, tPath = tempfile.mkstemp(text=True)
+        #     with open(tPath,"w") as tFd:
+        #         toml.dump(hConf,tFd)
+        #     # fhostsFile = ("--set hostsFile=" + tPath)
+        #     fhostsFile = f"--hostfile {tPath}"
+        #     # cmd = str.join(' ',(fcmd, fflag, fpath, fabcmd, fhostsFile, fAppsFolder))
+        #     fRole = "--role nodes"
+        #     fV = "-v"
+        #     cmd = str.join(' ',(fcmd, fV, fRole, fhostsFile, fabcmd))
+        # self.log(cmd)
+        # proc = subprocess.run(shlex.split(cmd),stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+        # resp = proc.stdout.decode('utf-8')
+        # if tPath: os.unlink(tPath)
+        # print(resp)
+        # self.log(resp,': ')
+        # for line in resp.split('\n'):
+        #     if len(line) > 0: 
+        #         self.log(line,'  ')
+        #
+        self.fabIn.delete_text(0,-1)
+
+    def on_CmdEntry(self, *args):
+        '''
+        Called when the cmd entry receives an 'activate' event
+        '''
+        global guiLock
+        cmd = self.cmdIn.get_text()
+        
+        if len(cmd) == 0: return
         self.log(cmd)
         proc = subprocess.run(shlex.split(cmd),stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
         resp = proc.stdout.decode('utf-8')
-        if tPath: os.unlink(tPath)
-        # print(resp)
-        # self.log(resp,': ')
         for line in resp.split('\n'):
             if len(line) > 0: 
-                self.log(line,': ')
-        self.consoleIn.delete_text(0,-1)
-
+                self.log(line,'  ')
+        self.cmdIn.delete_text(0,-1)
+        
     def selectFile(self, title, patterns):
         '''
         File selection dialog
@@ -251,7 +328,7 @@ class ControlGUIClient(object):
         fileName = self.selectFile("application model", ["*.riaps","*.json"])
         if fileName != None:
             self.appNameEntry.set_text(os.path.basename(fileName))
-            self.controller.compileApplication(fileName, self.folderEntry.get_text())
+            # self.controller.compileApplication(fileName, self.folderEntry.get_text())
             #if self.isAppOK():
             #    self.launchButton.set_sensitive(True)
             #    self.removeButton.set_sensitive(True)
@@ -270,11 +347,11 @@ class ControlGUIClient(object):
         fileName = self.selectFile("deployment", ["*.depl","*.json"])
         if fileName != None:
             self.deplNameEntry.set_text(os.path.basename(fileName))
-            self.appToLoad = self.controller.compileDeployment(fileName)
+            # self.appToLoad = self.controller.compileDeployment(fileName)
             #if self.isAppOK():
             #    self.launchButton.set_sensitive(True)
             #    self.removeButton.set_sensitive(True)
-
+            
     def clearDeployment(self):
         '''
         Clears the deployment entry
@@ -311,6 +388,31 @@ class ControlGUIClient(object):
         self.socket.close()
         Gtk.main_quit()
 
+    def on_hostSelected(self, eventBox, _eventButton):
+        '''
+        Start a deplo journal log window for the selected client 
+        '''
+        ip = self.eBox2IP.get(id(eventBox),None)
+        if ip is None: return 
+        self.handleHostSelection(ip)
+
+    def handleHostSelection(self,ip):
+        '''
+        Start/stop a deplo journal log window for the selected client 
+        '''
+        client = self.controller.getClient(ip)
+        if client is None: return
+        if ip in self.clientMonitors.keys():
+            (client, mon_thread) = self.clientMonitors[ip]
+            self.controller.stopClientMonitor(client)
+            mon_thread.join()
+            del self.clientMonitors[ip]
+        else:
+            if self.controller.startClientMonitor(client):
+                mon_thread = ClientMonitor(self.builder_file,client,self,ip)
+                mon_thread.start()
+                self.clientMonitors[ip] = (client, mon_thread)
+    
     """
     Begin Status Table Additions
     """
@@ -346,13 +448,25 @@ class ControlGUIClient(object):
         '''
         A new node connected to the controller
         '''
-        self.node_connected(ip)
+        eventBox = self.node_connected(ip)
+        self.ip2Label[ip] = eventBox   
+        # eventBox.set_events(Gdk.EventMask.BUTTON_PRESS_MASK)
+        self.ip2Handler[ip] = eventBox.connect("button-press-event", self.on_hostSelected)
+        self.eBox2IP[id(eventBox)] = ip
+        # connect to the "button-press-event" signal on_hostSelected callback
 
     def update_node_disconnected_status(self, ip):
         '''
         A node disconnected from the controller
         '''
+        eventBox = self.ip2Label.get(ip,None)
+        if eventBox: 
+            eventBox.disconnect(self.ip2Handler[ip])
+            del self.ip2Label[ip]
+            del self.ip2Handler[ip]
+            del self.eBox2IP[id(eventBox)]
         self.node_disconnected(ip)
+
 
     def update_remove_status(self, app):
         ''' 
@@ -409,12 +523,13 @@ class ControlGUIClient(object):
 
         keys = list(self.nodeIDDict.keys())
         col_id = keys.index(ip) + 1
+        label = None
         cell = self.gridTable.get_child_at(col_id, 0)
         if cell is not None:
             self.modify_text_cell_color(cell, 'black', 'white')
-            self.modify_text_cell_text(cell, ip)
-
+            label = self.modify_text_cell_text(cell, ip)
         self.gridTable.show_all()
+        return label
 
     def node_disconnected(self, ip):
         '''
@@ -497,8 +612,9 @@ class ControlGUIClient(object):
             self.gridTable.attach(self.create_table_cell(self.appStatusDict[app][col_id - 1], 'black', 'lime'), col_id, row_id, 1, 1)
         else:
             self.modify_text_cell_color(cell, 'lime', 'black')
-            child_list = cell.get_children()
-            child_list[0].set_label(self.appStatusDict[app][col_id - 1])
+            self.modify_text_cell_text(cell,self.appStatusDict[app][col_id - 1])
+            # child_list = cell.get_children()
+            # child_list[0].set_label(self.appStatusDict[app][col_id - 1])
 
         self.gridTable.show_all()       # not sure if it's necessary here
 
@@ -526,14 +642,34 @@ class ControlGUIClient(object):
         Load the selected application onto to the network
         '''
         # add a row in the table for the application
+        if self.appNameEntry.get_text_length() != 0:
+            appFileName = self.appNameEntry.get_text()
+            appNameKey =  self.controller.compileApplication(appFileName, self.folderEntry.get_text())
+            if appNameKey is None:
+                self.clearApplication() 
+                return
+        else:
+            return 
+        
+        if self.deplNameEntry.get_text_length() != 0:
+            deplFileName = self.deplNameEntry.get_text()
+            appToLoad = self.controller.compileDeployment(deplFileName)
+            if appToLoad is None:
+                self.clearDeployment()
+                return 
+            else:
+                self.appToLoad = appToLoad
+        else:
+            return
+            
         if self.appToLoad is None:
             return
 
         if self.controller.loadByName(self.appToLoad):
             self.add_app(self.appToLoad)
-        self.clearApplication()
-        self.clearDeployment()
-        self.appToLoad = None
+        # self.clearApplication()
+        # self.clearDeployment()
+        # self.appToLoad = None
 
     def on_viewApplication(self, _widget):
         '''
@@ -599,10 +735,12 @@ class ControlGUIClient(object):
         item.connect('activate', self.on_launch_app_press)
         menu.append(item)
         item = Gtk.ImageMenuItem.new_from_stock(Gtk.STOCK_MEDIA_STOP)
+        item.get_child().set_text('Halt')
         item.connect('activate', self.on_stop_app_press)
         menu.append(item)
         menu.append(Gtk.SeparatorMenuItem())
         item = Gtk.ImageMenuItem.new_from_stock(Gtk.STOCK_REMOVE)
+        item.get_child().set_text('Uninstall')
         item.connect('activate', self.on_remove_app_press)
         menu.append(item)
 
@@ -613,12 +751,17 @@ class ControlGUIClient(object):
             frame_box = Gtk.Frame()
             frame_box.modify_fg(Gtk.StateType.NORMAL, Gdk.color_parse(fg_color))
             frame_box.modify_bg(Gtk.StateType.NORMAL, Gdk.color_parse(bg_color))
-
+            
+            event_box = Gtk.EventBox()
+            
             text_label = Gtk.Label()
             text_content = '<b>' + ''.join(text) + '</b>'
             text_label.set_markup(text_content)
             text_label.set_justify(Gtk.Justification.CENTER)
-            frame_box.add(text_label)
+            
+            event_box.add(text_label)
+            frame_box.add(event_box)
+            # frame_box.add(text_label)
             return frame_box
         except Exception as e:
             message = str(e)
@@ -649,7 +792,12 @@ class ControlGUIClient(object):
         if cell is not None:
             children = cell.get_children()
             if len(children) > 0:
-                children[0].set_label(text)
+                grandchildren = children[0].get_children()
+                if len(grandchildren) > 0:
+                    grandchildren[0].set_label(text)
+                    return children[0]
+                # children[0].set_label(text)
+        return None
 
     def set_cell_bg_color(self, text):
         if 'Actor' in text:

@@ -6,7 +6,7 @@ from riaps.rfab import api
 from riaps.rfab.api.task import TaskRunner
 from riaps.rfab.api.sys import *
 from riaps.rfab.api.utils import make_log_folder
-from .helpers import assert_role_in
+from .helpers import assert_role_in, pass_args
 from os.path import isfile
 from pathlib import Path
 from sys import exit
@@ -14,9 +14,10 @@ from sys import exit
 @task
 def check(c: Context):
     '''
-    Confims a connection can be made
+    Confirms a connection can be made
     '''
-    kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
+    kwargs = pass_args(c)
+    kwargs['hide'] = False
     runner = TaskRunner(c.config.hosts,SysCheck,**kwargs)
     runner.set_log_folder(make_log_folder("sys.check"))
     runner.run()
@@ -29,7 +30,7 @@ def check(c: Context):
             'why':'message logged for shutdown reason'})
 def shutdown(c: Context, when='1', why=''):
     """Shutdown the hosts"""
-    kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
+    kwargs = pass_args(c)
     SysShutdown.configure(when,why)
     runner = TaskRunner(c.config.hosts,SysShutdown,**kwargs)
     runner.set_log_folder(make_log_folder("sys.shutdown"))
@@ -38,7 +39,7 @@ def shutdown(c: Context, when='1', why=''):
 @task(pre=[call(assert_role_in,"remote")])
 def reboot(c: Context):
     """Reboot the hosts"""
-    kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
+    kwargs = pass_args(c)
     runner = TaskRunner(c.config.hosts,SysReboot,**kwargs)
     runner.set_log_folder(make_log_folder("sys.reboot"))
     runner.run()
@@ -46,7 +47,7 @@ def reboot(c: Context):
 @task(pre=[call(assert_role_in,"remote","nodes")])
 def clearJournal(c: Context):
     """Clear system journal"""
-    kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
+    kwargs = pass_args(c)
     runner = TaskRunner(c.config.hosts,SysClearJournal,**kwargs)
     runner.set_log_folder(make_log_folder("sys.clearJournal"))
     runner.run()
@@ -58,8 +59,7 @@ def put(c: Context, local_file, remote_dir=''):
     '''
     Copies a local file to the target(s)
     '''
-
-    kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
+    kwargs = pass_args(c)
     SysPut.configure(local_file,remote_dir)
     runner = TaskRunner(c.config.hosts,SysPut,**kwargs)
     runner.set_log_folder(make_log_folder("sys.put"))
@@ -74,7 +74,7 @@ def get(c: Context, remote_file, local_dir='', name=''):
     '''
     Copies a remote file from the host(s) to local folder(s)
     '''
-    kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
+    kwargs = pass_args(c)
     SysGet.configure(remote_file,local_dir,name)
     runner = TaskRunner(c.config.hosts,SysGet,**kwargs)
     runner.set_log_folder(make_log_folder("sys.get"))
@@ -85,7 +85,7 @@ def get(c: Context, remote_file, local_dir='', name=''):
       help={'command':'shell command to run, in quotes'})
 def run(c: Context, command):
     """Execute command as user:<command>"""
-    kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
+    kwargs = pass_args(c)
     SysRun.configure(command)
     runner = TaskRunner(c.config.hosts,SysRun,**kwargs)
     runner.set_log_folder(make_log_folder("sys.run"))
@@ -95,7 +95,7 @@ def run(c: Context, command):
       help={'command':'shell command to run, in quotes'})
 def sudo(c: Context, command):
     """Sudo execute command as root:<command>"""
-    kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
+    kwargs = pass_args(c)
     SysSudo.configure(command)
     runner = TaskRunner(c.config.hosts,SysSudo,**kwargs)
     runner.set_log_folder(make_log_folder("sys.sudo"))
@@ -106,7 +106,7 @@ def arch(c: Context):
     '''
     Get architecture of host(s)
     '''
-    kwargs = {'dry':c.config.run.dry,'verbose':True}
+    kwargs = pass_args(c)
     runner = TaskRunner(c.config.hosts,SysArch,**kwargs)
     runner.set_log_folder(make_log_folder("sys.arch"))
     runner.run()
@@ -116,7 +116,7 @@ def flushIPTables(c: Context):
     '''
     Flush the iptables
     '''
-    kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
+    kwargs = pass_args(c)
     runner = TaskRunner(c.config.hosts,SysFlushIPTables,**kwargs)
     runner.set_log_folder(make_log_folder("sys.flushIPTables"))
     runner.run()
@@ -126,7 +126,7 @@ def flushIPTables(c: Context):
 def setJournalLogSize(c: Context, size=64):
     """Adjust journalctl log file size"""
     newSize = f'SystemMaxUse={size}M'
-    kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
+    kwargs = pass_args(c)
     SysSudo.configure(f'sed -i "/SystemMaxUse/c\{newSize}" /etc/systemd/journald.conf')
     runner = TaskRunner(c.config.hosts,SysSudo,**kwargs)
     runner.set_log_folder(make_log_folder("sys.setJournalLogSize"))
@@ -136,7 +136,7 @@ def setJournalLogSize(c: Context, size=64):
 def getConfig(c: Context):
     '''Collect system state date to local folder ./logs/
     '''
-    kwargs = {'dry':c.config.run.dry,'verbose':c.config.verbose}
+    kwargs = pass_args(c)
     #Make log folder
     logfolder = Path(c.cwd,"logs")
     if logfolder.exists() and logfolder.is_dir():

@@ -851,8 +851,8 @@ class DeploymentManager(threading.Thread):
                 return
             
             with disco_capnp.DiscoRep.from_bytes(respBytes) as resp:
-                which = resp.which()
-                if which == 'actorUnreg':
+                tag = resp.which()
+                if tag == 'actorUnreg':
                     respMessage = resp.actorUnreg
                     status = respMessage.status
                     if status == 'ok':
@@ -1106,22 +1106,23 @@ class DeploymentManager(threading.Thread):
         Handle a message from a client (i.e. an actor) 
         '''
         self.logger.info("handleClient")
+        tag = None
         try:
             with deplo_capnp.DeplReq.from_bytes(msgBytes) as msg:
-                which = msg.which()
-                if which == 'actorReg':
+                tag = msg.which()
+                if tag == 'actorReg':
                     self.handleActorReg(msg)
-                elif which == 'deviceGet':
+                elif tag == 'deviceGet':
                     self.handleDeviceReq(msg)
-                elif which == 'deviceRel':
+                elif tag == 'deviceRel':
                     self.handleDeviceRel(msg)
-                elif which == 'reportEvent':
+                elif tag == 'reportEvent':
                     self.handleReportEvent(msg)
                 else:
                     pass
         except: 
             info = sys.exc_info()
-            self.logger.error("Error in handleClient '%s': %s %s" % (which, info[0], info[1]))
+            self.logger.error("Error in handleClient '%s': %s %s" % (tag, info[0], info[1]))
             traceback.print_exc()
 
 
@@ -1664,20 +1665,20 @@ class DeploymentManager(threading.Thread):
         Handle a  message that has been sent to the actor
         '''
         with deplo_capnp.DeplCmd.from_bytes(msgBytes) as msg:      
-            which = msg.which()
-            if which == 'resourceMsg':      # Resource violation
+            tag = msg.which()
+            if tag == 'resourceMsg':      # Resource violation
                 what = msg.resourceMsg.which()
                 self.logger.info('handleActorMessage: %s.%s - %s' 
                                  % (appName,actorName,what))
                 # TODO: send message to fault manager
-            elif which == 'reinstateCmd':   # Reinstate command - ignore
+            elif tag == 'reinstateCmd':   # Reinstate command - ignore
                 pass
-            elif which == 'nicStateMsg':    # NIC state has changed - ignore
+            elif tag == 'nicStateMsg':    # NIC state has changed - ignore
                 pass
-            elif which == 'peerInfoMsg':    # Peer info has changed - ignore
+            elif tag == 'peerInfoMsg':    # Peer info has changed - ignore
                 pass
             else:
-                self.logger.error("unknown msg from monitor: '%s'" % which)
+                self.logger.error("unknown msg from monitor: '%s'" % tag)
                 pass
         
     def terminate(self):

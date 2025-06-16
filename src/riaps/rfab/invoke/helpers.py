@@ -16,3 +16,6 @@ def assert_role_not_in(c: Context, *args):
         print(f"Cannot run this command for role \"{c.config.role}\"")
         exit(-1)
    
+
+def pass_args(c:Context):
+    return {'dry':c.config.run.dry,'verbose':c.config.verbose, 'echo':c.config.echo}

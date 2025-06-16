@@ -87,8 +87,8 @@ class DiscoClient(object):
         msgBytes = reqt.to_bytes()
         respBytes = self.rpcDisco(msgBytes,"registerActor",True)
         with disco_capnp.DiscoRep.from_bytes(respBytes) as resp:
-            which = resp.which()
-            if which == 'actorReg':
+            tag = resp.which()
+            if tag == 'actorReg':
                 respMessage = resp.actorReg
                 status = respMessage.status
                 port = respMessage.port
@@ -135,8 +135,8 @@ class DiscoClient(object):
         msgBytes = req.to_bytes()
         respBytes = self.rpcDisco(msgBytes,"handleRegReq",True)
         with disco_capnp.DiscoRep.from_bytes(respBytes) as resp:          
-            which = resp.which()
-            if which == 'serviceReg':
+            tag = resp.which()
+            if tag == 'serviceReg':
                 repMessage = resp.serviceReg
                 status = repMessage.status
                 if status == 'err':
@@ -175,8 +175,8 @@ class DiscoClient(object):
         respBytes = self.rpcDisco(msgBytes,"handleLookupReq",True)
         returnValue = []
         with disco_capnp.DiscoRep.from_bytes(respBytes) as resp:
-            which = resp.which()
-            if which == 'serviceLookup':
+            tag = resp.which()
+            if tag == 'serviceLookup':
                 repMessage = resp.serviceLookup
                 status = repMessage.status
                 if status == 'err':
@@ -218,8 +218,8 @@ class DiscoClient(object):
         respBytes = self.rpcDisco(msgBytes,"handleUnregReq",True)
         
         with disco_capnp.DiscoRep.from_bytes(respBytes) as resp:  
-            which = resp.which()
-            if which == 'serviceUnreg':
+            tag = resp.which()
+            if tag == 'serviceUnreg':
                 repMessage = resp.serviceUnreg
                 status = repMessage.status
                 if status == 'err':
@@ -258,8 +258,8 @@ class DiscoClient(object):
         respBytes = self.rpcDisco(msgBytes,"handleUnlookupReq",True)
         returnValue = []
         with disco_capnp.DiscoRep.from_bytes(respBytes) as resp:
-            which = resp.which()
-            if which == 'serviceUnlookup':
+            tag = resp.which()
+            if tag == 'serviceUnlookup':
                 repMessage = resp.serviceUnlookup
                 status = repMessage.status
                 if status == 'err':
@@ -355,8 +355,8 @@ class DiscoClient(object):
             respBytes = self.rpcDisco(msgBytes,"unregister",True)
             
             with disco_capnp.DiscoRep.from_bytes(respBytes) as resp:
-                which = resp.which()
-                if which == 'actorUnreg':
+                tag = resp.which()
+                if tag == 'actorUnreg':
                     respMessage = resp.actorUnreg
                     status = respMessage.status
                     port = respMessage.port

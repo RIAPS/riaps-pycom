@@ -358,12 +358,13 @@ class Actor(object):
         '''Find the IP addresses of the (host-)local and network(-global) interfaces
         
         '''
-        (globalIPs, globalMACs, _globalNames, localIP) = getNetworkInterfaces()
+        (found, globalIPs, globalMACs, _globalNames, localIP) = getNetworkInterfaces()
         try:
             assert len(globalIPs) > 0 and len(globalMACs) > 0
         except:
             self.logger.error("Error: no active network interface")
             raise
+        if not found: self.logger.warning("Configured network interface not found - using first available") 
         globalIP = globalIPs[0]
         globalMAC = globalMACs[0]
         self.localHost = localIP
@@ -502,8 +503,8 @@ class Actor(object):
         Handle a service update message from the discovery service
         '''
         with disco_capnp.DiscoUpd.from_bytes(msgBytes) as msgUpd:   # Parse the incoming message
-            which = msgUpd.which()
-            if which == 'portUpdate':
+            tag = msgUpd.which()
+            if tag == 'portUpdate':
                 msg = msgUpd.portUpdate
                 client = msg.client
                 actorHost = client.actorHost
@@ -525,7 +526,7 @@ class Actor(object):
                 if scope != "global":
                     assert host == self.localHost                   # Local/internal ports are host-local
                 self.updatePart(instanceName, portName, host, port) # Update the selected part
-            elif which == 'groupUpdate':
+            elif tag == 'groupUpdate':
                 msg = msgUpd.groupUpdate                            # Placeholder 
                 self.logger.info('handleServiceUpdate():groupUpdate')
 
@@ -542,8 +543,8 @@ class Actor(object):
         Handle a message from the deployment service
         '''
         with deplo_capnp.DeplCmd.from_bytes(msgBytes) as msgUpd:   # Parse the incoming message
-            which = msgUpd.which()
-            if which == 'resourceMsg':
+            tag = msgUpd.which()
+            if tag == 'resourceMsg':
                 what = msgUpd.resourceMsg.which()
                 if what == 'resCPUX':
                     self.handleCPULimit()
@@ -556,19 +557,19 @@ class Actor(object):
                 else:
                     self.logger.error("unknown resource msg from deplo: '%s'" % what)
                     pass
-            elif which == 'reinstateCmd':
+            elif tag == 'reinstateCmd':
                 self.handleReinstate()
-            elif which == 'nicStateMsg':
+            elif tag == 'nicStateMsg':
                 stateMsg = msgUpd.nicStateMsg
                 state = str(stateMsg.nicState)
                 self.handleNICStateChange(state)
-            elif which == 'peerInfoMsg':
+            elif tag == 'peerInfoMsg':
                 peerMsg = msgUpd.peerInfoMsg
                 state = str(peerMsg.peerState)
                 uuid = peerMsg.uuid
                 self.handlePeerStateChange(state, uuid)
             else:
-                self.logger.error("unknown msg from deplo: '%s'" % which)
+                self.logger.error("unknown msg from deplo: '%s'" % tag)
                 pass
 
     def handleReinstate(self):

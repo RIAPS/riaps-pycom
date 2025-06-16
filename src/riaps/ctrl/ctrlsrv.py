@@ -14,6 +14,7 @@ from rpyc import async_
 from rpyc.utils.server import ThreadedServer
 from rpyc.utils.authenticators import SSLAuthenticator
 from riaps.utils.config import Config
+from riaps.utils.check_x509 import check_x509_validity
 from riaps.consts.defs import *
 import ssl
 import time
@@ -23,7 +24,6 @@ from threading import RLock
 
 rpyc.core.protocol.DEFAULT_CONFIG['allow_pickle'] = True
 
-from riaps.consts.defs import *
 
 theController = None
 # guiClient = None
@@ -40,6 +40,8 @@ class ServiceClient(object):
         self.appFolder = appFolder
         self.socket = theController.context.socket(zmq.PUSH)
         self.socket.connect(theController.endpoint)
+        self.sshClient = None
+        self.ssh_stdin, self.ssh_stdout, self.ssh_stderr = None,None,None
         self.log("+ %s" %(self.name,))
 
     def close(self):
@@ -49,6 +51,10 @@ class ServiceClient(object):
         self.log("- %s " % (self.name,))    
         self.socket.disconnect(theController.endpoint)
         self.socket.close()
+        for f in [self.ssh_stdin, self.ssh_stdout, self.ssh_stderr,self.sshClient]:
+            if f: f.close()
+        self.ssh_stdin, self.ssh_stdout, self.ssh_stderr = None,None,None
+        self.sshClient = None
         
     def ping(self):
         if self.stale: return
@@ -244,9 +250,15 @@ class ServiceThread(threading.Thread):
         '''
         global theController
         host = theController.hostAddress
-        self.auth = SSLAuthenticator(theController.keyFile, theController.certFile,
+        if Config.SECURITY:
+            if check_x509_validity(theController.certFile) is False:
+                print (f"riaps_ctrl: invalid certificate {theController.certFile} ")
+                os._exit(0)
+            self.auth = SSLAuthenticator(theController.keyFile, theController.certFile,
                                      cert_reqs=ssl.CERT_REQUIRED, ca_certs=theController.certFile,
-                                     ) if Config.SECURITY else None
+                                     ) 
+        else:
+            self.auth = None
         try:
             self.server = ThreadedServer(ControllerService,hostname=host, port=self.port,
                                          authenticator = self.auth,
