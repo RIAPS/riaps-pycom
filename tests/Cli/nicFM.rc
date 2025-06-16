@@ -1,0 +1,14 @@
+# RIAPS Control command file for NICFm
+e Testing NICfm
+w 10
+a /home/riaps/workspace/RIAPS/tests/NICFm
+m nic.riaps
+d nic.depl
+i NICFm
+l NICFm
+w 60
+h NICFm
+w 20
+u NICFm
+w 20
+q

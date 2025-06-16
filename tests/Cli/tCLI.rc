@@ -1,0 +1,38 @@
+# RIAPS Control command file for DistributedEstimator
+e Testing CLI error handling 
+# good
+w 5
+# fail
+# w aaa
+# good
+a /home/riaps/workspace/RIAPS/tests/DistributedEstimator
+# fail
+# f Somefolder
+# good
+m sample.riaps
+# fail
+# m SAMPLE.riaps
+# good
+d sample.depl
+# fail
+# d SAMPLE.depl
+# good
+i DistributedEstimator
+# fail
+# i SomeApp
+# good
+l DistributedEstimator
+# fail
+# l SAMPLE
+w 30
+# good 
+h DistributedEstimator
+# fail
+# h SAMPLE
+w 5
+# good 
+u DistributedEstimator
+# fail 
+# u SAMPLE
+w 5
+q

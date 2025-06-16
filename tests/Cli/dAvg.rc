@@ -1,0 +1,14 @@
+# RIAPS Control command file for DistributedAverager
+e Testing DistributedAverager
+w 5
+a /home/riaps/workspace/RIAPS/tests/DistributedAverager
+m daver.riaps
+d daver.depl
+i DistributedAverager
+l DistributedAverager
+w 60
+h DistributedAverager
+w 5
+u DistributedAverager
+w 5
+q

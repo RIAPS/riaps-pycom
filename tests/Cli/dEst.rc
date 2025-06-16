@@ -1,0 +1,15 @@
+# RIAPS Control command file for DistributedEstimator
+e Testing DistributedEstimator
+w 5
+a /home/riaps/workspace/RIAPS/tests/DistributedEstimator
+m sample.riaps
+d sample.depl
+i DistributedEstimator
+l DistributedEstimator
+w 30
+h DistributedEstimator
+w 5
+u DistributedEstimator
+w 5
+s 
+q
