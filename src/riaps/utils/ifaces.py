@@ -1,63 +1,94 @@
-'''
+"""
 Various network interface utility functions
 Created on Nov 4, 2016
 
 @author: riaps
-'''
+"""
 
+import hashlib
 import netifaces
 import socket
 from random import randint
 from contextlib import closing
 from riaps.utils.config import Config
 
+
 def getNetworkInterfaces(nicName=None):
-    '''
-     Determine the IP address of  the network interfaces
-     Return a tuple of list of global IP addresses, list of MAC addresses, and local IP address
-     If the requested interface is found the list will contain the information for that interface only. 
-     ''' 
+    """
+    Determine the IP address of  the network interfaces
+    Return a tuple of list of global IP addresses, list of MAC addresses, and local IP address
+    If the requested interface is found the list will contain the information for that interface only.
+    """
     if nicName is None:
         nicName = Config.NIC_NAME
-    local = '127.0.0.1'
+    local = "127.0.0.1"
     ipAddressList = []
     macAddressList = []
     ifNameList = []
     ifNames = netifaces.interfaces()
-    found = False      
+    found = False
     for ifName in ifNames:
         ifInfo = netifaces.ifaddresses(ifName)
         if netifaces.AF_INET in ifInfo:
             ifAddrs = ifInfo[netifaces.AF_INET]
-            ifAddr = ifAddrs[0]['addr']
-            if ifAddr == '127.0.0.1':
+            ifAddr = ifAddrs[0]["addr"]
+            if ifAddr == "127.0.0.1":
                 continue
             else:
                 ipAddressList.append(ifAddr)
                 ifNameList.append(ifName)
-                linkAddrs = netifaces.ifaddresses(ifName)[netifaces.AF_PACKET]
-                linkAddr = linkAddrs[0]['addr'].replace(':', '')
-                macAddressList.append(linkAddr)
-                if(nicName == ifName):
+                if_addrs_map = netifaces.ifaddresses(ifName)
+
+                assigned_real_mac = False
+                mac_address_to_append = None
+
+                if netifaces.AF_PACKET in if_addrs_map:
+                    link_layer_addrs = if_addrs_map[netifaces.AF_PACKET]
+                    if (
+                        link_layer_addrs
+                        and len(link_layer_addrs) > 0
+                        and "addr" in link_layer_addrs[0]
+                    ):
+                        mac_address_to_append = link_layer_addrs[0]["addr"].replace(
+                            ":", ""
+                        )
+                        assigned_real_mac = True
+
+                if not assigned_real_mac:
+                    # Generate a deterministic, locally administered pseudo-MAC
+                    hostname = socket.gethostname()
+                    hasher = hashlib.md5()
+                    hasher.update(hostname.encode("utf-8"))
+                    hasher.update(
+                        ifName.encode("utf-8")
+                    )  # Combine hostname and ifName for uniqueness
+                    digest = hasher.hexdigest()
+                    mac_address_to_append = digest[:8] + hostname[-4:]
+
+                macAddressList.append(mac_address_to_append)
+                if nicName == ifName:
                     ipAddressList = [ipAddressList[-1]]
                     ifNameList = [ifName]
                     macAddressList = [macAddressList[-1]]
-                    found = True 
+                    found = True
                     break
-    
+
     return (found, ipAddressList, macAddressList, ifNameList, local)
 
+
 def gethost():
-    '''
+    """
     Retrieve a host IP address for the default interface (used by RIAPS)
-    '''
-    (_found,globalIPs,_globalMACs,_globalNames,_localIP) = getNetworkInterfaces()
-    assert len(globalIPs) > 0 and len(_globalMACs) > 0, "Error: no active network interface"
+    """
+    (_found, globalIPs, _globalMACs, _globalNames, _localIP) = getNetworkInterfaces()
+    assert (
+        len(globalIPs) > 0 and len(_globalMACs) > 0
+    ), "Error: no active network interface"
     return str(globalIPs[0])
-    
+
+
 def is_valid_ipv4_address(address):
-    ''' Determine if the argument is a valid IP address
-    '''
+    """Determine if the argument is a valid IP address"""
     try:
         socket.inet_pton(socket.AF_INET, address)
     except AttributeError:  # no inet_pton here, sorry
@@ -65,21 +96,20 @@ def is_valid_ipv4_address(address):
             socket.inet_aton(address)
         except socket.error:
             return False
-        return address.count('.') == 3
+        return address.count(".") == 3
     except socket.error:  # not a valid address
         return False
     return True
 
 
 def get_unix_dns_ips():
-    ''' Retrieve the IP address(es) of dns servers used by this host
-    '''
+    """Retrieve the IP address(es) of dns servers used by this host"""
     dns_ips = []
 
-    with open('/etc/resolv.conf') as fp:
+    with open("/etc/resolv.conf") as fp:
         for _cnt, line in enumerate(fp):
             columns = line.split()
-            if len(columns) > 0 and columns[0] == 'nameserver':
+            if len(columns) > 0 and columns[0] == "nameserver":
                 ip = columns[1:][0]
                 if is_valid_ipv4_address(ip):
                     dns_ips.append(ip)
@@ -91,13 +121,12 @@ RANDOM_PORT_MAX = 65535
 
 
 def get_random_port():
-    '''
+    """
     Get a random open port
-    '''
+    """
     while True:
-        port = randint(RANDOM_PORT_MIN , RANDOM_PORT_MAX)
+        port = randint(RANDOM_PORT_MIN, RANDOM_PORT_MAX)
         with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
-            s.bind(('', port))
+            s.bind(("", port))
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             return s.getsockname()[1]
-
