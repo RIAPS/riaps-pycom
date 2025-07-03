@@ -117,7 +117,7 @@ class DeploService(object):
         while True:
             self.conn = None
             try:
-                addrs = rpyc.utils.factory.discover(const.ctrlServiceName)
+                addrs = rpyc.utils.factory.discover(const.ctrlServiceName,host=Config.REG_SERVER)
             except DiscoveryError as e:
                 self.logger.info('Discovery error: %s' % (str(e)))
                 addrs = [(self.ctrlrHost,self.ctrlrPort)] if self.ctrlrHost and self.ctrlrPort else []
