@@ -116,17 +116,28 @@ class DeploService(object):
         host,port = None,None
         while True:
             self.conn = None
-            try:
-                addrs = rpyc.utils.factory.discover(const.ctrlServiceName,host=Config.REG_SERVER)
-            except DiscoveryError as e:
-                self.logger.info('Discovery error: %s' % (str(e)))
-                addrs = [(self.ctrlrHost,self.ctrlrPort)] if self.ctrlrHost and self.ctrlrPort else []
-            except OSError as e:
-                self.logger.info('OS error: %s' % (str(e)))
-                if e.errno in DeploService.NETERRORS:
-                    addrs = []
-                else:
-                    raise
+            addrs = []
+            while True:
+                try:
+                    if Config.REG_SERVER:
+                        try:
+                            addrs = rpyc.utils.factory.discover(const.ctrlServiceName,
+                                                                registrar = rpyc.utils.registry.UDPRegistryClient(ip=Config.REG_SERVER))
+                            break
+                        except DiscoveryError as e:
+                            self.logger.info('Discovery error: %s' % (str(e)))
+                        except OSError: raise
+                    try:     
+                        addrs = rpyc.utils.factory.discover(const.ctrlServiceName)
+                        break
+                    except DiscoveryError as e:
+                        self.logger.info('Discovery error: %s' % (str(e)))
+                        addrs = [(self.ctrlrHost,self.ctrlrPort)] if self.ctrlrHost and self.ctrlrPort else []      
+                    except OSError: raise
+                except OSError as e:
+                    self.logger.info('OS error: %s' % (str(e)))
+                    if e.errno in DeploService.NETERRORS: addrs = []
+                    else: raise
             for host,port in addrs:
                 try:
                     if Config.SECURITY:
