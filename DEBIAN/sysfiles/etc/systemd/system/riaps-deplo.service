@@ -1,8 +1,8 @@
 [Unit]
 Description=RIAPS Deployment Manager Service
 Requires=riaps-rm-cgroups.service riaps-rm-quota.service
-Wants=network-online.target
-After=network-online.target
+Wants=network-online.target riaps-rpyc-registry.service
+After=network-online.target riaps-rpyc-registry.service
 
 [Service]
 Type=simple
@@ -10,7 +10,7 @@ EnvironmentFile=/etc/riaps/systemdenv.conf
 StandardError=inherit
 SyslogIdentifier=RIAPS-DEPLO
 SyslogLevel=info
-ExecStart=/usr/local/bin/riaps_deplo
+ExecStart=/usr/local/bin/riaps_deplo --node ${RIAPS_CTRL_NODE}
 Restart=always
 KillMode=process
 KillSignal=SIGTERM
