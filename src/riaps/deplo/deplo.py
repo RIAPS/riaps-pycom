@@ -134,10 +134,14 @@ class DeploService(object):
                         self.logger.info('Discovery error: %s' % (str(e)))
                         addrs = [(self.ctrlrHost,self.ctrlrPort)] if self.ctrlrHost and self.ctrlrPort else []      
                     except OSError: raise
+                except socket.gaierror as e:
+                    self.logger.info('Registry address error: %s' % (str(e)))
+                    addrs = [(self.ctrlrHost,self.ctrlrPort)] if self.ctrlrHost and self.ctrlrPort else []
                 except OSError as e:
                     self.logger.info('OS error: %s' % (str(e)))
                     if e.errno in DeploService.NETERRORS: addrs = []
                     else: raise
+                break
             for host,port in addrs:
                 try:
                     if Config.SECURITY:

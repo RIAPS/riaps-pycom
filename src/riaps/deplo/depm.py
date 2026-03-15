@@ -276,6 +276,17 @@ class DeploymentManager(threading.Thread):
         Start the Discovery Service process 
         '''
         self.logger.info("starting disco")
+        # Kill any leftover riaps_disco processes (can survive due to KillMode=process)
+        for proc in psutil.process_iter(attrs=['pid', 'name', 'cmdline']):
+            try:
+                cmdline = proc.info.get('cmdline') or []
+                if any('riaps_disco' in part for part in cmdline):
+                    self.logger.warning("Terminating leftover disco process pid=%d" % proc.pid)
+                    proc.terminate()
+                    proc.wait(timeout=5)
+            except (psutil.NoSuchProcess, psutil.TimeoutExpired, psutil.AccessDenied):
+                pass
+        time.sleep(0.5)  # Allow port 9700 to be released
         disco_prog = 'riaps_disco'
         disco_mod = self.riaps_disco_file   # File name for python script riaps_disco.py
 
