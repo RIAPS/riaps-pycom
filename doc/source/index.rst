@@ -16,6 +16,7 @@ using fabric), code generation tool (riaps_gen) and an alternate discovery servi
    :caption: Contents:
 
    riaps
+   troubleshooting
 
 
 Indices and tables
